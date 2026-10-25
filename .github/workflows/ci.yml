@@ -1,0 +1,27 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build g++
+      - name: Asset and policy check
+        run: ./scripts/check_no_assets.sh
+      - name: Python tests
+        run: python3 -m unittest discover -s tests/python -v
+      - name: Progress block
+        run: python3 tools/gen/progress.py --check
+      - name: Configure
+        run: cmake --preset linux-debug
+      - name: Build
+        run: cmake --build --preset linux-debug
+      - name: Test
+        run: ctest --preset linux-debug --output-on-failure
