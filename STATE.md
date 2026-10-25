@@ -34,13 +34,20 @@ and assets) is complete.
   `src/engine/math.hpp` and `src/platform/headless/`. `bo2nx --list-big`
   lists real containers and `--frame` renders a real DDS texture on a
   textured cube with a free camera to a PPM, without a window.
-- C++ unit tests cover the `goefile` reader, DDS, math and rasterizer.
+- C++ unit tests cover the `goefile` reader, `cellgrup`, DDS, math and
+  rasterizer.
+- The static level shell is loaded: `cellgrup` parsing, world-space
+  vertices, per-material colors and a free camera. `bo2nx --level` renders
+  `sanctuary` (75/76 models, 5,107 triangles) to a PPM.
 
 ## What is not done
 
-- Level geometry: `cellgrup`, `region`, `planinfo`, `bpackage`.
-- Per-type payloads: `model`, `animatio`, `animreel`, `strtable`,
-  `musicbnk`, `texfont`, `liteinfo`.
+- Level textures/material binding: the current frame uses flat material
+  colors; the `texture`/`uvs`/`mlyrcolr` path is not bound yet.
+- Cell grid/visibility data after the `cellmdls` models.
+- Animation and skinning (`animatio`, `animreel`, `vtxweigh`, `jointidx`).
+- `region`, `planinfo`, `bpackage`, `strtable`, `musicbnk`, `texfont`,
+  `liteinfo`.
 - SDL2 + OpenGL host backend (the development container has no libraries
   or display).
 - `game.erg` parser details.
@@ -52,23 +59,22 @@ and assets) is complete.
 
 | # | Unknown | Next action | Read first |
 |---|---|---|---|
-| 0 | Model payload layout | Decompile the model loader; document the `rmd` chunks | `docs/FORMATS/big.md` |
-| 1 | Level geometry: `cellgrup`, `region`, `planinfo`, `bpackage` | Decompile the level loader; render one level | `docs/FORMATS/big.md` |
+| 0 | Material/texture binding | Validate the `texture`/`uvs`/`textures` path and bind DDS | `docs/FORMATS/models.md` |
+| 1 | Cell grid and visibility | Parse the data after `cellmdls` | `docs/FORMATS/models.md` |
 | 2 | `game.erg` parser details | Decompile the key lookup in `bo2.exe` | `docs/FORMATS/erg.md` |
 | 3 | Original logic tick | Measure from the oracle once it runs, or from the main loop | `docs/ARCHITECTURE.md` |
 | 4 | Level list and streaming model | Derive it from the installer script and `list.txt` | `docs/GAMEPLAY.md` |
-| 5 | Level renderer | Draw the decoded level with textures and the free camera | `docs/ARCHITECTURE.md` |
+| 5 | Level renderer | Textures, near-plane clipping and SDL2+OpenGL | `docs/ARCHITECTURE.md` |
 | 6 | `animatio` and `animreel` layout | Decompile the animation loader | `docs/FORMATS/models.md` |
 
 ## Next steps
 
-1. Decode the level geometry (`cellgrup`, `region`, `planinfo`,
-   `bpackage`) and load a level in the headless renderer.
-2. Document the model payload and the level records.
-3. Add the SDL2 + OpenGL backend when the environment provides the
-   libraries and a display.
-4. Parse `game.erg` and the `pc.rkv` event table.
-5. Use the original under Wine as the oracle once a level renders.
+1. Bind the `cellgrup` textures/material path and validate the UVs.
+2. Add the near-plane clipper for interior cameras.
+3. Parse the cell grid/visibility data.
+4. Decode animation/skinning and the shared `model` entries.
+5. Add the SDL2 + OpenGL backend when the environment provides the
+   libraries and a display; use the original as the oracle after that.
 
 ## Rules
 

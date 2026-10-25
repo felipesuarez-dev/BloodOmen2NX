@@ -15,6 +15,7 @@ PLATFORM_FEATURES = [
     ("BIG/RKV parsers", "done"),
     ("Validated asset extraction", "done"),
     ("Headless host first frame", "done"),
+    ("Level geometry (cellgrup)", "done"),
     ("Host renderer (OpenGL)", "todo"),
     ("Switch renderer (deko3d)", "todo"),
     ("Audio", "todo"),
