@@ -127,11 +127,11 @@ exposes them. The `language index` is stored but not interpreted.
   the `cellgrup` symbol list.
 - `region`, `planinfo`, `animatio`, `animreel`, `strtable`, `musicbnk`,
   `texfont`, `liteinfo`.
-- The `cellinst`, `cellight` and `cellmark` records after `cellmdls` (the `cells`, `attrs` and `cellbsp` tail is decoded in `docs/FORMATS/models.md`).
+- The `cellight` and `cellmark` records after `cellmdls` (the `cells`, `attrs`, `cellbsp` and `cellinst` tail is decoded in `docs/FORMATS/models.md`).
 - Which types the renderer and audio backend consume first.
 
 ## Next steps
 
-1. Decode the material lighting equation and `cellinst`, `cellight` and `cellmark`.
+1. Decode `cellight`, `cellmark` and the material lighting equation.
 2. Document `region` and `planinfo` for the level loader.
 3. Port the remaining validated readers to `src/engine/`.

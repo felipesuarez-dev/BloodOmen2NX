@@ -249,7 +249,7 @@ void append_cell_bsp(std::vector<std::uint8_t>& out) {
     put16(out, 3);
 }
 
-std::vector<std::uint8_t> build_cell_group() {
+std::vector<std::uint8_t> build_cell_group(bool with_instances = false) {
     std::vector<std::uint8_t> positions;
     put32(positions, 4);
     for (const auto& point : std::vector<std::array<float, 3>>{{0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0}}) {
@@ -378,6 +378,37 @@ std::vector<std::uint8_t> build_cell_group() {
     std::vector<std::uint8_t> bsp;
     append_cell_bsp(bsp);
     append_chunk(cell, "cellbsp", bsp);
+
+    if (with_instances) {
+        std::vector<std::uint8_t> instances;
+        put32(instances, 2);
+        put32(instances, 4);
+        put16(instances, 0);
+        put16(instances, 0);
+        put32(instances, 0);
+        put_float(instances, 10.0f);
+        put_float(instances, 0.0f);
+        put_float(instances, 0.0f);
+        put_float(instances, 1.0f);
+        put_float(instances, 1.0f);
+        put_float(instances, 1.0f);
+        put_float(instances, 0.0f);
+        put_float(instances, 0.0f);
+        put_float(instances, 0.0f);
+        put32(instances, 0);
+        put32(instances, 3);
+        put16(instances, 0);
+        put16(instances, 0);
+        put32(instances, 0);
+        put_float(instances, 20.0f);
+        put_float(instances, 0.0f);
+        put_float(instances, 0.0f);
+        put_float(instances, 0.0f);
+        put_float(instances, 0.0f);
+        put_float(instances, 3.14159265f);
+        put32(instances, 0);
+        append_chunk(cell, "cellinst", instances);
+    }
     return cell;
 }
 
@@ -477,6 +508,32 @@ void test_math() {
     CHECK(std::fabs(near_point.z / near_point.w + 1.0f) < 1.0e-5f);
     const bo2::engine::Vec4 far_point = projection * bo2::engine::Vec4{0.0f, 0.0f, -10.0f, 1.0f};
     CHECK(std::fabs(far_point.z / far_point.w - 1.0f) < 1.0e-5f);
+}
+
+void test_cell_instances() {
+    const std::vector<std::uint8_t> data = build_cell_group(true);
+    const bo2::engine::LevelGeometry geometry = bo2::engine::parse_cell_group(data);
+    CHECK(geometry.has_instances);
+    CHECK(geometry.instances.size() == 2);
+    CHECK(geometry.placed_instances == 2);
+    CHECK(geometry.skipped_instances == 0);
+    CHECK(geometry.positions.size() == 8);
+    CHECK(geometry.triangles.size() == 6);
+    CHECK(std::fabs(geometry.positions[0].x - 10.0f) < 1.0e-5f);
+    CHECK(std::fabs(geometry.positions[4].x - 20.0f) < 1.0e-5f);
+    CHECK(std::fabs(geometry.minimum.x - 10.0f) < 1.0e-5f);
+    CHECK(std::fabs(geometry.maximum.x - 20.0f) < 1.0e-5f);
+
+    std::vector<std::uint8_t> broken = data;
+    const std::string needle = "cellinst";
+    const auto found = std::search(broken.begin(), broken.end(), needle.begin(), needle.end());
+    CHECK(found != broken.end());
+    const std::size_t offset = static_cast<std::size_t>(found - broken.begin());
+    patch32(broken, offset + 16 + 4 + 8, 99);
+    const bo2::engine::LevelGeometry partial = bo2::engine::parse_cell_group(broken);
+    CHECK(partial.placed_instances == 1);
+    CHECK(partial.skipped_instances == 1);
+    CHECK(partial.triangles.size() == 3);
 }
 
 void test_cell_group() {
@@ -594,6 +651,7 @@ int main() {
     test_dds();
     test_math();
     test_cell_group();
+    test_cell_instances();
     if (failures != 0) {
         std::cerr << failures << " check(s) failed\n";
         return 1;

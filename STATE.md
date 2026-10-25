@@ -48,6 +48,10 @@ and assets) is complete.
 - The cell grid and visibility BSP are decoded: `cells` version 2,
   `attrs` tables and the recursive `cellbsp`; `bo2nx --level` reports the
   counts. `sanctuary` has 3 cells, 6 portals and 33 BSP nodes.
+- Cell instances are parsed and applied: the `cellmdls` models are local
+  templates and `cellinst` (v3/v4) places them in world space. In
+  `sanctuary` 74 of 112 instances are placed (38 sentinel or missing);
+  `cy01` places 429 of 575 and `lc01` 400 of 512.
 - Material layer records are parsed: `mlyrcolr` (three RGBA colors) and
   `mlyrctrl` (three `u32`/`f32`/`u16`/`u16` controls) per material.
   Untextured surfaces use the diffuse layer; textured surfaces keep the
@@ -76,7 +80,7 @@ and assets) is complete.
 | # | Unknown | Next action | Read first |
 |---|---|---|---|
 | 0 | Material lighting equation | Decompile the render-model material apply path | `docs/FORMATS/models.md` |
-| 1 | `cellinst`, `cellight` and `cellmark` records | Decompile the dispatcher branches | `docs/FORMATS/models.md` |
+| 1 | `cellight` and `cellmark` records | Decompile the dispatcher branches | `docs/FORMATS/models.md` |
 | 2 | `game.erg` parser details | Decompile the key lookup in `bo2.exe` | `docs/FORMATS/erg.md` |
 | 3 | Original logic tick | Measure from the oracle once it runs, or from the main loop | `docs/ARCHITECTURE.md` |
 | 4 | Level list and streaming model | Derive it from the installer script and `list.txt` | `docs/GAMEPLAY.md` |
@@ -86,8 +90,8 @@ and assets) is complete.
 ## Next steps
 
 1. Decode the material lighting equation.
-2. Decode `cellinst`/`cellight`/`cellmark`, animation/skinning and the
-   shared `model` entries.
+2. Decode `cellight`/`cellmark`, animation/skinning and the shared
+   `model` entries.
 3. Compare the SDL2/OpenGL frame with the original under Wine/Xvfb.
 
 ## Rules

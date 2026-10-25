@@ -147,7 +147,7 @@ The chunks after `cellmdls` are a second chunk stream inside the same
 cellmdls [cellanim] cellinst cellight cellmark cells attrs cellbsp
 ```
 
-Only `cells`, `attrs` and `cellbsp` are decoded here. `cellinst`,
+`cells`, `attrs`, `cellbsp` and `cellinst` are decoded here.
 `cellight`, `cellmark` and `cellanim` are still opaque.
 
 ### `cells`
@@ -174,6 +174,52 @@ selects the version and `FUN_00687990` is the version 1 parser, which
 does not occur in the reference tree.
 
 The two `Vec3` values are the bounds of the cell, not of the level.
+
+### `cellinst`
+
+The `cellmdls` model geometry is in **local** space. The `cellinst` chunk
+places copies of those models in world space:
+
+```
+u32 instance count
+per instance, version 3 (40 bytes):
+  u32  version = 3
+  u16  material A
+  u16  material B
+  u32  model index
+  Vec3 position
+  Vec3 rotation
+  u32  flags
+version 4 (52 bytes):
+  u32  version = 4
+  u16  material A
+  u16  material B
+  u32  model index
+  Vec3 position
+  Vec3 scale
+  Vec3 rotation
+  u32  flags
+```
+
+`model` indexes the `cellmdls` model block, including blocks without an
+`rmd`. `0xFFFFFFFF` is a sentinel: the instance has no model and is
+skipped. `material A` and `material B` are symbols in the cellgrup list;
+they often resolve to textures, but their override semantics are open.
+`flags` is stored and not interpreted. Version 3 has no scale (implicit
+1.0). Version 3 occurs in `hubworld`; the level containers use version 4.
+
+The host places each instance as
+`world = position + R * (scale * local)`, where `R` is the Euler
+rotation applied X, then Y, then Z. Normals are rotated; UVs and
+triangle indices are copied. The reference rotations are axis-aligned,
+so the Euler order is not yet distinguishable from the bounds alone.
+
+In `sanctuary` 112 instances produce 74 placed models; 38 are the
+`0xFFFFFFFF` sentinel or a model block without `rmd`. Of the 74 placed
+models, 73 fit inside a cell within 8 units and one straddles a cell
+boundary. The union of the placed models matches the cell union on X and
+Z. The previous host drew the `cellmdls` vertices as if they were world
+space; the instance pass fixes the level layout.
 
 ### `portal2`
 
@@ -268,6 +314,10 @@ Measured on the 135 level containers:
 | BSP leaf count matching the header | 162 / 162 |
 | BSP depth range | 1..24 |
 | `attrs` body size | 32 bytes in all groups |
+| `cellinst` versions | 4 in level containers; 3 in `hubworld` |
+| `sanctuary` instances | 112 (74 placed, 38 skipped) |
+| `canyons/cy01` instances | 575 (429 placed, 146 skipped) |
+| `lowercity/lc01` instances | 512 (400 placed, 112 skipped) |
 
 `sanctuary.big`: 3 cells, 6 portals, 121 terrain ids, 33 BSP nodes
 (17 leaves, depth 8). `canyons/cy01.big`: 8 cells, 32 portals, 674
@@ -305,7 +355,8 @@ interior, while the default isometric frame shows the level.
 - The 40/42-byte `prims` extra record.
 - `cells` flags, `cellattr`/`attrs` value semantics, the `portal2`
   plane/index and the BSP traversal.
-- `cellinst`, `cellight`, `cellmark` and `cellanim`.
+- `cellinst` material A/B overrides, flags and the Euler order.
+- `cellight`, `cellmark` and `cellanim`.
 - `model 74` has no `rmd`; its role is unknown.
 - Skeleton, skinning and animation playback.
 - The shared `model` entries versus the `cellmdls` inline models.
@@ -313,6 +364,6 @@ interior, while the default isometric frame shows the level.
 ## Next steps
 
 1. Use the cell grid and BSP for culling and cell visibility.
-2. Decode the material lighting equation.
-3. Decode the animation/skeleton chunks.
-4. Bind the shared `model` entries and entity placements.
+2. Decode `cellight`, `cellmark` and the shared `model` entries.
+3. Decode the material lighting equation.
+4. Decode the animation/skeleton chunks.

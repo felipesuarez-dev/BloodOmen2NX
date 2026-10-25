@@ -78,7 +78,7 @@ Function map: 35513 rows. Levels and platform features are defined in [`tools/ge
 | Host backend (headless software) | First frame: real DDS texture, free camera, PPM output |
 | Host backend (SDL2 + OpenGL) | Works: `bo2nx --sdl`; window, free camera and Xvfb capture |
 | C++ engine readers (BIG/DDS) | Validated on the installed tree |
-| Level geometry, textures and cell grid | `sanctuary` cellgrup renders headless and in OpenGL (75 models, 5,107 triangles, 33/34 DDS textures, 3 cells, 33 BSP nodes) |
+| Level geometry, textures and cell grid | `sanctuary` cellgrup renders headless and in OpenGL (75 models, 33/34 DDS textures, 3 cells, 33 BSP nodes, 74 placed instances) |
 | Switch backend (libnx + deko3d) | Not started |
 | `game.erg` | Decoded (text configuration) |
 | `.big` and `pc.rkv` | Validated against the installed Spanish build: 179 `.big` (246,332 entries) and 2,666 RKV streams |

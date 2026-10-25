@@ -64,6 +64,25 @@ struct CellGrid {
     std::vector<LevelCell> cells;
 };
 
+struct ModelRange {
+    std::uint32_t first_vertex = 0;
+    std::uint32_t vertex_count = 0;
+    std::uint32_t first_triangle = 0;
+    std::uint32_t triangle_count = 0;
+    bool present = false;
+};
+
+struct LevelInstance {
+    std::uint32_t version = 0;
+    std::uint32_t model = 0;
+    std::uint16_t material_a = 0;
+    std::uint16_t material_b = 0;
+    Vec3 position{0.0f, 0.0f, 0.0f};
+    Vec3 scale{1.0f, 1.0f, 1.0f};
+    Vec3 rotation{0.0f, 0.0f, 0.0f};
+    std::uint32_t flags = 0;
+};
+
 struct BspNode {
     bool leaf = false;
     Vec3 plane{0.0f, 0.0f, 0.0f};
@@ -88,6 +107,8 @@ struct LevelGeometry {
     std::vector<LevelTriangle> triangles;
     std::vector<MaterialLayer> materials;
     std::vector<CellAttributeTable> level_attributes;
+    std::vector<ModelRange> model_ranges;
+    std::vector<LevelInstance> instances;
     CellGrid cell_grid;
     CellBsp cell_bsp;
     Vec3 minimum{0.0f, 0.0f, 0.0f};
@@ -97,6 +118,9 @@ struct LevelGeometry {
     bool has_cell_grid = false;
     bool has_cell_bsp = false;
     bool has_level_attributes = false;
+    bool has_instances = false;
+    std::uint32_t placed_instances = 0;
+    std::uint32_t skipped_instances = 0;
 };
 
 LevelGeometry parse_cell_group(const std::vector<std::uint8_t>& data);

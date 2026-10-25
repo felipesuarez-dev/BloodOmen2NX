@@ -7,6 +7,7 @@
 #include <cstring>
 #include <limits>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "bo2/common/reader.hpp"
@@ -414,6 +415,80 @@ CellBsp read_cell_bsp(const common::Reader& reader, const Chunk& chunk) {
     return bsp;
 }
 
+std::vector<LevelInstance> read_instances(const common::Reader& reader, const Chunk& chunk) {
+    if (chunk.data_size < 4) {
+        throw common::ParseError("empty instance chunk");
+    }
+    const std::uint32_t count = reader.u32(chunk.data_offset);
+    std::size_t position = chunk.data_offset + 4;
+    const std::size_t end = chunk.data_offset + chunk.data_size;
+    if (count > 65536) {
+        throw common::ParseError("instance count is out of range");
+    }
+    std::vector<LevelInstance> instances;
+    instances.reserve(count);
+    for (std::uint32_t index = 0; index < count; ++index) {
+        if (position + 4 > end) {
+            throw common::ParseError("truncated instance header");
+        }
+        const std::uint32_t version = reader.u32(position);
+        std::size_t record_size = 0;
+        if (version == 3) {
+            record_size = 40;
+        } else if (version == 4) {
+            record_size = 52;
+        } else {
+            throw common::ParseError("unsupported instance version");
+        }
+        if (position + record_size > end) {
+            throw common::ParseError("truncated instance record");
+        }
+        LevelInstance instance;
+        instance.version = version;
+        instance.material_a = reader.u16(position + 4);
+        instance.material_b = reader.u16(position + 6);
+        instance.model = reader.u32(position + 8);
+        instance.position = read_vec3(reader, position + 12);
+        if (version == 4) {
+            instance.scale = read_vec3(reader, position + 24);
+            instance.rotation = read_vec3(reader, position + 36);
+            instance.flags = reader.u32(position + 48);
+        } else {
+            instance.rotation = read_vec3(reader, position + 24);
+            instance.flags = reader.u32(position + 36);
+            instance.scale = {1.0f, 1.0f, 1.0f};
+        }
+        instances.push_back(instance);
+        position += record_size;
+    }
+    if (position != end) {
+        throw common::ParseError("instance chunk has a trailer");
+    }
+    return instances;
+}
+
+Vec3 rotate_x(const Vec3& value, float angle) {
+    const float cosine = std::cos(angle);
+    const float sine = std::sin(angle);
+    return {value.x, value.y * cosine - value.z * sine, value.y * sine + value.z * cosine};
+}
+
+Vec3 rotate_y(const Vec3& value, float angle) {
+    const float cosine = std::cos(angle);
+    const float sine = std::sin(angle);
+    return {value.x * cosine + value.z * sine, value.y, -value.x * sine + value.z * cosine};
+}
+
+Vec3 rotate_z(const Vec3& value, float angle) {
+    const float cosine = std::cos(angle);
+    const float sine = std::sin(angle);
+    return {value.x * cosine - value.y * sine, value.x * sine + value.y * cosine, value.z};
+}
+
+Vec3 rotate_euler(const Vec3& value, const Vec3& angles) {
+    return rotate_z(rotate_y(rotate_x(value, angles.x), angles.y), angles.z);
+}
+
 void read_cell_tail(const common::Reader& reader, std::size_t start, std::size_t end,
                     LevelGeometry& geometry) {
     if (start == end) {
@@ -427,6 +502,9 @@ void read_cell_tail(const common::Reader& reader, std::size_t start, std::size_t
         } else if (chunk.name == "attrs") {
             geometry.level_attributes = read_attribute_tables(reader, chunk);
             geometry.has_level_attributes = true;
+        } else if (chunk.name == "cellinst") {
+            geometry.instances = read_instances(reader, chunk);
+            geometry.has_instances = true;
         } else if (chunk.name == "cellbsp") {
             geometry.cell_bsp = read_cell_bsp(reader, chunk);
             geometry.has_cell_bsp = true;
@@ -664,6 +742,67 @@ void compute_bounds(LevelGeometry& geometry) {
     geometry.maximum = maximum;
 }
 
+void place_instances(LevelGeometry& geometry) {
+    geometry.placed_instances = 0;
+    geometry.skipped_instances = 0;
+    if (geometry.instances.empty() || geometry.model_ranges.empty()) {
+        return;
+    }
+    std::vector<Vec3> positions;
+    std::vector<Vec3> normals;
+    std::vector<Vec2> texcoords;
+    std::vector<LevelTriangle> triangles;
+    for (const LevelInstance& instance : geometry.instances) {
+        if (instance.model >= geometry.model_ranges.size()) {
+            ++geometry.skipped_instances;
+            continue;
+        }
+        const ModelRange& range = geometry.model_ranges[instance.model];
+        if (!range.present || range.vertex_count == 0 || range.triangle_count == 0) {
+            ++geometry.skipped_instances;
+            continue;
+        }
+        const std::uint32_t vertex_base = static_cast<std::uint32_t>(positions.size());
+        for (std::uint32_t index = 0; index < range.vertex_count; ++index) {
+            const std::size_t source = static_cast<std::size_t>(range.first_vertex) + index;
+            const Vec3 scaled{geometry.positions[source].x * instance.scale.x,
+                              geometry.positions[source].y * instance.scale.y,
+                              geometry.positions[source].z * instance.scale.z};
+            positions.push_back(instance.position + rotate_euler(scaled, instance.rotation));
+            if (source < geometry.normals.size()) {
+                normals.push_back(normalize(rotate_euler(geometry.normals[source], instance.rotation)));
+            } else {
+                normals.push_back({0.0f, 0.0f, 0.0f});
+            }
+            texcoords.push_back(source < geometry.texcoords.size() ? geometry.texcoords[source]
+                                                                  : Vec2{});
+        }
+        for (std::uint32_t index = 0; index < range.triangle_count; ++index) {
+            const std::size_t source = static_cast<std::size_t>(range.first_triangle) + index;
+            LevelTriangle triangle = geometry.triangles[source];
+            const std::uint32_t first = range.first_vertex;
+            const std::uint32_t last = range.first_vertex + range.vertex_count;
+            if (triangle.a < first || triangle.a >= last || triangle.b < first ||
+                triangle.b >= last || triangle.c < first || triangle.c >= last) {
+                continue;
+            }
+            triangle.a = vertex_base + (triangle.a - first);
+            triangle.b = vertex_base + (triangle.b - first);
+            triangle.c = vertex_base + (triangle.c - first);
+            triangles.push_back(triangle);
+        }
+        ++geometry.placed_instances;
+    }
+    if (geometry.placed_instances == 0) {
+        return;
+    }
+    geometry.positions = std::move(positions);
+    geometry.normals = std::move(normals);
+    geometry.texcoords = std::move(texcoords);
+    geometry.triangles = std::move(triangles);
+    compute_bounds(geometry);
+}
+
 }  // namespace
 
 LevelGeometry parse_cell_group(const std::vector<std::uint8_t>& data,
@@ -679,6 +818,7 @@ LevelGeometry parse_cell_group(const std::vector<std::uint8_t>& data,
     const std::uint32_t model_count = reader.u32(24);
     std::size_t position = 28;
     LevelGeometry geometry;
+    geometry.model_ranges.assign(model_count, ModelRange{});
     for (std::uint32_t model = 0; model < model_count; ++model) {
         if (position + 20 > data.size()) {
             throw common::ParseError("truncated model block");
@@ -693,15 +833,25 @@ LevelGeometry parse_cell_group(const std::vector<std::uint8_t>& data,
         }
         const std::vector<Chunk> chunks = read_chunks(reader, chunks_start, model_end);
         const Chunk* rmd = find_chunk(chunks, "rmd");
+        const std::size_t first_vertex = geometry.positions.size();
+        const std::size_t first_triangle = geometry.triangles.size();
         if (rmd == nullptr) {
             ++geometry.skipped_models;
         } else {
             parse_model(reader, *rmd, model, symbols, names, geometry);
             ++geometry.model_count;
+            ModelRange& range = geometry.model_ranges[model];
+            range.first_vertex = static_cast<std::uint32_t>(first_vertex);
+            range.vertex_count = static_cast<std::uint32_t>(geometry.positions.size() - first_vertex);
+            range.first_triangle = static_cast<std::uint32_t>(first_triangle);
+            range.triangle_count =
+                static_cast<std::uint32_t>(geometry.triangles.size() - first_triangle);
+            range.present = true;
         }
         position = model_end;
     }
     read_cell_tail(reader, position, data.size(), geometry);
+    place_instances(geometry);
     if (geometry.positions.empty() || geometry.triangles.empty()) {
         throw common::ParseError("cell group has no renderable geometry");
     }

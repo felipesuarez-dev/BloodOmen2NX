@@ -215,6 +215,11 @@ void print_scene(const LoadedLevel& level) {
                   << geometry.cell_bsp.leaf_count << " leaves, depth "
                   << geometry.cell_bsp.depth << ")\n";
     }
+    if (geometry.has_instances) {
+        std::cout << "instances: " << geometry.instances.size() << " (placed "
+                  << geometry.placed_instances << ", skipped " << geometry.skipped_instances
+                  << ")\n";
+    }
     if (geometry.has_level_attributes) {
         std::cout << "attrs: " << geometry.level_attributes.size() << " tables\n";
     }

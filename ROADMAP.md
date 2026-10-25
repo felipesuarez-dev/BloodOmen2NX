@@ -12,7 +12,7 @@ comparison.
 |---|---|---|---|
 | M0 | Laboratory and binary truth | Hashes, PE triage, SFXI, `game.erg` and Ghidra inventory | DONE — install materialization moved to M1 and completed there |
 | M1 | Containers and assets (GO/NO-GO) | `.big` and `pc.rkv` validated against the installed tree; one asset extracted; formats documented | DONE — 198/198 installer chunks, 179 `.big`/246,332 entries, 2,666 RKV streams, DDS and model extracted |
-| M2 | Host skeleton and first frame | Host backend renders one level with textures and a free camera; frame comparable to the oracle | WIP — headless and SDL2/OpenGL level with DDS textures, cell grid/BSP, material layers and a free camera; oracle frame pending |
+| M2 | Host skeleton and first frame | Host backend renders one level with textures and a free camera; frame comparable to the oracle | WIP — headless and SDL2/OpenGL level with DDS textures, cell grid/BSP, cell instances, material layers and a free camera; oracle frame pending |
 | M3 | Playable slice | First level playable start to finish; route replay test and state comparison | TODO |
 | M4 | Complete systems | Enemies, combat, dark gifts, scripting, menus, saves, audio and videos | TODO |
 | M5 | Complete content | All levels, bosses and unlockables; parity battery green | TODO |
@@ -31,6 +31,7 @@ comparison.
 | Level geometry (cellgrup) | done | 75/76 models, 5,107 triangles, free camera |
 | Level textures (DDS binding) | done | 33/34 textures; symbol → name → DDS |
 | Cell grid and visibility BSP | done | 173 groups with `cells`; 162 with `cellbsp`; leaf count verified |
+| Cell instances and placement | done | `cellinst` v3/v4; local `cellmdls` templates placed in world space |
 | Material layer records | done | `mlyrcolr`/`mlyrctrl` ranges; untextured fallback uses the diffuse layer |
 | Host renderer (OpenGL) | done | SDL2/OpenGL window, free camera and Xvfb capture |
 | Switch renderer (deko3d) | todo | M2+ |
