@@ -35,6 +35,18 @@ NUL-terminated.
 build whose index is `0x18000`. Compute it and optionally validate it by
 checking that the first entry starts with `OggS`.
 
+## Validation
+
+The reference parser rejects malformed input instead of returning partial
+data:
+
+- a version other than 1, or a file shorter than the 12 bytes needed for
+  the version, index size and language count;
+- an index whose declared size ends past the file;
+- strings and counts that overrun the declared index size;
+- an entry flag other than 1;
+- an entry whose sector and size point past the file.
+
 ## Integration
 
 - `tools/bo2fmt/rkv.py` implements list and extract.

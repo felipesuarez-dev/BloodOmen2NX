@@ -20,6 +20,8 @@ Container:
     padding
     data_start = index_size + 8 + 0x800
     data       = data_start + sector * 2048
+
+Malformed input raises `RkvError` instead of returning partial data.
 """
 
 from __future__ import annotations
@@ -67,6 +69,10 @@ def parse(data: bytes) -> list[Entry]:
     if len(data) < 12 or _u32(data, 0) != 1:
         raise RkvError("not an rkv container")
     index_size = _u32(data, 4)
+    index_end = 8 + index_size
+    if index_end > len(data):
+        raise RkvError("index beyond end of file")
+    data_start = index_end + DATA_BIAS
     pos = 8
     language_count = _u32(data, pos)
     pos += 4
@@ -82,14 +88,21 @@ def parse(data: bytes) -> list[Entry]:
             pos += 4  # zero
             for _ in range(entry_count):
                 name, pos = _string(data, pos)
-                pos += 4  # 1
+                flag = _u32(data, pos)
+                pos += 4
+                if flag != 1:
+                    raise RkvError(f"bad entry flag for {name!r}")
                 sector = _u32(data, pos)
                 pos += 4
                 size = _u32(data, pos)
                 pos += 4
                 pos += 4  # zero
-                offset = index_size + 8 + DATA_BIAS + sector * SECTOR
+                offset = data_start + sector * SECTOR
+                if offset + size > len(data):
+                    raise RkvError(f"entry data out of range: {name!r}")
                 entries.append(Entry(name, section, language, sector, size, offset))
+    if pos > index_end:
+        raise RkvError("index overruns its declared size")
     return entries
 
 
