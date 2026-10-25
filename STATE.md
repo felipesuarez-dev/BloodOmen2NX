@@ -30,13 +30,21 @@ and assets) is complete.
   the model starts with an `rmd` chunk.
 - Installer S-box and password offsets documented in
   `docs/FORMATS/dat.md`; neither is stored in the repository.
+- Host skeleton: `src/engine/big_archive.*`, `src/engine/dds.*`,
+  `src/engine/math.hpp` and `src/platform/headless/`. `bo2nx --list-big`
+  lists real containers and `--frame` renders a real DDS texture on a
+  textured cube with a free camera to a PPM, without a window.
+- C++ unit tests cover the `goefile` reader, DDS, math and rasterizer.
 
 ## What is not done
 
-- Per-type payloads: `model`, `cellgrup`, `region`, `planinfo`,
-  `animatio`, `animreel`, `strtable`, `musicbnk`, `texfont`, `liteinfo`.
+- Level geometry: `cellgrup`, `region`, `planinfo`, `bpackage`.
+- Per-type payloads: `model`, `animatio`, `animreel`, `strtable`,
+  `musicbnk`, `texfont`, `liteinfo`.
+- SDL2 + OpenGL host backend (the development container has no libraries
+  or display).
 - `game.erg` parser details.
-- Renderer, audio, input or gameplay.
+- Audio, input or gameplay.
 - The installer's native RAR decoder is not ported; development
   extraction uses `unrar`. The game does not need the installer decoder.
 
@@ -45,22 +53,22 @@ and assets) is complete.
 | # | Unknown | Next action | Read first |
 |---|---|---|---|
 | 0 | Model payload layout | Decompile the model loader; document the `rmd` chunks | `docs/FORMATS/big.md` |
-| 1 | `cellgrup`, `region`, `planinfo` | Decompile the level loader; document the records | `docs/FORMATS/big.md` |
+| 1 | Level geometry: `cellgrup`, `region`, `planinfo`, `bpackage` | Decompile the level loader; render one level | `docs/FORMATS/big.md` |
 | 2 | `game.erg` parser details | Decompile the key lookup in `bo2.exe` | `docs/FORMATS/erg.md` |
 | 3 | Original logic tick | Measure from the oracle once it runs, or from the main loop | `docs/ARCHITECTURE.md` |
 | 4 | Level list and streaming model | Derive it from the installer script and `list.txt` | `docs/GAMEPLAY.md` |
-| 5 | Renderer pipeline | First level render on the host backend | `docs/ARCHITECTURE.md` |
+| 5 | Level renderer | Draw the decoded level with textures and the free camera | `docs/ARCHITECTURE.md` |
 | 6 | `animatio` and `animreel` layout | Decompile the animation loader | `docs/FORMATS/models.md` |
 
 ## Next steps
 
-1. Start M2: host backend skeleton, first frame with a level, textures
-   and a free camera.
-2. Port the validated `.big` and `pc.rkv` readers and the DDS/model
-   loaders to `src/engine/`.
-3. Document the model and level payloads.
+1. Decode the level geometry (`cellgrup`, `region`, `planinfo`,
+   `bpackage`) and load a level in the headless renderer.
+2. Document the model payload and the level records.
+3. Add the SDL2 + OpenGL backend when the environment provides the
+   libraries and a display.
 4. Parse `game.erg` and the `pc.rkv` event table.
-5. Use the original under Wine as the oracle once a backend can render.
+5. Use the original under Wine as the oracle once a level renders.
 
 ## Rules
 

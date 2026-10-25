@@ -4,7 +4,7 @@
 
 **A native Nintendo Switch port of *Blood Omen 2* (PC, 2002, Spanish GoldMaster 1.02), built through functional decompilation.**
 
-**Work in progress. M0: laboratory setup and binary triage. Nothing is playable yet.**
+**Work in progress. M1 complete; M2 (host skeleton and first frame) in progress. Nothing is playable yet.**
 
 [![Status][status-badge]](#status)
 [![Overall progress][overall-badge]](#status)
@@ -19,7 +19,10 @@
 
 </div>
 
-[status-badge]: https://img.shields.io/badge/phase-M1%20complete-brightgreen
+[status-badge]: https://img.shields.io/badge/phase-M2%20in%20progress-orange
+[overall-badge]: https://img.shields.io/badge/overall-5.5%25-yellow
+[fn-badge]: https://img.shields.io/badge/functions-0%20%2F%2018097-lightgrey
+[levels-badge]: https://img.shields.io/badge/levels-0%20%2F%20TBD-lightgrey
 [cpp-badge]: https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white
 [cmake-badge]: https://img.shields.io/badge/build-CMake%20presets-064F8C?logo=cmake&logoColor=white
 [platform-badge]: https://img.shields.io/badge/platform-Linux%20dev%20%7C%20Switch%20target-lightgrey
@@ -56,13 +59,13 @@ This is a *functional* port, not a byte-matching decompilation: it does not rebu
 ## Status
 
 <!-- progress:start -->
-**Overall progress: 5.0%**
+**Overall progress: 5.5%**
 
 | Component | Weight | Progress | Score |
 |---|---:|---:|---:|
 | Functions translated / in-scope | 60% | 0 / 18097 | 0.00% |
 | Levels completable | 30% | 0 / TBD | 0.00% |
-| Platform features | 10% | 5 / 10 | 50.00% |
+| Platform features | 10% | 6 / 11 | 54.55% |
 
 Function map: 35513 rows. Levels and platform features are defined in [`tools/gen/progress_data.py`](tools/gen/progress_data.py).
 <!-- progress:end -->
@@ -72,13 +75,15 @@ Function map: 35513 rows. Levels and platform features are defined in [`tools/ge
 | Area | State |
 |---|---|
 | Repository, build presets and host smoke binary | Works |
-| Host backend (SDL2 + OpenGL) | Not started |
+| Host backend (headless software) | First frame: real DDS texture, free camera, PPM output |
+| Host backend (SDL2 + OpenGL) | Pending; the dev container has no SDL2/OpenGL/display |
+| C++ engine readers (BIG/DDS) | Validated on the installed tree |
 | Switch backend (libnx + deko3d) | Not started |
 | `game.erg` | Decoded (text configuration) |
 | `.big` and `pc.rkv` | Validated against the installed Spanish build: 179 `.big` (246,332 entries) and 2,666 RKV streams |
 | Installer `data/*.dat` | Decoded; `tools/bo2fmt/installer.py` materializes the 227-file tree |
 | Installed game tree | 227 files, 1.9 GB; manifest hash in `docs/PROVENANCE.md` |
-| Renderer, audio, input | Not started |
+| Level renderer, audio, input | Textured preview only; level geometry pending |
 | Game logic translation | Not started |
 | Original game as oracle | Not started |
 

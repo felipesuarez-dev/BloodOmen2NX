@@ -14,6 +14,7 @@ PLATFORM_FEATURES = [
     ("Installer chunk decompressor", "done"),
     ("BIG/RKV parsers", "done"),
     ("Validated asset extraction", "done"),
+    ("Headless host first frame", "done"),
     ("Host renderer (OpenGL)", "todo"),
     ("Switch renderer (deko3d)", "todo"),
     ("Audio", "todo"),
