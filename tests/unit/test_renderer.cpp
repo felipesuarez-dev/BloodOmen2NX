@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <vector>
 
+#include "bo2/engine/cell_group.hpp"
 #include "bo2/engine/image.hpp"
 #include "bo2/platform/headless/software_renderer.hpp"
 
@@ -26,6 +27,16 @@ bool throws(Function&& function) {
         return true;
     }
     return false;
+}
+
+bo2::engine::LevelGeometry level_quad() {
+    bo2::engine::LevelGeometry geometry;
+    geometry.positions = {{0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 0.0f}, {0.0f, 1.0f, 0.0f}};
+    geometry.normals = {{0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 1.0f}};
+    geometry.triangles = {{0, 1, 2, 0, 0}, {0, 2, 3, 0, 0}};
+    geometry.minimum = {0.0f, 0.0f, 0.0f};
+    geometry.maximum = {1.0f, 1.0f, 0.0f};
+    return geometry;
 }
 
 bo2::engine::Image red_image() {
@@ -66,6 +77,23 @@ int main() {
     CHECK(throws([&] {
         options.camera.target = options.camera.eye;
         bo2::platform::headless::render_textured_cube(image, options);
+    }));
+
+    bo2::platform::headless::FrameOptions level_options;
+    level_options.width = 64;
+    level_options.height = 64;
+    level_options.camera.eye = {0.5f, -3.0f, 3.0f};
+    level_options.camera.target = {0.5f, 0.5f, 0.0f};
+    level_options.camera.up = {0.0f, 0.0f, 1.0f};
+    level_options.camera.fov_degrees = 55.0f;
+    const std::vector<std::uint8_t> level_frame =
+        bo2::platform::headless::render_level(level_quad(), level_options);
+    CHECK(level_frame.size() == 64U * 64U * 4U);
+    CHECK(level_frame[center + 0] != 20 || level_frame[center + 1] != 22 ||
+          level_frame[center + 2] != 30);
+    CHECK(throws([&] {
+        bo2::engine::LevelGeometry empty;
+        bo2::platform::headless::render_level(empty, level_options);
     }));
 
     if (failures != 0) {

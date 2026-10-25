@@ -63,6 +63,7 @@ Current concrete modules:
 | Module | Responsibility | State |
 |---|---|---|
 | `big_archive` | `goefile` reader | Validated on the installed tree |
+| `cell_group` | `cellgrup` static level geometry | World-space triangles |
 | `dds` | DDS/BC decoder | DXT1, DXT3, DXT5, A8R8G8B8; top mip |
 | `math` | Vec3, Vec4, Mat4 | Used by the headless renderer |
 

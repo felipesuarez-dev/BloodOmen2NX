@@ -16,6 +16,7 @@ target_compile_options(bo2_common PRIVATE ${BO2NX_WARNINGS})
 
 add_library(bo2_engine STATIC
     src/engine/big_archive.cpp
+    src/engine/cell_group.cpp
     src/engine/dds.cpp
 )
 target_link_libraries(bo2_engine PUBLIC bo2_common)

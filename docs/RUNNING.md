@@ -25,10 +25,29 @@ BIG=external/installed/media/gogames/bo2/resources/levels/sanctuary/sanctuary.bi
 The frame is a PPM; no display is needed. The camera is `--eye` and
 `--target`; `--width`, `--height` and `--fov` control the image.
 
+## Level frame
+
+`--level` reads the `cellgrup` entry and renders the static level shell.
+The default camera is an isometric view of the whole level; `--eye` and
+`--target` select a free camera. The level axes are Z-up.
+
+```sh
+BIG=external/installed/media/gogames/bo2/resources/levels/sanctuary/sanctuary.big
+./build/linux-debug/bo2nx --level --big "$BIG" --out /tmp/sanctuary.ppm
+./build/linux-debug/bo2nx --level --big "$BIG" --out /tmp/sanctuary_inside.ppm \
+  --eye 0,-20,4 --target 0,20,4 --fov 70
+```
+
+The geometry is drawn with per-material colors; binding the DDS textures
+is the next step. The near-plane clipper is pending, so a camera that
+intersects a surface can show projection artifacts; the isometric frame
+is stable.
+
 | Flag | Purpose |
 |---|---|
 | `--list-big <file>` | List entries (type, size, name) |
 | `--frame --big <file>` | Render a textured preview frame |
+| `--level --big <level.big>` | Render the static `cellgrup` level shell |
 | `--entry <substring>` | Texture entry to use (default: first texture) |
 | `--out <file.ppm>` | Frame output |
 | `--eye x,y,z`, `--target x,y,z` | Free camera |

@@ -8,7 +8,9 @@ unit tests and lists the installed containers.
 
 `goefile` is where the game content lives: geometry, models, textures,
 samples, `tunedata`, `cellgrup`, `region`, `planinfo`, `bpackage`,
-`animatio`, `animreel`, and the other resource types below. It is not the
+`animatio`, `animreel`, and the other resource types below. The static
+level shell is the `cellgrup` entry; its model and `rmd` layout is in
+`docs/FORMATS/models.md`. It is not the
 CDC `bigfile.dat` used by Soul Reaver; that format does not apply.
 
 ## Header
@@ -120,13 +122,15 @@ not yet interpreted.
 
 ## Open questions
 
-- The meaning of the language index and of the `n` u16 values.
-- Per-type payload layouts: `model`, `cellgrup`, `region`, `planinfo`,
-  `animatio`, `animreel`, `strtable`, `musicbnk`, `texfont`, `liteinfo`.
+- The meaning of the language index and of the `n` u16 values, beyond
+  the `cellgrup` symbol list.
+- `region`, `planinfo`, `animatio`, `animreel`, `strtable`, `musicbnk`,
+  `texfont`, `liteinfo`.
+- The cell grid/visibility data after the `cellmdls` models.
 - Which types the renderer and audio backend consume first.
 
 ## Next steps
 
-1. Document the `model` payload (`rmd` chunks and named records).
-2. Document `cellgrup`, `region` and `planinfo` for the level loader.
-3. Port the validated parser to `src/engine/`.
+1. Bind the `cellgrup` textures and validate the material/UV path.
+2. Document `region` and `planinfo` for the level loader.
+3. Port the remaining validated readers to `src/engine/`.

@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstdint>
 #include <cstdlib>
 #include <exception>
@@ -7,6 +8,7 @@
 #include <vector>
 
 #include "bo2/engine/big_archive.hpp"
+#include "bo2/engine/cell_group.hpp"
 #include "bo2/engine/dds.hpp"
 #include "bo2/platform/headless/software_renderer.hpp"
 #include "bo2/version.hpp"
@@ -16,6 +18,9 @@ namespace {
 struct Options {
     std::string list_big;
     bool frame = false;
+    bool level = false;
+    bool eye_set = false;
+    bool target_set = false;
     std::string big;
     std::string entry;
     std::string out;
@@ -87,6 +92,8 @@ Options parse_options(int argc, char** argv) {
             options.list_big = next_argument(index, argc, argv);
         } else if (argument == "--frame") {
             options.frame = true;
+        } else if (argument == "--level") {
+            options.level = true;
         } else if (argument == "--big") {
             options.big = next_argument(index, argc, argv);
         } else if (argument == "--entry") {
@@ -99,8 +106,10 @@ Options parse_options(int argc, char** argv) {
             options.frame_options.height = parse_dimension(next_argument(index, argc, argv), "height");
         } else if (argument == "--eye") {
             options.frame_options.camera.eye = parse_vec3(next_argument(index, argc, argv), "eye");
+            options.eye_set = true;
         } else if (argument == "--target") {
             options.frame_options.camera.target = parse_vec3(next_argument(index, argc, argv), "target");
+            options.target_set = true;
         } else if (argument == "--fov") {
             options.frame_options.camera.fov_degrees =
                 parse_float(next_argument(index, argc, argv), "fov");
@@ -108,8 +117,10 @@ Options parse_options(int argc, char** argv) {
             usage_error("unknown argument: " + argument);
         }
     }
-    if (!options.list_big.empty() && options.frame) {
-        usage_error("--list-big and --frame are mutually exclusive");
+    const int modes = (!options.list_big.empty() ? 1 : 0) + (options.frame ? 1 : 0) +
+                      (options.level ? 1 : 0);
+    if (modes > 1) {
+        usage_error("--list-big, --frame and --level are mutually exclusive");
     }
     return options;
 }
@@ -129,6 +140,47 @@ const bo2::engine::BigEntry* pick_texture(const bo2::engine::BigArchive& archive
         }
     }
     return needle.empty() ? first : nullptr;
+}
+
+int render_level_frame(const Options& options) {
+    if (options.big.empty()) {
+        usage_error("--level requires --big");
+    }
+    if (options.out.empty()) {
+        usage_error("--level requires --out");
+    }
+    const bo2::engine::BigArchive archive = bo2::engine::BigArchive::load(options.big);
+    const bo2::engine::BigEntry* entry = nullptr;
+    for (const bo2::engine::BigEntry& candidate : archive.entries()) {
+        if (bo2::engine::iequals(candidate.type, "cellgrup")) {
+            entry = &candidate;
+            break;
+        }
+    }
+    if (entry == nullptr) {
+        throw std::runtime_error("no cellgrup entry in " + options.big);
+    }
+    const std::vector<std::uint8_t> bytes = archive.extract(*entry);
+    const bo2::engine::LevelGeometry geometry = bo2::engine::parse_cell_group(bytes);
+
+    bo2::platform::headless::FrameOptions frame = options.frame_options;
+    if (!options.eye_set || !options.target_set) {
+        const bo2::engine::Vec3 center =
+            (geometry.minimum + geometry.maximum) * 0.5f;
+        const bo2::engine::Vec3 extent = geometry.maximum - geometry.minimum;
+        const float size = std::max({extent.x, extent.y, extent.z});
+        frame.camera.eye = center + bo2::engine::Vec3{size * 0.9f, -size * 1.15f, size * 0.8f};
+        frame.camera.target = center;
+    }
+    frame.camera.up = {0.0f, 0.0f, 1.0f};
+    const std::vector<std::uint8_t> pixels =
+        bo2::platform::headless::render_level(geometry, frame);
+    bo2::platform::headless::write_ppm(options.out, frame.width, frame.height, pixels);
+    std::cout << "cellgrup: " << entry->name << " (models " << geometry.model_count
+              << ", skipped " << geometry.skipped_models << ", triangles "
+              << geometry.triangles.size() << ", vertices " << geometry.positions.size() << ")\n";
+    std::cout << "frame: " << options.out << " (" << frame.width << 'x' << frame.height << ")\n";
+    return 0;
 }
 
 int list_big(const std::string& path) {
@@ -179,6 +231,9 @@ int main(int argc, char** argv) {
         }
         if (options.frame) {
             return render_frame(options);
+        }
+        if (options.level) {
+            return render_level_frame(options);
         }
         std::cout << bo2::kProjectName << ' ' << bo2::version() << '\n';
         return 0;

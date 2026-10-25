@@ -38,7 +38,12 @@ ctest --preset linux-debug --output-on-failure
 BO2NX_ASSETS_DIR=/path/to/game ctest --preset linux-debug   # asset-gated on
 ./scripts/ci.sh                                             # everything + policy check
 
-# Asset frame (manual, needs the installed tree)
+# Level frame (manual, needs the installed tree)
+./build/linux-debug/bo2nx --level \
+  --big external/installed/media/gogames/bo2/resources/levels/sanctuary/sanctuary.big \
+  --out /tmp/sanctuary.ppm
+
+# Texture preview (manual, needs the installed tree)
 ./build/linux-debug/bo2nx --frame \
   --big external/installed/media/gogames/bo2/resources/levels/sanctuary/sanctuary.big \
   --entry SewBrick3 --out /tmp/bo2-frame.ppm
@@ -46,7 +51,7 @@ BO2NX_ASSETS_DIR=/path/to/game ctest --preset linux-debug   # asset-gated on
 
 ## Visual gate
 
-The headless renderer writes a PPM preview now. `tools/oracle/compare_frame.sh`
-lands with the level renderer; the side-by-side gate still applies before
-a demo. Do not show a level demo until the frame recognizably matches the
-original.
+The headless renderer draws the `cellgrup` shell with flat material
+colors now. Texture binding and `tools/oracle/compare_frame.sh` are the
+next steps; the side-by-side gate still applies before a demo. Do not
+show a level demo until the frame recognizably matches the original.

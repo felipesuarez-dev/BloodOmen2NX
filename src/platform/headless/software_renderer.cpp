@@ -162,6 +162,28 @@ void rasterize(const ScreenVertex& v0, const ScreenVertex& v1, const ScreenVerte
     }
 }
 
+engine::Mat4 make_view_projection(const Camera& camera, float aspect, float near_plane,
+                                  float far_plane) {
+    if (camera.fov_degrees <= 1.0f || camera.fov_degrees >= 179.0f) {
+        throw std::runtime_error("unsupported field of view");
+    }
+    const engine::Vec3 forward = camera.target - camera.eye;
+    if (engine::length(forward) < 1.0e-6f) {
+        throw std::runtime_error("camera eye and target are the same");
+    }
+    engine::Vec3 up = camera.up;
+    if (engine::length(up) < 1.0e-6f) {
+        up = {0.0f, 1.0f, 0.0f};
+    }
+    if (engine::length(engine::cross(engine::normalize(forward), engine::normalize(up))) < 1.0e-6f) {
+        up = {0.0f, 0.0f, 1.0f};
+    }
+    const engine::Mat4 view = engine::Mat4::look_at(camera.eye, camera.target, up);
+    const engine::Mat4 projection =
+        engine::Mat4::perspective(camera.fov_degrees * kPi / 180.0f, aspect, near_plane, far_plane);
+    return projection * view;
+}
+
 struct Face {
     engine::Vec3 corners[4];
     float shade;
@@ -202,23 +224,9 @@ std::vector<std::uint8_t> render_textured_cube(const engine::Image& texture,
         options.height > 8192) {
         throw std::runtime_error("unsupported frame size");
     }
-    if (options.camera.fov_degrees <= 1.0f || options.camera.fov_degrees >= 179.0f) {
-        throw std::runtime_error("unsupported field of view");
-    }
-    const engine::Vec3 forward = options.camera.target - options.camera.eye;
-    if (engine::length(forward) < 1.0e-6f) {
-        throw std::runtime_error("camera eye and target are the same");
-    }
-    engine::Vec3 up{0.0f, 1.0f, 0.0f};
-    if (engine::length(engine::cross(engine::normalize(forward), up)) < 1.0e-6f) {
-        up = {0.0f, 0.0f, 1.0f};
-    }
-
     const float aspect = static_cast<float>(options.width) / static_cast<float>(options.height);
-    const engine::Mat4 view = engine::Mat4::look_at(options.camera.eye, options.camera.target, up);
-    const engine::Mat4 projection =
-        engine::Mat4::perspective(options.camera.fov_degrees * kPi / 180.0f, aspect, 0.05f, 50.0f);
-    const engine::Mat4 view_projection = projection * view;
+    const engine::Mat4 view_projection =
+        make_view_projection(options.camera, aspect, 0.05f, 50.0f);
 
     const std::size_t pixel_count = static_cast<std::size_t>(options.width) * options.height;
     std::vector<std::uint8_t> color(pixel_count * 4);
@@ -249,6 +257,103 @@ std::vector<std::uint8_t> render_textured_cube(const engine::Image& texture,
                   depth);
         rasterize(screen[0], screen[2], screen[3], texture, options.width, options.height, color,
                   depth);
+    }
+    return color;
+}
+
+std::vector<std::uint8_t> render_level(const engine::LevelGeometry& geometry,
+                                            const FrameOptions& options) {
+    if (geometry.positions.empty() || geometry.triangles.empty()) {
+        throw std::runtime_error("cannot render empty level geometry");
+    }
+    if (options.width == 0 || options.height == 0 || options.width > 8192 ||
+        options.height > 8192) {
+        throw std::runtime_error("unsupported frame size");
+    }
+    const float aspect = static_cast<float>(options.width) / static_cast<float>(options.height);
+    engine::Vec3 minimum = geometry.minimum;
+    engine::Vec3 maximum = geometry.maximum;
+    if (!(minimum.x <= maximum.x)) {
+        minimum = geometry.positions.front();
+        maximum = geometry.positions.front();
+        for (const engine::Vec3& position : geometry.positions) {
+            minimum.x = std::min(minimum.x, position.x);
+            minimum.y = std::min(minimum.y, position.y);
+            minimum.z = std::min(minimum.z, position.z);
+            maximum.x = std::max(maximum.x, position.x);
+            maximum.y = std::max(maximum.y, position.y);
+            maximum.z = std::max(maximum.z, position.z);
+        }
+    }
+    const float distance = engine::length(options.camera.eye - options.camera.target);
+    const float extent = std::max({maximum.x - minimum.x, maximum.y - minimum.y,
+                                   maximum.z - minimum.z});
+    const float near_plane = std::max(0.05f, distance * 0.001f);
+    const float far_plane = distance + extent * 2.0f + 10.0f;
+    const engine::Mat4 view_projection =
+        make_view_projection(options.camera, aspect, near_plane, far_plane);
+    const std::size_t pixel_count = static_cast<std::size_t>(options.width) * options.height;
+    std::vector<std::uint8_t> color(pixel_count * 4);
+    for (std::size_t pixel = 0; pixel < pixel_count; ++pixel) {
+        color[pixel * 4 + 0] = 20;
+        color[pixel * 4 + 1] = 22;
+        color[pixel * 4 + 2] = 30;
+        color[pixel * 4 + 3] = 255;
+    }
+    std::vector<float> depth(pixel_count, std::numeric_limits<float>::infinity());
+
+    const std::array<engine::Vec3, 8> palette = {{
+        {0.62f, 0.56f, 0.48f}, {0.50f, 0.52f, 0.56f}, {0.58f, 0.47f, 0.38f},
+        {0.45f, 0.50f, 0.43f}, {0.54f, 0.44f, 0.42f}, {0.60f, 0.56f, 0.44f},
+        {0.42f, 0.46f, 0.52f}, {0.52f, 0.48f, 0.58f},
+    }};
+    std::array<engine::Image, 8> materials;
+    for (std::size_t index = 0; index < materials.size(); ++index) {
+        engine::Image image;
+        image.width = 1;
+        image.height = 1;
+        image.rgba = {
+            static_cast<std::uint8_t>(std::clamp(palette[index].x * 255.0f, 0.0f, 255.0f)),
+            static_cast<std::uint8_t>(std::clamp(palette[index].y * 255.0f, 0.0f, 255.0f)),
+            static_cast<std::uint8_t>(std::clamp(palette[index].z * 255.0f, 0.0f, 255.0f)),
+            255,
+        };
+        materials[index] = std::move(image);
+    }
+
+    const engine::Vec3 light = engine::normalize({-0.35f, 0.55f, 0.75f});
+    auto shade_of = [&light](const engine::Vec3& normal) {
+        const engine::Vec3 unit = engine::normalize(normal);
+        if (engine::length(unit) < 0.5f) {
+            return 0.85f;
+        }
+        return 0.25f + 0.75f * std::fabs(engine::dot(unit, light));
+    };
+
+    for (const engine::LevelTriangle& triangle : geometry.triangles) {
+        if (triangle.a >= geometry.positions.size() || triangle.b >= geometry.positions.size() ||
+            triangle.c >= geometry.positions.size()) {
+            throw std::runtime_error("level triangle index is out of range");
+        }
+        const engine::Vec3 positions[3] = {geometry.positions[triangle.a],
+                                           geometry.positions[triangle.b],
+                                           geometry.positions[triangle.c]};
+        const engine::Vec3 normals[3] = {geometry.normals[triangle.a], geometry.normals[triangle.b],
+                                         geometry.normals[triangle.c]};
+        ScreenVertex screen[3];
+        bool visible = true;
+        for (int corner = 0; corner < 3; ++corner) {
+            if (!project(view_projection, positions[corner], 0.0f, 0.0f, shade_of(normals[corner]),
+                         options.width, options.height, screen[corner])) {
+                visible = false;
+                break;
+            }
+        }
+        if (!visible) {
+            continue;
+        }
+        rasterize(screen[0], screen[1], screen[2], materials[triangle.material % materials.size()],
+                  options.width, options.height, color, depth);
     }
     return color;
 }
