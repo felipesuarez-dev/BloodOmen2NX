@@ -33,7 +33,7 @@ comparison.
 | Cell grid and visibility BSP | done | 173 groups with `cells`; 162 with `cellbsp`; leaf count verified |
 | Cell instances and placement | done | `cellinst` v3/v4; local `cellmdls` templates placed in world space |
 | Cell lights and markers | done | `cellight` v3 and `cellmark` v4 parsed; renderer consumer pending |
-| Material layer records | done | `mlyrcolr`/`mlyrctrl` ranges; untextured fallback uses the diffuse layer |
+| Material layer records | done | `mlyrcolr`/`mlyrctrl`; diagnostic `--material` tints; `.slm` light map open |
 | Host renderer (OpenGL) | done | SDL2/OpenGL window, free camera and Xvfb capture |
 | Switch renderer (deko3d) | todo | M2+ |
 | Audio | todo | M2+ |

@@ -57,8 +57,12 @@ and assets) is complete.
   10 markers; the renderer does not consume them yet.
 - Material layer records are parsed: `mlyrcolr` (three RGBA colors) and
   `mlyrctrl` (three `u32`/`f32`/`u16`/`u16` controls) per material.
-  Untextured surfaces use the diffuse layer; textured surfaces keep the
-  texture.
+  Untextured surfaces use the diffuse layer. The D3D8 trace shows texture
+  stage 0 as `MODULATE`/`MODULATE2X` with `TEXTURE × DIFFUSE`; the host
+  exposes diagnostic `--material` tints. A direct tint darkens sanctuary
+  to mean 0.086 (from 0.107) and clips its maximum, so the static light
+  map is still required. `sanctuary.slm` (388,673 bytes, 13 entries) is
+  the next input.
 - The SDL2 + OpenGL host backend is built: `bo2nx --sdl` opens a window,
   draws the level with textures, a free camera and right-drag orbit, and
   captures a framebuffer with `--out`. It uses the same engine data as
@@ -67,8 +71,8 @@ and assets) is complete.
 
 ## What is not done
 
-- The material lighting equation (`mlyrcolr`/`mlyrctrl`); the layer
-  records are parsed, but textured surfaces keep the texture.
+- The `.slm` light map and the vertex diffuse equation; the `--material`
+  tints are diagnostic until the light map is decoded.
 - Animation and skinning (`animatio`, `animreel`, `vtxweigh`, `jointidx`).
 - `region`, `planinfo`, `bpackage`, `strtable`, `musicbnk`, `texfont`,
   `liteinfo`.
@@ -82,7 +86,7 @@ and assets) is complete.
 
 | # | Unknown | Next action | Read first |
 |---|---|---|---|
-| 0 | Material lighting equation | Decompile the render-model material apply path | `docs/FORMATS/models.md` |
+| 0 | `.slm` light map and vertex diffuse | Decode `litedata/sanctuary.slm` and combine it with the material layers | `docs/FORMATS/models.md` |
 | 1 | Shared `model` entries and entity semantics | Bind the shared models and decode the consumers | `docs/FORMATS/models.md` |
 | 2 | `game.erg` parser details | Decompile the key lookup in `bo2.exe` | `docs/FORMATS/erg.md` |
 | 3 | Original logic tick | Measure from the oracle once it runs, or from the main loop | `docs/ARCHITECTURE.md` |
@@ -92,7 +96,7 @@ and assets) is complete.
 
 ## Next steps
 
-1. Decode the material lighting equation.
+1. Decode the `.slm` light map and make the material tint faithful.
 2. Bind the shared `model` entries and decode animation/skinning.
 3. Compare the SDL2/OpenGL frame with the original under Wine/Xvfb.
 

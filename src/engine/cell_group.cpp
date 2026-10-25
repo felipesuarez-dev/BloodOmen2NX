@@ -987,4 +987,39 @@ LevelGeometry parse_cell_group(const std::vector<std::uint8_t>& data) {
     return parse_cell_group(data, no_symbols, no_names);
 }
 
+Vec3 material_tint(const LevelGeometry& geometry, const LevelTriangle& triangle,
+                   MaterialMode mode) {
+    if (mode == MaterialMode::Off) {
+        return {1.0f, 1.0f, 1.0f};
+    }
+    const std::size_t index = static_cast<std::size_t>(triangle.material);
+    if (index >= geometry.materials.size()) {
+        return {1.0f, 1.0f, 1.0f};
+    }
+    const MaterialLayer& layer = geometry.materials[index];
+    if (!layer.has_colors) {
+        return {1.0f, 1.0f, 1.0f};
+    }
+    Vec3 color{};
+    if (mode == MaterialMode::Diffuse) {
+        color = layer.colors[1];
+    } else {
+        color = layer.colors[0] + layer.colors[1] + layer.colors[2];
+        if (mode == MaterialMode::Layers2x) {
+            color = color * 2.0f;
+        }
+    }
+    if (layer.has_controls) {
+        const float weight = layer.controls[1].weight;
+        if (weight >= 0.0f && weight <= 1.0f) {
+            color = color * weight;
+        }
+    }
+    const float limit = (mode == MaterialMode::Layers2x) ? 2.0f : 1.0f;
+    color.x = std::clamp(color.x, 0.0f, limit);
+    color.y = std::clamp(color.y, 0.0f, limit);
+    color.z = std::clamp(color.z, 0.0f, limit);
+    return color;
+}
+
 }  // namespace bo2::engine

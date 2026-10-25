@@ -158,7 +158,8 @@ engine::Mat4 view_projection(const Camera& camera, float aspect, float near_plan
 }
 
 void draw_level(const engine::LevelGeometry& geometry, const std::vector<GLuint>& textures,
-                const Camera& camera, std::uint32_t width, std::uint32_t height) {
+                const Camera& camera, std::uint32_t width, std::uint32_t height,
+                engine::MaterialMode material_mode) {
     glViewport(0, 0, static_cast<GLsizei>(width), static_cast<GLsizei>(height));
     glClearColor(20.0f / 255.0f, 22.0f / 255.0f, 30.0f / 255.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -208,6 +209,7 @@ void draw_level(const engine::LevelGeometry& geometry, const std::vector<GLuint>
             (textured && triangle.c < geometry.texcoords.size()) ? geometry.texcoords[triangle.c]
                                                                  : engine::Vec2{},
         };
+        const engine::Vec3 tint = engine::material_tint(geometry, triangle, material_mode);
         if (textured) {
             glEnable(GL_TEXTURE_2D);
             glBindTexture(GL_TEXTURE_2D, textures[static_cast<std::size_t>(triangle.texture)]);
@@ -220,7 +222,7 @@ void draw_level(const engine::LevelGeometry& geometry, const std::vector<GLuint>
         for (int corner = 0; corner < 3; ++corner) {
             const float shade = shade_of(normals[corner]);
             if (textured) {
-                glColor4f(shade, shade, shade, 1.0f);
+                glColor4f(shade * tint.x, shade * tint.y, shade * tint.z, 1.0f);
                 glTexCoord2f(uv[corner].x, uv[corner].y);
             }
             glVertex3f(positions[corner].x, positions[corner].y, positions[corner].z);
@@ -342,7 +344,8 @@ int run_level(const engine::LevelGeometry& geometry,
     const std::vector<GLuint> texture_ids = upload_textures(textures);
     OrbitCamera orbit = make_orbit(options.camera);
     if (!options.screenshot.empty()) {
-        draw_level(geometry, texture_ids, current_camera(orbit), options.width, options.height);
+        draw_level(geometry, texture_ids, current_camera(orbit), options.width, options.height,
+                   options.material_mode);
         glFinish();
         capture(options.screenshot, options.width, options.height);
         return 0;
@@ -397,7 +400,8 @@ int run_level(const engine::LevelGeometry& geometry,
         if (keys[SDL_SCANCODE_Q] != 0) {
             orbit.target.z -= step;
         }
-        draw_level(geometry, texture_ids, current_camera(orbit), options.width, options.height);
+        draw_level(geometry, texture_ids, current_camera(orbit), options.width, options.height,
+                   options.material_mode);
         SDL_GL_SwapWindow(context->window);
         SDL_Delay(1);
     }

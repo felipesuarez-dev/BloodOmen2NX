@@ -40,7 +40,9 @@ BIG=external/installed/media/gogames/bo2/resources/levels/sanctuary/sanctuary.bi
 
 The geometry is drawn with the DDS textures resolved from the cellgrup
 symbols; materials without a texture entry use the diffuse material
-layer. A triangle near-plane clipper keeps interior cameras stable; a
+layer. `--material` applies the material layers as a diagnostic tint on
+textured surfaces; the default `off` keeps the preview frame. The tint is
+not the final lighting equation (see `docs/FORMATS/models.md`). A triangle near-plane clipper keeps interior cameras stable; a
 camera inside the closed shell sees the shell interior, while the
 isometric frame shows the level.
 
@@ -73,6 +75,7 @@ mouse button orbits, the wheel zooms and `Escape` quits.
 | `--out <file.ppm>` | Frame output |
 | `--eye x,y,z`, `--target x,y,z` | Free camera |
 | `--width`, `--height`, `--fov` | Frame size and field of view |
+| `--material <mode>` | Diagnostic material tint: `off`, `diffuse`, `layers`, `layers2x` |
 
 Planned with the level pipeline:
 

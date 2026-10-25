@@ -21,6 +21,7 @@ struct FrameOptions {
     std::uint32_t width = 640;
     std::uint32_t height = 480;
     Camera camera;
+    engine::MaterialMode material_mode = engine::MaterialMode::Off;
 };
 
 std::vector<std::uint8_t> render_textured_cube(const engine::Image& texture,

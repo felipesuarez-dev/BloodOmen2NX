@@ -1,8 +1,8 @@
 # Models and animation
 
-Status: **static cell geometry, base textures, the cell grid/BSP and
-the material layer records are decoded; the material lighting equation and
-animation are open**.
+Status: **static cell geometry, base textures, the cell grid/BSP, the
+material layer records and the D3D texture-stage equation are decoded; the
+light map and animation are open**.
 
 The static shell of a level lives in the `cellgrup` entry of its `.big`.
 The shared `model` entries (characters, props, particles) use the same
@@ -62,7 +62,7 @@ u32   2
 | `uvs` | `u32 set`, `u32 count` + `count` × 2 floats | One chunk per UV set |
 | `mlyrcolr` | `u32 start`, `u32 count` + `count` × 48 bytes | Three RGBA colors; see Material layers |
 | `mlyrctrl` | `u32 start`, `u32 count` + `count` × 12 bytes | Three controls; see Material layers |
-| `mtlctrl` | `u32 start`, `u32 count` + `count` × 12 bytes | Three `u32` values; semantics open |
+| `mtlctrl` | `u32 count` + `count` × 12 bytes | Three `u32` values; semantics open |
 | `texture` | `u32 start`, `u32 count` + per-material records | Texture symbol per material; bound by the host |
 | `mdlattr` | Named attribute table | Model metadata |
 | `vtxweigh` | `u32 count` + weights | Skinning; static cell models are zero |
@@ -108,14 +108,17 @@ material color.
 
 ### Material layers
 
-The `mlyrcolr`, `mlyrctrl` and `mtlctrl` chunks describe the material
-layers. Each chunk starts with a material range:
+The `mlyrcolr` and `mlyrctrl` chunks describe the material layers. Each
+starts with a material range:
 
 ```
 u32 start
 u32 count
 count × record
 ```
+
+`mtlctrl` differs: it starts with a `u32 count` followed by `count`
+records (no start field).
 
 | Chunk | Record | Fields |
 |---|---|---|
@@ -132,11 +135,34 @@ elements for chunk IDs `0xd..0x10` (`mlyrcolr`), `0x11..0x14`
 The host parses `mlyrcolr` and `mlyrctrl` into
 `LevelGeometry::materials`. The software renderer uses the second layer
 (the diffuse slot after the ambient slot) as the surface color when a
-material has no texture, scaled by that layer's control weight. Textured
-surfaces keep the texture. The reference colors are dark: in
-`sanctuary`, layer 0 averages 0.007, layer 1 averages 0.100 and layer 2
-is 0.000, so the colors behave like lighting/ambient data rather than
-albedo. The exact lighting equation is still open.
+material has no texture, scaled by that layer's control weight.
+
+The D3D8 trace of the reference build (captured from the loading/UI path)
+sets texture stage 0 to `D3DTOP_MODULATE` (4) or `D3DTOP_MODULATE2X` (5),
+with `COLORARG1 = TEXTURE`, `COLORARG2 = DIFFUSE`, and the same alpha
+operations. Stages 1 and 2 are `SELECTARG1` pass-through. The final color
+is therefore `texture × vertex diffuse` (doubled for `MODULATE2X`); the
+material colors feed the vertex diffuse, not a separate texture-stage
+constant.
+
+The host exposes the raw layers and a diagnostic tint:
+`--material off|diffuse|layers|layers2x`. `off` keeps the current preview,
+`diffuse` uses layer 1, `layers` sums the three and `layers2x` doubles the
+sum. Applying the direct tint to `sanctuary` darkens the frame from mean
+0.107 to 0.086 and clips the maximum from 0.667 to 0.118. That negative
+result shows the material colors cannot be the albedo multiplier on their
+own: the static light map is missing.
+
+`sanctuary.big` carries `litedata/sanctuary.slm` (388,673 bytes). Its
+header is `version = 1`, `header size = 112`, `count = 13` and the string
+`cryptexithall`; the 13 lights match the `cellight` count. The light map
+or the per-vertex lighting must modulate the material layers before the
+texture stage. The `--material` modes stay diagnostic until that path is
+decoded.
+
+The observed `mtlctrl` record is `{0, 0x004c0000, 0x00000100}` per
+material. The observed `mlyrctrl` record is `{0x000a0000|1|6, 1.0, 0, 0}`;
+the high word and the two `u16` fields are not interpreted.
 
 ## Cell grid and visibility
 
@@ -404,7 +430,8 @@ interior, while the default isometric frame shows the level.
 
 ## Open questions
 
-- The `mlyrcolr`/`mlyrctrl` lighting equation and the `mtlctrl` values.
+- The `litedata`/`.slm` light map, the vertex diffuse equation and the
+  `mtlctrl` values.
 - The 40/42-byte `prims` extra record.
 - `cells` flags, `cellattr`/`attrs` value semantics, the `portal2`
   plane/index and the BSP traversal.
@@ -419,5 +446,5 @@ interior, while the default isometric frame shows the level.
 
 1. Use the cell grid and BSP for culling and cell visibility.
 2. Bind the shared `model` entries and decode `cellanim`.
-3. Decode the material lighting equation.
+3. Decode the `.slm` light map and make the material tint faithful.
 4. Decode the animation/skeleton chunks.

@@ -156,7 +156,8 @@ bool project_clip(const ClipVertex& vertex, std::uint32_t width, std::uint32_t h
 
 void rasterize(const ScreenVertex& v0, const ScreenVertex& v1, const ScreenVertex& v2,
                const engine::Image& texture, std::uint32_t width, std::uint32_t height,
-               std::vector<std::uint8_t>& color, std::vector<float>& depth) {
+               std::vector<std::uint8_t>& color, std::vector<float>& depth,
+               const engine::Vec3& tint = {1.0f, 1.0f, 1.0f}) {
     const float area = edge(v0.x, v0.y, v1.x, v1.y, v2.x, v2.y);
     if (std::fabs(area) < 1.0e-6f) {
         return;
@@ -204,8 +205,10 @@ void rasterize(const ScreenVertex& v0, const ScreenVertex& v1, const ScreenVerte
             for (std::size_t channel = 0; channel < 3; ++channel) {
                 const float source = static_cast<float>(
                     channel == 0 ? texel.r : (channel == 1 ? texel.g : texel.b));
+                const float channel_tint = channel == 0 ? tint.x : (channel == 1 ? tint.y : tint.z);
                 const float destination = static_cast<float>(color[out + channel]);
-                const float blended = source * shade * alpha + destination * (1.0f - alpha);
+                const float blended =
+                    source * shade * channel_tint * alpha + destination * (1.0f - alpha);
                 color[out + channel] = static_cast<std::uint8_t>(std::clamp(blended + 0.5f, 0.0f, 255.0f));
             }
             depth[pixel] = z;
@@ -448,6 +451,8 @@ std::vector<std::uint8_t> render_level(const engine::LevelGeometry& geometry,
                        ? materials[static_cast<std::size_t>(triangle.material)]
                        : palette_images[static_cast<std::size_t>(triangle.material) %
                                         palette_images.size()]);
+        const engine::Vec3 tint =
+            engine::material_tint(geometry, triangle, options.material_mode);
         for (std::size_t index = 1; index + 1 < polygon.size(); ++index) {
             ScreenVertex screen[3];
             bool visible = true;
@@ -463,7 +468,7 @@ std::vector<std::uint8_t> render_level(const engine::LevelGeometry& geometry,
                 continue;
             }
             rasterize(screen[0], screen[1], screen[2], image, options.width, options.height, color,
-                      depth);
+                      depth, textured ? tint : engine::Vec3{1.0f, 1.0f, 1.0f});
         }
     }
     return color;

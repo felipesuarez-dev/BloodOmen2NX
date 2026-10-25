@@ -23,6 +23,7 @@ struct WindowOptions {
     std::string title = "Blood Omen 2 NX";
     std::string screenshot;
     bool hidden = false;
+    engine::MaterialMode material_mode = engine::MaterialMode::Off;
     Camera camera;
 };
 

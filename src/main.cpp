@@ -61,6 +61,22 @@ std::uint32_t parse_dimension(const std::string& text, const char* name) {
     return static_cast<std::uint32_t>(value);
 }
 
+bo2::engine::MaterialMode parse_material_mode(const std::string& text) {
+    if (text == "off") {
+        return bo2::engine::MaterialMode::Off;
+    }
+    if (text == "diffuse") {
+        return bo2::engine::MaterialMode::Diffuse;
+    }
+    if (text == "layers") {
+        return bo2::engine::MaterialMode::Layers;
+    }
+    if (text == "layers2x") {
+        return bo2::engine::MaterialMode::Layers2x;
+    }
+    usage_error("invalid material mode: " + text);
+}
+
 bo2::engine::Vec3 parse_vec3(const std::string& text, const char* name) {
     const std::size_t first = text.find(',');
     const std::size_t second = first == std::string::npos ? std::string::npos : text.find(',', first + 1);
@@ -91,7 +107,8 @@ Options parse_options(int argc, char** argv) {
                 << "  --height <n>          frame height (default 480)\n"
                 << "  --eye x,y,z           camera position (default 2.4,1.6,2.4)\n"
                 << "  --target x,y,z        camera target (default 0,0,0)\n"
-                << "  --fov <degrees>       vertical field of view (default 55)\n";
+                << "  --fov <degrees>       vertical field of view (default 55)\n"
+                << "  --material <mode>     material tint: off, diffuse, layers, layers2x\n";
             std::exit(0);
         }
         if (argument == "--list-big") {
@@ -121,6 +138,9 @@ Options parse_options(int argc, char** argv) {
         } else if (argument == "--fov") {
             options.frame_options.camera.fov_degrees =
                 parse_float(next_argument(index, argc, argv), "fov");
+        } else if (argument == "--material") {
+            options.frame_options.material_mode =
+                parse_material_mode(next_argument(index, argc, argv));
         } else {
             usage_error("unknown argument: " + argument);
         }
@@ -268,6 +288,7 @@ int run_sdl(const Options& options) {
     window.camera.target = options.frame_options.camera.target;
     window.camera.fov_degrees = options.frame_options.camera.fov_degrees;
     window.camera.up = {0.0f, 0.0f, 1.0f};
+    window.material_mode = options.frame_options.material_mode;
     if (options.big.empty()) {
         return bo2::platform::sdl::run_triangle(window);
     }

@@ -33,6 +33,8 @@ struct MaterialLayer {
     bool has_controls = false;
 };
 
+enum class MaterialMode { Off, Diffuse, Layers, Layers2x };
+
 struct CellAttributeTable {
     std::string name;
     std::uint32_t size = 0;
@@ -155,5 +157,8 @@ LevelGeometry parse_cell_group(const std::vector<std::uint8_t>& data);
 LevelGeometry parse_cell_group(const std::vector<std::uint8_t>& data,
                                const std::vector<std::uint16_t>& symbols,
                                const std::vector<std::string>& names);
+
+Vec3 material_tint(const LevelGeometry& geometry, const LevelTriangle& triangle,
+                   MaterialMode mode);
 
 }  // namespace bo2::engine

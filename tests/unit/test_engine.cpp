@@ -596,6 +596,24 @@ void test_cell_group() {
     CHECK(geometry.materials[0].controls[1].arg0 == 3);
     CHECK(geometry.materials[0].controls[1].arg1 == 4);
     CHECK(!geometry.materials[1].has_colors);
+    const bo2::engine::Vec3 off_tint = bo2::engine::material_tint(
+        geometry, geometry.triangles[0], bo2::engine::MaterialMode::Off);
+    CHECK(std::fabs(off_tint.x - 1.0f) < 1.0e-5f);
+    const bo2::engine::Vec3 diffuse_tint = bo2::engine::material_tint(
+        geometry, geometry.triangles[0], bo2::engine::MaterialMode::Diffuse);
+    CHECK(std::fabs(diffuse_tint.x - 0.9f) < 1.0e-5f);
+    CHECK(std::fabs(diffuse_tint.y - 0.1f) < 1.0e-5f);
+    CHECK(std::fabs(diffuse_tint.z - 0.05f) < 1.0e-5f);
+    const bo2::engine::Vec3 layers_tint = bo2::engine::material_tint(
+        geometry, geometry.triangles[0], bo2::engine::MaterialMode::Layers);
+    CHECK(std::fabs(layers_tint.x - 1.0f) < 1.0e-5f);
+    CHECK(std::fabs(layers_tint.y - 0.6f) < 1.0e-5f);
+    CHECK(std::fabs(layers_tint.z - 0.8f) < 1.0e-5f);
+    const bo2::engine::Vec3 layers2x_tint = bo2::engine::material_tint(
+        geometry, geometry.triangles[0], bo2::engine::MaterialMode::Layers2x);
+    CHECK(std::fabs(layers2x_tint.x - 2.0f) < 1.0e-5f);
+    CHECK(std::fabs(layers2x_tint.y - 1.2f) < 1.0e-5f);
+    CHECK(std::fabs(layers2x_tint.z - 1.6f) < 1.0e-5f);
     CHECK(std::fabs(geometry.minimum.x) < 1.0e-5f);
     CHECK(std::fabs(geometry.maximum.x - 1.0f) < 1.0e-5f);
     CHECK(geometry.has_cell_grid);

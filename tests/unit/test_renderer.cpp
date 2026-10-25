@@ -123,6 +123,28 @@ int main() {
         bo2::platform::headless::render_level(colored, level_options);
     CHECK(colored_frame[center + 1] > 150 && colored_frame[center + 0] < 100);
 
+    bo2::engine::LevelGeometry tinted = level_quad();
+    tinted.texcoords = {{0.0f, 0.0f}, {1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f}};
+    for (bo2::engine::LevelTriangle& triangle : tinted.triangles) {
+        triangle.texture = 0;
+    }
+    tinted.materials.resize(1);
+    tinted.materials[0].has_colors = true;
+    tinted.materials[0].colors[1] = {0.5f, 0.5f, 0.5f};
+    bo2::engine::Image white;
+    white.width = 1;
+    white.height = 1;
+    white.rgba = {255, 255, 255, 255};
+    const std::vector<bo2::engine::Image> white_texture = {white};
+    const std::vector<std::uint8_t> plain_frame =
+        bo2::platform::headless::render_level(tinted, white_texture, level_options);
+    bo2::platform::headless::FrameOptions tint_options = level_options;
+    tint_options.material_mode = bo2::engine::MaterialMode::Diffuse;
+    const std::vector<std::uint8_t> tint_frame =
+        bo2::platform::headless::render_level(tinted, white_texture, tint_options);
+    CHECK(plain_frame[center + 0] > 100);
+    CHECK(tint_frame[center + 0] < plain_frame[center + 0] * 0.7);
+
     if (failures != 0) {
         std::cerr << failures << " check(s) failed\n";
         return 1;
