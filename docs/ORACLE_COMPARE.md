@@ -14,7 +14,15 @@ behaviour, not to run the game for fun.
 
 ## Status
 
-Not started. The oracle is optional and time-boxed; see
+**Launches, frame capture pending.** On 2026-10-25 the Spanish GoldMaster
+launches under Wine 9.0 on Xvfb: the initial warning dialog appears and
+the D3D8 device is created (vertex buffers are locked). After accepting
+the dialog the process faults at `0x56e2c9` in `FUN_0056e2b0` with a null
+`param_1[2]` (`read access to 0x1c`). The install tree was mounted as
+`C:\gogames\bo2` in a private prefix, with `bo2.exe`, `data/` and the
+`code.big`/`pc.rkv`/`resources` files at the root. The next step is to
+inspect the display/init path behind `FUN_0056e2b0` and the GOG registry
+or launcher requirements. The oracle remains optional and time-boxed; see
 `docs/RUNNING.md`.
 
 ## Rules
