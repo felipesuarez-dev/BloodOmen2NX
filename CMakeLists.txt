@@ -43,6 +43,7 @@ if(BO2NX_ENABLE_SDL)
     find_package(OpenGL QUIET)
     if(SDL2_FOUND AND OPENGL_FOUND)
         add_library(bo2_platform_sdl STATIC
+            src/platform/sdl/render_pipeline.cpp
             src/platform/sdl/sdl_backend.cpp
         )
         target_link_libraries(bo2_platform_sdl PUBLIC bo2_engine bo2_platform_core SDL2::SDL2

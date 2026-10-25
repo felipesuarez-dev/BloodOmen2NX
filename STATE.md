@@ -64,7 +64,8 @@ and assets) is complete.
 - Host diagnostics are measured: `--stats` reports the archive, cell
   group, texture and light-map load times, the headless/SDL render time
   and the resident/peak memory. `sanctuary` 640x480 loads in about 250 ms,
-  renders in about 31 ms headless and 35 ms in SDL, with 12-15 MB RSS.
+  renders in about 31 ms headless and 20-22 ms in the SDL shader pipeline,
+  with 12-16 MB RSS.
   Switch hardware numbers are tracked in #49.
 - The `game.erg` configuration parser is verified: quoted keys/values,
   literal backslashes, CRLF, blank lines and an exact round-trip fixture.
@@ -89,9 +90,10 @@ and assets) is complete.
   the next input.
 - The SDL2 + OpenGL host backend is built: `bo2nx --sdl` opens a window,
   draws the level with textures, a free camera and right-drag orbit, and
-  captures a framebuffer with `--out`. It uses the same engine data as
-  the headless path; a 640x480 sanctuary frame is within 0.2% RMSE of the
-  software renderer.
+  captures a framebuffer with `--out`. The level goes through an explicit
+  GLSL 1.20/VBO pipeline with ordered runs, replacing the D3D8
+  fixed-function path. It uses the same engine data as the headless path;
+  a 640x480 sanctuary frame is within 0.2% RMSE of the software renderer.
 
 ## What is not done
 

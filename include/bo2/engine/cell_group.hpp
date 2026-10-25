@@ -173,6 +173,7 @@ LevelGeometry parse_cell_group(const std::vector<std::uint8_t>& data,
 
 Vec3 material_tint(const LevelGeometry& geometry, const LevelTriangle& triangle,
                    MaterialMode mode);
+Vec3 material_color(const LevelGeometry& geometry, const LevelTriangle& triangle);
 std::vector<LevelLightMap> parse_lightmaps(const std::vector<std::uint8_t>& data);
 void assign_model_lightmaps(LevelGeometry& geometry,
                             const std::vector<LevelLightMap>& lightmaps);

@@ -1198,6 +1198,26 @@ void assign_model_lightmaps(LevelGeometry& geometry,
     }
 }
 
+Vec3 material_color(const LevelGeometry& geometry, const LevelTriangle& triangle) {
+    static const Vec3 palette[8] = {
+        {0.62f, 0.56f, 0.48f}, {0.50f, 0.52f, 0.56f}, {0.58f, 0.47f, 0.38f},
+        {0.45f, 0.50f, 0.43f}, {0.54f, 0.44f, 0.42f}, {0.60f, 0.56f, 0.44f},
+        {0.42f, 0.46f, 0.52f}, {0.52f, 0.48f, 0.58f},
+    };
+    const std::size_t index = static_cast<std::size_t>(triangle.material);
+    if (index < geometry.materials.size() && geometry.materials[index].has_colors) {
+        Vec3 color = geometry.materials[index].colors[1];
+        if (geometry.materials[index].has_controls) {
+            const float weight = geometry.materials[index].controls[1].weight;
+            if (weight >= 0.0f && weight <= 1.0f) {
+                color = color * weight;
+            }
+        }
+        return color;
+    }
+    return palette[index % 8];
+}
+
 Vec3 material_tint(const LevelGeometry& geometry, const LevelTriangle& triangle,
                    MaterialMode mode) {
     if (mode == MaterialMode::Off) {

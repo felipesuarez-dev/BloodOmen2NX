@@ -64,15 +64,16 @@ Measured on this container for `sanctuary` at 640x480 with `--lightmap`:
 | Textures | 5-6 ms |
 | Light maps | 8 ms |
 | Headless render | 30-31 ms |
-| SDL first frame | 34-35 ms |
+| SDL first frame | 20-22 ms |
 | RSS / peak | 12-15 MB |
 
 Hardware (Switch) numbers are tracked in #49.
 
 ## SDL2 + OpenGL window
 
-`--sdl` opens the SDL2 + OpenGL backend. With `--big` it loads the level;
-without `--big` it draws a triangle, which is the backend self-test. The
+`--sdl` opens the SDL2 + OpenGL backend. With `--big` it loads the level
+through the GLSL 1.20/VBO pipeline; without `--big` it draws a triangle,
+which is the backend self-test. The
 backend is built when CMake finds SDL2 and OpenGL; set
 `-DBO2NX_ENABLE_SDL=OFF` to build headless only.
 

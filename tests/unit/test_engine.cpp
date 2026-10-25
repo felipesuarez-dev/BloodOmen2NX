@@ -698,6 +698,16 @@ void test_cell_group() {
     CHECK(geometry.materials[0].controls[1].arg0 == 3);
     CHECK(geometry.materials[0].controls[1].arg1 == 4);
     CHECK(!geometry.materials[1].has_colors);
+    const bo2::engine::Vec3 base_color =
+        bo2::engine::material_color(geometry, geometry.triangles[0]);
+    CHECK(std::fabs(base_color.x - 0.9f) < 1.0e-5f);
+    CHECK(std::fabs(base_color.y - 0.1f) < 1.0e-5f);
+    CHECK(std::fabs(base_color.z - 0.05f) < 1.0e-5f);
+    const bo2::engine::Vec3 fallback_color =
+        bo2::engine::material_color(geometry, geometry.triangles[2]);
+    CHECK(std::fabs(fallback_color.x - 0.50f) < 1.0e-5f);
+    CHECK(std::fabs(fallback_color.y - 0.52f) < 1.0e-5f);
+    CHECK(std::fabs(fallback_color.z - 0.56f) < 1.0e-5f);
     const bo2::engine::Vec3 off_tint = bo2::engine::material_tint(
         geometry, geometry.triangles[0], bo2::engine::MaterialMode::Off);
     CHECK(std::fabs(off_tint.x - 1.0f) < 1.0e-5f);

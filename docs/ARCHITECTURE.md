@@ -34,6 +34,14 @@ the reference mappings; the SDL backend translates keyboard and
 game-controller state into the same struct. The Switch backend will feed
 libnx buttons through the same map.
 
+The SDL backend renders the level through an explicit pipeline
+(`src/platform/sdl/render_pipeline.cpp`): GLSL 1.20 vertex and fragment
+shaders, an interleaved vertex buffer and an index buffer. Triangles are
+submitted in ordered runs, so the original triangle order is preserved
+for blending; each run sets its texture, light map, material tint and
+shader uniforms. This replaces the D3D8 fixed-function path and is the
+host reference for the Switch deko3d backend.
+
 The Switch backend (libnx + deko3d) replaces the platform layer once the
 host build renders a level. The game and engine layers do not change when
 the backend changes.
@@ -80,6 +88,7 @@ Current concrete modules:
 | `cell_group` | `cellgrup` static level geometry | World-space triangles and textures |
 | `dds` | DDS/BC decoder | DXT1, DXT3, DXT5, A8R8G8B8; top mip |
 | `math` | Vec3, Vec4, Mat4 | Used by the headless renderer |
+| `render_pipeline` | GLSL/VBO level pipeline | SDL host renderer |
 
 Each interface is implemented by the platform backend. The engine owns
 the data structures; the platform owns the device objects.

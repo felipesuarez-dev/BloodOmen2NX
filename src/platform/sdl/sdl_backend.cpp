@@ -1,5 +1,6 @@
 #include "bo2/platform/input.hpp"
 #include "bo2/platform/sdl/sdl_backend.hpp"
+#include "render_pipeline.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -21,9 +22,6 @@ namespace bo2::platform::sdl {
 namespace {
 
 constexpr float kPi = 3.14159265358979323846f;
-constexpr float kLightX = -0.35f;
-constexpr float kLightY = 0.55f;
-constexpr float kLightZ = 0.75f;
 
 void check_sdl(bool ok, const char* what) {
     if (!ok) {
@@ -81,37 +79,6 @@ void load_matrix(const engine::Mat4& matrix) {
     glLoadMatrixf(values);
 }
 
-float shade_of(const engine::Vec3& normal) {
-    const engine::Vec3 light =
-        engine::normalize({kLightX, kLightY, kLightZ});
-    const engine::Vec3 unit = engine::normalize(normal);
-    if (engine::length(unit) < 0.5f) {
-        return 0.85f;
-    }
-    return 0.25f + 0.75f * std::fabs(engine::dot(unit, light));
-}
-
-engine::Vec3 material_color(const engine::LevelGeometry& geometry,
-                            const engine::LevelTriangle& triangle) {
-    static const engine::Vec3 palette[8] = {
-        {0.62f, 0.56f, 0.48f}, {0.50f, 0.52f, 0.56f}, {0.58f, 0.47f, 0.38f},
-        {0.45f, 0.50f, 0.43f}, {0.54f, 0.44f, 0.42f}, {0.60f, 0.56f, 0.44f},
-        {0.42f, 0.46f, 0.52f}, {0.52f, 0.48f, 0.58f},
-    };
-    const std::size_t index = static_cast<std::size_t>(triangle.material);
-    if (index < geometry.materials.size() && geometry.materials[index].has_colors) {
-        engine::Vec3 color = geometry.materials[index].colors[1];
-        if (geometry.materials[index].has_controls) {
-            const float weight = geometry.materials[index].controls[1].weight;
-            if (weight >= 0.0f && weight <= 1.0f) {
-                color = color * weight;
-            }
-        }
-        return color;
-    }
-    return palette[index % 8];
-}
-
 std::vector<GLuint> upload_textures(const std::vector<engine::Image>& textures) {
     std::vector<GLuint> ids(textures.size(), 0);
     if (!ids.empty()) {
@@ -162,8 +129,8 @@ engine::Mat4 view_projection(const Camera& camera, float aspect, float near_plan
 
 void draw_level(const engine::LevelGeometry& geometry, const std::vector<GLuint>& textures,
                 const std::vector<GLuint>& lightmaps, std::size_t model_lightmap_offset,
-                const Camera& camera, std::uint32_t width, std::uint32_t height,
-                engine::MaterialMode material_mode, bool use_lightmap) {
+                detail::LevelPipeline& pipeline, const Camera& camera, std::uint32_t width,
+                std::uint32_t height, engine::MaterialMode material_mode, bool use_lightmap) {
     glViewport(0, 0, static_cast<GLsizei>(width), static_cast<GLsizei>(height));
     glClearColor(20.0f / 255.0f, 22.0f / 255.0f, 30.0f / 255.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -171,7 +138,6 @@ void draw_level(const engine::LevelGeometry& geometry, const std::vector<GLuint>
     glDisable(GL_CULL_FACE);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
     engine::Vec3 minimum = geometry.minimum;
     engine::Vec3 maximum = geometry.maximum;
@@ -187,92 +153,13 @@ void draw_level(const engine::LevelGeometry& geometry, const std::vector<GLuint>
     const float aspect = static_cast<float>(width) / static_cast<float>(height);
     const engine::Mat4 matrix = view_projection(camera, aspect, near_plane, far_plane);
 
+    pipeline.draw(geometry, textures, lightmaps, model_lightmap_offset, matrix, material_mode,
+                  use_lightmap);
+
     glMatrixMode(GL_PROJECTION);
     load_matrix(matrix);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-
-    for (const engine::LevelTriangle& triangle : geometry.triangles) {
-        if (triangle.a >= geometry.positions.size() || triangle.b >= geometry.positions.size() ||
-            triangle.c >= geometry.positions.size()) {
-            continue;
-        }
-        const engine::Vec3 positions[3] = {geometry.positions[triangle.a],
-                                           geometry.positions[triangle.b],
-                                           geometry.positions[triangle.c]};
-        const engine::Vec3 normals[3] = {geometry.normals[triangle.a], geometry.normals[triangle.b],
-                                         geometry.normals[triangle.c]};
-        const bool textured = triangle.texture >= 0 &&
-                              static_cast<std::size_t>(triangle.texture) < textures.size() &&
-                              textures[static_cast<std::size_t>(triangle.texture)] != 0;
-        const engine::Vec2 uv[3] = {
-            (textured && triangle.a < geometry.texcoords.size()) ? geometry.texcoords[triangle.a]
-                                                                 : engine::Vec2{},
-            (textured && triangle.b < geometry.texcoords.size()) ? geometry.texcoords[triangle.b]
-                                                                 : engine::Vec2{},
-            (textured && triangle.c < geometry.texcoords.size()) ? geometry.texcoords[triangle.c]
-                                                                 : engine::Vec2{},
-        };
-        const engine::Vec3 tint = engine::material_tint(geometry, triangle, material_mode);
-        GLuint lightmap_id = 0;
-        if (use_lightmap && textured) {
-            const std::size_t model_index =
-                triangle.lightmap >= 0
-                    ? model_lightmap_offset + static_cast<std::size_t>(triangle.lightmap)
-                    : lightmaps.size();
-            if (model_index < lightmaps.size()) {
-                lightmap_id = lightmaps[model_index];
-            } else if (static_cast<std::size_t>(triangle.texture) < model_lightmap_offset) {
-                lightmap_id = lightmaps[static_cast<std::size_t>(triangle.texture)];
-            }
-        }
-        const engine::Vec2 light_uv[3] = {
-            (textured && triangle.a < geometry.lightmap_texcoords.size())
-                ? geometry.lightmap_texcoords[triangle.a]
-                : uv[0],
-            (textured && triangle.b < geometry.lightmap_texcoords.size())
-                ? geometry.lightmap_texcoords[triangle.b]
-                : uv[1],
-            (textured && triangle.c < geometry.lightmap_texcoords.size())
-                ? geometry.lightmap_texcoords[triangle.c]
-                : uv[2],
-        };
-        if (textured) {
-            glActiveTexture(GL_TEXTURE0);
-            glEnable(GL_TEXTURE_2D);
-            glBindTexture(GL_TEXTURE_2D, textures[static_cast<std::size_t>(triangle.texture)]);
-        } else {
-            glDisable(GL_TEXTURE_2D);
-            const engine::Vec3 color = material_color(geometry, triangle);
-            glColor3f(color.x, color.y, color.z);
-        }
-        if (lightmap_id != 0) {
-            glActiveTexture(GL_TEXTURE1);
-            glEnable(GL_TEXTURE_2D);
-            glBindTexture(GL_TEXTURE_2D, lightmap_id);
-            glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-        }
-        glBegin(GL_TRIANGLES);
-        for (int corner = 0; corner < 3; ++corner) {
-            const float shade = shade_of(normals[corner]);
-            if (textured) {
-                const float light = lightmap_id != 0 ? 1.0f : shade;
-                glColor4f(light * tint.x, light * tint.y, light * tint.z, 1.0f);
-                glMultiTexCoord2f(GL_TEXTURE0, uv[corner].x, uv[corner].y);
-                if (lightmap_id != 0) {
-                    glMultiTexCoord2f(GL_TEXTURE1, light_uv[corner].x, light_uv[corner].y);
-                }
-            }
-            glVertex3f(positions[corner].x, positions[corner].y, positions[corner].z);
-        }
-        glEnd();
-        if (lightmap_id != 0) {
-            glActiveTexture(GL_TEXTURE1);
-            glDisable(GL_TEXTURE_2D);
-        }
-        glActiveTexture(GL_TEXTURE0);
-    }
-    glDisable(GL_TEXTURE_2D);
 }
 
 void write_ppm(const std::string& path, std::uint32_t width, std::uint32_t height,
@@ -498,10 +385,12 @@ int run_level(const engine::LevelGeometry& geometry,
     combined_lightmaps.insert(combined_lightmaps.end(), geometry.model_lightmaps.begin(),
                               geometry.model_lightmaps.end());
     const std::vector<GLuint> lightmap_ids = upload_textures(combined_lightmaps);
+    detail::LevelPipeline pipeline;
+    pipeline.upload(geometry);
     OrbitCamera orbit = make_orbit(options.camera);
     if (!options.screenshot.empty()) {
         const auto frame_start = std::chrono::steady_clock::now();
-        draw_level(geometry, texture_ids, lightmap_ids, model_lightmap_offset,
+        draw_level(geometry, texture_ids, lightmap_ids, model_lightmap_offset, pipeline,
                    current_camera(orbit), options.width, options.height, options.material_mode,
                    options.lightmap);
         glFinish();
@@ -605,7 +494,7 @@ int run_level(const engine::LevelGeometry& geometry,
         }
         orbit.pitch = std::clamp(orbit.pitch, -1.5f, 1.5f);
         const auto frame_start = std::chrono::steady_clock::now();
-        draw_level(geometry, texture_ids, lightmap_ids, model_lightmap_offset,
+        draw_level(geometry, texture_ids, lightmap_ids, model_lightmap_offset, pipeline,
                    current_camera(orbit), options.width, options.height, options.material_mode,
                    options.lightmap);
         draw_player(orbit.target);
