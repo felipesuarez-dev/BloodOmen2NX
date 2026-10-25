@@ -5,7 +5,7 @@
 | Level | What | When | Assets needed |
 |---|---|---|---|
 | Unit (Python) | LE readers, math, parsers on synthetic fixtures (SFXI, BIG, RKV), installer | Always | No |
-| Unit (C++) | goefile/DDS readers, math and the software renderer | Always | No |
+| Unit (C++) | goefile/DDS/cellgrup readers, texture binding, math and rasterizer | Always | No |
 | Parity Python/C++ | Same input to the reference parser and the C++ parser -> identical output | Always | No (fixtures) |
 | Integration (asset-gated) | Parsers over the user's real assets -> counts and SHA-256 manifests | `BO2NX_ASSETS_DIR` set | Yes, skips otherwise |
 | Render golden | Offscreen render of a scene or texture -> PNG hash | `BO2NX_ASSETS_DIR` set | Yes, goldens local |
@@ -51,7 +51,8 @@ BO2NX_ASSETS_DIR=/path/to/game ctest --preset linux-debug   # asset-gated on
 
 ## Visual gate
 
-The headless renderer draws the `cellgrup` shell with flat material
-colors now. Texture binding and `tools/oracle/compare_frame.sh` are the
-next steps; the side-by-side gate still applies before a demo. Do not
-show a level demo until the frame recognizably matches the original.
+The headless renderer draws the `cellgrup` shell with its DDS textures
+and a free camera now. The near-plane clipper and
+`tools/oracle/compare_frame.sh` are the next steps; the side-by-side gate
+still applies before a demo. Do not show a level demo until the frame
+recognizably matches the original.

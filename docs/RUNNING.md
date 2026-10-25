@@ -38,10 +38,10 @@ BIG=external/installed/media/gogames/bo2/resources/levels/sanctuary/sanctuary.bi
   --eye 0,-20,4 --target 0,20,4 --fov 70
 ```
 
-The geometry is drawn with per-material colors; binding the DDS textures
-is the next step. The near-plane clipper is pending, so a camera that
-intersects a surface can show projection artifacts; the isometric frame
-is stable.
+The geometry is drawn with the DDS textures resolved from the cellgrup
+symbols; materials without a texture entry use a flat color. The
+near-plane clipper is pending, so a camera that intersects a surface can
+show projection artifacts; the isometric frame is stable.
 
 | Flag | Purpose |
 |---|---|

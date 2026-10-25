@@ -13,6 +13,7 @@ struct BigEntry {
     std::uint16_t language = 0;
     std::size_t offset = 0;
     std::size_t size = 0;
+    std::vector<std::uint16_t> symbols;
 };
 
 class BigArchive {
@@ -21,6 +22,7 @@ public:
     static BigArchive parse(std::vector<std::uint8_t> data);
 
     const std::vector<BigEntry>& entries() const { return entries_; }
+    const std::vector<std::string>& names() const { return names_; }
     const std::vector<std::uint8_t>& bytes() const { return data_; }
     std::vector<std::uint8_t> extract(const BigEntry& entry) const;
     const BigEntry* find(const std::string& type, const std::string& name) const;
@@ -28,6 +30,7 @@ public:
 private:
     std::vector<std::uint8_t> data_;
     std::vector<BigEntry> entries_;
+    std::vector<std::string> names_;
 };
 
 bool iequals(const std::string& left, const std::string& right);

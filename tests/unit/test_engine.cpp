@@ -67,6 +67,7 @@ struct Item {
     std::string type;
     std::string name;
     std::vector<std::uint8_t> payload;
+    std::vector<std::uint16_t> symbols;
 };
 
 std::vector<std::uint8_t> build_big(const std::vector<Item>& items) {
@@ -95,11 +96,18 @@ std::vector<std::uint8_t> build_big(const std::vector<Item>& items) {
     for (std::size_t index = 0; index < items.size(); ++index) {
         const Item& item = items[index];
         std::vector<std::uint8_t> body;
+        const std::size_t symbols_size = (20 + item.symbols.size() * 2 + 3) & ~std::size_t{3U};
         append(body, "symlist");
         body.push_back(0);
-        put32(body, 20);
+        put32(body, static_cast<std::uint32_t>(symbols_size));
         put32(body, 0);
-        put32(body, 0);
+        put32(body, static_cast<std::uint32_t>(item.symbols.size()));
+        for (std::uint16_t symbol : item.symbols) {
+            put16(body, symbol);
+        }
+        while (body.size() < symbols_size) {
+            body.push_back(0);
+        }
         put32(body, static_cast<std::uint32_t>(item.payload.size()));
         body.insert(body.end(), item.payload.begin(), item.payload.end());
         std::size_t entry_length = 20 + body.size();
@@ -199,10 +207,33 @@ std::vector<std::uint8_t> build_cell_group() {
         prims.push_back(0);
     }
 
+    std::vector<std::uint8_t> uv_indices;
+    put32(uv_indices, 4);
+    for (std::uint16_t index : {std::uint16_t{0}, std::uint16_t{1}, std::uint16_t{2},
+                                std::uint16_t{3}}) {
+        put16(uv_indices, index);
+    }
+    std::vector<std::uint8_t> uvs;
+    put32(uvs, 0);
+    put32(uvs, 4);
+    for (const auto& uv : std::vector<std::array<float, 2>>{{0, 0}, {1, 0}, {1, 1}, {0, 1}}) {
+        put_float(uvs, uv[0]);
+        put_float(uvs, uv[1]);
+    }
+    std::vector<std::uint8_t> material_texture;
+    put32(material_texture, 0);
+    put32(material_texture, 1);
+    put32(material_texture, 1);
+    put16(material_texture, 0);
+    put16(material_texture, 0xFFFF);
+
     std::vector<std::uint8_t> record;
     append_chunk(record, "position", positions);
     append_chunk(record, "normals", normals);
     append_chunk(record, "prims", prims);
+    append_chunk(record, "textures", uv_indices);
+    append_chunk(record, "uvs", uvs);
+    append_chunk(record, "texture", material_texture);
 
     std::vector<std::uint8_t> rmd;
     put32(rmd, 2);
@@ -246,13 +277,15 @@ void test_reader() {
 
 void test_big() {
     const std::vector<std::uint8_t> data = build_big({
-        {"model", "alpha", {1, 2, 3}},
-        {"texture", "Beta", {4, 5, 6, 7}},
+        {"model", "alpha", {1, 2, 3}, {3, 4}},
+        {"texture", "Beta", {4, 5, 6, 7}, {}},
     });
     const bo2::engine::BigArchive archive = bo2::engine::BigArchive::parse(data);
     CHECK(archive.entries().size() == 2);
+    CHECK(archive.names() == std::vector<std::string>({"alpha", "Beta"}));
     CHECK(archive.entries()[0].type == "model");
     CHECK(archive.entries()[0].name == "alpha");
+    CHECK(archive.entries()[0].symbols == std::vector<std::uint16_t>({3, 4}));
     CHECK(archive.entries()[1].type == "texture");
     CHECK(archive.entries()[1].name == "Beta");
     CHECK(archive.extract(archive.entries()[0]) == std::vector<std::uint8_t>({1, 2, 3}));
@@ -338,6 +371,7 @@ void test_cell_group() {
     CHECK(geometry.triangles.size() == 3);
     CHECK(geometry.triangles[0].material == 0);
     CHECK(geometry.triangles[2].material == 1);
+    CHECK(geometry.triangles[2].texture == -1);
     CHECK(std::fabs(geometry.minimum.x) < 1.0e-5f);
     CHECK(std::fabs(geometry.maximum.x - 1.0f) < 1.0e-5f);
     CHECK(throws([&] {
@@ -345,6 +379,17 @@ void test_cell_group() {
         broken.resize(12);
         bo2::engine::parse_cell_group(broken);
     }));
+
+    std::vector<std::uint16_t> symbols = {100};
+    std::vector<std::string> names(101);
+    names[100] = "synthetic/tex";
+    const bo2::engine::LevelGeometry textured =
+        bo2::engine::parse_cell_group(data, symbols, names);
+    CHECK(textured.texture_names.size() == 1);
+    CHECK(textured.texture_names[0] == "synthetic/tex");
+    CHECK(textured.texcoords.size() == 4);
+    CHECK(std::fabs(textured.texcoords[1].x - 1.0f) < 1.0e-5f);
+    CHECK(textured.triangles[0].texture == 0);
 }
 
 }  // namespace

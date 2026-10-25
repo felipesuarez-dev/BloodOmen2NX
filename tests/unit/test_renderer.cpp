@@ -96,6 +96,23 @@ int main() {
         bo2::platform::headless::render_level(empty, level_options);
     }));
 
+    bo2::engine::LevelGeometry textured = level_quad();
+    textured.texcoords = {{0.0f, 0.0f}, {1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f}};
+    textured.texture_names = {"synthetic"};
+    for (bo2::engine::LevelTriangle& triangle : textured.triangles) {
+        triangle.texture = 0;
+    }
+    bo2::engine::Image texture;
+    texture.width = 2;
+    texture.height = 2;
+    texture.rgba = {255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 255, 255};
+    const std::vector<bo2::engine::Image> textures = {texture};
+    const std::vector<std::uint8_t> textured_frame =
+        bo2::platform::headless::render_level(textured, textures, level_options);
+    CHECK(textured_frame.size() == 64U * 64U * 4U);
+    CHECK(textured_frame[center + 0] != 20 || textured_frame[center + 1] != 22 ||
+          textured_frame[center + 2] != 30);
+
     if (failures != 0) {
         std::cerr << failures << " check(s) failed\n";
         return 1;

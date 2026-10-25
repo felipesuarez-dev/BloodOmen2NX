@@ -27,6 +27,9 @@ std::vector<std::uint8_t> render_textured_cube(const engine::Image& texture,
                                                const FrameOptions& options);
 std::vector<std::uint8_t> render_level(const engine::LevelGeometry& geometry,
                                        const FrameOptions& options);
+std::vector<std::uint8_t> render_level(const engine::LevelGeometry& geometry,
+                                       const std::vector<engine::Image>& textures,
+                                       const FrameOptions& options);
 void write_ppm(const std::string& path, std::uint32_t width, std::uint32_t height,
                const std::vector<std::uint8_t>& rgba);
 

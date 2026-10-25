@@ -1,7 +1,7 @@
 # Models and animation
 
-Status: **static cell geometry decoded and rendered; materials and
-animation open**.
+Status: **static cell geometry and base textures decoded and rendered;
+material modulation and animation open**.
 
 The static shell of a level lives in the `cellgrup` entry of its `.big`.
 The shared `model` entries (characters, props, particles) use the same
@@ -97,9 +97,15 @@ the `.big` name table. In `sanctuary.big`, position 6 resolves to symbol
 resolve to the next wall/floor textures. The `texture` entry with that
 name is the DDS payload.
 
-This mapping is the next step: it must be validated by binding the
-textures and comparing the frame. The `textures`/`uvs`/`mlyrcolr` layout
-above is observed, not yet proven as the final material path.
+The C++ reader resolves the name, finds the `texture` entry and decodes
+the top DDS mip. The `textures` chunk is used as the per-vertex UV index
+into the first `uvs` set (`set = 0`); the triangle's material selects the
+texture record. In `sanctuary` 33 of 34 names resolve to a texture entry;
+the one that does not is a non-texture symbol and falls back to the
+material color.
+
+`mlyrcolr` and `mlyrctrl` are parsed as observed (48 and 12 bytes per
+material) but their modulation is not applied yet.
 
 ## Animation
 
@@ -119,16 +125,17 @@ the animation chunks. The node hierarchy and keyframe encoding are open.
 | Primitive groups | 123 |
 | Vertices | 7,458 |
 | Triangles | 5,107 |
+| Textures resolved | 33 / 34 |
 | World bounds | 2164 × 1124 × 624 |
 
-The headless renderer draws this geometry with per-material colors and a
+The headless renderer draws this geometry with the DDS textures and a
 free camera (`bo2nx --level`). The near-plane clipper is pending, so a
 camera inside a surface can show projection artifacts; the default
 isometric frame is stable.
 
 ## Open questions
 
-- The exact material → texture → UV path (the current lead is above).
+- `mlyrcolr`/`mlyrctrl` modulation (color, specular, layers).
 - The 40/42-byte `prims` extra record.
 - The cell grid/portal data after the models (visibility and streaming).
 - `model 74` has no `rmd`; its role is unknown.
@@ -137,7 +144,7 @@ isometric frame is stable.
 
 ## Next steps
 
-1. Bind the cellgrup textures and validate the material/UV mapping.
-2. Add the near-plane clipper for interior cameras.
-3. Parse the cell grid/visibility data.
+1. Add the near-plane clipper for interior cameras.
+2. Parse the cell grid/visibility data.
+3. Apply `mlyrcolr`/`mlyrctrl` modulation.
 4. Decode the animation/skeleton chunks.

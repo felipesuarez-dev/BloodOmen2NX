@@ -86,8 +86,95 @@ std::vector<Vec3> read_vectors(const common::Reader& reader, const Chunk& chunk)
     return values;
 }
 
+std::vector<std::uint16_t> read_u16s(const common::Reader& reader, const Chunk& chunk) {
+    if (chunk.data_size < 4) {
+        throw common::ParseError("empty u16 chunk");
+    }
+    const std::uint32_t count = reader.u32(chunk.data_offset);
+    if (4 + static_cast<std::size_t>(count) * 2 > chunk.data_size) {
+        throw common::ParseError("u16 chunk is short");
+    }
+    std::vector<std::uint16_t> values;
+    values.reserve(count);
+    for (std::uint32_t index = 0; index < count; ++index) {
+        values.push_back(reader.u16(chunk.data_offset + 4 + static_cast<std::size_t>(index) * 2));
+    }
+    return values;
+}
+
+std::vector<Vec2> read_uvs(const common::Reader& reader, const Chunk& chunk) {
+    if (chunk.data_size < 8) {
+        throw common::ParseError("empty uv chunk");
+    }
+    const std::uint32_t count = reader.u32(chunk.data_offset + 4);
+    if (8 + static_cast<std::size_t>(count) * 8 > chunk.data_size) {
+        throw common::ParseError("uv chunk is short");
+    }
+    std::vector<Vec2> values;
+    values.reserve(count);
+    for (std::uint32_t index = 0; index < count; ++index) {
+        const std::size_t offset = chunk.data_offset + 8 + static_cast<std::size_t>(index) * 8;
+        values.push_back({read_float(reader, offset), read_float(reader, offset + 4)});
+    }
+    return values;
+}
+
+std::string resolve_texture_name(std::uint32_t relative,
+                                 const std::vector<std::uint16_t>& symbols,
+                                 const std::vector<std::string>& names) {
+    if (relative >= symbols.size()) {
+        return {};
+    }
+    const std::uint32_t symbol = symbols[relative];
+    if (symbol >= names.size()) {
+        return {};
+    }
+    return names[symbol];
+}
+
+std::int32_t add_texture_name(LevelGeometry& geometry, const std::string& name) {
+    if (name.empty()) {
+        return -1;
+    }
+    for (std::size_t index = 0; index < geometry.texture_names.size(); ++index) {
+        if (geometry.texture_names[index] == name) {
+            return static_cast<std::int32_t>(index);
+        }
+    }
+    geometry.texture_names.push_back(name);
+    return static_cast<std::int32_t>(geometry.texture_names.size() - 1);
+}
+
+std::vector<std::int32_t> read_material_textures(
+    const common::Reader& reader, const Chunk* chunk, const std::vector<std::uint16_t>& symbols,
+    const std::vector<std::string>& names, LevelGeometry& geometry) {
+    std::vector<std::int32_t> result;
+    if (chunk == nullptr || chunk->data_size < 8) {
+        return result;
+    }
+    const std::uint32_t start = reader.u32(chunk->data_offset);
+    const std::uint32_t count = reader.u32(chunk->data_offset + 4);
+    if (count == 0 || count > 4096 || start > 65536) {
+        return result;
+    }
+    const std::size_t record_size = (chunk->data_size - 8) / count;
+    if (record_size < 4) {
+        return result;
+    }
+    result.assign(static_cast<std::size_t>(start) + count, -1);
+    for (std::uint32_t index = 0; index < count; ++index) {
+        const std::size_t record = chunk->data_offset + 8 + static_cast<std::size_t>(index) * record_size;
+        const std::uint32_t relative =
+            (record_size >= 6) ? reader.u16(record + 4) : reader.u32(record);
+        result[static_cast<std::size_t>(start) + index] =
+            add_texture_name(geometry, resolve_texture_name(relative, symbols, names));
+    }
+    return result;
+}
+
 void parse_prims(const common::Reader& reader, const Chunk& chunk, std::uint32_t vertex_base,
-                 std::uint32_t vertex_count, std::uint32_t model, LevelGeometry& geometry) {
+                 std::uint32_t vertex_count, std::uint32_t model,
+                 const std::vector<std::int32_t>& material_texture, LevelGeometry& geometry) {
     if (chunk.data_size < 4) {
         throw common::ParseError("empty prim chunk");
     }
@@ -115,8 +202,10 @@ void parse_prims(const common::Reader& reader, const Chunk& chunk, std::uint32_t
             if (a >= vertex_count || b >= vertex_count || c >= vertex_count) {
                 throw common::ParseError("prim index is out of range");
             }
+            const std::int32_t texture =
+                material < material_texture.size() ? material_texture[material] : -1;
             geometry.triangles.push_back(
-                {vertex_base + a, vertex_base + b, vertex_base + c, material, model});
+                {vertex_base + a, vertex_base + b, vertex_base + c, material, model, texture});
         }
         position += static_cast<std::size_t>(indices) * 2;
         if (position + 2 > end) {
@@ -135,7 +224,8 @@ void parse_prims(const common::Reader& reader, const Chunk& chunk, std::uint32_t
 }
 
 void parse_model(const common::Reader& reader, const Chunk& rmd, std::uint32_t model,
-                 LevelGeometry& geometry) {
+                 const std::vector<std::uint16_t>& symbols,
+                 const std::vector<std::string>& names, LevelGeometry& geometry) {
     const std::size_t data_end = rmd.data_offset + rmd.data_size;
     if (rmd.data_size < 4) {
         throw common::ParseError("empty rmd chunk");
@@ -152,6 +242,19 @@ void parse_model(const common::Reader& reader, const Chunk& rmd, std::uint32_t m
     const Chunk* positions = find_chunk(chunks, "position");
     const Chunk* normals = find_chunk(chunks, "normals");
     const Chunk* prims = find_chunk(chunks, "prims");
+    const Chunk* uv_indices = find_chunk(chunks, "textures");
+    const Chunk* uv_set = nullptr;
+    for (const Chunk& chunk : chunks) {
+        if (chunk.name != "uvs") {
+            continue;
+        }
+        if (uv_set == nullptr || (chunk.data_size >= 4 && reader.u32(chunk.data_offset) == 0)) {
+            uv_set = &chunk;
+            if (reader.u32(chunk.data_offset) == 0) {
+                break;
+            }
+        }
+    }
     if (positions == nullptr || prims == nullptr) {
         throw common::ParseError("model has no position or prim chunk");
     }
@@ -162,10 +265,24 @@ void parse_model(const common::Reader& reader, const Chunk& rmd, std::uint32_t m
     }
     vertex_normals.resize(vertices.size(), Vec3{0.0f, 0.0f, 0.0f});
 
+    const std::vector<std::uint16_t> uv_index_values =
+        (uv_indices != nullptr) ? read_u16s(reader, *uv_indices) : std::vector<std::uint16_t>{};
+    const std::vector<Vec2> uv_values =
+        (uv_set != nullptr) ? read_uvs(reader, *uv_set) : std::vector<Vec2>{};
+
     const std::uint32_t base = static_cast<std::uint32_t>(geometry.positions.size());
     geometry.positions.insert(geometry.positions.end(), vertices.begin(), vertices.end());
     geometry.normals.insert(geometry.normals.end(), vertex_normals.begin(), vertex_normals.end());
-    parse_prims(reader, *prims, base, static_cast<std::uint32_t>(vertices.size()), model, geometry);
+    for (std::size_t index = 0; index < vertices.size(); ++index) {
+        const std::uint32_t uv_index =
+            (index < uv_index_values.size()) ? uv_index_values[index]
+                                             : static_cast<std::uint32_t>(index);
+        geometry.texcoords.push_back(uv_index < uv_values.size() ? uv_values[uv_index] : Vec2{});
+    }
+    const std::vector<std::int32_t> material_texture =
+        read_material_textures(reader, find_chunk(chunks, "texture"), symbols, names, geometry);
+    parse_prims(reader, *prims, base, static_cast<std::uint32_t>(vertices.size()), model,
+                material_texture, geometry);
 }
 
 void compute_bounds(LevelGeometry& geometry) {
@@ -186,7 +303,9 @@ void compute_bounds(LevelGeometry& geometry) {
 
 }  // namespace
 
-LevelGeometry parse_cell_group(const std::vector<std::uint8_t>& data) {
+LevelGeometry parse_cell_group(const std::vector<std::uint8_t>& data,
+                               const std::vector<std::uint16_t>& symbols,
+                               const std::vector<std::string>& names) {
     const common::Reader reader(data);
     if (data.size() < 28) {
         throw common::ParseError("cell group is shorter than its header");
@@ -214,7 +333,7 @@ LevelGeometry parse_cell_group(const std::vector<std::uint8_t>& data) {
         if (rmd == nullptr) {
             ++geometry.skipped_models;
         } else {
-            parse_model(reader, *rmd, model, geometry);
+            parse_model(reader, *rmd, model, symbols, names, geometry);
             ++geometry.model_count;
         }
         position = model_end;
@@ -224,6 +343,12 @@ LevelGeometry parse_cell_group(const std::vector<std::uint8_t>& data) {
     }
     compute_bounds(geometry);
     return geometry;
+}
+
+LevelGeometry parse_cell_group(const std::vector<std::uint8_t>& data) {
+    static const std::vector<std::uint16_t> no_symbols;
+    static const std::vector<std::string> no_names;
+    return parse_cell_group(data, no_symbols, no_names);
 }
 
 }  // namespace bo2::engine

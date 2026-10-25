@@ -262,6 +262,7 @@ std::vector<std::uint8_t> render_textured_cube(const engine::Image& texture,
 }
 
 std::vector<std::uint8_t> render_level(const engine::LevelGeometry& geometry,
+                                            const std::vector<engine::Image>& textures,
                                             const FrameOptions& options) {
     if (geometry.positions.empty() || geometry.triangles.empty()) {
         throw std::runtime_error("cannot render empty level geometry");
@@ -340,11 +341,23 @@ std::vector<std::uint8_t> render_level(const engine::LevelGeometry& geometry,
                                            geometry.positions[triangle.c]};
         const engine::Vec3 normals[3] = {geometry.normals[triangle.a], geometry.normals[triangle.b],
                                          geometry.normals[triangle.c]};
+        const bool textured = triangle.texture >= 0 &&
+                              static_cast<std::size_t>(triangle.texture) < textures.size() &&
+                              !textures[static_cast<std::size_t>(triangle.texture)].empty();
+        const engine::Vec2 uv[3] = {
+            (textured && triangle.a < geometry.texcoords.size()) ? geometry.texcoords[triangle.a]
+                                                                 : engine::Vec2{},
+            (textured && triangle.b < geometry.texcoords.size()) ? geometry.texcoords[triangle.b]
+                                                                 : engine::Vec2{},
+            (textured && triangle.c < geometry.texcoords.size()) ? geometry.texcoords[triangle.c]
+                                                                 : engine::Vec2{},
+        };
         ScreenVertex screen[3];
         bool visible = true;
         for (int corner = 0; corner < 3; ++corner) {
-            if (!project(view_projection, positions[corner], 0.0f, 0.0f, shade_of(normals[corner]),
-                         options.width, options.height, screen[corner])) {
+            if (!project(view_projection, positions[corner], uv[corner].x, uv[corner].y,
+                         shade_of(normals[corner]), options.width, options.height,
+                         screen[corner])) {
                 visible = false;
                 break;
             }
@@ -352,10 +365,18 @@ std::vector<std::uint8_t> render_level(const engine::LevelGeometry& geometry,
         if (!visible) {
             continue;
         }
-        rasterize(screen[0], screen[1], screen[2], materials[triangle.material % materials.size()],
-                  options.width, options.height, color, depth);
+        const engine::Image& image =
+            textured ? textures[static_cast<std::size_t>(triangle.texture)]
+                     : materials[static_cast<std::size_t>(triangle.material) % materials.size()];
+        rasterize(screen[0], screen[1], screen[2], image, options.width, options.height, color,
+                  depth);
     }
     return color;
+}
+
+std::vector<std::uint8_t> render_level(const engine::LevelGeometry& geometry,
+                                     const FrameOptions& options) {
+    return render_level(geometry, std::vector<engine::Image>{}, options);
 }
 
 void write_ppm(const std::string& path, std::uint32_t width, std::uint32_t height,

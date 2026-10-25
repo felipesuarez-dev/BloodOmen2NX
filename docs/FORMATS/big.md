@@ -117,8 +117,9 @@ The full model layout is open.
 
 The name table can hold more than 3,000 names (the sanctuary file has
 3,332, covering four languages plus `default`). The `name index` resolves
-the entry name; the `language index` and the `n` u16 values are stored but
-not yet interpreted.
+the entry name. The `n` u16 values are resource symbol references: the
+`cellgrup` uses them to resolve its texture names, and `BigEntry.symbols`
+exposes them. The `language index` is stored but not interpreted.
 
 ## Open questions
 

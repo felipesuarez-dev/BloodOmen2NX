@@ -136,6 +136,11 @@ BigArchive BigArchive::parse(std::vector<std::uint8_t> data) {
         const std::uint16_t name_index = reader.u16(position + 16);
         const std::uint16_t language = reader.u16(position + 18);
         const std::size_t symbols_size = reader.u32(position + kSymbolsOffset);
+        const std::uint32_t symbol_count = reader.u32(position + 36);
+        const std::size_t symbols_at = position + 40;
+        if (symbols_at + static_cast<std::size_t>(symbol_count) * 2 > entry_end) {
+            throw common::ParseError("symbol list is out of range");
+        }
         const std::size_t data_length_at = position + 20 + symbols_size;
         if (data_length_at + 4 > entry_end) {
             throw common::ParseError("bad symbol list");
@@ -156,9 +161,15 @@ BigArchive BigArchive::parse(std::vector<std::uint8_t> data) {
         entry.language = language;
         entry.offset = data_offset;
         entry.size = data_length;
+        entry.symbols.reserve(symbol_count);
+        for (std::uint32_t index = 0; index < symbol_count; ++index) {
+            entry.symbols.push_back(
+                reader.u16(symbols_at + static_cast<std::size_t>(index) * 2));
+        }
         archive.entries_.push_back(std::move(entry));
         position = entry_end;
     }
+    archive.names_ = std::move(names);
     return archive;
 }
 

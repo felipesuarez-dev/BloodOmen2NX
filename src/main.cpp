@@ -161,7 +161,25 @@ int render_level_frame(const Options& options) {
         throw std::runtime_error("no cellgrup entry in " + options.big);
     }
     const std::vector<std::uint8_t> bytes = archive.extract(*entry);
-    const bo2::engine::LevelGeometry geometry = bo2::engine::parse_cell_group(bytes);
+    const bo2::engine::LevelGeometry geometry =
+        bo2::engine::parse_cell_group(bytes, entry->symbols, archive.names());
+
+    std::vector<bo2::engine::Image> textures;
+    textures.reserve(geometry.texture_names.size());
+    std::size_t loaded_textures = 0;
+    for (const std::string& name : geometry.texture_names) {
+        const bo2::engine::BigEntry* texture_entry = archive.find("texture", name);
+        if (texture_entry == nullptr) {
+            textures.emplace_back();
+            continue;
+        }
+        try {
+            textures.push_back(bo2::engine::decode_dds(archive.extract(*texture_entry)));
+            ++loaded_textures;
+        } catch (const std::exception&) {
+            textures.emplace_back();
+        }
+    }
 
     bo2::platform::headless::FrameOptions frame = options.frame_options;
     if (!options.eye_set || !options.target_set) {
@@ -174,11 +192,13 @@ int render_level_frame(const Options& options) {
     }
     frame.camera.up = {0.0f, 0.0f, 1.0f};
     const std::vector<std::uint8_t> pixels =
-        bo2::platform::headless::render_level(geometry, frame);
+        bo2::platform::headless::render_level(geometry, textures, frame);
     bo2::platform::headless::write_ppm(options.out, frame.width, frame.height, pixels);
     std::cout << "cellgrup: " << entry->name << " (models " << geometry.model_count
               << ", skipped " << geometry.skipped_models << ", triangles "
-              << geometry.triangles.size() << ", vertices " << geometry.positions.size() << ")\n";
+              << geometry.triangles.size() << ", vertices " << geometry.positions.size()
+              << ", textures " << loaded_textures << "/" << geometry.texture_names.size()
+              << ")\n";
     std::cout << "frame: " << options.out << " (" << frame.width << 'x' << frame.height << ")\n";
     return 0;
 }
