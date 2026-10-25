@@ -48,10 +48,15 @@ and assets) is complete.
 - The cell grid and visibility BSP are decoded: `cells` version 2,
   `attrs` tables and the recursive `cellbsp`; `bo2nx --level` reports the
   counts. `sanctuary` has 3 cells, 6 portals and 33 BSP nodes.
+- Material layer records are parsed: `mlyrcolr` (three RGBA colors) and
+  `mlyrctrl` (three `u32`/`f32`/`u16`/`u16` controls) per material.
+  Untextured surfaces use the diffuse layer; textured surfaces keep the
+  texture.
 
 ## What is not done
 
-- `mlyrcolr`/`mlyrctrl` material modulation.
+- The material lighting equation (`mlyrcolr`/`mlyrctrl`); the layer
+  records are parsed, but textured surfaces keep the texture.
 - Animation and skinning (`animatio`, `animreel`, `vtxweigh`, `jointidx`).
 - `region`, `planinfo`, `bpackage`, `strtable`, `musicbnk`, `texfont`,
   `liteinfo`.
@@ -68,7 +73,7 @@ and assets) is complete.
 
 | # | Unknown | Next action | Read first |
 |---|---|---|---|
-| 0 | `mlyrcolr`/`mlyrctrl` modulation | Decompile the material setup and apply it | `docs/FORMATS/models.md` |
+| 0 | Material lighting equation | Decompile the render-model material apply path | `docs/FORMATS/models.md` |
 | 1 | `cellinst`, `cellight` and `cellmark` records | Decompile the dispatcher branches | `docs/FORMATS/models.md` |
 | 2 | `game.erg` parser details | Decompile the key lookup in `bo2.exe` | `docs/FORMATS/erg.md` |
 | 3 | Original logic tick | Measure from the oracle once it runs, or from the main loop | `docs/ARCHITECTURE.md` |
@@ -78,7 +83,7 @@ and assets) is complete.
 
 ## Next steps
 
-1. Apply the `mlyrcolr`/`mlyrctrl` material modulation.
+1. Decode the material lighting equation.
 2. Decode `cellinst`/`cellight`/`cellmark`, animation/skinning and the
    shared `model` entries.
 3. Add the SDL2 + OpenGL backend and use the original as the oracle.

@@ -113,6 +113,16 @@ int main() {
     CHECK(textured_frame[center + 0] != 20 || textured_frame[center + 1] != 22 ||
           textured_frame[center + 2] != 30);
 
+    bo2::engine::LevelGeometry colored = level_quad();
+    colored.materials.resize(1);
+    colored.materials[0].has_colors = true;
+    colored.materials[0].colors[1] = {0.0f, 1.0f, 0.0f};
+    colored.materials[0].has_controls = true;
+    colored.materials[0].controls[1].weight = 1.0f;
+    const std::vector<std::uint8_t> colored_frame =
+        bo2::platform::headless::render_level(colored, level_options);
+    CHECK(colored_frame[center + 1] > 150 && colored_frame[center + 0] < 100);
+
     if (failures != 0) {
         std::cerr << failures << " check(s) failed\n";
         return 1;

@@ -1,7 +1,8 @@
 # Models and animation
 
-Status: **static cell geometry, base textures and the cell grid/BSP are
-decoded and rendered; material modulation and animation open**.
+Status: **static cell geometry, base textures, the cell grid/BSP and
+the material layer records are decoded; the material lighting equation and
+animation are open**.
 
 The static shell of a level lives in the `cellgrup` entry of its `.big`.
 The shared `model` entries (characters, props, particles) use the same
@@ -59,9 +60,10 @@ u32   2
 | `prims` | See below | Triangle lists per material |
 | `textures` | `u32 count` + `count` u16 | Per-vertex UV indices; mapping open |
 | `uvs` | `u32 set`, `u32 count` + `count` × 2 floats | One chunk per UV set |
-| `mlyrcolr` | `u32 start`, `u32 count` + `count` × 48 bytes | Material layer colors; observed |
-| `mlyrctrl` | `u32 start`, `u32 count` + `count` × 12 bytes | Material controllers; observed |
-| `texture` | `u32 start`, `u32 count` + per-material records | Texture symbol per material; observed |
+| `mlyrcolr` | `u32 start`, `u32 count` + `count` × 48 bytes | Three RGBA colors; see Material layers |
+| `mlyrctrl` | `u32 start`, `u32 count` + `count` × 12 bytes | Three controls; see Material layers |
+| `mtlctrl` | `u32 start`, `u32 count` + `count` × 12 bytes | Three `u32` values; semantics open |
+| `texture` | `u32 start`, `u32 count` + per-material records | Texture symbol per material; bound by the host |
 | `mdlattr` | Named attribute table | Model metadata |
 | `vtxweigh` | `u32 count` + weights | Skinning; static cell models are zero |
 | `jointidx` | `u32 count` + joint indices | Skinning |
@@ -104,8 +106,37 @@ texture record. In `sanctuary` 33 of 34 names resolve to a texture entry;
 the one that does not is a non-texture symbol and falls back to the
 material color.
 
-`mlyrcolr` and `mlyrctrl` are parsed as observed (48 and 12 bytes per
-material) but their modulation is not applied yet.
+### Material layers
+
+The `mlyrcolr`, `mlyrctrl` and `mtlctrl` chunks describe the material
+layers. Each chunk starts with a material range:
+
+```
+u32 start
+u32 count
+count × record
+```
+
+| Chunk | Record | Fields |
+|---|---|---|
+| `mlyrcolr` | 48 bytes | three RGBA colors (16 bytes each) |
+| `mlyrctrl` | 12 bytes | `u32 value`, `f32 weight`, `u16 arg0`, `u16 arg1`, three times |
+| `mtlctrl` | 12 bytes | three `u32` values |
+
+The original debug dumper reads the three colors at offsets 0, 0x10 and
+0x20 (`FUN_0067e850`) and the controls as the four fields above
+(`FUN_0067e880`). The loader `FUN_0061ed40` creates render-model
+elements for chunk IDs `0xd..0x10` (`mlyrcolr`), `0x11..0x14`
+(`mlyrctrl`) and `0x15..0x18` (`texture`); `FUN_0067dd40` prints them.
+
+The host parses `mlyrcolr` and `mlyrctrl` into
+`LevelGeometry::materials`. The software renderer uses the second layer
+(the diffuse slot after the ambient slot) as the surface color when a
+material has no texture, scaled by that layer's control weight. Textured
+surfaces keep the texture. The reference colors are dark: in
+`sanctuary`, layer 0 averages 0.007, layer 1 averages 0.100 and layer 2
+is 0.000, so the colors behave like lighting/ambient data rather than
+albedo. The exact lighting equation is still open.
 
 ## Cell grid and visibility
 
@@ -270,7 +301,7 @@ interior, while the default isometric frame shows the level.
 
 ## Open questions
 
-- `mlyrcolr`/`mlyrctrl` modulation (color, specular, layers).
+- The `mlyrcolr`/`mlyrctrl` lighting equation and the `mtlctrl` values.
 - The 40/42-byte `prims` extra record.
 - `cells` flags, `cellattr`/`attrs` value semantics, the `portal2`
   plane/index and the BSP traversal.
@@ -282,6 +313,6 @@ interior, while the default isometric frame shows the level.
 ## Next steps
 
 1. Use the cell grid and BSP for culling and cell visibility.
-2. Apply `mlyrcolr`/`mlyrctrl` modulation.
+2. Decode the material lighting equation.
 3. Decode the animation/skeleton chunks.
 4. Bind the shared `model` entries and entity placements.

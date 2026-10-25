@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -15,6 +16,21 @@ struct LevelTriangle {
     std::uint32_t material = 0;
     std::uint32_t model = 0;
     std::int32_t texture = -1;
+};
+
+struct MaterialControl {
+    std::uint32_t value = 0;
+    float weight = 0.0f;
+    std::uint16_t arg0 = 0;
+    std::uint16_t arg1 = 0;
+};
+
+struct MaterialLayer {
+    std::array<Vec3, 3> colors{};
+    std::array<float, 3> alphas{1.0f, 1.0f, 1.0f};
+    std::array<MaterialControl, 3> controls{};
+    bool has_colors = false;
+    bool has_controls = false;
 };
 
 struct CellAttributeTable {
@@ -70,6 +86,7 @@ struct LevelGeometry {
     std::vector<Vec2> texcoords;
     std::vector<std::string> texture_names;
     std::vector<LevelTriangle> triangles;
+    std::vector<MaterialLayer> materials;
     std::vector<CellAttributeTable> level_attributes;
     CellGrid cell_grid;
     CellBsp cell_bsp;

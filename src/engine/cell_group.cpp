@@ -461,8 +461,74 @@ std::vector<std::int32_t> read_material_textures(
     return result;
 }
 
+std::vector<MaterialLayer> read_material_layers(const common::Reader& reader,
+                                                const std::vector<Chunk>& chunks) {
+    std::vector<MaterialLayer> layers;
+    const auto grow = [&layers](std::uint32_t start, std::uint32_t count) {
+        const std::size_t required = static_cast<std::size_t>(start) + count;
+        if (required > layers.size()) {
+            layers.resize(required);
+        }
+    };
+
+    const Chunk* colors = find_chunk(chunks, "mlyrcolr");
+    if (colors != nullptr && colors->data_size >= 8) {
+        const std::uint32_t start = reader.u32(colors->data_offset);
+        const std::uint32_t count = reader.u32(colors->data_offset + 4);
+        if (start > 65536 || count > 4096) {
+            throw common::ParseError("material color range is out of bounds");
+        }
+        if (count != 0) {
+            const std::size_t record_size = (colors->data_size - 8) / count;
+            if (record_size < 48) {
+                throw common::ParseError("material color record is short");
+            }
+            grow(start, count);
+            for (std::uint32_t index = 0; index < count; ++index) {
+                MaterialLayer& layer = layers[static_cast<std::size_t>(start) + index];
+                for (std::size_t color = 0; color < 3; ++color) {
+                    const std::size_t offset = colors->data_offset + 8 +
+                                               static_cast<std::size_t>(index) * record_size +
+                                               color * 16;
+                    layer.colors[color] = read_vec3(reader, offset);
+                    layer.alphas[color] = read_float(reader, offset + 12);
+                }
+                layer.has_colors = true;
+            }
+        }
+    }
+
+    const Chunk* controls = find_chunk(chunks, "mlyrctrl");
+    if (controls != nullptr && controls->data_size >= 8) {
+        const std::uint32_t start = reader.u32(controls->data_offset);
+        const std::uint32_t count = reader.u32(controls->data_offset + 4);
+        if (start > 65536 || count > 4096) {
+            throw common::ParseError("material control range is out of bounds");
+        }
+        if (count != 0) {
+            const std::size_t record_size = (controls->data_size - 8) / count;
+            if (record_size < 12) {
+                throw common::ParseError("material control record is short");
+            }
+            grow(start, count);
+            for (std::uint32_t index = 0; index < count; ++index) {
+                MaterialLayer& layer = layers[static_cast<std::size_t>(start) + index];
+                for (std::size_t control = 0; control < 3; ++control) {
+                    const std::size_t offset = controls->data_offset + 8 +
+                                               static_cast<std::size_t>(index) * record_size +
+                                               control * 12;
+                    layer.controls[control] = {reader.u32(offset), read_float(reader, offset + 4),
+                                               reader.u16(offset + 8), reader.u16(offset + 10)};
+                }
+                layer.has_controls = true;
+            }
+        }
+    }
+    return layers;
+}
+
 void parse_prims(const common::Reader& reader, const Chunk& chunk, std::uint32_t vertex_base,
-                 std::uint32_t vertex_count, std::uint32_t model,
+                 std::uint32_t vertex_count, std::uint32_t model, std::uint32_t material_base,
                  const std::vector<std::int32_t>& material_texture, LevelGeometry& geometry) {
     if (chunk.data_size < 4) {
         throw common::ParseError("empty prim chunk");
@@ -493,8 +559,12 @@ void parse_prims(const common::Reader& reader, const Chunk& chunk, std::uint32_t
             }
             const std::int32_t texture =
                 material < material_texture.size() ? material_texture[material] : -1;
+            const std::uint32_t global_material = material_base + material;
+            if (global_material >= geometry.materials.size()) {
+                geometry.materials.resize(static_cast<std::size_t>(global_material) + 1);
+            }
             geometry.triangles.push_back(
-                {vertex_base + a, vertex_base + b, vertex_base + c, material, model, texture});
+                {vertex_base + a, vertex_base + b, vertex_base + c, global_material, model, texture});
         }
         position += static_cast<std::size_t>(indices) * 2;
         if (position + 2 > end) {
@@ -568,10 +638,14 @@ void parse_model(const common::Reader& reader, const Chunk& rmd, std::uint32_t m
                                              : static_cast<std::uint32_t>(index);
         geometry.texcoords.push_back(uv_index < uv_values.size() ? uv_values[uv_index] : Vec2{});
     }
+    const std::uint32_t material_base = static_cast<std::uint32_t>(geometry.materials.size());
+    const std::vector<MaterialLayer> material_layers = read_material_layers(reader, chunks);
+    geometry.materials.insert(geometry.materials.end(), material_layers.begin(),
+                              material_layers.end());
     const std::vector<std::int32_t> material_texture =
         read_material_textures(reader, find_chunk(chunks, "texture"), symbols, names, geometry);
     parse_prims(reader, *prims, base, static_cast<std::uint32_t>(vertices.size()), model,
-                material_texture, geometry);
+                material_base, material_texture, geometry);
 }
 
 void compute_bounds(LevelGeometry& geometry) {

@@ -132,6 +132,6 @@ exposes them. The `language index` is stored but not interpreted.
 
 ## Next steps
 
-1. Apply the material modulation and decode `cellinst`, `cellight` and `cellmark`.
+1. Decode the material lighting equation and `cellinst`, `cellight` and `cellmark`.
 2. Document `region` and `planinfo` for the level loader.
 3. Port the remaining validated readers to `src/engine/`.

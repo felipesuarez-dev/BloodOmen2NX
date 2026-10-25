@@ -308,6 +308,29 @@ std::vector<std::uint8_t> build_cell_group() {
     put16(material_texture, 0);
     put16(material_texture, 0xFFFF);
 
+    std::vector<std::uint8_t> layer_colors;
+    put32(layer_colors, 0);
+    put32(layer_colors, 1);
+    for (float value : {0.25f, 0.5f, 0.75f, 1.0f, 0.9f, 0.1f, 0.05f, 0.5f, 0.0f, 0.0f, 0.0f,
+                        1.0f}) {
+        put_float(layer_colors, value);
+    }
+    std::vector<std::uint8_t> layer_controls;
+    put32(layer_controls, 0);
+    put32(layer_controls, 1);
+    put32(layer_controls, 7);
+    put_float(layer_controls, 0.75f);
+    put16(layer_controls, 1);
+    put16(layer_controls, 2);
+    put32(layer_controls, 8);
+    put_float(layer_controls, 1.0f);
+    put16(layer_controls, 3);
+    put16(layer_controls, 4);
+    put32(layer_controls, 9);
+    put_float(layer_controls, 0.5f);
+    put16(layer_controls, 5);
+    put16(layer_controls, 6);
+
     std::vector<std::uint8_t> record;
     append_chunk(record, "position", positions);
     append_chunk(record, "normals", normals);
@@ -315,6 +338,8 @@ std::vector<std::uint8_t> build_cell_group() {
     append_chunk(record, "textures", uv_indices);
     append_chunk(record, "uvs", uvs);
     append_chunk(record, "texture", material_texture);
+    append_chunk(record, "mlyrcolr", layer_colors);
+    append_chunk(record, "mlyrctrl", layer_controls);
 
     std::vector<std::uint8_t> rmd;
     put32(rmd, 2);
@@ -465,6 +490,16 @@ void test_cell_group() {
     CHECK(geometry.triangles[0].material == 0);
     CHECK(geometry.triangles[2].material == 1);
     CHECK(geometry.triangles[2].texture == -1);
+    CHECK(geometry.materials.size() == 2);
+    CHECK(geometry.materials[0].has_colors);
+    CHECK(std::fabs(geometry.materials[0].colors[1].x - 0.9f) < 1.0e-5f);
+    CHECK(std::fabs(geometry.materials[0].alphas[1] - 0.5f) < 1.0e-5f);
+    CHECK(geometry.materials[0].has_controls);
+    CHECK(geometry.materials[0].controls[1].value == 8);
+    CHECK(std::fabs(geometry.materials[0].controls[1].weight - 1.0f) < 1.0e-5f);
+    CHECK(geometry.materials[0].controls[1].arg0 == 3);
+    CHECK(geometry.materials[0].controls[1].arg1 == 4);
+    CHECK(!geometry.materials[1].has_colors);
     CHECK(std::fabs(geometry.minimum.x) < 1.0e-5f);
     CHECK(std::fabs(geometry.maximum.x - 1.0f) < 1.0e-5f);
     CHECK(geometry.has_cell_grid);

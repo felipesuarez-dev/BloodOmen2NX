@@ -359,8 +359,8 @@ std::vector<std::uint8_t> render_level(const engine::LevelGeometry& geometry,
         {0.45f, 0.50f, 0.43f}, {0.54f, 0.44f, 0.42f}, {0.60f, 0.56f, 0.44f},
         {0.42f, 0.46f, 0.52f}, {0.52f, 0.48f, 0.58f},
     }};
-    std::array<engine::Image, 8> materials;
-    for (std::size_t index = 0; index < materials.size(); ++index) {
+    std::array<engine::Image, 8> palette_images;
+    for (std::size_t index = 0; index < palette_images.size(); ++index) {
         engine::Image image;
         image.width = 1;
         image.height = 1;
@@ -370,7 +370,33 @@ std::vector<std::uint8_t> render_level(const engine::LevelGeometry& geometry,
             static_cast<std::uint8_t>(std::clamp(palette[index].z * 255.0f, 0.0f, 255.0f)),
             255,
         };
-        materials[index] = std::move(image);
+        palette_images[index] = std::move(image);
+    }
+    std::vector<engine::Image> materials;
+    materials.reserve(geometry.materials.size());
+    for (std::size_t index = 0; index < geometry.materials.size(); ++index) {
+        const engine::MaterialLayer& layer = geometry.materials[index];
+        if (!layer.has_colors) {
+            materials.push_back(palette_images[index % palette_images.size()]);
+            continue;
+        }
+        engine::Vec3 surface = layer.colors[1];
+        if (layer.has_controls) {
+            const float weight = layer.controls[1].weight;
+            if (weight >= 0.0f && weight <= 1.0f) {
+                surface = surface * weight;
+            }
+        }
+        engine::Image image;
+        image.width = 1;
+        image.height = 1;
+        image.rgba = {
+            static_cast<std::uint8_t>(std::clamp(surface.x * 255.0f, 0.0f, 255.0f)),
+            static_cast<std::uint8_t>(std::clamp(surface.y * 255.0f, 0.0f, 255.0f)),
+            static_cast<std::uint8_t>(std::clamp(surface.z * 255.0f, 0.0f, 255.0f)),
+            255,
+        };
+        materials.push_back(std::move(image));
     }
 
     const engine::Vec3 light = engine::normalize({-0.35f, 0.55f, 0.75f});
@@ -416,8 +442,12 @@ std::vector<std::uint8_t> render_level(const engine::LevelGeometry& geometry,
             continue;
         }
         const engine::Image& image =
-            textured ? textures[static_cast<std::size_t>(triangle.texture)]
-                     : materials[static_cast<std::size_t>(triangle.material) % materials.size()];
+            textured
+                ? textures[static_cast<std::size_t>(triangle.texture)]
+                : (static_cast<std::size_t>(triangle.material) < materials.size()
+                       ? materials[static_cast<std::size_t>(triangle.material)]
+                       : palette_images[static_cast<std::size_t>(triangle.material) %
+                                        palette_images.size()]);
         for (std::size_t index = 1; index + 1 < polygon.size(); ++index) {
             ScreenVertex screen[3];
             bool visible = true;
