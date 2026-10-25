@@ -1,0 +1,180 @@
+#!/usr/bin/env python3
+"""Reader for the Blood Omen 2 `.big` container ("goefile").
+
+Status: EXPERIMENTAL. The layout is reconstructed from public independent
+descriptions (see docs/PRIOR_ART.md and docs/FORMATS/big.md) and has not
+been validated against this build yet. It must not be treated as decoded
+until a real file round-trips.
+
+Container:
+
+    0x00  char[8]  "goefile\\0"
+    0x08  u32      total file length
+    0x0C  u32      unknown (1)
+    0x10  char[8]  "symlist\\0"
+    0x18  u32      directory length, including this header
+    0x1C  u32      0
+    0x20  u32      name count
+    0x24  ...      NUL-terminated names
+          pad to even offset
+    entries start at 0x10 + directory_length
+
+Entry:
+
+    char[8] type
+    u32     entry length, including this header and the padding
+    u32     0
+    u16     name index
+    u16     language index
+    char[8] "symlist\\0"
+    u32     unknown (20 or 28)
+    u32     0
+    u32     n; n u16 values
+    u32     data length
+    u64     unknown
+    data, padded to 4
+
+The data offset is derived from the end of the entry, which is the robust
+formula used by independent parsers: data = start + length - align4(size).
+"""
+
+from __future__ import annotations
+
+import argparse
+import struct
+import sys
+from pathlib import Path
+
+MAGIC = b"goefile\0"
+SYMLIST = b"symlist\0"
+
+
+class BigError(ValueError):
+    pass
+
+
+class Entry:
+    __slots__ = ("type", "name", "language", "size", "offset", "data")
+
+    def __init__(self, type_name, name, language, size, offset, data):
+        self.type = type_name
+        self.name = name
+        self.language = language
+        self.size = size
+        self.offset = offset
+        self.data = data
+
+
+def _u32(data: bytes, offset: int) -> int:
+    if offset + 4 > len(data):
+        raise BigError("truncated u32")
+    return struct.unpack_from("<I", data, offset)[0]
+
+
+def _u16(data: bytes, offset: int) -> int:
+    if offset + 2 > len(data):
+        raise BigError("truncated u16")
+    return struct.unpack_from("<H", data, offset)[0]
+
+
+def _cstr(data: bytes, offset: int) -> tuple[str, int]:
+    end = data.find(b"\0", offset)
+    if end < 0:
+        raise BigError("unterminated string")
+    return data[offset:end].decode("latin1"), end + 1
+
+
+def parse(data: bytes) -> tuple[list[str], list[Entry]]:
+    if len(data) < 0x24 or data[:8] != MAGIC:
+        raise BigError("not a goefile container")
+    directory_length = _u32(data, 0x18)
+    name_count = _u32(data, 0x20)
+    pos = 0x24
+    names: list[str] = []
+    for _ in range(name_count):
+        name, pos = _cstr(data, pos)
+        names.append(name)
+    if pos & 1:
+        pos += 1
+    entries_start = 0x10 + directory_length
+    if entries_start < pos or entries_start > len(data):
+        raise BigError("bad directory length")
+
+    entries: list[Entry] = []
+    pos = entries_start
+    while pos + 52 <= len(data):
+        type_name = data[pos : pos + 8].rstrip(b"\0").decode("latin1")
+        if not type_name:
+            break
+        entry_length = _u32(data, pos + 8)
+        if entry_length < 52 or pos + entry_length > len(data):
+            raise BigError(f"bad entry length at {pos:#x}")
+        name_index = _u16(data, pos + 16)
+        language_index = _u16(data, pos + 18)
+        n = _u32(data, pos + 36)
+        values_end = pos + 40 + n * 2
+        data_length = _u32(data, values_end)
+        padded = (data_length + 3) & ~3
+        data_offset = pos + entry_length - padded
+        if data_offset < values_end + 4 or data_offset + data_length > len(data):
+            raise BigError(f"bad data range at {pos:#x}")
+        entries.append(
+            Entry(
+                type_name,
+                names[name_index] if name_index < len(names) else f"#{name_index}",
+                language_index,
+                data_length,
+                data_offset,
+                data[data_offset : data_offset + data_length],
+            )
+        )
+        pos += entry_length
+    return names, entries
+
+
+def load(path: Path) -> tuple[list[str], list[Entry]]:
+    return parse(path.read_bytes())
+
+
+def cmd_list(args) -> int:
+    names, entries = load(Path(args.container))
+    print(f"names: {len(names)}  entries: {len(entries)}")
+    for entry in entries:
+        print(f"{entry.type:8s} {entry.size:10d} {entry.name}")
+    return 0
+
+
+def cmd_extract(args) -> int:
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    _, entries = load(Path(args.container))
+    for index, entry in enumerate(entries):
+        name = Path(entry.name)
+        if name.is_absolute() or ".." in name.parts:
+            print(f"skip unsafe name: {entry.name}", file=sys.stderr)
+            continue
+        target = out / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if target.exists():
+            target = target.with_name(f"{target.name}.{index}")
+        target.write_bytes(entry.data)
+    print(f"extracted {len(entries)} entries to {out}")
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Read a Blood Omen 2 .big container")
+    sub = parser.add_subparsers(dest="command", required=True)
+    p_list = sub.add_parser("list")
+    p_list.add_argument("container")
+    p_list.set_defaults(func=cmd_list)
+    p_extract = sub.add_parser("extract")
+    p_extract.add_argument("container")
+    p_extract.add_argument("--out", required=True)
+    p_extract.set_defaults(func=cmd_extract)
+    args = parser.parse_args()
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

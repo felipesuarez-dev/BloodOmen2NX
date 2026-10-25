@@ -24,5 +24,14 @@ python3 tools/bo2fmt/bo2fmt.py info <file>
 
 ## Status
 
-Empty until M1. The first target is the `.dat` container, then
-`game.erg`.
+Implemented:
+
+| Module | Target | State |
+|---|---|---|
+| `sfxi.py` | Installer SFXI container | Verified against the reference installer |
+| `big.py` | `.big` (`goefile`) content container | Spec-level, synthetic tests |
+| `rkv.py` | `pc.rkv` audio archive | Spec-level, synthetic tests |
+
+The numbered `data/*.dat` chunks are a custom encrypted installer
+archive; the extractor is not ported. Use an installed tree for real
+assets.
