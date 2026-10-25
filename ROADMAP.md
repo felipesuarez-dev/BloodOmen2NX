@@ -10,8 +10,8 @@ comparison.
 
 | Gate | Phase | Exit criteria | Status |
 |---|---|---|---|
-| M0 | Laboratory and binary truth | Installed layout materialized by static extraction, SHA-256 manifest, Ghidra project with recovered functions, compiler and imports identified | WIP — hashes, PE triage, SFXI, `game.erg` and Ghidra inventory done; decompressor and subsystem triage pending |
-| M1 | Containers and assets (GO/NO-GO) | `game.erg` and `.dat` decoded; one asset extracted, re-packed and accepted by the original; formats documented | TODO |
+| M0 | Laboratory and binary truth | Hashes, PE triage, SFXI, `game.erg` and Ghidra inventory | DONE — install materialization moved to M1 because the chunks are a custom encrypted archive |
+| M1 | Containers and assets (GO/NO-GO) | `.big` and `pc.rkv` validated against the installed tree; one asset extracted; formats documented | WIP — public specs, parsers and synthetic tests done; waiting for an installed tree |
 | M2 | Host skeleton and first frame | Host backend renders one level with textures and a free camera; frame comparable to the oracle | TODO |
 | M3 | Playable slice | First level playable start to finish; route replay test and state comparison | TODO |
 | M4 | Complete systems | Enemies, combat, dark gifts, scripting, menus, saves, audio and videos | TODO |
@@ -24,7 +24,8 @@ comparison.
 |---|---|---|
 | Host build skeleton | done | CMake presets, smoke binary and tests |
 | Installer container (SFXI) | done | Reader and synthetic test |
-| Asset containers | todo | Installer decompressor and `pc.rkv` |
+| BIG/RKV parsers (spec) | partial | Synthetic tests; not validated against this build |
+| Validated asset extraction | todo | Needs an installed tree |
 | Host renderer (OpenGL) | todo | M2 |
 | Switch renderer (deko3d) | todo | M2+ |
 | Audio | todo | M2+ |

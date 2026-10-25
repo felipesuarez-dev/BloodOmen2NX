@@ -1,6 +1,6 @@
 # State
 
-Current milestone: **M0 — laboratory and binary truth**.
+Current milestone: **M1 — containers and assets**. M0 (laboratory and binary truth) is complete.
 
 ## What is done
 
@@ -15,18 +15,22 @@ Current milestone: **M0 — laboratory and binary truth**.
 - `list.txt` extracted: the asset path list (kept local).
 - Ghidra project created and auto-analysis completed; 35,767 functions
   exported, 18,097 game candidates seeded in `re/FUNCTION_MAP.csv`.
+- Prior art integrated (`docs/PRIOR_ART.md`): `.big` (`goefile`) and
+  `pc.rkv` audio formats documented, DDS textures and Ogg audio confirmed.
+- `tools/bo2fmt/big.py` and `rkv.py` implemented with synthetic tests.
+- Installer archive identified: custom encrypted container (32-round
+  XTEA-like cipher, fixed S-box, embedded password), not zlib or RAR.
 - Installer script read: the numbered `data/*.dat` are compressed chunks
   that expand to `pc.rkv`, `code.big`, level `.big` files and `.san`
   animations; the movies are copied to `data/` unchanged.
 
 ## What is not done
 
-- The installer decompressor is not reversed: the installed tree cannot
-  be materialized yet.
-- `pc.rkv` not expanded or parsed.
-- The `.dat` payload codec is unknown.
+- No installed tree yet: parsers cannot be validated against real data.
+- `.big` and `pc.rkv` parsers are spec-level, not decoded for this build.
+- Per-type payloads (models, cell groups, animation, textures) are open.
 - Function map not triaged by subsystem yet.
-- Installer decompressor not reversed.
+- Installer decompressor not ported; it is optional, not a gate.
 - No renderer, audio, input or gameplay.
 
 ## Known unknowns (ranked)

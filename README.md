@@ -19,7 +19,7 @@
 
 </div>
 
-[status-badge]: https://img.shields.io/badge/phase-M0%20in%20progress-orange
+[status-badge]: https://img.shields.io/badge/phase-M1%20in%20progress-orange
 [cpp-badge]: https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white
 [cmake-badge]: https://img.shields.io/badge/build-CMake%20presets-064F8C?logo=cmake&logoColor=white
 [platform-badge]: https://img.shields.io/badge/platform-Linux%20dev%20%7C%20Switch%20target-lightgrey
@@ -56,13 +56,13 @@ This is a *functional* port, not a byte-matching decompilation: it does not rebu
 ## Status
 
 <!-- progress:start -->
-**Overall progress: 2.5%**
+**Overall progress: 2.8%**
 
 | Component | Weight | Progress | Score |
 |---|---:|---:|---:|
 | Functions translated / in-scope | 60% | 0 / 18097 | 0.00% |
 | Levels completable | 30% | 0 / TBD | 0.00% |
-| Platform features | 10% | 2 / 8 | 25.00% |
+| Platform features | 10% | 2 / 9 | 27.78% |
 
 Function map: 35513 rows. Levels and platform features are defined in [`tools/gen/progress_data.py`](tools/gen/progress_data.py).
 <!-- progress:end -->
@@ -74,7 +74,9 @@ Function map: 35513 rows. Levels and platform features are defined in [`tools/ge
 | Repository, build presets and host smoke binary | Works |
 | Host backend (SDL2 + OpenGL) | Not started |
 | Switch backend (libnx + deko3d) | Not started |
-| Asset containers (`game.erg`, `.dat`) | Not decoded |
+| `game.erg` | Decoded (text configuration) |
+| `.big` and `pc.rkv` | Public specs, parsers and synthetic tests; not validated against this build |
+| Installer `data/*.dat` | Identified as a custom encrypted archive; not ported |
 | Renderer, audio, input | Not started |
 | Game logic translation | Not started |
 | Original game as oracle | Not started |
@@ -223,6 +225,7 @@ Per-function loop: [`docs/PORTING_GUIDE.md`](docs/PORTING_GUIDE.md). The rule is
 | [`docs/REVERSING.md`](docs/REVERSING.md) | Ghidra workflow, compiler triage and dump policy |
 | [`docs/PORTING_GUIDE.md`](docs/PORTING_GUIDE.md) | The per-function translation loop |
 | [`docs/FORMATS/`](docs/FORMATS/) | Container and asset format specs |
+| [`docs/PRIOR_ART.md`](docs/PRIOR_ART.md) | Public tools, licenses and what we reuse or only use as an oracle |
 | [`docs/GAMEPLAY.md`](docs/GAMEPLAY.md) | Translated gameplay systems |
 | [`docs/RUNNING.md`](docs/RUNNING.md) | Host build, Switch target and the oracle |
 | [`docs/TESTING.md`](docs/TESTING.md) | Test pyramid and rules |
