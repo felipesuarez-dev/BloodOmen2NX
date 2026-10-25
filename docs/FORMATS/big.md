@@ -54,6 +54,19 @@ data = entry_start + entry_length - align4(data_length)
 This avoids depending on the variable `unknown` field and on the `n`
 values. The parser rejects entries whose computed range is inconsistent.
 
+## Validation
+
+The reference parser rejects malformed input instead of returning partial
+data:
+
+- a file shorter than `0x24` bytes or without the `goefile\0` magic;
+- a directory that starts before `0x24` or ends past the file;
+- names that do not terminate before the directory end;
+- an entry shorter than the fixed header or ending past the file;
+- a symbol list (`n` u16 values) or a payload length that does not fit
+  inside the entry;
+- non-zero bytes after the last entry.
+
 ## Resource types observed
 
 `goefile`, `symlist`, `bpackage`, `cellgrup`, `effect`, `lipsync`,

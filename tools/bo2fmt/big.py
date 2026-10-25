@@ -36,6 +36,8 @@ Entry:
 
 The data offset is derived from the end of the entry, which is the robust
 formula used by independent parsers: data = start + length - align4(size).
+
+Malformed input raises `BigError` instead of returning partial data.
 """
 
 from __future__ import annotations
@@ -77,8 +79,8 @@ def _u16(data: bytes, offset: int) -> int:
     return struct.unpack_from("<H", data, offset)[0]
 
 
-def _cstr(data: bytes, offset: int) -> tuple[str, int]:
-    end = data.find(b"\0", offset)
+def _cstr(data: bytes, offset: int, limit: int) -> tuple[str, int]:
+    end = data.find(b"\0", offset, limit)
     if end < 0:
         raise BigError("unterminated string")
     return data[offset:end].decode("latin1"), end + 1
@@ -89,34 +91,48 @@ def parse(data: bytes) -> tuple[list[str], list[Entry]]:
         raise BigError("not a goefile container")
     directory_length = _u32(data, 0x18)
     name_count = _u32(data, 0x20)
+    entries_start = 0x10 + directory_length
+    if entries_start < 0x24 or entries_start > len(data):
+        raise BigError("bad directory length")
+
     pos = 0x24
     names: list[str] = []
     for _ in range(name_count):
-        name, pos = _cstr(data, pos)
+        name, pos = _cstr(data, pos, entries_start)
         names.append(name)
     if pos & 1:
         pos += 1
-    entries_start = 0x10 + directory_length
-    if entries_start < pos or entries_start > len(data):
-        raise BigError("bad directory length")
+    if pos > entries_start:
+        raise BigError("name table overruns the directory")
 
     entries: list[Entry] = []
     pos = entries_start
-    while pos + 52 <= len(data):
+    while pos < len(data):
+        if len(data) - pos < 52:
+            if any(data[pos:]):
+                raise BigError(f"truncated entry at {pos:#x}")
+            break
         type_name = data[pos : pos + 8].rstrip(b"\0").decode("latin1")
         if not type_name:
+            if any(data[pos:]):
+                raise BigError(f"bad entry type at {pos:#x}")
             break
         entry_length = _u32(data, pos + 8)
-        if entry_length < 52 or pos + entry_length > len(data):
+        entry_end = pos + entry_length
+        if entry_length < 52 or entry_end > len(data):
             raise BigError(f"bad entry length at {pos:#x}")
         name_index = _u16(data, pos + 16)
         language_index = _u16(data, pos + 18)
         n = _u32(data, pos + 36)
         values_end = pos + 40 + n * 2
+        if values_end + 4 > entry_end:
+            raise BigError(f"bad symbol list at {pos:#x}")
         data_length = _u32(data, values_end)
         padded = (data_length + 3) & ~3
-        data_offset = pos + entry_length - padded
-        if data_offset < values_end + 4 or data_offset + data_length > len(data):
+        if padded > entry_length:
+            raise BigError(f"bad data length at {pos:#x}")
+        data_offset = entry_end - padded
+        if data_offset < values_end + 4 or data_offset > entry_end:
             raise BigError(f"bad data range at {pos:#x}")
         entries.append(
             Entry(
@@ -128,7 +144,7 @@ def parse(data: bytes) -> tuple[list[str], list[Entry]]:
                 data[data_offset : data_offset + data_length],
             )
         )
-        pos += entry_length
+        pos = entry_end
     return names, entries
 
 
@@ -148,6 +164,7 @@ def cmd_extract(args) -> int:
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     _, entries = load(Path(args.container))
+    written = 0
     for index, entry in enumerate(entries):
         name = Path(entry.name)
         if name.is_absolute() or ".." in name.parts:
@@ -158,7 +175,8 @@ def cmd_extract(args) -> int:
         if target.exists():
             target = target.with_name(f"{target.name}.{index}")
         target.write_bytes(entry.data)
-    print(f"extracted {len(entries)} entries to {out}")
+        written += 1
+    print(f"extracted {written} entries to {out}")
     return 0
 
 
