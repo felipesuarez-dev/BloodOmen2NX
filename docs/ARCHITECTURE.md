@@ -14,11 +14,11 @@ The first target is a Linux host build (SDL2 + OpenGL). It exists to:
   oracle;
 - validate formats and renderer assumptions cheaply.
 
-The development container has no SDL2, OpenGL or display. The first host
-backend is therefore `src/platform/headless/`: a software rasterizer that
-writes PPM frames and exercises the engine readers. The SDL2 + OpenGL
-backend remains the target and implements the same platform interfaces;
-the engine and game layers do not change when it lands.
+The development container provides SDL2, OpenGL, Xvfb and Wine.
+`src/platform/headless/` is the deterministic software rasterizer used by
+the tests and the PPM output. `src/platform/sdl/` is the interactive
+SDL2 + OpenGL backend (`bo2nx --sdl`); it implements the same engine
+interfaces, so the engine and game layers do not change.
 
 The Switch backend (libnx + deko3d) replaces the platform layer once the
 host build renders a level. The game and engine layers do not change when

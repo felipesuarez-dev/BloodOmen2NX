@@ -12,7 +12,7 @@ jobs:
       - name: Install toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build g++
+          sudo apt-get install -y cmake ninja-build g++ libsdl2-dev libgl1-mesa-dev xvfb
       - name: Asset and policy check
         run: ./scripts/check_no_assets.sh
       - name: Python tests

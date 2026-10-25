@@ -11,6 +11,7 @@
 | Render golden | Offscreen render of a scene or texture -> PNG hash | `BO2NX_ASSETS_DIR` set | Yes, goldens local |
 | Headless regression | `bo2nx --headless --frames N --dump-state` -> canonical hash | Always (synthetic) / gated (real levels) | Mixed |
 | Oracle | Port vs original under Wine (screenshots, state, saves, audio) | Milestones | See `docs/RUNNING.md` |
+| SDL smoke | SDL2/OpenGL triangle under Xvfb -> PPM | When SDL2 and Xvfb are present | No |
 | Sanitizers | ASan + UBSan over unit and integration | `linux-asan` preset | No |
 
 ## Rules
@@ -51,8 +52,7 @@ BO2NX_ASSETS_DIR=/path/to/game ctest --preset linux-debug   # asset-gated on
 
 ## Visual gate
 
-The headless renderer draws the `cellgrup` shell with its DDS textures
-and a free camera now. The near-plane clipper and
-`tools/oracle/compare_frame.sh` are the next steps; the side-by-side gate
-still applies before a demo. Do not show a level demo until the frame
-recognizably matches the original.
+The headless renderer and the SDL2 + OpenGL backend draw the `cellgrup`
+shell with its DDS textures and a free camera. The side-by-side oracle
+gate still applies before a demo; do not show a level demo until the
+frame recognizably matches the original.

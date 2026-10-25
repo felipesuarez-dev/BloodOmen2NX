@@ -7,8 +7,12 @@ One-time setup for the host build and the reversing tools.
 ```sh
 sudo apt update
 sudo apt install -y cmake ninja-build g++ clang-format p7zip-full \
-  python3 python3-venv
+  python3 python3-venv libsdl2-dev libgl1-mesa-dev xvfb
 ```
+
+The SDL2 + OpenGL backend and its Xvfb smoke test need `libsdl2-dev`,
+`libgl1-mesa-dev` and `xvfb`. CMake skips the backend when they are
+missing; use `-DBO2NX_ENABLE_SDL=OFF` to force a headless build.
 
 Already present on the development machine, no install needed: `git`,
 `cmake` 3.28, `gcc` 13, `python3`, `uv`, `cargo`, `node`, `bsdtar`,

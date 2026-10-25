@@ -9,9 +9,8 @@ cmake --build --preset linux-debug
 ctest --preset linux-debug --output-on-failure
 ```
 
-The host binary inspects `.big` containers and renders a frame without a
-window. The first backend is headless; SDL2 + OpenGL is pending because
-the development container has neither the libraries nor a display.
+The host binary inspects `.big` containers, renders frames without a
+window and can open an SDL2 + OpenGL window when the backend is built.
 
 Inspect a container and render a real texture on the free-camera preview:
 
@@ -40,16 +39,36 @@ BIG=external/installed/media/gogames/bo2/resources/levels/sanctuary/sanctuary.bi
 ```
 
 The geometry is drawn with the DDS textures resolved from the cellgrup
-symbols; materials without a texture entry use a flat color. A triangle
-near-plane clipper keeps interior cameras stable; a camera inside the
-closed shell sees the shell interior, while the isometric frame shows
-the level.
+symbols; materials without a texture entry use the diffuse material
+layer. A triangle near-plane clipper keeps interior cameras stable; a
+camera inside the closed shell sees the shell interior, while the
+isometric frame shows the level.
+
+## SDL2 + OpenGL window
+
+`--sdl` opens the SDL2 + OpenGL backend. With `--big` it loads the level;
+without `--big` it draws a triangle, which is the backend self-test. The
+backend is built when CMake finds SDL2 and OpenGL; set
+`-DBO2NX_ENABLE_SDL=OFF` to build headless only.
+
+```sh
+BIG=external/installed/media/gogames/bo2/resources/levels/sanctuary/sanctuary.big
+./build/linux-debug/bo2nx --sdl --big "$BIG"
+xvfb-run -a ./build/linux-debug/bo2nx --sdl --big "$BIG"   --width 640 --height 480 --out /tmp/sdl-sanctuary.ppm
+xvfb-run -a ./build/linux-debug/bo2nx --sdl --out /tmp/sdl-triangle.ppm
+```
+
+With `--out` the backend renders one frame, captures the framebuffer and
+exits; without it the window stays open. Controls: `W`/`S` or the arrow
+keys move the target, `A`/`D` strafe, `Q`/`E` change height, the right
+mouse button orbits, the wheel zooms and `Escape` quits.
 
 | Flag | Purpose |
 |---|---|
 | `--list-big <file>` | List entries (type, size, name) |
 | `--frame --big <file>` | Render a textured preview frame |
 | `--level --big <level.big>` | Render the static `cellgrup` level shell |
+| `--sdl [--big <file>]` | SDL2 + OpenGL window; no `--big` draws a triangle |
 | `--entry <substring>` | Texture entry to use (default: first texture) |
 | `--out <file.ppm>` | Frame output |
 | `--eye x,y,z`, `--target x,y,z` | Free camera |
@@ -63,7 +82,6 @@ Planned with the level pipeline:
 | `--headless` | No window; fixed ticks |
 | `--frames N` | Run exactly N logic ticks |
 | `--dump-state <file>` | Canonical state serialization for regression tests |
-| `--screenshot <file>` | Offscreen render of one frame |
 
 ## Switch build (M2)
 
@@ -82,7 +100,7 @@ Rules:
 - Do not block M0 or M1 on it.
 - Record the exact steps and the Wine prefix in this file if it works.
 - If it does not boot, continue with static analysis and note it in
-  `STATE.md`.
+  `STATE.md` and `docs/ORACLE_COMPARE.md`.
 
 ## Asset-gated tests
 

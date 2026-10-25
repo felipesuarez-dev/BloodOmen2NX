@@ -76,17 +76,17 @@ Function map: 35513 rows. Levels and platform features are defined in [`tools/ge
 |---|---|
 | Repository, build presets and host smoke binary | Works |
 | Host backend (headless software) | First frame: real DDS texture, free camera, PPM output |
-| Host backend (SDL2 + OpenGL) | Pending; the dev container has no SDL2/OpenGL/display |
+| Host backend (SDL2 + OpenGL) | Works: `bo2nx --sdl`; window, free camera and Xvfb capture |
 | C++ engine readers (BIG/DDS) | Validated on the installed tree |
-| Level geometry and textures | `sanctuary` cellgrup renders headless (75 models, 5,107 triangles, 33/34 DDS textures) |
+| Level geometry, textures and cell grid | `sanctuary` cellgrup renders headless and in OpenGL (75 models, 5,107 triangles, 33/34 DDS textures, 3 cells, 33 BSP nodes) |
 | Switch backend (libnx + deko3d) | Not started |
 | `game.erg` | Decoded (text configuration) |
 | `.big` and `pc.rkv` | Validated against the installed Spanish build: 179 `.big` (246,332 entries) and 2,666 RKV streams |
 | Installer `data/*.dat` | Decoded; `tools/bo2fmt/installer.py` materializes the 227-file tree |
 | Installed game tree | 227 files, 1.9 GB; manifest hash in `docs/PROVENANCE.md` |
-| Level renderer, audio, input | Textured preview only; level geometry pending |
+| Level renderer, audio, input | Level shell with free-camera input; audio and gameplay pending |
 | Game logic translation | Not started |
-| Original game as oracle | Not started |
+| Original game as oracle | Wine/Xvfb launches the original; frame comparison pending |
 
 Source of truth: [`STATE.md`](STATE.md) and [`ROADMAP.md`](ROADMAP.md).
 
@@ -209,7 +209,7 @@ Per-function loop: [`docs/PORTING_GUIDE.md`](docs/PORTING_GUIDE.md). The rule is
 | `src/common/` | Shared utilities (types, little-endian readers, logging) |
 | `src/engine/` | Recovered engine services behind stable interfaces |
 | `src/game/` | Translated game logic |
-| `src/platform/linux/` | SDL2 + OpenGL host backend |
+| `src/platform/sdl/` | SDL2 + OpenGL host backend |
 | `src/platform/switch/` | libnx + deko3d backend |
 | `include/bo2/` | Public headers |
 | `tests/` | Unit, integration and golden tests |

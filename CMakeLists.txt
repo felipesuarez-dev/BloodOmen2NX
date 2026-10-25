@@ -28,9 +28,29 @@ add_library(bo2_platform_headless STATIC
 target_link_libraries(bo2_platform_headless PUBLIC bo2_engine)
 target_compile_options(bo2_platform_headless PRIVATE ${BO2NX_WARNINGS})
 
+option(BO2NX_ENABLE_SDL "Build the SDL2 and OpenGL host backend" ON)
+set(BO2NX_HAVE_SDL OFF)
+if(BO2NX_ENABLE_SDL)
+    find_package(SDL2 CONFIG QUIET)
+    find_package(OpenGL QUIET)
+    if(SDL2_FOUND AND OPENGL_FOUND)
+        add_library(bo2_platform_sdl STATIC
+            src/platform/sdl/sdl_backend.cpp
+        )
+        target_link_libraries(bo2_platform_sdl PUBLIC bo2_engine SDL2::SDL2 OpenGL::GL)
+        target_include_directories(bo2_platform_sdl PUBLIC include)
+        target_compile_options(bo2_platform_sdl PRIVATE ${BO2NX_WARNINGS})
+        set(BO2NX_HAVE_SDL ON)
+    endif()
+endif()
+
 add_executable(bo2nx src/main.cpp)
 target_link_libraries(bo2nx PRIVATE bo2_platform_headless)
 target_compile_options(bo2nx PRIVATE ${BO2NX_WARNINGS})
+if(BO2NX_HAVE_SDL)
+    target_compile_definitions(bo2nx PRIVATE BO2NX_HAVE_SDL)
+    target_link_libraries(bo2nx PRIVATE bo2_platform_sdl)
+endif()
 
 include(CTest)
 if(BUILD_TESTING)
@@ -48,4 +68,14 @@ if(BUILD_TESTING)
     target_link_libraries(bo2nx_renderer_tests PRIVATE bo2_platform_headless)
     target_compile_options(bo2nx_renderer_tests PRIVATE ${BO2NX_WARNINGS})
     add_test(NAME renderer COMMAND bo2nx_renderer_tests)
+endif()
+
+if(BO2NX_HAVE_SDL)
+    find_program(XVFB_RUN xvfb-run)
+    if(XVFB_RUN)
+        add_test(NAME sdl_triangle
+            COMMAND ${XVFB_RUN} -a -s "-screen 0 320x240x24" $<TARGET_FILE:bo2nx> --sdl
+                    --width 128 --height 96 --out ${CMAKE_BINARY_DIR}/sdl_triangle.ppm)
+        set_tests_properties(sdl_triangle PROPERTIES PASS_REGULAR_EXPRESSION "sdl frame")
+    endif()
 endif()

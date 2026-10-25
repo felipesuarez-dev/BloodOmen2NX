@@ -12,6 +12,9 @@
 #include "bo2/engine/dds.hpp"
 #include "bo2/platform/headless/software_renderer.hpp"
 #include "bo2/version.hpp"
+#ifdef BO2NX_HAVE_SDL
+#include "bo2/platform/sdl/sdl_backend.hpp"
+#endif
 
 namespace {
 
@@ -19,6 +22,7 @@ struct Options {
     std::string list_big;
     bool frame = false;
     bool level = false;
+    bool sdl = false;
     bool eye_set = false;
     bool target_set = false;
     std::string big;
@@ -78,7 +82,9 @@ Options parse_options(int argc, char** argv) {
                 << "Usage:\n"
                 << "  bo2nx\n"
                 << "  bo2nx --list-big <file.big>\n"
-                << "  bo2nx --frame --big <file.big> --out <frame.ppm> [options]\n\n"
+                << "  bo2nx --frame --big <file.big> --out <frame.ppm> [options]\n"
+                << "  bo2nx --level --big <file.big> --out <frame.ppm> [options]\n"
+                << "  bo2nx --sdl [--big <file.big>] [--out <screenshot.ppm>] [options]\n\n"
                 << "Frame options:\n"
                 << "  --entry <substring>   texture entry (default: first texture)\n"
                 << "  --width <n>           frame width (default 640)\n"
@@ -94,6 +100,8 @@ Options parse_options(int argc, char** argv) {
             options.frame = true;
         } else if (argument == "--level") {
             options.level = true;
+        } else if (argument == "--sdl") {
+            options.sdl = true;
         } else if (argument == "--big") {
             options.big = next_argument(index, argc, argv);
         } else if (argument == "--entry") {
@@ -118,9 +126,9 @@ Options parse_options(int argc, char** argv) {
         }
     }
     const int modes = (!options.list_big.empty() ? 1 : 0) + (options.frame ? 1 : 0) +
-                      (options.level ? 1 : 0);
+                      (options.level ? 1 : 0) + (options.sdl ? 1 : 0);
     if (modes > 1) {
-        usage_error("--list-big, --frame and --level are mutually exclusive");
+        usage_error("--list-big, --frame, --level and --sdl are mutually exclusive");
     }
     return options;
 }
@@ -142,12 +150,16 @@ const bo2::engine::BigEntry* pick_texture(const bo2::engine::BigArchive& archive
     return needle.empty() ? first : nullptr;
 }
 
-int render_level_frame(const Options& options) {
+struct LoadedLevel {
+    bo2::engine::LevelGeometry geometry;
+    std::vector<bo2::engine::Image> textures;
+    std::size_t loaded_textures = 0;
+    std::string name;
+};
+
+LoadedLevel load_level(const Options& options) {
     if (options.big.empty()) {
         usage_error("--level requires --big");
-    }
-    if (options.out.empty()) {
-        usage_error("--level requires --out");
     }
     const bo2::engine::BigArchive archive = bo2::engine::BigArchive::load(options.big);
     const bo2::engine::BigEntry* entry = nullptr;
@@ -160,44 +172,33 @@ int render_level_frame(const Options& options) {
     if (entry == nullptr) {
         throw std::runtime_error("no cellgrup entry in " + options.big);
     }
-    const std::vector<std::uint8_t> bytes = archive.extract(*entry);
-    const bo2::engine::LevelGeometry geometry =
-        bo2::engine::parse_cell_group(bytes, entry->symbols, archive.names());
-
-    std::vector<bo2::engine::Image> textures;
-    textures.reserve(geometry.texture_names.size());
-    std::size_t loaded_textures = 0;
-    for (const std::string& name : geometry.texture_names) {
+    LoadedLevel level;
+    level.name = entry->name;
+    level.geometry = bo2::engine::parse_cell_group(archive.extract(*entry), entry->symbols,
+                                                   archive.names());
+    level.textures.reserve(level.geometry.texture_names.size());
+    for (const std::string& name : level.geometry.texture_names) {
         const bo2::engine::BigEntry* texture_entry = archive.find("texture", name);
         if (texture_entry == nullptr) {
-            textures.emplace_back();
+            level.textures.emplace_back();
             continue;
         }
         try {
-            textures.push_back(bo2::engine::decode_dds(archive.extract(*texture_entry)));
-            ++loaded_textures;
+            level.textures.push_back(bo2::engine::decode_dds(archive.extract(*texture_entry)));
+            ++level.loaded_textures;
         } catch (const std::exception&) {
-            textures.emplace_back();
+            level.textures.emplace_back();
         }
     }
+    return level;
+}
 
-    bo2::platform::headless::FrameOptions frame = options.frame_options;
-    if (!options.eye_set || !options.target_set) {
-        const bo2::engine::Vec3 center =
-            (geometry.minimum + geometry.maximum) * 0.5f;
-        const bo2::engine::Vec3 extent = geometry.maximum - geometry.minimum;
-        const float size = std::max({extent.x, extent.y, extent.z});
-        frame.camera.eye = center + bo2::engine::Vec3{size * 0.9f, -size * 1.15f, size * 0.8f};
-        frame.camera.target = center;
-    }
-    frame.camera.up = {0.0f, 0.0f, 1.0f};
-    const std::vector<std::uint8_t> pixels =
-        bo2::platform::headless::render_level(geometry, textures, frame);
-    bo2::platform::headless::write_ppm(options.out, frame.width, frame.height, pixels);
-    std::cout << "cellgrup: " << entry->name << " (models " << geometry.model_count
+void print_scene(const LoadedLevel& level) {
+    const bo2::engine::LevelGeometry& geometry = level.geometry;
+    std::cout << "cellgrup: " << level.name << " (models " << geometry.model_count
               << ", skipped " << geometry.skipped_models << ", triangles "
               << geometry.triangles.size() << ", vertices " << geometry.positions.size()
-              << ", textures " << loaded_textures << "/" << geometry.texture_names.size()
+              << ", textures " << level.loaded_textures << "/" << geometry.texture_names.size()
               << ")\n";
     if (geometry.has_cell_grid) {
         std::size_t portals = 0;
@@ -217,8 +218,58 @@ int render_level_frame(const Options& options) {
     if (geometry.has_level_attributes) {
         std::cout << "attrs: " << geometry.level_attributes.size() << " tables\n";
     }
+}
+
+void default_camera(const LoadedLevel& level, bo2::engine::Vec3& eye,
+                    bo2::engine::Vec3& target) {
+    const bo2::engine::Vec3 center = (level.geometry.minimum + level.geometry.maximum) * 0.5f;
+    const bo2::engine::Vec3 extent = level.geometry.maximum - level.geometry.minimum;
+    const float size = std::max({extent.x, extent.y, extent.z});
+    eye = center + bo2::engine::Vec3{size * 0.9f, -size * 1.15f, size * 0.8f};
+    target = center;
+}
+
+int render_level_frame(const Options& options) {
+    if (options.out.empty()) {
+        usage_error("--level requires --out");
+    }
+    const LoadedLevel level = load_level(options);
+    bo2::platform::headless::FrameOptions frame = options.frame_options;
+    if (!options.eye_set || !options.target_set) {
+        default_camera(level, frame.camera.eye, frame.camera.target);
+    }
+    frame.camera.up = {0.0f, 0.0f, 1.0f};
+    const std::vector<std::uint8_t> pixels =
+        bo2::platform::headless::render_level(level.geometry, level.textures, frame);
+    bo2::platform::headless::write_ppm(options.out, frame.width, frame.height, pixels);
+    print_scene(level);
     std::cout << "frame: " << options.out << " (" << frame.width << 'x' << frame.height << ")\n";
     return 0;
+}
+
+int run_sdl(const Options& options) {
+#ifdef BO2NX_HAVE_SDL
+    bo2::platform::sdl::WindowOptions window;
+    window.width = options.frame_options.width;
+    window.height = options.frame_options.height;
+    window.screenshot = options.out;
+    window.camera.eye = options.frame_options.camera.eye;
+    window.camera.target = options.frame_options.camera.target;
+    window.camera.fov_degrees = options.frame_options.camera.fov_degrees;
+    window.camera.up = {0.0f, 0.0f, 1.0f};
+    if (options.big.empty()) {
+        return bo2::platform::sdl::run_triangle(window);
+    }
+    const LoadedLevel level = load_level(options);
+    if (!options.eye_set || !options.target_set) {
+        default_camera(level, window.camera.eye, window.camera.target);
+    }
+    print_scene(level);
+    return bo2::platform::sdl::run_level(level.geometry, level.textures, window);
+#else
+    (void)options;
+    throw std::runtime_error("this build has no SDL2/OpenGL backend");
+#endif
 }
 
 int list_big(const std::string& path) {
@@ -272,6 +323,9 @@ int main(int argc, char** argv) {
         }
         if (options.level) {
             return render_level_frame(options);
+        }
+        if (options.sdl) {
+            return run_sdl(options);
         }
         std::cout << bo2::kProjectName << ' ' << bo2::version() << '\n';
         return 0;

@@ -52,6 +52,11 @@ and assets) is complete.
   `mlyrctrl` (three `u32`/`f32`/`u16`/`u16` controls) per material.
   Untextured surfaces use the diffuse layer; textured surfaces keep the
   texture.
+- The SDL2 + OpenGL host backend is built: `bo2nx --sdl` opens a window,
+  draws the level with textures, a free camera and right-drag orbit, and
+  captures a framebuffer with `--out`. It uses the same engine data as
+  the headless path; a 640x480 sanctuary frame is within 0.2% RMSE of the
+  software renderer.
 
 ## What is not done
 
@@ -60,12 +65,9 @@ and assets) is complete.
 - Animation and skinning (`animatio`, `animreel`, `vtxweigh`, `jointidx`).
 - `region`, `planinfo`, `bpackage`, `strtable`, `musicbnk`, `texfont`,
   `liteinfo`.
-- SDL2 + OpenGL host backend and the oracle frame comparison (the
-  development container has no libraries, display or Wine).
-- SDL2 + OpenGL host backend (the development container has no libraries
-  or display).
+- The oracle frame comparison (the original launches under Wine/Xvfb).
 - `game.erg` parser details.
-- Audio, input or gameplay.
+- Audio or gameplay (the SDL viewer has camera input only).
 - The installer's native RAR decoder is not ported; development
   extraction uses `unrar`. The game does not need the installer decoder.
 
@@ -78,7 +80,7 @@ and assets) is complete.
 | 2 | `game.erg` parser details | Decompile the key lookup in `bo2.exe` | `docs/FORMATS/erg.md` |
 | 3 | Original logic tick | Measure from the oracle once it runs, or from the main loop | `docs/ARCHITECTURE.md` |
 | 4 | Level list and streaming model | Derive it from the installer script and `list.txt` | `docs/GAMEPLAY.md` |
-| 5 | Level renderer | SDL2+OpenGL and the oracle frame | `docs/ARCHITECTURE.md` |
+| 5 | Oracle frame comparison | Run the original under Wine/Xvfb and compare frames | `docs/ORACLE_COMPARE.md` |
 | 6 | `animatio` and `animreel` layout | Decompile the animation loader | `docs/FORMATS/models.md` |
 
 ## Next steps
@@ -86,7 +88,7 @@ and assets) is complete.
 1. Decode the material lighting equation.
 2. Decode `cellinst`/`cellight`/`cellmark`, animation/skinning and the
    shared `model` entries.
-3. Add the SDL2 + OpenGL backend and use the original as the oracle.
+3. Compare the SDL2/OpenGL frame with the original under Wine/Xvfb.
 
 ## Rules
 
