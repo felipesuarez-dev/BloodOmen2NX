@@ -60,11 +60,11 @@ This is a *functional* port, not a byte-matching decompilation: it does not rebu
 
 | Component | Weight | Progress | Score |
 |---|---:|---:|---:|
-| Functions translated / in-scope | 60% | 0 / 0 | 0.00% |
+| Functions translated / in-scope | 60% | 0 / 18097 | 0.00% |
 | Levels completable | 30% | 0 / TBD | 0.00% |
 | Platform features | 10% | 2 / 8 | 25.00% |
 
-Function map: 0 rows. Levels and platform features are defined in [`tools/gen/progress_data.py`](tools/gen/progress_data.py).
+Function map: 35513 rows. Levels and platform features are defined in [`tools/gen/progress_data.py`](tools/gen/progress_data.py).
 <!-- progress:end -->
 
 ### What works today

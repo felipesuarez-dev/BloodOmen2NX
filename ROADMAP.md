@@ -10,7 +10,7 @@ comparison.
 
 | Gate | Phase | Exit criteria | Status |
 |---|---|---|---|
-| M0 | Laboratory and binary truth | Installed layout materialized by static extraction, SHA-256 manifest, Ghidra project with recovered functions, compiler and imports identified | WIP — hashes, PE triage, SFXI and `game.erg` done; decompressor and Ghidra pending |
+| M0 | Laboratory and binary truth | Installed layout materialized by static extraction, SHA-256 manifest, Ghidra project with recovered functions, compiler and imports identified | WIP — hashes, PE triage, SFXI, `game.erg` and Ghidra inventory done; decompressor and subsystem triage pending |
 | M1 | Containers and assets (GO/NO-GO) | `game.erg` and `.dat` decoded; one asset extracted, re-packed and accepted by the original; formats documented | TODO |
 | M2 | Host skeleton and first frame | Host backend renders one level with textures and a free camera; frame comparable to the oracle | TODO |
 | M3 | Playable slice | First level playable start to finish; route replay test and state comparison | TODO |

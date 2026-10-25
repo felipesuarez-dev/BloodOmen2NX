@@ -58,6 +58,27 @@ known engine classes. Otherwise use `fn_<address>` and record the evidence
 that hints at the purpose. Never invent a descriptive name without
 evidence.
 
+## Ghidra function inventory (M0)
+
+`bo2.exe` imported as `x86:LE:32:default`; auto-analysis completed in 284 s
+with `MAXMEM=3G`. Inventory exported with
+`tools/ghidra/ghidra_scripts/ExportFunctions.java`:
+
+| Class | Count | Treatment |
+|---|---:|---|
+| Unnamed game candidates (`FUN_*`) | 18,097 | `todo` in the function map |
+| Named CRT/Win32/STL functions | 17,416 | `external`, excluded from progress |
+| Thunks (`thunk_*`) | 170 | excluded |
+| Exception artifacts (`Catch@*`) | 84 | excluded |
+| Total exported | 35,767 | - |
+
+The `.text` section spans `0x401000`-`0x83e7e2` (4.4 MB of code), so the
+game-candidate count is proportionate. The game/CRT split is a heuristic
+based on the name; subsystem triage refines it as evidence appears.
+
+`re/FUNCTION_MAP.csv` is seeded from this export. New rows are `todo` with
+an `unknown` subsystem until a function is classified.
+
 ## Ghidra project
 
 - Project directory: `external/ghidra` (gitignored).

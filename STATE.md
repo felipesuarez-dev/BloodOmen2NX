@@ -13,6 +13,8 @@ Current milestone: **M0 — laboratory and binary truth**.
   `tools/bo2fmt/sfxi.py`, with a synthetic test.
 - `game.erg` extracted and identified as the text configuration file.
 - `list.txt` extracted: the asset path list (kept local).
+- Ghidra project created and auto-analysis completed; 35,767 functions
+  exported, 18,097 game candidates seeded in `re/FUNCTION_MAP.csv`.
 - Installer script read: the numbered `data/*.dat` are compressed chunks
   that expand to `pc.rkv`, `code.big`, level `.big` files and `.san`
   animations; the movies are copied to `data/` unchanged.
@@ -23,8 +25,8 @@ Current milestone: **M0 — laboratory and binary truth**.
   be materialized yet.
 - `pc.rkv` not expanded or parsed.
 - The `.dat` payload codec is unknown.
-- Ghidra project not created; `bo2.exe` not analysed.
-- No function map rows.
+- Function map not triaged by subsystem yet.
+- Installer decompressor not reversed.
 - No renderer, audio, input or gameplay.
 
 ## Known unknowns (ranked)
@@ -40,11 +42,10 @@ Current milestone: **M0 — laboratory and binary truth**.
 
 ## Next steps
 
-1. Reverse the installer decompressor and expand one `data/*.dat` chunk.
-2. Create the Ghidra project and recover functions missed by
-   auto-analysis.
-3. Seed `re/FUNCTION_MAP.csv` from the recovered functions.
-4. Parse `game.erg` and `pc.rkv`; write the parsers with synthetic
+1. Triage the 18,097 game candidates by subsystem and recover functions
+   missed by auto-analysis.
+2. Reverse the installer decompressor and expand one `data/*.dat` chunk.
+3. Parse `game.erg` and `pc.rkv`; write the parsers with synthetic
    fixtures.
 5. Re-pack one asset and verify it with the original.
 6. Start the host backend once M1 passes.
