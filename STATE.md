@@ -100,6 +100,9 @@ and assets) is complete.
 - Shared-model instance light maps, the per-vertex data, the
   material/light-map combination and the vertex diffuse equation.
 - Animation and skinning (`animatio`, `animreel`, `vtxweigh`, `jointidx`).
+- Collision (`collmodc`) and entity/player logic.
+- Audio playback: Ogg streams extract from `pc.rkv`, but the decoder and
+  mixer (#27) and the `sound`/`strmfile` event table (#17) are open.
 - `region`, `planinfo`, `bpackage`, `strtable`, `musicbnk`, `texfont`,
   `liteinfo`.
 - The oracle frame comparison (the original launches under Wine/Xvfb).
