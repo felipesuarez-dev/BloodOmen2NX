@@ -12,13 +12,16 @@ The expected installed layout is:
 ```
 <data-dir>/
   bo2.exe                 (reference only; never executed by the port)
+  binkw32.dll
   data/
     game.erg              text configuration
+    *.dat                 Bink videos (copy entries)
+    list.txt, *.raw, *.fnt, *.dds, *.react, dsstdfx.bin
+  media/gogames/bo2/
     pc.rkv                audio archive (Ogg Vorbis)
     Code.big, PreCode.big code, font and shared resources
     resources/levels/...  level .big files
-    kain*.big             Kain models and textures per chapter
-    *.dat                 Bink videos
+    resources/animations/levels/*.san
 ```
 
 `pc.rkv` is audio, not the master asset file. Level, model, texture and
@@ -47,8 +50,10 @@ artifact are in `docs/PROVENANCE.md`. Nothing is downloaded by the build.
 
 ## Installing from the ISO
 
-The reference ISO is an installer, not an installed game. The installer
-uses a custom encrypted archive; the fast path is to install the game on
-Windows (or use a GOG/Steam copy) and copy the installed tree to
-`external/installed/`. The ISO remains the provenance reference. See
-`docs/FORMATS/dat.md`.
+The reference ISO is an installer, not an installed game. The chunks are
+decoded; `tools/bo2fmt/installer.py` materializes the tree from the ISO,
+the SFXI resources and the 198 `data/*.dat` files. See
+`docs/FORMATS/dat.md` for the pipeline and the `--data-dir` layout.
+
+A Windows or GOG/Steam installation remains a valid oracle, but it is no
+longer required to obtain the tree.

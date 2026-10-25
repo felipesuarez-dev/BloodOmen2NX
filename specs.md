@@ -1,7 +1,7 @@
 # Blood Omen 2 NX — Technical specification (v0.1)
 
-Status: M0. This document describes the intended system and the verified
-facts about the target. Anything not marked **verified** is an open
+Status: M1 complete; M2 in progress. This document describes the intended
+system and the verified facts about the target. Anything not marked **verified** is an open
 question and must not be treated as a design decision.
 
 ## 1. Purpose
@@ -51,9 +51,10 @@ Reference media hash and chain of custody: `docs/PROVENANCE.md`.
 - The ISO root holds nine Bink videos (`awakens.dat`, `bo2intro.dat`,
   `credits.dat`, `crystal.dat`, `eidos.dat`, `install2.dat`, `outro.dat`,
   `spooky.dat`, `sr2_trailer.dat`).
-- The 198 files under `data/` start with a 32-bit little-endian value that
-  appears to be a payload length, followed by high-entropy data with no
-  recognizable asset markers. Compression or encryption is unconfirmed.
+- The 198 files under `data/` are installer chunks: a XOR layer over a
+  single-file RAR 4 archive whose packed data uses the installer's own
+  32-round block cipher. `tools/bo2fmt/installer.py` decodes them and
+  materializes the 227-file tree. See `docs/FORMATS/dat.md`.
 - The installed layout expects `data/game.erg`; the file is not present in
   the ISO, so the installer creates or extracts it.
 - `bo2.exe` imports `d3d8.dll`, `d3d8d.dll`, `DINPUT.dll` and
@@ -92,16 +93,16 @@ possible, after a re-pack is accepted by the original game.
 | Format | Status |
 |---|---|
 | `game.erg` | Unknown |
-| `.dat` container | Header observed, payload unknown |
-| Models | Unknown |
-| Textures | Unknown |
-| Audio | Ogg Vorbis expected, container unknown |
+| `.dat` container | Verified: decoded and validated |
+| Models | Payload extracted; layout unknown |
+| Textures | Verified: DDS payloads |
+| Audio | Verified: Ogg Vorbis in `pc.rkv` |
 | Video | Bink, inventory known |
 | Saves | Unknown |
 
 ## 8. Asset pipeline
 
-1. Materialize an installed copy from the user's media.
+1. Materialize an installed copy from the user's media (`tools/bo2fmt/installer.py`).
 2. Parse containers with a Python reference implementation (`tools/bo2fmt`).
 3. Validate with synthetic fixtures first, then with real assets.
 4. Re-pack one asset and confirm the original game accepts it.
@@ -114,6 +115,11 @@ Both implement the same interface. The original D3D8 fixed-function path
 must be mapped to explicit pipelines; the game data is expected to be
 mostly pre-lit, which keeps the shader set small. This is an assumption
 until the first level renders.
+
+The development container has no SDL2, OpenGL or display. The first host
+step is therefore a headless software rasterizer that writes frames and
+runs the same engine interfaces; the SDL2 + OpenGL backend lands when the
+development environment provides those libraries.
 
 ## 10. Audio
 
@@ -167,14 +173,14 @@ level renders.
 
 ## 16. Milestones
 
-See `ROADMAP.md`. M1 is the go/no-go gate: if the containers cannot be
-decoded and re-packed, the project is replanned.
+See `ROADMAP.md`. M1 passed on 2026-10-25: the containers are decoded and
+validated. M2 is the current milestone.
 
 ## 17. Risks
 
 | Risk | Impact | Mitigation |
 |---|---|---|
-| `.dat` or `game.erg` cannot be decoded | Blocks all content | M1 gate; time-boxed reverse of the installer |
+| `.dat` decoding was the M1 gate | It passed; content is available | Keep the pipeline and manifest documented |
 | No symbols and no public dump | Slow naming and triage | Function map + string/RTTI evidence |
 | Renderer tightly coupled to D3D8 | Long graphics work | Host backend first; pre-lit asset assumption validated early |
 | Scope (full 3D game) | Years of work | Vertical slice first; levels one by one |

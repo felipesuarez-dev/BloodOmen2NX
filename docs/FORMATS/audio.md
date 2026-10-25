@@ -1,28 +1,28 @@
 # Audio
 
-Status: **observed**, not decoded.
+Status: **`pc.rkv` decoded; event table unknown**.
 
 ## Observed
 
-- The PC version uses Ogg Vorbis for sound effects, dialogue and music.
-  A public MIT parser and inventory confirm it: `pc.rkv` holds 2,824 Ogg
-  streams under `vo/`, `streams/wav/` and `music/wav/`.
+- `pc.rkv` is the PC audio archive: 2,666 length-prefixed entries under
+  `vo/`, `streams/wav/` and `music/wav/`. The first stream decodes as
+  Ogg Vorbis mono 44.1 kHz.
+- The last entry declares 50,002 bytes and stores 49,152; the reference
+  file ends there. The parser reports it as truncated.
 - The PS2 version uses Sony ADPCM; GameCube uses DSP. Both are covered by
   vgmstream, but they are out of scope for the PC port.
-- No `OggS` marker was found in the sampled `.dat` payloads on the
-  reference ISO because those chunks are encrypted installer containers;
-  the audio lives in `pc.rkv`, which the installer expands from them.
 
 ## Open questions
 
-- Container and index for the audio streams.
-- Sample rate, channels and loop metadata.
+- The 2,666 streams versus the 2,824 reported for the public GOG copy.
+- Sample rate, channels and loop metadata per stream.
 - Music: streamed Ogg or a separate module format.
-- Event table: which entity or script triggers each sound.
+- Event table: which entity or script triggers each sound. The `sound`
+  and `strmfile` entries live in the `.big` files.
 
 ## Next steps
 
-1. Decode the `.dat` container.
-2. Search the decoded payloads for `OggS` and Vorbis headers.
-3. Find the audio loader and the mixer setup in `bo2.exe`.
-4. Decode one stream and compare it with the original's output.
+1. Document the `sound`/`strmfile` event table.
+2. Decode more streams and compare them with the original's output.
+3. Feed `vo/`, `streams/wav/` and `music/wav/` into the host audio
+   backend.

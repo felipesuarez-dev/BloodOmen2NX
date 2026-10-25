@@ -7,13 +7,13 @@ by a parser or the original game; **observed** = seen but not decoded;
 | Format | Status | Doc |
 |---|---|---|
 | SFXI installer container | verified | [`sfxi.md`](sfxi.md) |
-| `.dat` installer chunk | encrypted, not decoded | [`dat.md`](dat.md) |
+| `.dat` installer chunk | verified: decoded and validated | [`dat.md`](dat.md) |
 | `game.erg` | verified (text config) | [`erg.md`](erg.md) |
-| `.big` container (`goefile`) | spec from public parsers | [`big.md`](big.md) |
-| `pc.rkv` audio archive | spec from public parsers | [`rkv.md`](rkv.md) |
-| Models | unknown payload | [`models.md`](models.md) |
-| Textures | DDS payload observed | [`textures.md`](textures.md) |
-| Audio | Ogg Vorbis (public parsers) | [`audio.md`](audio.md) |
+| `.big` container (`goefile`) | verified: 179 files, 246,332 entries | [`big.md`](big.md) |
+| `pc.rkv` audio archive | verified: 2,666 Ogg streams | [`rkv.md`](rkv.md) |
+| Models | payload extracted; layout unknown | [`models.md`](models.md) |
+| Textures | verified: DDS payloads | [`textures.md`](textures.md) |
+| Audio | verified: Ogg Vorbis in `pc.rkv` | [`audio.md`](audio.md) |
 | Video | verified (magic only) | [`video.md`](video.md) |
 | Saves | unknown | - |
 
