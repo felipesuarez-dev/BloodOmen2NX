@@ -1142,22 +1142,33 @@ void assign_model_lightmaps(LevelGeometry& geometry,
             group.entries.push_back(&map);
         }
     }
-    std::map<const LevelLightMap*, std::int32_t> image_index;
-    for (LevelTriangle& triangle : geometry.triangles) {
-        if (triangle.model >= geometry.model_ranges.size()) {
-            continue;
-        }
-        const ModelRange& range = geometry.model_ranges[triangle.model];
+    std::map<std::uint32_t, std::vector<const Group*>> groups_by_count;
+    for (const Group& group : groups) {
+        groups_by_count[group.vertex_count].push_back(&group);
+    }
+    std::vector<const Group*> model_groups(geometry.model_ranges.size(), nullptr);
+    std::map<std::uint32_t, std::size_t> next_group;
+    for (std::size_t model = 0; model < geometry.model_ranges.size(); ++model) {
+        const ModelRange& range = geometry.model_ranges[model];
         if (!range.present) {
             continue;
         }
-        const Group* match = nullptr;
-        for (const Group& group : groups) {
-            if (group.vertex_count == range.vertex_count) {
-                match = &group;
-                break;
-            }
+        const auto found = groups_by_count.find(range.vertex_count);
+        if (found == groups_by_count.end()) {
+            continue;
         }
+        std::size_t& index = next_group[range.vertex_count];
+        if (index < found->second.size()) {
+            model_groups[model] = found->second[index];
+            ++index;
+        }
+    }
+    std::map<const LevelLightMap*, std::int32_t> image_index;
+    for (LevelTriangle& triangle : geometry.triangles) {
+        if (triangle.model >= model_groups.size()) {
+            continue;
+        }
+        const Group* match = model_groups[triangle.model];
         if (match == nullptr || triangle.texture < 0 ||
             static_cast<std::size_t>(triangle.texture) >= geometry.texture_names.size()) {
             continue;

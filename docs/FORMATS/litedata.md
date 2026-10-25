@@ -79,12 +79,15 @@ counts match the model vertex counts (for example `cryptexithall` 116,
 153/161, the pilars 206/122).
 
 `assign_model_lightmaps` groups the entries by their prefix and matches a
-model's vertex count to a group. Within the group it picks the entry
-whose name ends with the model's texture name. In `sanctuary` this
-produces 34 model light maps covering 2,745 triangles. When several
-groups share a vertex count (the 48-vertex coffins) the first group in
-file order wins; the per-instance choice is open. The model reader
-stores the second UV set in `LevelGeometry::lightmap_texcoords`.
+model's vertex count to a group. Models are consumed in index order, so
+the Nth model with a given vertex count takes the Nth group with that
+count; the six 48-vertex coffins and the six 153/161-vertex roofbits get
+different groups instead of sharing the first one. Within the group it
+picks the entry whose name ends with the model's texture name. In
+`sanctuary` this produces 62 model light maps covering 2,769 triangles.
+The model reader stores the second UV set in
+`LevelGeometry::lightmap_texcoords`. Shared `model` entries (props not in
+`cellmdls`) still need their own instance mapping.
 
 `bo2nx --level --lightmap` samples the light map with those UVs and uses
 its luminance as the light factor (`texture × tint × light map`). The
@@ -94,8 +97,8 @@ against the no-lightmap + five-entry version.
 
 ## Open questions
 
-- Per-instance selection when several groups share a vertex count (the
-  48-vertex coffins, the 153/161-vertex roofbits).
+- Instance mapping for the shared `model` entries (props not in
+  `cellmdls`).
 - The group header fields after the name (12, 13 or 9 bytes depending on
   the group).
 - The per-vertex data after each group (`u32 count` + `count × 16
