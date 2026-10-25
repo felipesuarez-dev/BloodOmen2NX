@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <cstring>
 #include <limits>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -1014,55 +1015,68 @@ std::vector<LevelLightMap> parse_lightmaps(const std::vector<std::uint8_t>& data
         12 + group_length + 12 > data.size()) {
         return maps;
     }
+    std::set<std::string> seen;
     std::size_t position = 12 + group_length + 12;
-    for (int entry = 0; entry < 64; ++entry) {
-        if (position + 4 > data.size()) {
-            break;
-        }
+    while (position + 4 <= data.size()) {
         const std::uint32_t name_length = reader.u32(position);
-        if (name_length == 0 || name_length > 4096 ||
-            position + 4 + name_length + 12 > data.size()) {
-            break;
+        bool valid = name_length >= 4 && name_length <= 4096 &&
+                     position + 4 + name_length + 12 <= data.size();
+        bool has_dash = false;
+        if (valid) {
+            for (std::uint32_t index = 0; index < name_length; ++index) {
+                const std::uint8_t value = data[position + 4 + index];
+                if (value < 32 || value > 126) {
+                    valid = false;
+                    break;
+                }
+                if (value == '-') {
+                    has_dash = true;
+                }
+            }
         }
-        LevelLightMap map;
-        map.name.assign(reinterpret_cast<const char*>(data.data() + position + 4), name_length);
-        const std::size_t record = position + 4 + name_length;
-        const std::uint16_t version = reader.u16(record);
-        const std::uint8_t format = reader.u8(record + 2);
-        const std::uint16_t width = reader.u16(record + 8);
-        const std::uint16_t height = reader.u16(record + 10);
-        if (version != 1 || format != 4 || width == 0 || height == 0 || width > 1024 ||
-            height > 1024) {
-            break;
+        if (valid && has_dash) {
+            const std::size_t record = position + 4 + name_length;
+            const std::uint16_t version = reader.u16(record);
+            const std::uint8_t format = reader.u8(record + 2);
+            const std::uint16_t width = reader.u16(record + 8);
+            const std::uint16_t height = reader.u16(record + 10);
+            const std::size_t palette_offset = record + 12;
+            const std::size_t indices_offset = palette_offset + 64;
+            const std::size_t index_bytes =
+                (static_cast<std::size_t>(width) * height + 1) / 2;
+            if (version == 1 && format == 4 && width > 0 && height > 0 && width <= 2048 &&
+                height <= 2048 && indices_offset + index_bytes <= data.size()) {
+                LevelLightMap map;
+                map.name.assign(reinterpret_cast<const char*>(data.data() + position + 4),
+                                name_length);
+                std::array<std::uint8_t, 16> luminance{};
+                for (std::size_t index = 0; index < luminance.size(); ++index) {
+                    luminance[index] = static_cast<std::uint8_t>(
+                        (reader.u32(palette_offset + index * 4) >> 24) & 0xFF);
+                }
+                map.image.width = width;
+                map.image.height = height;
+                map.image.rgba.resize(static_cast<std::size_t>(width) * height * 4);
+                for (std::size_t index = 0; index < static_cast<std::size_t>(width) * height;
+                     ++index) {
+                    const std::uint8_t byte = data[indices_offset + index / 2];
+                    const std::uint8_t nibble =
+                        (index % 2 == 0) ? static_cast<std::uint8_t>(byte >> 4)
+                                         : static_cast<std::uint8_t>(byte & 0x0F);
+                    const std::uint8_t value = luminance[nibble];
+                    map.image.rgba[index * 4 + 0] = value;
+                    map.image.rgba[index * 4 + 1] = value;
+                    map.image.rgba[index * 4 + 2] = value;
+                    map.image.rgba[index * 4 + 3] = 255;
+                }
+                if (seen.insert(map.name).second) {
+                    maps.push_back(std::move(map));
+                }
+                position = indices_offset + index_bytes;
+                continue;
+            }
         }
-        const std::size_t palette_offset = record + 12;
-        const std::size_t indices_offset = palette_offset + 64;
-        const std::size_t index_bytes =
-            (static_cast<std::size_t>(width) * height + 1) / 2;
-        if (indices_offset + index_bytes > data.size()) {
-            break;
-        }
-        std::array<std::uint8_t, 16> luminance{};
-        for (std::size_t index = 0; index < luminance.size(); ++index) {
-            luminance[index] = static_cast<std::uint8_t>(
-                (reader.u32(palette_offset + index * 4) >> 24) & 0xFF);
-        }
-        map.image.width = width;
-        map.image.height = height;
-        map.image.rgba.resize(static_cast<std::size_t>(width) * height * 4);
-        for (std::size_t index = 0; index < static_cast<std::size_t>(width) * height; ++index) {
-            const std::uint8_t byte = data[indices_offset + index / 2];
-            const std::uint8_t nibble =
-                (index % 2 == 0) ? static_cast<std::uint8_t>(byte >> 4)
-                                 : static_cast<std::uint8_t>(byte & 0x0F);
-            const std::uint8_t value = luminance[nibble];
-            map.image.rgba[index * 4 + 0] = value;
-            map.image.rgba[index * 4 + 1] = value;
-            map.image.rgba[index * 4 + 2] = value;
-            map.image.rgba[index * 4 + 3] = 255;
-        }
-        maps.push_back(std::move(map));
-        position = indices_offset + index_bytes;
+        ++position;
     }
     return maps;
 }

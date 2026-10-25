@@ -156,11 +156,13 @@ result shows the material colors cannot be the albedo multiplier on their
 own: the static light map is missing.
 
 `sanctuary.big` carries `litedata/sanctuary.slm` (388,673 bytes). Its
-header is `version = 1`, `header size = 112`, `count = 13` and the string
-`cryptexithall`; the 13 lights match the `cellight` count. The light map
-or the per-vertex lighting must modulate the material layers before the
-texture stage. The `--material` modes stay diagnostic until that path is
-decoded.
+header is `version = 1`, `header size = 112`, `group name length = 13`
+and the group `cryptexithall`; the 13 is the group name length, not a
+light count. The file contains 71 light-map entries across the
+cell/object groups. The host applies them with `--lightmap`, sampled with
+the model's second UV set; 16 of the 34 sanctuary textures resolve. The
+per-cell/object selection and the exact combination with the material
+layers are open; the `--material` modes stay diagnostic.
 
 The observed `mtlctrl` record is `{0, 0x004c0000, 0x00000100}` per
 material. The observed `mlyrctrl` record is `{0x000a0000|1|6, 1.0, 0, 0}`;
@@ -432,8 +434,8 @@ interior, while the default isometric frame shows the level.
 
 ## Open questions
 
-- The `litedata`/`.slm` light map, the vertex diffuse equation and the
-  `mtlctrl` values.
+- Per-cell/object light-map selection, the vertex diffuse equation and
+  the `mtlctrl` values.
 - The 40/42-byte `prims` extra record.
 - `cells` flags, `cellattr`/`attrs` value semantics, the `portal2`
   plane/index and the BSP traversal.
@@ -448,5 +450,5 @@ interior, while the default isometric frame shows the level.
 
 1. Use the cell grid and BSP for culling and cell visibility.
 2. Bind the shared `model` entries and decode `cellanim`.
-3. Decode the `.slm` light map and make the material tint faithful.
+3. Match the light-map group to the cell/object and combine it with the material layers.
 4. Decode the animation/skeleton chunks.

@@ -1,8 +1,9 @@
 # Light maps (`litedata/*.slm`)
 
-Status: **partially verified**. The first five entries of
-`sanctuary.slm` parse and render; the large trailing section of the
-`grey_brick` entry is still open.
+Status: **partially verified**. The entry scanner finds 71 unique
+light maps across the cell/object groups of `sanctuary.slm`; 16 of the
+34 `sanctuary` textures resolve. The per-cell/object selection and the
+per-vertex data are still open.
 
 `litedata` entries hold static light maps for the level. The reference
 file is `sanctuary.big` -> `litedata` -> `sanctuary.slm` (388,673
@@ -20,7 +21,12 @@ char group[group name length]   (no NUL)
 entries...
 ```
 
-The first entry starts at `12 + group_length + 12`.
+The first entry starts at `12 + group_length + 12`. After a group's
+entries the file stores per-vertex data (`u32 count` + `count × 16
+bytes`) and then another group header (`u32 group length`, group name,
+12 bytes). The group names are cell or object names (`cryptexithall`,
+`crypt`, `cryptentrancehall`, `coffin01`, `roofbit_08`, `mesh13`,
+`object37`, `sanctuary/pilarb`, `box02`, ...).
 
 ## Entry
 
@@ -55,26 +61,36 @@ luminance in the high byte of each `u32`.
 | `inner city-textures-walls-grey_brick` | 64 | 64 | 2,048 |
 
 The first four entries end exactly at the next entry. The `grey_brick`
-entry is followed by about 376 KB that is not part of the 64x64 index
-buffer; it is probably additional light-map pages or a second section
-whose layout is not decoded yet.
+entry is followed by about 376 KB, but that is not part of its 64x64
+index buffer: it contains additional groups (coffin, cryptentrancehall,
+roofbit, mesh, object, pilar, box, ...) and their entries. The host
+scanner treats every valid entry signature in the file as a candidate,
+so it collects 71 unique entries from sanctuary; the first matching
+entry per texture wins.
 
 ## Host
 
-`parse_lightmaps` in `src/engine/cell_group.cpp` reads the entries,
-expands the palette and indices into a grayscale `Image`, and matches
-the entries to `LevelGeometry::texture_names` by name suffix. The model
-reader stores the second UV set in `LevelGeometry::lightmap_texcoords`.
+`parse_lightmaps` in `src/engine/cell_group.cpp` scans the whole file for
+entry signatures, expands the palette and indices into a grayscale
+`Image`, and deduplicates by full name. The loader matches the entries to
+`LevelGeometry::texture_names` by name suffix; the first match (the first
+cell group in the file) wins. The model reader stores the second UV set
+in `LevelGeometry::lightmap_texcoords`.
 
 `bo2nx --level --lightmap` samples the light map with those UVs and uses
 its luminance as the light factor (`texture × tint × light map`). The
-`--material` tint can be combined with it. In `sanctuary` 5 of 34
-textures have a light map; the 640x480 frame changes in 28,551 pixels
-(mean 0.114 with the light map, 0.107 without).
+`--material` tint can be combined with it. In `sanctuary` 16 of 34
+textures resolve to a light map; the frame changes by about 0.0098 RMSE
+against the no-lightmap + five-entry version.
 
 ## Open questions
 
-- The `grey_brick` trailing section (about 376 KB).
-- The 12 header bytes after the group name.
+- Per-cell/per-object light-map selection: the first matching entry by
+  texture name is an approximation; the group name and the second UV set
+  should choose the exact entry.
+- The per-vertex data after each group (`u32 count` + `count × 16
+  bytes`); it may be vertex colours or light-map UVs.
+- The group-header fields after the name (12, 13 or 9 bytes depending on
+  the group).
 - The exact combination of the light map with `mlyrcolr`/`mlyrctrl`.
 - Whether the second UV set is always the light-map set.

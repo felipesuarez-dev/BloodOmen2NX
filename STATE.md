@@ -55,11 +55,13 @@ and assets) is complete.
 - Cell lights and markers are parsed: `cellight` version 3 in 114 groups
   and `cellmark` version 4 in 131 groups. `sanctuary` has 13 lights and
   10 markers; the renderer does not consume them yet.
-- The `.slm` light maps are parsed: `sanctuary.slm` has five
-  texture-named entries (SewBrick3, SewWalk1, SewWalkEdge, ConcTrim1,
-  GreyBrick) with 16-color palettes and 4-bit indices. The model reader
-  keeps the second UV set and `--lightmap` samples it; 5 of 34 sanctuary
-  textures resolve. The `grey_brick` trailing section is still open.
+- The `.slm` light maps are parsed: the scanner finds 71 unique entries
+  across the cell/object groups of `sanctuary.slm` (cryptexithall,
+  crypt, cryptentrancehall, coffins, roofbits, meshes, objects, pilars,
+  boxes), with 16-color palettes and 4-bit indices. The model reader
+  keeps the second UV set and `--lightmap` samples it; 16 of 34 sanctuary
+  textures resolve. Per-cell/object selection and the per-vertex data
+  are open.
 - Material layer records are parsed: `mlyrcolr` (three RGBA colors) and
   `mlyrctrl` (three `u32`/`f32`/`u16`/`u16` controls) per material.
   Untextured surfaces use the diffuse layer. The D3D8 trace shows texture
@@ -76,8 +78,8 @@ and assets) is complete.
 
 ## What is not done
 
-- The `grey_brick` extra section, the material/light-map combination and
-  the vertex diffuse equation.
+- Per-cell/object light-map selection, the per-vertex data, the
+  material/light-map combination and the vertex diffuse equation.
 - Animation and skinning (`animatio`, `animreel`, `vtxweigh`, `jointidx`).
 - `region`, `planinfo`, `bpackage`, `strtable`, `musicbnk`, `texfont`,
   `liteinfo`.
@@ -91,7 +93,7 @@ and assets) is complete.
 
 | # | Unknown | Next action | Read first |
 |---|---|---|---|
-| 0 | `.slm` `grey_brick` section and material combination | Decode the trailing ~376 KB and combine the light map with `mlyrcolr`/`mlyrctrl` | `docs/FORMATS/litedata.md` |
+| 0 | Per-object light-map selection and material combination | Match the group/cell to the model and combine the light map with `mlyrcolr`/`mlyrctrl` | `docs/FORMATS/litedata.md` |
 | 1 | Shared `model` entries and entity semantics | Bind the shared models and decode the consumers | `docs/FORMATS/models.md` |
 | 2 | `game.erg` parser details | Decompile the key lookup in `bo2.exe` | `docs/FORMATS/erg.md` |
 | 3 | Original logic tick | Measure from the oracle once it runs, or from the main loop | `docs/ARCHITECTURE.md` |
@@ -101,7 +103,7 @@ and assets) is complete.
 
 ## Next steps
 
-1. Decode the `grey_brick` section and combine the light map with the material layers.
+1. Match the light-map group to the cell/object and combine it with the material layers.
 2. Bind the shared `model` entries and decode animation/skinning.
 3. Compare the SDL2/OpenGL frame with the original under Wine/Xvfb.
 
