@@ -123,25 +123,34 @@ provide symbols.
 - The script copies `bo2.exe`, `binkw32.dll`, the Bink movies and
   `game.erg` into the install tree, and marks the numbered `data/*.dat`
   chunks as `InstallType = decompress` with a target path.
-- `pc.rkv` is the main archive declared by `game.erg`; it is expanded
-  from the numbered chunks by the installer's decompressor.
+- `pc.rkv` is the audio archive declared by `game.erg`; the numbered
+  chunks also expand to `code.big`, `PreCode.big`, level `.big` files and
+  `.san` animations.
 
-## Installer archive (M1)
+## Installer chunks (M1, done)
 
 The chunk executor is `install2.dat` at `0x401b30`; the script parser is
-`0x401540`/`0x4019e0`. For `InstallType = decompress` with a numbered
-chunk it:
+`0x401540`/`0x4019e0`. For `InstallType = decompress` it:
 
-1. reads the first four bytes of `data/<n>.dat`;
-2. builds a header from those bytes, the file number and the entry name;
-3. calls the extractor at `0x405810`.
+1. reads the first four bytes of `data/<hash>.dat` as the size seed;
+2. builds a XOR key from the size, the chunk hash (the decimal file name)
+   and the lowercased target name, then reads the chunk through the
+   wrapper at `0x404f60`;
+3. parses the RAR headers (`0x405b90`/`0x4059f0`), sets up the cipher
+   (`0x405490`) and reads/decrypts the packed data through `0x4069a0`;
+4. decompresses the RAR data in `0x4060b0` (method `0x35`).
 
-The extractor setup at `0x405490` initializes a 256-byte S-box and a
-128-bit key, mixes an embedded password through a CRC table, and runs a
-32-round XTEA-like block cipher (`0x405110`) before decompressing into a
-1 MB buffer. The chunks are not zlib and not standard RAR.
+The cipher is the installer's own: S-box shuffle and key schedule at
+`0x405490`, CRC-table generator `0x4050a0`, key mix `0x405280`, encrypt
+`0x405110`, decrypt `0x405300`. The S-box (256 bytes) and the password are
+read from the installer's data; the repository does not contain them.
 
-This is a custom encrypted archive. The fast path to a usable asset tree
-is an installation made by the owner on Windows, or a GOG/Steam copy; the
-custom decompressor remains an optional target and is not allowed to
-block M1.
+The previous assumption that the chunks were "not RAR" was wrong: the
+outer XOR and the header parser hid a standard single-file RAR 4 archive.
+The complete pipeline is in `docs/FORMATS/dat.md` and
+`tools/bo2fmt/installer.py`.
+
+Result: 198/198 chunks decoded, 227 installed files (1.9 GB), 179 `.big`
+files (246,332 entries) and 2,666 `pc.rkv` streams. An owner's Windows or
+GOG install is still a valid oracle, but it is no longer needed to
+materialize the tree.
