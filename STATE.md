@@ -55,6 +55,9 @@ and assets) is complete.
 - Cell lights and markers are parsed: `cellight` version 3 in 114 groups
   and `cellmark` version 4 in 131 groups. `sanctuary` has 13 lights and
   10 markers; the renderer does not consume them yet.
+- The host platform services are implemented and tested without a window
+  or assets: `FileSystem`, `log_message`, the monotonic clock and the
+  resident/peak memory snapshot (`src/platform/linux/platform.cpp`).
 - The `game.erg` configuration parser is verified: quoted keys/values,
   literal backslashes, CRLF, blank lines and an exact round-trip fixture.
   `bo2nx --erg` reads the reference file (52 entries).

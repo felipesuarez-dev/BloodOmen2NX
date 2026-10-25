@@ -23,6 +23,12 @@ add_library(bo2_engine STATIC
 target_link_libraries(bo2_engine PUBLIC bo2_common)
 target_compile_options(bo2_engine PRIVATE ${BO2NX_WARNINGS})
 
+add_library(bo2_platform_core STATIC
+    src/platform/linux/platform.cpp
+)
+target_include_directories(bo2_platform_core PUBLIC include)
+target_compile_options(bo2_platform_core PRIVATE ${BO2NX_WARNINGS})
+
 add_library(bo2_platform_headless STATIC
     src/platform/headless/software_renderer.cpp
 )
@@ -46,7 +52,7 @@ if(BO2NX_ENABLE_SDL)
 endif()
 
 add_executable(bo2nx src/main.cpp)
-target_link_libraries(bo2nx PRIVATE bo2_platform_headless)
+target_link_libraries(bo2nx PRIVATE bo2_platform_headless bo2_platform_core)
 target_compile_options(bo2nx PRIVATE ${BO2NX_WARNINGS})
 if(BO2NX_HAVE_SDL)
     target_compile_definitions(bo2nx PRIVATE BO2NX_HAVE_SDL)
@@ -69,6 +75,11 @@ if(BUILD_TESTING)
     target_link_libraries(bo2nx_renderer_tests PRIVATE bo2_platform_headless)
     target_compile_options(bo2nx_renderer_tests PRIVATE ${BO2NX_WARNINGS})
     add_test(NAME renderer COMMAND bo2nx_renderer_tests)
+
+    add_executable(bo2nx_platform_tests tests/unit/test_platform.cpp)
+    target_link_libraries(bo2nx_platform_tests PRIVATE bo2_platform_core)
+    target_compile_options(bo2nx_platform_tests PRIVATE ${BO2NX_WARNINGS})
+    add_test(NAME platform COMMAND bo2nx_platform_tests)
 endif()
 
 if(BO2NX_HAVE_SDL)

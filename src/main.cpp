@@ -3,8 +3,6 @@
 #include <cstdint>
 #include <cstdlib>
 #include <exception>
-#include <fstream>
-#include <iterator>
 #include <stdexcept>
 #include <iostream>
 #include <string>
@@ -14,6 +12,7 @@
 #include "bo2/engine/cell_group.hpp"
 #include "bo2/engine/dds.hpp"
 #include "bo2/engine/erg.hpp"
+#include "bo2/platform/platform.hpp"
 #include "bo2/platform/headless/software_renderer.hpp"
 #include "bo2/version.hpp"
 #ifdef BO2NX_HAVE_SDL
@@ -389,12 +388,7 @@ int run_sdl(const Options& options) {
 }
 
 int print_erg(const std::string& path) {
-    std::ifstream stream(path, std::ios::binary);
-    if (!stream) {
-        throw std::runtime_error("cannot read " + path);
-    }
-    const std::string text((std::istreambuf_iterator<char>(stream)),
-                           std::istreambuf_iterator<char>());
+    const std::string text = bo2::platform::FileSystem::read_text(path);
     const bo2::engine::ErgConfig config = bo2::engine::ErgConfig::parse(text);
     std::size_t entries = 0;
     for (const bo2::engine::ErgEntry& entry : config.entries()) {

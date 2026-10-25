@@ -20,6 +20,11 @@ the tests and the PPM output. `src/platform/sdl/` is the interactive
 SDL2 + OpenGL backend (`bo2nx --sdl`); it implements the same engine
 interfaces, so the engine and game layers do not change.
 
+The platform layer also provides the host services shared by every
+backend: `FileSystem`, `log_message`, the monotonic clock and the memory
+snapshot in `include/bo2/platform/platform.hpp`, implemented for Linux in
+`src/platform/linux/`. The Switch backend implements the same interfaces.
+
 The Switch backend (libnx + deko3d) replaces the platform layer once the
 host build renders a level. The game and engine layers do not change when
 the backend changes.
