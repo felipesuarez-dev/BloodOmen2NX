@@ -22,9 +22,8 @@ identifies the GOG-derived Spanish GoldMaster build.
 |---|---:|---|
 | `Legacy Of Kain Blood Omen II.iso` | 1,207,830,528 | `cb118cd46d778ce4e8cb768a8f2bb71def006b8211611e6d4e05cf0b1b64456e` |
 
-Local copy:
-`/home/felipe/DECOMPILACION/blood-omen-2/Legacy Of Kain Blood Omen II-PC/Legacy Of Kain Blood Omen II.iso`
-(gitignored).
+Local copy: outside the repository, in the workspace materials
+directory (gitignored).
 
 ## Extracted binaries
 
