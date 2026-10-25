@@ -32,9 +32,22 @@ of `game.erg` does not change it. The D3D8 device is created and vertex
 buffers are locked, so the crash is in the 2D/UI scaling path rather than
 in device creation.
 
+The game stores its video settings under
+`HKCU\Software\Crystal Dynamics\Blood Omen 2\1.00.000`
+(`ScreenWidth`, `ScreenHeight`, `ScreenDepth`, `Windowed`, `SkipMovies`,
+`ProgramsWarnings`, `DisableVShader`, `DisableModulate2x`, ...). Setting
+`ScreenDepth = 32`, `Windowed = 1`, `SkipMovies = 1` and
+`ProgramsWarnings = 0` replaces the initial crash with the message
+"Tu configuración gráfica ha cambiado" followed by the video
+configuration dialog. The dialog's resolution list is empty under Wine,
+so a mode cannot be selected; setting `Windowed = 0` and the original
+`ScreenDepth = 23` showed one 16-bit mode and reproduced the crash after
+accepting it.
+
 The next step is to inspect the class behind the `0x86db78` vtable and
-the display/UI initialization that fills `param_1[2]`, and to try a
-different virtual-desktop bit depth or resolution.
+the display/UI initialization that fills `param_1[2]`, and to make Wine
+enumerate a valid video mode (or run the game windowed with a mode that
+does not need the 2D display object).
 
 The install tree was mounted as `C:\gogames\bo2` in a private prefix,
 with `bo2.exe`, `data/` and the `code.big`/`pc.rkv`/`resources` files at
