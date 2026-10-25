@@ -1,3 +1,4 @@
+#include "bo2/platform/input.hpp"
 #include "bo2/platform/sdl/sdl_backend.hpp"
 
 #include <algorithm>
@@ -8,6 +9,7 @@
 #include <iostream>
 #include <memory>
 #include <stdexcept>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -331,6 +333,114 @@ Camera current_camera(const OrbitCamera& orbit) {
     return camera;
 }
 
+std::set<InputKey> pressed_keys(const Uint8* keys) {
+    struct Binding {
+        SDL_Scancode scancode;
+        InputKey key;
+    };
+    static constexpr Binding bindings[] = {
+        {SDL_SCANCODE_W, InputKey::W},       {SDL_SCANCODE_A, InputKey::A},
+        {SDL_SCANCODE_S, InputKey::S},       {SDL_SCANCODE_D, InputKey::D},
+        {SDL_SCANCODE_Q, InputKey::Q},       {SDL_SCANCODE_E, InputKey::E},
+        {SDL_SCANCODE_R, InputKey::R},       {SDL_SCANCODE_F, InputKey::F},
+        {SDL_SCANCODE_UP, InputKey::Up},     {SDL_SCANCODE_DOWN, InputKey::Down},
+        {SDL_SCANCODE_LEFT, InputKey::Left}, {SDL_SCANCODE_RIGHT, InputKey::Right},
+        {SDL_SCANCODE_SPACE, InputKey::Space}, {SDL_SCANCODE_RETURN, InputKey::Enter},
+        {SDL_SCANCODE_ESCAPE, InputKey::Escape}, {SDL_SCANCODE_TAB, InputKey::Tab},
+    };
+    std::set<InputKey> pressed;
+    for (const Binding& binding : bindings) {
+        if (keys[binding.scancode] != 0) {
+            pressed.insert(binding.key);
+        }
+    }
+    return pressed;
+}
+
+std::set<InputButton> pressed_buttons(SDL_GameController* controller) {
+    struct Binding {
+        SDL_GameControllerButton button;
+        InputButton key;
+    };
+    static constexpr Binding bindings[] = {
+        {SDL_CONTROLLER_BUTTON_A, InputButton::A},
+        {SDL_CONTROLLER_BUTTON_B, InputButton::B},
+        {SDL_CONTROLLER_BUTTON_X, InputButton::X},
+        {SDL_CONTROLLER_BUTTON_Y, InputButton::Y},
+        {SDL_CONTROLLER_BUTTON_DPAD_UP, InputButton::Up},
+        {SDL_CONTROLLER_BUTTON_DPAD_DOWN, InputButton::Down},
+        {SDL_CONTROLLER_BUTTON_DPAD_LEFT, InputButton::Left},
+        {SDL_CONTROLLER_BUTTON_DPAD_RIGHT, InputButton::Right},
+        {SDL_CONTROLLER_BUTTON_LEFTSHOULDER, InputButton::L},
+        {SDL_CONTROLLER_BUTTON_RIGHTSHOULDER, InputButton::R},
+        {SDL_CONTROLLER_BUTTON_START, InputButton::Plus},
+        {SDL_CONTROLLER_BUTTON_BACK, InputButton::Minus},
+        {SDL_CONTROLLER_BUTTON_LEFTSTICK, InputButton::LStick},
+        {SDL_CONTROLLER_BUTTON_RIGHTSTICK, InputButton::RStick},
+    };
+    std::set<InputButton> pressed;
+    if (controller == nullptr || SDL_GameControllerGetAttached(controller) == SDL_FALSE) {
+        return pressed;
+    }
+    for (const Binding& binding : bindings) {
+        if (SDL_GameControllerGetButton(controller, binding.button) != 0) {
+            pressed.insert(binding.key);
+        }
+    }
+    if (SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_TRIGGERLEFT) > 16384) {
+        pressed.insert(InputButton::ZL);
+    }
+    if (SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_TRIGGERRIGHT) > 16384) {
+        pressed.insert(InputButton::ZR);
+    }
+    return pressed;
+}
+
+void controller_axes(SDL_GameController* controller, float& move_x, float& move_y, float& look_x,
+                     float& look_y) {
+    move_x = 0.0f;
+    move_y = 0.0f;
+    look_x = 0.0f;
+    look_y = 0.0f;
+    if (controller == nullptr || SDL_GameControllerGetAttached(controller) == SDL_FALSE) {
+        return;
+    }
+    const auto axis = [controller](SDL_GameControllerAxis index) {
+        return static_cast<float>(SDL_GameControllerGetAxis(controller, index)) / 32767.0f;
+    };
+    move_x = axis(SDL_CONTROLLER_AXIS_LEFTX);
+    move_y = -axis(SDL_CONTROLLER_AXIS_LEFTY);
+    look_x = axis(SDL_CONTROLLER_AXIS_RIGHTX);
+    look_y = axis(SDL_CONTROLLER_AXIS_RIGHTY);
+}
+
+SDL_GameController* open_controller(int index) {
+    if (SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER) != 0) {
+        return nullptr;
+    }
+    if (SDL_IsGameController(index) == SDL_FALSE) {
+        return nullptr;
+    }
+    return SDL_GameControllerOpen(index);
+}
+
+void draw_player(const engine::Vec3& position) {
+    glDisable(GL_TEXTURE_2D);
+    glDisable(GL_DEPTH_TEST);
+    glLineWidth(2.0f);
+    glBegin(GL_LINES);
+    glColor3f(0.95f, 0.85f, 0.2f);
+    glVertex3f(position.x, position.y, position.z);
+    glVertex3f(position.x, position.y, position.z + 1.8f);
+    glVertex3f(position.x - 0.3f, position.y, position.z);
+    glVertex3f(position.x + 0.3f, position.y, position.z);
+    glVertex3f(position.x, position.y - 0.3f, position.z);
+    glVertex3f(position.x, position.y + 0.3f, position.z);
+    glEnd();
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_TEXTURE_2D);
+}
+
 void draw_triangle(std::uint32_t width, std::uint32_t height, float angle) {
     glViewport(0, 0, static_cast<GLsizei>(width), static_cast<GLsizei>(height));
     glClearColor(20.0f / 255.0f, 22.0f / 255.0f, 30.0f / 255.0f, 1.0f);
@@ -407,6 +517,18 @@ int run_level(const engine::LevelGeometry& geometry,
         return 0;
     }
 
+    SDL_GameController* controller = nullptr;
+    if (SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER) == 0) {
+        for (int index = 0; index < SDL_NumJoysticks(); ++index) {
+            if (SDL_IsGameController(index) != SDL_FALSE) {
+                controller = SDL_GameControllerOpen(index);
+                if (controller != nullptr) {
+                    break;
+                }
+            }
+        }
+    }
+    const InputMap input = default_host_map();
     bool running = true;
     bool dragging = false;
     bool print_stats = options.stats;
@@ -416,6 +538,13 @@ int run_level(const engine::LevelGeometry& geometry,
             if (event.type == SDL_QUIT ||
                 (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE)) {
                 running = false;
+            } else if (event.type == SDL_CONTROLLERDEVICEADDED && controller == nullptr) {
+                controller = open_controller(event.cdevice.which);
+            } else if (event.type == SDL_CONTROLLERDEVICEREMOVED && controller != nullptr &&
+                       event.cdevice.which ==
+                           SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(controller))) {
+                SDL_GameControllerClose(controller);
+                controller = nullptr;
             } else if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_RIGHT) {
                 dragging = true;
             } else if (event.type == SDL_MOUSEBUTTONUP && event.button.button == SDL_BUTTON_RIGHT) {
@@ -430,7 +559,27 @@ int run_level(const engine::LevelGeometry& geometry,
             }
         }
         const Uint8* keys = SDL_GetKeyboardState(nullptr);
-        const float step = std::max(0.01f, orbit.distance * 0.01f);
+        float move_x = 0.0f;
+        float move_y = 0.0f;
+        float look_x = 0.0f;
+        float look_y = 0.0f;
+        controller_axes(controller, move_x, move_y, look_x, look_y);
+        const InputState state =
+            input.update(pressed_keys(keys), pressed_buttons(controller), move_x, move_y, look_x,
+                         look_y);
+        if (state.action(InputAction::Pause)) {
+            running = false;
+        }
+        const float forward_axis =
+            std::clamp((state.action(InputAction::MoveForward) ? 1.0f : 0.0f) -
+                           (state.action(InputAction::MoveBack) ? 1.0f : 0.0f) + state.move_y,
+                       -1.0f, 1.0f);
+        const float right_axis =
+            std::clamp((state.action(InputAction::MoveRight) ? 1.0f : 0.0f) -
+                           (state.action(InputAction::MoveLeft) ? 1.0f : 0.0f) + state.move_x,
+                       -1.0f, 1.0f);
+        const float step = std::max(0.01f, orbit.distance * 0.01f) *
+                           (state.action(InputAction::Run) ? 2.0f : 1.0f);
         const engine::Vec3 view = engine::normalize(orbit.target - current_camera(orbit).eye);
         engine::Vec3 forward{view.x, view.y, 0.0f};
         if (engine::length(forward) < 1.0e-6f) {
@@ -439,28 +588,27 @@ int run_level(const engine::LevelGeometry& geometry,
             forward = engine::normalize(forward);
         }
         const engine::Vec3 right = engine::normalize(engine::cross(forward, {0.0f, 0.0f, 1.0f}));
-        if (keys[SDL_SCANCODE_W] != 0 || keys[SDL_SCANCODE_UP] != 0) {
-            orbit.target = orbit.target + forward * step;
+        orbit.target = orbit.target + forward * (forward_axis * step) + right * (right_axis * step);
+        orbit.yaw -= state.look_x * 0.05f;
+        orbit.pitch += state.look_y * 0.05f;
+        if (state.action(InputAction::LookUp)) {
+            orbit.pitch += 0.02f;
         }
-        if (keys[SDL_SCANCODE_S] != 0 || keys[SDL_SCANCODE_DOWN] != 0) {
-            orbit.target = orbit.target - forward * step;
+        if (state.action(InputAction::LookDown)) {
+            orbit.pitch -= 0.02f;
         }
-        if (keys[SDL_SCANCODE_D] != 0 || keys[SDL_SCANCODE_RIGHT] != 0) {
-            orbit.target = orbit.target + right * step;
+        if (state.action(InputAction::LookLeft)) {
+            orbit.yaw += 0.02f;
         }
-        if (keys[SDL_SCANCODE_A] != 0 || keys[SDL_SCANCODE_LEFT] != 0) {
-            orbit.target = orbit.target - right * step;
+        if (state.action(InputAction::LookRight)) {
+            orbit.yaw -= 0.02f;
         }
-        if (keys[SDL_SCANCODE_E] != 0) {
-            orbit.target.z += step;
-        }
-        if (keys[SDL_SCANCODE_Q] != 0) {
-            orbit.target.z -= step;
-        }
+        orbit.pitch = std::clamp(orbit.pitch, -1.5f, 1.5f);
         const auto frame_start = std::chrono::steady_clock::now();
         draw_level(geometry, texture_ids, lightmap_ids, model_lightmap_offset,
                    current_camera(orbit), options.width, options.height, options.material_mode,
                    options.lightmap);
+        draw_player(orbit.target);
         SDL_GL_SwapWindow(context->window);
         if (print_stats) {
             const double frame_ms = static_cast<double>(
@@ -472,6 +620,9 @@ int run_level(const engine::LevelGeometry& geometry,
             print_stats = false;
         }
         SDL_Delay(1);
+    }
+    if (controller != nullptr) {
+        SDL_GameControllerClose(controller);
     }
     return 0;
 }

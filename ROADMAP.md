@@ -12,7 +12,7 @@ comparison.
 |---|---|---|---|
 | M0 | Laboratory and binary truth | Hashes, PE triage, SFXI, `game.erg` and Ghidra inventory | DONE — install materialization moved to M1 and completed there |
 | M1 | Containers and assets (GO/NO-GO) | `.big` and `pc.rkv` validated against the installed tree; one asset extracted; formats documented | DONE — 198/198 installer chunks, 179 `.big`/246,332 entries, 2,666 RKV streams, DDS and model extracted |
-| M2 | Host skeleton and first frame | Host backend renders one level with textures and a free camera; frame comparable to the oracle | WIP — headless and SDL2/OpenGL level with DDS textures, cell grid/BSP, cell instances, lights/markers, material layers and a free camera; oracle frame pending |
+| M2 | Host skeleton and first frame | Host backend renders one level with textures and a free camera; frame comparable to the oracle | WIP — headless and SDL2/OpenGL level with DDS textures, cell grid/BSP, cell instances, lights/markers, material layers, input/player marker and a free camera; oracle frame pending |
 | M3 | Playable slice | First level playable start to finish; route replay test and state comparison | TODO |
 | M4 | Complete systems | Enemies, combat, dark gifts, scripting, menus, saves, audio and videos | TODO |
 | M5 | Complete content | All levels, bosses and unlockables; parity battery green | TODO |
@@ -26,6 +26,7 @@ comparison.
 | `game.erg` parser | done | Quoted keys/values, CRLF, round-trip fixture; 52 real entries |
 | Platform services | done | FS, log, monotonic clock and memory snapshot; Linux tests |
 | Host diagnostics | done | `--stats`: load breakdown, render, RSS/peak; hardware in #49 |
+| Input layer | done | Keyboard + Switch maps, SDL controller, player marker; actor in M3 |
 | Installer container (SFXI) | done | Reader and synthetic test |
 | Installer chunk decompressor | done | 198/198 chunks; 227-file tree |
 | BIG/RKV parsers | done | 179 `.big`/246,332 entries; 2,666 RKV streams |

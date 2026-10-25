@@ -24,6 +24,7 @@ target_link_libraries(bo2_engine PUBLIC bo2_common)
 target_compile_options(bo2_engine PRIVATE ${BO2NX_WARNINGS})
 
 add_library(bo2_platform_core STATIC
+    src/platform/input.cpp
     src/platform/linux/platform.cpp
 )
 target_include_directories(bo2_platform_core PUBLIC include)
@@ -44,7 +45,8 @@ if(BO2NX_ENABLE_SDL)
         add_library(bo2_platform_sdl STATIC
             src/platform/sdl/sdl_backend.cpp
         )
-        target_link_libraries(bo2_platform_sdl PUBLIC bo2_engine SDL2::SDL2 OpenGL::GL)
+        target_link_libraries(bo2_platform_sdl PUBLIC bo2_engine bo2_platform_core SDL2::SDL2
+                                                     OpenGL::GL)
         target_include_directories(bo2_platform_sdl PUBLIC include)
         target_compile_options(bo2_platform_sdl PRIVATE ${BO2NX_WARNINGS})
         set(BO2NX_HAVE_SDL ON)

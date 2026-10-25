@@ -27,6 +27,13 @@ snapshot in `include/bo2/platform/platform.hpp`, implemented for Linux in
 `--stats` uses them to report the load breakdown, render time and the
 resident/peak memory snapshot.
 
+Input is platform-neutral: `include/bo2/platform/input.hpp` defines the
+actions, keys and buttons, and `InputMap` binds them into an `InputState`.
+`default_keyboard_map`, `default_switch_map` and `default_host_map` provide
+the reference mappings; the SDL backend translates keyboard and
+game-controller state into the same struct. The Switch backend will feed
+libnx buttons through the same map.
+
 The Switch backend (libnx + deko3d) replaces the platform layer once the
 host build renders a level. The game and engine layers do not change when
 the backend changes.

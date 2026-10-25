@@ -1,4 +1,5 @@
 #include <chrono>
+#include <cmath>
 #include <cstdint>
 #include <filesystem>
 #include <iostream>
@@ -7,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "bo2/platform/input.hpp"
 #include "bo2/platform/platform.hpp"
 
 namespace {
@@ -61,6 +63,70 @@ void test_clock() {
     CHECK(bo2::platform::monotonic_milliseconds() <= after / 1000000ULL + 1ULL);
 }
 
+void test_keyboard_input() {
+    const bo2::platform::InputMap map = bo2::platform::default_keyboard_map();
+    bo2::platform::InputState state = map.update({bo2::platform::InputKey::W}, {});
+    CHECK(state.action(bo2::platform::InputAction::MoveForward));
+    CHECK(!state.action(bo2::platform::InputAction::MoveBack));
+
+    state = map.update({bo2::platform::InputKey::S, bo2::platform::InputKey::A,
+                        bo2::platform::InputKey::R, bo2::platform::InputKey::Space},
+                       {});
+    CHECK(state.action(bo2::platform::InputAction::MoveBack));
+    CHECK(state.action(bo2::platform::InputAction::MoveLeft));
+    CHECK(state.action(bo2::platform::InputAction::Run));
+    CHECK(state.action(bo2::platform::InputAction::Jump));
+    CHECK(!state.action(bo2::platform::InputAction::MoveForward));
+
+    state = map.update({bo2::platform::InputKey::F, bo2::platform::InputKey::E,
+                        bo2::platform::InputKey::Enter, bo2::platform::InputKey::Escape},
+                       {});
+    CHECK(state.action(bo2::platform::InputAction::Attack));
+    CHECK(state.action(bo2::platform::InputAction::Use));
+    CHECK(state.action(bo2::platform::InputAction::Menu));
+    CHECK(state.action(bo2::platform::InputAction::Pause));
+}
+
+void test_switch_input() {
+    const bo2::platform::InputMap map = bo2::platform::default_switch_map();
+    bo2::platform::InputState state =
+        map.update({}, {bo2::platform::InputButton::A, bo2::platform::InputButton::L});
+    CHECK(state.action(bo2::platform::InputAction::Jump));
+    CHECK(state.action(bo2::platform::InputAction::Run));
+
+    state = map.update({}, {bo2::platform::InputButton::B, bo2::platform::InputButton::X,
+                            bo2::platform::InputButton::Y, bo2::platform::InputButton::Plus,
+                            bo2::platform::InputButton::Minus});
+    CHECK(state.action(bo2::platform::InputAction::Attack));
+    CHECK(state.action(bo2::platform::InputAction::Use));
+    CHECK(state.action(bo2::platform::InputAction::Menu));
+    CHECK(state.action(bo2::platform::InputAction::Pause));
+
+    state = map.update({}, {bo2::platform::InputButton::ZL, bo2::platform::InputButton::ZR,
+                            bo2::platform::InputButton::Up});
+    CHECK(state.action(bo2::platform::InputAction::LookDown));
+    CHECK(state.action(bo2::platform::InputAction::LookUp));
+    CHECK(state.action(bo2::platform::InputAction::MoveForward));
+
+    const bo2::platform::InputMap host = bo2::platform::default_host_map();
+    state = host.update({bo2::platform::InputKey::W}, {bo2::platform::InputButton::A});
+    CHECK(state.action(bo2::platform::InputAction::MoveForward));
+    CHECK(state.action(bo2::platform::InputAction::Jump));
+}
+
+void test_input_axes() {
+    const bo2::platform::InputMap map = bo2::platform::default_keyboard_map();
+    bo2::platform::InputState state = map.update({}, {}, 0.1f, -0.5f, 0.9f, -0.9f);
+    CHECK(state.move_x == 0.0f);
+    CHECK(state.move_y == -0.5f);
+    CHECK(state.look_x == 0.9f);
+    CHECK(state.look_y == -0.9f);
+
+    state = map.update({}, {}, 0.25f, -0.25f, 0.0f, 0.0f);
+    CHECK(state.move_x == 0.25f);
+    CHECK(state.move_y == -0.25f);
+}
+
 void test_memory() {
     const bo2::platform::MemorySnapshot snapshot = bo2::platform::memory_snapshot();
 #if defined(__linux__)
@@ -76,6 +142,9 @@ int main() {
     test_log();
     test_clock();
     test_memory();
+    test_keyboard_input();
+    test_switch_input();
+    test_input_axes();
     if (failures != 0) {
         std::cerr << failures << " check(s) failed\n";
         return 1;

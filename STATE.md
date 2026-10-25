@@ -58,6 +58,9 @@ and assets) is complete.
 - The host platform services are implemented and tested without a window
   or assets: `FileSystem`, `log_message`, the monotonic clock and the
   resident/peak memory snapshot (`src/platform/linux/platform.cpp`).
+- The input layer is platform-neutral: keyboard and Switch maps, analog
+  deadzone, SDL game-controller support and a player placeholder marker in
+  the SDL viewer. The real actor and its movement come with M3.
 - Host diagnostics are measured: `--stats` reports the archive, cell
   group, texture and light-map load times, the headless/SDL render time
   and the resident/peak memory. `sanctuary` 640x480 loads in about 250 ms,

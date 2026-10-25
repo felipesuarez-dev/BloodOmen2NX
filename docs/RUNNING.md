@@ -84,9 +84,25 @@ xvfb-run -a ./build/linux-debug/bo2nx --sdl --out /tmp/sdl-triangle.ppm
 ```
 
 With `--out` the backend renders one frame, captures the framebuffer and
-exits; without it the window stays open. Controls: `W`/`S` or the arrow
-keys move the target, `A`/`D` strafe, `Q`/`E` change height, the right
-mouse button orbits, the wheel zooms and `Escape` quits.
+exits; without it the window stays open. The camera target is the player
+placeholder; `W`/`S` or the arrow keys move it, `A`/`D` strafe, the right
+mouse button orbits, the wheel zooms and `Escape` quits. The real actor
+arrives with the M3 game logic.
+
+Controls are defined in `include/bo2/platform/input.hpp`; the mapping is
+provisional until the original controls are recovered from `bo2.exe`.
+
+| Action | Keyboard | Switch / controller |
+|---|---|---|
+| Move | `WASD` or arrows | Left stick or D-pad |
+| Run | `R` | `L` or `R` |
+| Jump | `Space` | `A` |
+| Attack | `F` | `B` |
+| Use | `E` | `X` |
+| Menu | `Enter` | `Y` or `Minus` |
+| Pause / quit | `Escape` | `Plus` |
+| Look / orbit | Right mouse drag | Right stick, `ZL` / `ZR` |
+| Zoom | Wheel | - |
 
 | Flag | Purpose |
 |---|---|
