@@ -9,10 +9,32 @@ cmake --build --preset linux-debug
 ctest --preset linux-debug --output-on-failure
 ```
 
-The current binary only reports the project version. The game is not
-runnable until the M1/M2 work lands.
+The host binary inspects `.big` containers and renders a frame without a
+window. The first backend is headless; SDL2 + OpenGL is pending because
+the development container has neither the libraries nor a display.
 
-Future flags, once the host backend exists:
+Inspect a container and render a real texture on the free-camera preview:
+
+```sh
+BIG=external/installed/media/gogames/bo2/resources/levels/sanctuary/sanctuary.big
+./build/linux-debug/bo2nx --list-big "$BIG"
+./build/linux-debug/bo2nx --frame --big "$BIG" --entry SewBrick3 \
+  --out /tmp/bo2-frame.ppm --eye 2.4,1.6,2.4 --target 0,0,0
+```
+
+The frame is a PPM; no display is needed. The camera is `--eye` and
+`--target`; `--width`, `--height` and `--fov` control the image.
+
+| Flag | Purpose |
+|---|---|
+| `--list-big <file>` | List entries (type, size, name) |
+| `--frame --big <file>` | Render a textured preview frame |
+| `--entry <substring>` | Texture entry to use (default: first texture) |
+| `--out <file.ppm>` | Frame output |
+| `--eye x,y,z`, `--target x,y,z` | Free camera |
+| `--width`, `--height`, `--fov` | Frame size and field of view |
+
+Planned with the level pipeline:
 
 | Flag | Purpose |
 |---|---|

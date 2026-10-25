@@ -38,8 +38,8 @@ entity data lives in the `.big` files (`docs/FORMATS/big.md`).
 
 ## How the build finds it
 
-- Host build: `--data-dir <dir>` (planned; the current smoke binary does not
-  read assets).
+- Host build: `--big <path>` for `--list-big` and `--frame` (headless
+  preview). `--data-dir` is planned with the level pipeline.
 - Tests: `BO2NX_ASSETS_DIR=<dir>`. Asset-gated tests skip cleanly when it
   is unset.
 

@@ -14,6 +14,12 @@ The first target is a Linux host build (SDL2 + OpenGL). It exists to:
   oracle;
 - validate formats and renderer assumptions cheaply.
 
+The development container has no SDL2, OpenGL or display. The first host
+backend is therefore `src/platform/headless/`: a software rasterizer that
+writes PPM frames and exercises the engine readers. The SDL2 + OpenGL
+backend remains the target and implements the same platform interfaces;
+the engine and game layers do not change when it lands.
+
 The Switch backend (libnx + deko3d) replaces the platform layer once the
 host build renders a level. The game and engine layers do not change when
 the backend changes.
@@ -51,6 +57,14 @@ to mirror. The interfaces are recovered from the executable:
 | `Scene` | Submit geometry and camera state to the renderer |
 | `Audio` | Voices, buses and event playback |
 | `Clock` | Fixed logic tick and frame timing |
+
+Current concrete modules:
+
+| Module | Responsibility | State |
+|---|---|---|
+| `big_archive` | `goefile` reader | Validated on the installed tree |
+| `dds` | DDS/BC decoder | DXT1, DXT3, DXT5, A8R8G8B8; top mip |
+| `math` | Vec3, Vec4, Mat4 | Used by the headless renderer |
 
 Each interface is implemented by the platform backend. The engine owns
 the data structures; the platform owns the device objects.
@@ -91,5 +105,6 @@ The port reads the original installation unchanged:
 <data-dir>/*.dat          (Bink videos)
 ```
 
-The host build takes `--data-dir`; the Switch build reads from the SD
-card path documented in `docs/GAME_DATA.md`.
+The headless frame takes `--big <file>`; the level pipeline will add
+`--data-dir`. The Switch build reads from the SD card path documented in
+`docs/GAME_DATA.md`.

@@ -4,7 +4,8 @@
 
 | Level | What | When | Assets needed |
 |---|---|---|---|
-| Unit | LE readers, math, parsers on synthetic fixtures (SFXI, BIG, RKV), state machines | Always | No |
+| Unit (Python) | LE readers, math, parsers on synthetic fixtures (SFXI, BIG, RKV), installer | Always | No |
+| Unit (C++) | goefile/DDS readers, math and the software renderer | Always | No |
 | Parity Python/C++ | Same input to the reference parser and the C++ parser -> identical output | Always | No (fixtures) |
 | Integration (asset-gated) | Parsers over the user's real assets -> counts and SHA-256 manifests | `BO2NX_ASSETS_DIR` set | Yes, skips otherwise |
 | Render golden | Offscreen render of a scene or texture -> PNG hash | `BO2NX_ASSETS_DIR` set | Yes, goldens local |
@@ -36,11 +37,16 @@ ctest --preset linux-debug --output-on-failure
 
 BO2NX_ASSETS_DIR=/path/to/game ctest --preset linux-debug   # asset-gated on
 ./scripts/ci.sh                                             # everything + policy check
+
+# Asset frame (manual, needs the installed tree)
+./build/linux-debug/bo2nx --frame \
+  --big external/installed/media/gogames/bo2/resources/levels/sanctuary/sanctuary.big \
+  --entry SewBrick3 --out /tmp/bo2-frame.ppm
 ```
 
 ## Visual gate
 
-Once the host renderer exists, `tools/oracle/compare_frame.sh` will put a
-port frame next to an oracle capture. It is a manual gate: look at the
-side-by-side image before and after every geometry or camera change. Do
-not show a demo until the frame recognizably matches the original.
+The headless renderer writes a PPM preview now. `tools/oracle/compare_frame.sh`
+lands with the level renderer; the side-by-side gate still applies before
+a demo. Do not show a level demo until the frame recognizably matches the
+original.

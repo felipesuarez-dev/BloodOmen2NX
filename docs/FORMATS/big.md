@@ -1,8 +1,10 @@
 # `.big` container (`goefile`)
 
 Status: **validated against the reference build**. Implementation:
-`tools/bo2fmt/big.py`. The parser read 179 `.big` files (246,332
-entries) from the installed tree without errors; see "Coverage".
+`tools/bo2fmt/big.py` (reference) and `src/engine/big_archive.cpp` (C++
+reader). The parser read 179 `.big` files (246,332 entries) from the
+installed tree without errors; see "Coverage". The C++ reader passes the
+unit tests and lists the installed containers.
 
 `goefile` is where the game content lives: geometry, models, textures,
 samples, `tunedata`, `cellgrup`, `region`, `planinfo`, `bpackage`,
@@ -68,7 +70,7 @@ inside the entry.
 
 ## Validation
 
-The reference parser rejects malformed input instead of returning partial
+The reference parsers reject malformed input instead of returning partial
 data:
 
 - a file shorter than `0x24` bytes or without the `goefile\0` magic;

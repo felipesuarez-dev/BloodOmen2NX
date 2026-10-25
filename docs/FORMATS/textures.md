@@ -2,7 +2,8 @@
 
 Status: **verified**. Every `texture` entry checked in the 179 `.big`
 files carries a standard DDS payload (`DDS ` magic): 22,483 entries,
-0 exceptions.
+0 exceptions. Implementation: `src/engine/dds.cpp`; it decodes DXT1,
+DXT3, DXT5 and A8R8G8B8 and keeps the top mip.
 
 ## Container
 
@@ -25,9 +26,10 @@ same glyph codes for accented characters.
 
 ## Next steps
 
-1. Add the DDS decoder to `src/engine/` and cover DXT1/DXT3/DXT5 and
-   A8R8G8B8 with synthetic fixtures.
-2. Decode one real texture and render it on the host backend.
+1. Render a real texture in the level pipeline (the preview already uses
+   one).
+2. Add mip selection and the remaining codecs if a real texture needs
+   them.
 3. Find the texture loader and the pixel-conversion routine in `bo2.exe`
    only where the DDS header is not enough.
 4. Document the material binding used by the model payload.
