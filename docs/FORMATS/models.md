@@ -146,7 +146,9 @@ material colors feed the vertex diffuse, not a separate texture-stage
 constant.
 
 The host exposes the raw layers and a diagnostic tint:
-`--material off|diffuse|layers|layers2x`. `off` keeps the current preview,
+`--material off|diffuse|layers|layers2x`. The static lighting itself comes
+from the `.slm` light maps (`docs/FORMATS/litedata.md`), sampled with the
+model's second UV set and enabled with `--lightmap`. `off` keeps the current preview,
 `diffuse` uses layer 1, `layers` sums the three and `layers2x` doubles the
 sum. Applying the direct tint to `sanctuary` darkens the frame from mean
 0.107 to 0.086 and clips the maximum from 0.667 to 0.118. That negative

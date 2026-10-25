@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cctype>
 #include <cstdint>
 #include <cstdlib>
 #include <exception>
@@ -108,7 +109,8 @@ Options parse_options(int argc, char** argv) {
                 << "  --eye x,y,z           camera position (default 2.4,1.6,2.4)\n"
                 << "  --target x,y,z        camera target (default 0,0,0)\n"
                 << "  --fov <degrees>       vertical field of view (default 55)\n"
-                << "  --material <mode>     material tint: off, diffuse, layers, layers2x\n";
+                << "  --material <mode>     material tint: off, diffuse, layers, layers2x\n"
+                << "  --lightmap            sample the .slm light maps on textured surfaces\n";
             std::exit(0);
         }
         if (argument == "--list-big") {
@@ -141,6 +143,8 @@ Options parse_options(int argc, char** argv) {
         } else if (argument == "--material") {
             options.frame_options.material_mode =
                 parse_material_mode(next_argument(index, argc, argv));
+        } else if (argument == "--lightmap") {
+            options.frame_options.lightmap = true;
         } else {
             usage_error("unknown argument: " + argument);
         }
@@ -174,8 +178,24 @@ struct LoadedLevel {
     bo2::engine::LevelGeometry geometry;
     std::vector<bo2::engine::Image> textures;
     std::size_t loaded_textures = 0;
+    std::size_t loaded_lightmaps = 0;
+    std::size_t lightmap_entries = 0;
     std::string name;
 };
+
+std::string normalize_texture_name(const std::string& name) {
+    std::string result;
+    result.reserve(name.size());
+    for (char character : name) {
+        if (character == '/') {
+            result.push_back('-');
+        } else {
+            result.push_back(static_cast<char>(
+                std::tolower(static_cast<unsigned char>(character))));
+        }
+    }
+    return result;
+}
 
 LoadedLevel load_level(const Options& options) {
     if (options.big.empty()) {
@@ -210,6 +230,38 @@ LoadedLevel load_level(const Options& options) {
             level.textures.emplace_back();
         }
     }
+    const bo2::engine::BigEntry* litedata = nullptr;
+    for (const bo2::engine::BigEntry& candidate : archive.entries()) {
+        if (bo2::engine::iequals(candidate.type, "litedata")) {
+            litedata = &candidate;
+            break;
+        }
+    }
+    std::vector<bo2::engine::LevelLightMap> lightmap_entries;
+    if (litedata != nullptr) {
+        lightmap_entries = bo2::engine::parse_lightmaps(archive.extract(*litedata));
+        level.lightmap_entries = lightmap_entries.size();
+    }
+    level.geometry.lightmaps.reserve(level.geometry.texture_names.size());
+    for (const std::string& name : level.geometry.texture_names) {
+        const std::string normalized = normalize_texture_name(name);
+        const bo2::engine::LevelLightMap* match = nullptr;
+        for (const bo2::engine::LevelLightMap& lightmap_entry : lightmap_entries) {
+            if (lightmap_entry.name.size() >= normalized.size() &&
+                lightmap_entry.name.compare(
+                    lightmap_entry.name.size() - normalized.size(), normalized.size(),
+                    normalized) == 0) {
+                match = &lightmap_entry;
+                break;
+            }
+        }
+        if (match != nullptr) {
+            level.geometry.lightmaps.push_back(match->image);
+            ++level.loaded_lightmaps;
+        } else {
+            level.geometry.lightmaps.emplace_back();
+        }
+    }
     return level;
 }
 
@@ -219,7 +271,8 @@ void print_scene(const LoadedLevel& level) {
               << ", skipped " << geometry.skipped_models << ", triangles "
               << geometry.triangles.size() << ", vertices " << geometry.positions.size()
               << ", textures " << level.loaded_textures << "/" << geometry.texture_names.size()
-              << ")\n";
+              << ", lightmaps " << level.loaded_lightmaps << "/" << geometry.texture_names.size()
+              << " (entries " << level.lightmap_entries << "))\n";
     if (geometry.has_cell_grid) {
         std::size_t portals = 0;
         std::size_t terrains = 0;
@@ -289,6 +342,7 @@ int run_sdl(const Options& options) {
     window.camera.fov_degrees = options.frame_options.camera.fov_degrees;
     window.camera.up = {0.0f, 0.0f, 1.0f};
     window.material_mode = options.frame_options.material_mode;
+    window.lightmap = options.frame_options.lightmap;
     if (options.big.empty()) {
         return bo2::platform::sdl::run_triangle(window);
     }

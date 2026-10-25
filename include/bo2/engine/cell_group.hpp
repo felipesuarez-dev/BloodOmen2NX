@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "bo2/engine/image.hpp"
 #include "bo2/engine/math.hpp"
 
 namespace bo2::engine {
@@ -34,6 +35,11 @@ struct MaterialLayer {
 };
 
 enum class MaterialMode { Off, Diffuse, Layers, Layers2x };
+
+struct LevelLightMap {
+    std::string name;
+    Image image;
+};
 
 struct CellAttributeTable {
     std::string name;
@@ -129,7 +135,9 @@ struct LevelGeometry {
     std::vector<Vec3> positions;
     std::vector<Vec3> normals;
     std::vector<Vec2> texcoords;
+    std::vector<Vec2> lightmap_texcoords;
     std::vector<std::string> texture_names;
+    std::vector<Image> lightmaps;
     std::vector<LevelTriangle> triangles;
     std::vector<MaterialLayer> materials;
     std::vector<CellAttributeTable> level_attributes;
@@ -160,5 +168,6 @@ LevelGeometry parse_cell_group(const std::vector<std::uint8_t>& data,
 
 Vec3 material_tint(const LevelGeometry& geometry, const LevelTriangle& triangle,
                    MaterialMode mode);
+std::vector<LevelLightMap> parse_lightmaps(const std::vector<std::uint8_t>& data);
 
 }  // namespace bo2::engine

@@ -158,8 +158,9 @@ engine::Mat4 view_projection(const Camera& camera, float aspect, float near_plan
 }
 
 void draw_level(const engine::LevelGeometry& geometry, const std::vector<GLuint>& textures,
-                const Camera& camera, std::uint32_t width, std::uint32_t height,
-                engine::MaterialMode material_mode) {
+                const std::vector<GLuint>& lightmaps, const Camera& camera,
+                std::uint32_t width, std::uint32_t height, engine::MaterialMode material_mode,
+                bool use_lightmap) {
     glViewport(0, 0, static_cast<GLsizei>(width), static_cast<GLsizei>(height));
     glClearColor(20.0f / 255.0f, 22.0f / 255.0f, 30.0f / 255.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -210,7 +211,24 @@ void draw_level(const engine::LevelGeometry& geometry, const std::vector<GLuint>
                                                                  : engine::Vec2{},
         };
         const engine::Vec3 tint = engine::material_tint(geometry, triangle, material_mode);
+        const GLuint lightmap_id =
+            (use_lightmap && textured &&
+             static_cast<std::size_t>(triangle.texture) < lightmaps.size())
+                ? lightmaps[static_cast<std::size_t>(triangle.texture)]
+                : 0;
+        const engine::Vec2 light_uv[3] = {
+            (textured && triangle.a < geometry.lightmap_texcoords.size())
+                ? geometry.lightmap_texcoords[triangle.a]
+                : uv[0],
+            (textured && triangle.b < geometry.lightmap_texcoords.size())
+                ? geometry.lightmap_texcoords[triangle.b]
+                : uv[1],
+            (textured && triangle.c < geometry.lightmap_texcoords.size())
+                ? geometry.lightmap_texcoords[triangle.c]
+                : uv[2],
+        };
         if (textured) {
+            glActiveTexture(GL_TEXTURE0);
             glEnable(GL_TEXTURE_2D);
             glBindTexture(GL_TEXTURE_2D, textures[static_cast<std::size_t>(triangle.texture)]);
         } else {
@@ -218,16 +236,31 @@ void draw_level(const engine::LevelGeometry& geometry, const std::vector<GLuint>
             const engine::Vec3 color = material_color(geometry, triangle);
             glColor3f(color.x, color.y, color.z);
         }
+        if (lightmap_id != 0) {
+            glActiveTexture(GL_TEXTURE1);
+            glEnable(GL_TEXTURE_2D);
+            glBindTexture(GL_TEXTURE_2D, lightmap_id);
+            glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+        }
         glBegin(GL_TRIANGLES);
         for (int corner = 0; corner < 3; ++corner) {
             const float shade = shade_of(normals[corner]);
             if (textured) {
-                glColor4f(shade * tint.x, shade * tint.y, shade * tint.z, 1.0f);
-                glTexCoord2f(uv[corner].x, uv[corner].y);
+                const float light = lightmap_id != 0 ? 1.0f : shade;
+                glColor4f(light * tint.x, light * tint.y, light * tint.z, 1.0f);
+                glMultiTexCoord2f(GL_TEXTURE0, uv[corner].x, uv[corner].y);
+                if (lightmap_id != 0) {
+                    glMultiTexCoord2f(GL_TEXTURE1, light_uv[corner].x, light_uv[corner].y);
+                }
             }
             glVertex3f(positions[corner].x, positions[corner].y, positions[corner].z);
         }
         glEnd();
+        if (lightmap_id != 0) {
+            glActiveTexture(GL_TEXTURE1);
+            glDisable(GL_TEXTURE_2D);
+        }
+        glActiveTexture(GL_TEXTURE0);
     }
     glDisable(GL_TEXTURE_2D);
 }
@@ -342,10 +375,11 @@ int run_level(const engine::LevelGeometry& geometry,
               const std::vector<engine::Image>& textures, const WindowOptions& options) {
     auto context = create_context(options, options.title);
     const std::vector<GLuint> texture_ids = upload_textures(textures);
+    const std::vector<GLuint> lightmap_ids = upload_textures(geometry.lightmaps);
     OrbitCamera orbit = make_orbit(options.camera);
     if (!options.screenshot.empty()) {
-        draw_level(geometry, texture_ids, current_camera(orbit), options.width, options.height,
-                   options.material_mode);
+        draw_level(geometry, texture_ids, lightmap_ids, current_camera(orbit), options.width,
+                   options.height, options.material_mode, options.lightmap);
         glFinish();
         capture(options.screenshot, options.width, options.height);
         return 0;
@@ -400,8 +434,8 @@ int run_level(const engine::LevelGeometry& geometry,
         if (keys[SDL_SCANCODE_Q] != 0) {
             orbit.target.z -= step;
         }
-        draw_level(geometry, texture_ids, current_camera(orbit), options.width, options.height,
-                   options.material_mode);
+        draw_level(geometry, texture_ids, lightmap_ids, current_camera(orbit), options.width,
+                   options.height, options.material_mode, options.lightmap);
         SDL_GL_SwapWindow(context->window);
         SDL_Delay(1);
     }

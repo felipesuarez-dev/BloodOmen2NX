@@ -301,6 +301,14 @@ std::vector<std::uint8_t> build_cell_group(bool with_instances = false) {
         put_float(uvs, uv[0]);
         put_float(uvs, uv[1]);
     }
+    std::vector<std::uint8_t> lightmap_uvs;
+    put32(lightmap_uvs, 1);
+    put32(lightmap_uvs, 4);
+    for (const auto& uv : std::vector<std::array<float, 2>>{{0.25f, 0.25f}, {0.5f, 0.25f},
+                                                            {0.5f, 0.5f}, {0.25f, 0.5f}}) {
+        put_float(lightmap_uvs, uv[0]);
+        put_float(lightmap_uvs, uv[1]);
+    }
     std::vector<std::uint8_t> material_texture;
     put32(material_texture, 0);
     put32(material_texture, 1);
@@ -337,6 +345,7 @@ std::vector<std::uint8_t> build_cell_group(bool with_instances = false) {
     append_chunk(record, "prims", prims);
     append_chunk(record, "textures", uv_indices);
     append_chunk(record, "uvs", uvs);
+    append_chunk(record, "uvs", lightmap_uvs);
     append_chunk(record, "texture", material_texture);
     append_chunk(record, "mlyrcolr", layer_colors);
     append_chunk(record, "mlyrctrl", layer_controls);
@@ -575,6 +584,40 @@ void test_cell_instances() {
     CHECK(partial.triangles.size() == 3);
 }
 
+void test_lightmaps() {
+    std::vector<std::uint8_t> data;
+    put32(data, 1);
+    put32(data, 112);
+    put32(data, 4);
+    append(data, std::string("test", 4));
+    for (int index = 0; index < 12; ++index) {
+        data.push_back(0);
+    }
+    put32(data, 8);
+    append(data, "test-tex");
+    put16(data, 1);
+    data.push_back(4);
+    data.push_back(0x20);
+    put16(data, 0x10);
+    put16(data, 0x61);
+    put16(data, 2);
+    put16(data, 2);
+    for (int index = 0; index < 16; ++index) {
+        put32(data, static_cast<std::uint32_t>(index) << 28);
+    }
+    data.push_back(0x01);
+    data.push_back(0x23);
+    const std::vector<bo2::engine::LevelLightMap> maps =
+        bo2::engine::parse_lightmaps(data);
+    CHECK(maps.size() == 1);
+    CHECK(maps[0].name == "test-tex");
+    CHECK(maps[0].image.width == 2 && maps[0].image.height == 2);
+    CHECK(maps[0].image.rgba[0] == 0);
+    CHECK(maps[0].image.rgba[4] == 0x10);
+    CHECK(maps[0].image.rgba[8] == 0x20);
+    CHECK(maps[0].image.rgba[12] == 0x30);
+}
+
 void test_cell_group() {
     const std::vector<std::uint8_t> data = build_cell_group();
     const bo2::engine::LevelGeometry geometry = bo2::engine::parse_cell_group(data);
@@ -713,6 +756,9 @@ void test_cell_group() {
     CHECK(textured.texture_names[0] == "synthetic/tex");
     CHECK(textured.texcoords.size() == 4);
     CHECK(std::fabs(textured.texcoords[1].x - 1.0f) < 1.0e-5f);
+    CHECK(textured.lightmap_texcoords.size() == 4);
+    CHECK(std::fabs(textured.lightmap_texcoords[1].x - 0.5f) < 1.0e-5f);
+    CHECK(std::fabs(textured.lightmap_texcoords[1].y - 0.25f) < 1.0e-5f);
     CHECK(textured.triangles[0].texture == 0);
 }
 
@@ -725,6 +771,7 @@ int main() {
     test_math();
     test_cell_group();
     test_cell_instances();
+    test_lightmaps();
     if (failures != 0) {
         std::cerr << failures << " check(s) failed\n";
         return 1;

@@ -13,6 +13,7 @@ by a parser or the original game; **observed** = seen but not decoded;
 | `pc.rkv` audio archive | verified: 2,666 Ogg streams | [`rkv.md`](rkv.md) |
 | Models | payload extracted; layout unknown | [`models.md`](models.md) |
 | Textures | verified: DDS payloads | [`textures.md`](textures.md) |
+| Light maps (`litedata/*.slm`) | partially verified: 5 entries, palette + 4-bit indices | [`litedata.md`](litedata.md) |
 | Audio | verified: Ogg Vorbis in `pc.rkv` | [`audio.md`](audio.md) |
 | Video | verified (magic only) | [`video.md`](video.md) |
 | Saves | unknown | - |

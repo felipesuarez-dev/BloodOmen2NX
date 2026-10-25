@@ -24,6 +24,7 @@ struct WindowOptions {
     std::string screenshot;
     bool hidden = false;
     engine::MaterialMode material_mode = engine::MaterialMode::Off;
+    bool lightmap = false;
     Camera camera;
 };
 

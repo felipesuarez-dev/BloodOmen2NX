@@ -1,6 +1,7 @@
 #include "bo2/engine/cell_group.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -803,16 +804,23 @@ void parse_model(const common::Reader& reader, const Chunk& rmd, std::uint32_t m
     const Chunk* prims = find_chunk(chunks, "prims");
     const Chunk* uv_indices = find_chunk(chunks, "textures");
     const Chunk* uv_set = nullptr;
+    const Chunk* lightmap_uv_set = nullptr;
     for (const Chunk& chunk : chunks) {
-        if (chunk.name != "uvs") {
+        if (chunk.name != "uvs" || chunk.data_size < 4) {
             continue;
         }
-        if (uv_set == nullptr || (chunk.data_size >= 4 && reader.u32(chunk.data_offset) == 0)) {
+        const std::uint32_t set = reader.u32(chunk.data_offset);
+        if (set == 0 && uv_set == nullptr) {
             uv_set = &chunk;
-            if (reader.u32(chunk.data_offset) == 0) {
-                break;
-            }
+        } else if (set == 1 && lightmap_uv_set == nullptr) {
+            lightmap_uv_set = &chunk;
         }
+        if (uv_set != nullptr && lightmap_uv_set != nullptr) {
+            break;
+        }
+    }
+    if (uv_set == nullptr) {
+        uv_set = lightmap_uv_set;
     }
     if (positions == nullptr || prims == nullptr) {
         throw common::ParseError("model has no position or prim chunk");
@@ -828,6 +836,8 @@ void parse_model(const common::Reader& reader, const Chunk& rmd, std::uint32_t m
         (uv_indices != nullptr) ? read_u16s(reader, *uv_indices) : std::vector<std::uint16_t>{};
     const std::vector<Vec2> uv_values =
         (uv_set != nullptr) ? read_uvs(reader, *uv_set) : std::vector<Vec2>{};
+    const std::vector<Vec2> lightmap_uv_values =
+        (lightmap_uv_set != nullptr) ? read_uvs(reader, *lightmap_uv_set) : uv_values;
 
     const std::uint32_t base = static_cast<std::uint32_t>(geometry.positions.size());
     geometry.positions.insert(geometry.positions.end(), vertices.begin(), vertices.end());
@@ -836,7 +846,10 @@ void parse_model(const common::Reader& reader, const Chunk& rmd, std::uint32_t m
         const std::uint32_t uv_index =
             (index < uv_index_values.size()) ? uv_index_values[index]
                                              : static_cast<std::uint32_t>(index);
-        geometry.texcoords.push_back(uv_index < uv_values.size() ? uv_values[uv_index] : Vec2{});
+        const Vec2 uv = uv_index < uv_values.size() ? uv_values[uv_index] : Vec2{};
+        geometry.texcoords.push_back(uv);
+        geometry.lightmap_texcoords.push_back(
+            uv_index < lightmap_uv_values.size() ? lightmap_uv_values[uv_index] : uv);
     }
     const std::uint32_t material_base = static_cast<std::uint32_t>(geometry.materials.size());
     const std::vector<MaterialLayer> material_layers = read_material_layers(reader, chunks);
@@ -985,6 +998,73 @@ LevelGeometry parse_cell_group(const std::vector<std::uint8_t>& data) {
     static const std::vector<std::uint16_t> no_symbols;
     static const std::vector<std::string> no_names;
     return parse_cell_group(data, no_symbols, no_names);
+}
+
+std::vector<LevelLightMap> parse_lightmaps(const std::vector<std::uint8_t>& data) {
+    std::vector<LevelLightMap> maps;
+    if (data.size() < 12) {
+        return maps;
+    }
+    const common::Reader reader(data);
+    if (reader.u32(0) != 1) {
+        throw common::ParseError("unsupported light map version");
+    }
+    const std::uint32_t group_length = reader.u32(8);
+    if (group_length == 0 || group_length > 512 ||
+        12 + group_length + 12 > data.size()) {
+        return maps;
+    }
+    std::size_t position = 12 + group_length + 12;
+    for (int entry = 0; entry < 64; ++entry) {
+        if (position + 4 > data.size()) {
+            break;
+        }
+        const std::uint32_t name_length = reader.u32(position);
+        if (name_length == 0 || name_length > 4096 ||
+            position + 4 + name_length + 12 > data.size()) {
+            break;
+        }
+        LevelLightMap map;
+        map.name.assign(reinterpret_cast<const char*>(data.data() + position + 4), name_length);
+        const std::size_t record = position + 4 + name_length;
+        const std::uint16_t version = reader.u16(record);
+        const std::uint8_t format = reader.u8(record + 2);
+        const std::uint16_t width = reader.u16(record + 8);
+        const std::uint16_t height = reader.u16(record + 10);
+        if (version != 1 || format != 4 || width == 0 || height == 0 || width > 1024 ||
+            height > 1024) {
+            break;
+        }
+        const std::size_t palette_offset = record + 12;
+        const std::size_t indices_offset = palette_offset + 64;
+        const std::size_t index_bytes =
+            (static_cast<std::size_t>(width) * height + 1) / 2;
+        if (indices_offset + index_bytes > data.size()) {
+            break;
+        }
+        std::array<std::uint8_t, 16> luminance{};
+        for (std::size_t index = 0; index < luminance.size(); ++index) {
+            luminance[index] = static_cast<std::uint8_t>(
+                (reader.u32(palette_offset + index * 4) >> 24) & 0xFF);
+        }
+        map.image.width = width;
+        map.image.height = height;
+        map.image.rgba.resize(static_cast<std::size_t>(width) * height * 4);
+        for (std::size_t index = 0; index < static_cast<std::size_t>(width) * height; ++index) {
+            const std::uint8_t byte = data[indices_offset + index / 2];
+            const std::uint8_t nibble =
+                (index % 2 == 0) ? static_cast<std::uint8_t>(byte >> 4)
+                                 : static_cast<std::uint8_t>(byte & 0x0F);
+            const std::uint8_t value = luminance[nibble];
+            map.image.rgba[index * 4 + 0] = value;
+            map.image.rgba[index * 4 + 1] = value;
+            map.image.rgba[index * 4 + 2] = value;
+            map.image.rgba[index * 4 + 3] = 255;
+        }
+        maps.push_back(std::move(map));
+        position = indices_offset + index_bytes;
+    }
+    return maps;
 }
 
 Vec3 material_tint(const LevelGeometry& geometry, const LevelTriangle& triangle,

@@ -145,6 +145,18 @@ int main() {
     CHECK(plain_frame[center + 0] > 100);
     CHECK(tint_frame[center + 0] < plain_frame[center + 0] * 0.7);
 
+    bo2::engine::Image lightmap;
+    lightmap.width = 1;
+    lightmap.height = 1;
+    lightmap.rgba = {128, 128, 128, 255};
+    textured.lightmaps = {lightmap};
+    bo2::platform::headless::FrameOptions light_options = level_options;
+    light_options.lightmap = true;
+    const std::vector<std::uint8_t> light_frame =
+        bo2::platform::headless::render_level(textured, textures, light_options);
+    CHECK(light_frame[center + 0] > 0);
+    CHECK(light_frame[center + 0] < textured_frame[center + 0] * 0.8);
+
     if (failures != 0) {
         std::cerr << failures << " check(s) failed\n";
         return 1;

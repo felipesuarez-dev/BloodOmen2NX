@@ -34,6 +34,7 @@ also prints the parsed cell, portal, terrain, BSP, instance, light and marker co
 ```sh
 BIG=external/installed/media/gogames/bo2/resources/levels/sanctuary/sanctuary.big
 ./build/linux-debug/bo2nx --level --big "$BIG" --out /tmp/sanctuary.ppm
+./build/linux-debug/bo2nx --level --big "$BIG" --lightmap --out /tmp/sanctuary_lit.ppm
 ./build/linux-debug/bo2nx --level --big "$BIG" --out /tmp/sanctuary_inside.ppm \
   --eye 0,-20,4 --target 0,20,4 --fov 70
 ```
@@ -76,6 +77,7 @@ mouse button orbits, the wheel zooms and `Escape` quits.
 | `--eye x,y,z`, `--target x,y,z` | Free camera |
 | `--width`, `--height`, `--fov` | Frame size and field of view |
 | `--material <mode>` | Diagnostic material tint: `off`, `diffuse`, `layers`, `layers2x` |
+| `--lightmap` | Sample the `.slm` light maps with the second UV set |
 
 Planned with the level pipeline:
 
