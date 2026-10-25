@@ -43,11 +43,12 @@ and assets) is complete.
   model materials, the first UV set maps the texture coordinates, and
   33/34 `sanctuary` textures are bound; the rest fall back to the material
   color.
+- The level renderer clips triangles at the near plane, so a free camera
+  inside the shell no longer tears the projection.
 
 ## What is not done
 
 - `mlyrcolr`/`mlyrctrl` material modulation.
-- Near-plane clipping for interior cameras.
 - Cell grid/visibility data after the `cellmdls` models.
 - Animation and skinning (`animatio`, `animreel`, `vtxweigh`, `jointidx`).
 - `region`, `planinfo`, `bpackage`, `strtable`, `musicbnk`, `texfont`,
@@ -70,15 +71,14 @@ and assets) is complete.
 | 2 | `game.erg` parser details | Decompile the key lookup in `bo2.exe` | `docs/FORMATS/erg.md` |
 | 3 | Original logic tick | Measure from the oracle once it runs, or from the main loop | `docs/ARCHITECTURE.md` |
 | 4 | Level list and streaming model | Derive it from the installer script and `list.txt` | `docs/GAMEPLAY.md` |
-| 5 | Level renderer | Near-plane clipping, SDL2+OpenGL and the oracle frame | `docs/ARCHITECTURE.md` |
+| 5 | Level renderer | SDL2+OpenGL and the oracle frame | `docs/ARCHITECTURE.md` |
 | 6 | `animatio` and `animreel` layout | Decompile the animation loader | `docs/FORMATS/models.md` |
 
 ## Next steps
 
-1. Add the near-plane clipper for interior cameras.
-2. Parse the cell grid/visibility data and apply the material modulation.
-3. Decode animation/skinning and the shared `model` entries.
-4. Add the SDL2 + OpenGL backend when the environment provides the
+1. Parse the cell grid/visibility data and apply the material modulation.
+2. Decode animation/skinning and the shared `model` entries.
+3. Add the SDL2 + OpenGL backend when the environment provides the
    libraries and a display; use the original as the oracle after that.
 
 ## Rules

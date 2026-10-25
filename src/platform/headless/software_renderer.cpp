@@ -103,6 +103,57 @@ bool project(const engine::Mat4& view_projection, const engine::Vec3& position, 
     return true;
 }
 
+struct ClipVertex {
+    engine::Vec4 clip;
+    float u = 0.0f;
+    float v = 0.0f;
+    float shade = 1.0f;
+};
+
+std::vector<ClipVertex> clip_near(const ClipVertex triangle[3], float near_plane) {
+    std::vector<ClipVertex> input(triangle, triangle + 3);
+    std::vector<ClipVertex> output;
+    output.reserve(4);
+    for (std::size_t index = 0; index < input.size(); ++index) {
+        const ClipVertex& current = input[index];
+        const ClipVertex& next = input[(index + 1) % input.size()];
+        const bool current_inside = current.clip.w >= near_plane;
+        const bool next_inside = next.clip.w >= near_plane;
+        if (current_inside) {
+            output.push_back(current);
+        }
+        if (current_inside != next_inside) {
+            const float t = (near_plane - current.clip.w) / (next.clip.w - current.clip.w);
+            ClipVertex clipped;
+            clipped.clip.x = current.clip.x + t * (next.clip.x - current.clip.x);
+            clipped.clip.y = current.clip.y + t * (next.clip.y - current.clip.y);
+            clipped.clip.z = current.clip.z + t * (next.clip.z - current.clip.z);
+            clipped.clip.w = near_plane;
+            clipped.u = current.u + t * (next.u - current.u);
+            clipped.v = current.v + t * (next.v - current.v);
+            clipped.shade = current.shade + t * (next.shade - current.shade);
+            output.push_back(clipped);
+        }
+    }
+    return output;
+}
+
+bool project_clip(const ClipVertex& vertex, std::uint32_t width, std::uint32_t height,
+                  ScreenVertex& out) {
+    if (vertex.clip.w <= 1.0e-6f) {
+        return false;
+    }
+    const float inverse_w = 1.0f / vertex.clip.w;
+    out.x = (vertex.clip.x * inverse_w * 0.5f + 0.5f) * static_cast<float>(width);
+    out.y = (1.0f - (vertex.clip.y * inverse_w * 0.5f + 0.5f)) * static_cast<float>(height);
+    out.z = vertex.clip.z * inverse_w;
+    out.inverse_w = inverse_w;
+    out.u_over_w = vertex.u * inverse_w;
+    out.v_over_w = vertex.v * inverse_w;
+    out.shade = vertex.shade;
+    return true;
+}
+
 void rasterize(const ScreenVertex& v0, const ScreenVertex& v1, const ScreenVertex& v2,
                const engine::Image& texture, std::uint32_t width, std::uint32_t height,
                std::vector<std::uint8_t>& color, std::vector<float>& depth) {
@@ -352,24 +403,38 @@ std::vector<std::uint8_t> render_level(const engine::LevelGeometry& geometry,
             (textured && triangle.c < geometry.texcoords.size()) ? geometry.texcoords[triangle.c]
                                                                  : engine::Vec2{},
         };
-        ScreenVertex screen[3];
-        bool visible = true;
+        ClipVertex clipped_input[3];
         for (int corner = 0; corner < 3; ++corner) {
-            if (!project(view_projection, positions[corner], uv[corner].x, uv[corner].y,
-                         shade_of(normals[corner]), options.width, options.height,
-                         screen[corner])) {
-                visible = false;
-                break;
-            }
+            clipped_input[corner].clip = view_projection * engine::Vec4{
+                positions[corner].x, positions[corner].y, positions[corner].z, 1.0f};
+            clipped_input[corner].u = uv[corner].x;
+            clipped_input[corner].v = uv[corner].y;
+            clipped_input[corner].shade = shade_of(normals[corner]);
         }
-        if (!visible) {
+        const std::vector<ClipVertex> polygon = clip_near(clipped_input, near_plane);
+        if (polygon.size() < 3) {
             continue;
         }
         const engine::Image& image =
             textured ? textures[static_cast<std::size_t>(triangle.texture)]
                      : materials[static_cast<std::size_t>(triangle.material) % materials.size()];
-        rasterize(screen[0], screen[1], screen[2], image, options.width, options.height, color,
-                  depth);
+        for (std::size_t index = 1; index + 1 < polygon.size(); ++index) {
+            ScreenVertex screen[3];
+            bool visible = true;
+            const ClipVertex* corners[3] = {&polygon[0], &polygon[index], &polygon[index + 1]};
+            for (int corner = 0; corner < 3; ++corner) {
+                if (!project_clip(*corners[corner], options.width, options.height,
+                                  screen[corner])) {
+                    visible = false;
+                    break;
+                }
+            }
+            if (!visible) {
+                continue;
+            }
+            rasterize(screen[0], screen[1], screen[2], image, options.width, options.height, color,
+                      depth);
+        }
     }
     return color;
 }

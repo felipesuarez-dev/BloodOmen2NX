@@ -129,9 +129,9 @@ the animation chunks. The node hierarchy and keyframe encoding are open.
 | World bounds | 2164 × 1124 × 624 |
 
 The headless renderer draws this geometry with the DDS textures and a
-free camera (`bo2nx --level`). The near-plane clipper is pending, so a
-camera inside a surface can show projection artifacts; the default
-isometric frame is stable.
+free camera (`bo2nx --level`). A triangle near-plane clipper keeps
+interior cameras stable; a camera inside the closed shell sees the shell
+interior, while the default isometric frame shows the level.
 
 ## Open questions
 
@@ -144,7 +144,7 @@ isometric frame is stable.
 
 ## Next steps
 
-1. Add the near-plane clipper for interior cameras.
-2. Parse the cell grid/visibility data.
-3. Apply `mlyrcolr`/`mlyrctrl` modulation.
-4. Decode the animation/skeleton chunks.
+1. Parse the cell grid/visibility data.
+2. Apply `mlyrcolr`/`mlyrctrl` modulation.
+3. Decode the animation/skeleton chunks.
+4. Bind the shared `model` entries and entity placements.

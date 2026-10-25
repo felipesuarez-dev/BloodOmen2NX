@@ -39,9 +39,10 @@ BIG=external/installed/media/gogames/bo2/resources/levels/sanctuary/sanctuary.bi
 ```
 
 The geometry is drawn with the DDS textures resolved from the cellgrup
-symbols; materials without a texture entry use a flat color. The
-near-plane clipper is pending, so a camera that intersects a surface can
-show projection artifacts; the isometric frame is stable.
+symbols; materials without a texture entry use a flat color. A triangle
+near-plane clipper keeps interior cameras stable; a camera inside the
+closed shell sees the shell interior, while the isometric frame shows
+the level.
 
 | Flag | Purpose |
 |---|---|
