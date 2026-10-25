@@ -26,18 +26,18 @@ Entry:
     u32     0
     u16     name index
     u16     language index
-    char[8] "symlist\\0"
-    u32     unknown (20 or 28)
+    char[8] "symlist\0"
+    u32     symbols size (from the symlist to the data length)
     u32     0
-    u32     n; n u16 values
+    u32     n
+    n       u16 values
+    u16     0xffff (only when n > 0)
     u32     data length
-    u64     unknown
     data, padded to 4
 
-The data offset is derived from the end of the entry, which is the robust
-formula used by independent parsers: data = start + length - align4(size).
-
-Malformed input raises `BigError` instead of returning partial data.
+The data length lives at `entry_start + 20 + symbols_size`. The data
+offset is derived from the end of the entry, which is the robust formula
+used by independent parsers: data = start + length - align4(size).
 """
 
 from __future__ import annotations
@@ -108,7 +108,7 @@ def parse(data: bytes) -> tuple[list[str], list[Entry]]:
     entries: list[Entry] = []
     pos = entries_start
     while pos < len(data):
-        if len(data) - pos < 52:
+        if len(data) - pos < 44:
             if any(data[pos:]):
                 raise BigError(f"truncated entry at {pos:#x}")
             break
@@ -119,20 +119,20 @@ def parse(data: bytes) -> tuple[list[str], list[Entry]]:
             break
         entry_length = _u32(data, pos + 8)
         entry_end = pos + entry_length
-        if entry_length < 52 or entry_end > len(data):
+        if entry_length < 44 or entry_end > len(data):
             raise BigError(f"bad entry length at {pos:#x}")
         name_index = _u16(data, pos + 16)
         language_index = _u16(data, pos + 18)
-        n = _u32(data, pos + 36)
-        values_end = pos + 40 + n * 2
-        if values_end + 4 > entry_end:
+        symbols_size = _u32(data, pos + 28)
+        data_length_at = pos + 20 + symbols_size
+        if data_length_at + 4 > entry_end:
             raise BigError(f"bad symbol list at {pos:#x}")
-        data_length = _u32(data, values_end)
+        data_length = _u32(data, data_length_at)
         padded = (data_length + 3) & ~3
         if padded > entry_length:
             raise BigError(f"bad data length at {pos:#x}")
         data_offset = entry_end - padded
-        if data_offset < values_end + 4 or data_offset > entry_end:
+        if data_offset < data_length_at + 4 or data_offset > entry_end:
             raise BigError(f"bad data range at {pos:#x}")
         entries.append(
             Entry(

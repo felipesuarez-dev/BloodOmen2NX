@@ -9,7 +9,7 @@ from big import parse  # noqa: E402
 
 
 def build_big(entries):
-    names = [name for name, _, _ in entries]
+    names = [entry[0] for entry in entries]
     name_blob = b"".join(name.encode("latin1") + b"\0" for name in names)
     directory = (
         b"symlist\0"
@@ -29,14 +29,19 @@ def build_big(entries):
         + directory
     )
     out = bytearray(header)
-    for index, (_, type_name, payload) in enumerate(entries):
+    for index, entry in enumerate(entries):
+        name, type_name, payload = entry[:3]
+        values = entry[3] if len(entry) > 3 else ()
+        values_blob = b"".join(struct.pack("<H", value) for value in values)
+        symbols_size = (20 + len(values_blob) + 3) & ~3
         body = (
             b"symlist\0"
-            + struct.pack("<I", 20)
+            + struct.pack("<I", symbols_size)
             + struct.pack("<I", 0)
-            + struct.pack("<I", 0)
+            + struct.pack("<I", len(values))
+            + values_blob
+            + b"\0" * (symbols_size - 20 - len(values_blob))
             + struct.pack("<I", len(payload))
-            + b"\0" * 8
             + payload
         )
         entry_length = 20 + len(body)
@@ -79,7 +84,7 @@ class BigTest(unittest.TestCase):
         _, entries = parse(data)
         self.assertEqual(entries[0].size, 5)
         self.assertEqual(entries[0].data, b"abcde")
-        self.assertEqual(entries[0].offset, entry_start(data) + 52)
+        self.assertEqual(entries[0].offset, entry_start(data) + 44)
 
     def test_reads_empty_payload(self):
         data = build_big([("a", "region", b"")])
@@ -113,9 +118,15 @@ class BigTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "entry length"):
             parse(bytes(data))
 
-    def test_rejects_symbol_list_overrun(self):
+    def test_reads_symbol_values(self):
+        data = build_big([("a", "texture", b"DDS " + b"\0" * 4, (7, 8, 9, 10))])
+        _, entries = parse(data)
+        self.assertEqual(entries[0].size, 8)
+        self.assertEqual(entries[0].data[:4], b"DDS ")
+
+    def test_rejects_bad_symbols_size(self):
         data = bytearray(build_big([("a", "model", b"abc")]))
-        struct.pack_into("<I", data, entry_start(data) + 36, 0x1000)
+        struct.pack_into("<I", data, entry_start(data) + 28, 0x1000)
         with self.assertRaisesRegex(ValueError, "symbol list"):
             parse(bytes(data))
 
