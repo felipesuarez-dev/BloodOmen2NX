@@ -24,6 +24,8 @@ The platform layer also provides the host services shared by every
 backend: `FileSystem`, `log_message`, the monotonic clock and the memory
 snapshot in `include/bo2/platform/platform.hpp`, implemented for Linux in
 `src/platform/linux/`. The Switch backend implements the same interfaces.
+`--stats` uses them to report the load breakdown, render time and the
+resident/peak memory snapshot.
 
 The Switch backend (libnx + deko3d) replaces the platform layer once the
 host build renders a level. The game and engine layers do not change when

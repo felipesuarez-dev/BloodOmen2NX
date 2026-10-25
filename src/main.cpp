@@ -27,6 +27,7 @@ struct Options {
     bool frame = false;
     bool level = false;
     bool sdl = false;
+    bool stats = false;
     bool eye_set = false;
     bool target_set = false;
     std::string big;
@@ -114,7 +115,8 @@ Options parse_options(int argc, char** argv) {
                 << "  --target x,y,z        camera target (default 0,0,0)\n"
                 << "  --fov <degrees>       vertical field of view (default 55)\n"
                 << "  --material <mode>     material tint: off, diffuse, layers, layers2x\n"
-                << "  --lightmap            sample the .slm light maps on textured surfaces\n";
+                << "  --lightmap            sample the .slm light maps on textured surfaces\n"
+                << "  --stats               print load, parse, render and memory numbers\n";
             std::exit(0);
         }
         if (argument == "--list-big") {
@@ -151,6 +153,8 @@ Options parse_options(int argc, char** argv) {
                 parse_material_mode(next_argument(index, argc, argv));
         } else if (argument == "--lightmap") {
             options.frame_options.lightmap = true;
+        } else if (argument == "--stats") {
+            options.stats = true;
         } else {
             usage_error("unknown argument: " + argument);
         }
@@ -188,7 +192,16 @@ struct LoadedLevel {
     std::size_t loaded_lightmaps = 0;
     std::size_t lightmap_entries = 0;
     std::string name;
+    double load_ms = 0.0;
+    double archive_ms = 0.0;
+    double parse_ms = 0.0;
+    double textures_ms = 0.0;
+    double lightmaps_ms = 0.0;
 };
+
+double elapsed_ms(std::uint64_t start) {
+    return static_cast<double>(bo2::platform::monotonic_nanoseconds() - start) / 1.0e6;
+}
 
 std::string normalize_texture_name(const std::string& name) {
     std::string result;
@@ -208,7 +221,9 @@ LoadedLevel load_level(const Options& options) {
     if (options.big.empty()) {
         usage_error("--level requires --big");
     }
+    const std::uint64_t load_start = bo2::platform::monotonic_nanoseconds();
     const bo2::engine::BigArchive archive = bo2::engine::BigArchive::load(options.big);
+    const double archive_ms = elapsed_ms(load_start);
     const bo2::engine::BigEntry* entry = nullptr;
     for (const bo2::engine::BigEntry& candidate : archive.entries()) {
         if (bo2::engine::iequals(candidate.type, "cellgrup")) {
@@ -221,8 +236,12 @@ LoadedLevel load_level(const Options& options) {
     }
     LoadedLevel level;
     level.name = entry->name;
+    level.archive_ms = archive_ms;
+    const std::uint64_t parse_start = bo2::platform::monotonic_nanoseconds();
     level.geometry = bo2::engine::parse_cell_group(archive.extract(*entry), entry->symbols,
                                                    archive.names());
+    level.parse_ms = elapsed_ms(parse_start);
+    const std::uint64_t textures_start = bo2::platform::monotonic_nanoseconds();
     level.textures.reserve(level.geometry.texture_names.size());
     for (const std::string& name : level.geometry.texture_names) {
         const bo2::engine::BigEntry* texture_entry = archive.find("texture", name);
@@ -237,6 +256,8 @@ LoadedLevel load_level(const Options& options) {
             level.textures.emplace_back();
         }
     }
+    level.textures_ms = elapsed_ms(textures_start);
+    const std::uint64_t lightmaps_start = bo2::platform::monotonic_nanoseconds();
     const bo2::engine::BigEntry* litedata = nullptr;
     for (const bo2::engine::BigEntry& candidate : archive.entries()) {
         if (bo2::engine::iequals(candidate.type, "litedata")) {
@@ -270,7 +291,21 @@ LoadedLevel load_level(const Options& options) {
             level.geometry.lightmaps.emplace_back();
         }
     }
+    level.lightmaps_ms = elapsed_ms(lightmaps_start);
+    level.load_ms = elapsed_ms(load_start);
     return level;
+}
+
+void print_stats(const LoadedLevel& level, double render_ms) {
+    const bo2::platform::MemorySnapshot memory = bo2::platform::memory_snapshot();
+    std::cout << "stats: load " << level.load_ms << " ms (archive " << level.archive_ms
+              << ", parse " << level.parse_ms << ", textures " << level.textures_ms
+              << ", lightmaps " << level.lightmaps_ms << ")";
+    if (render_ms >= 0.0) {
+        std::cout << ", render " << render_ms << " ms";
+    }
+    std::cout << ", rss " << memory.resident_bytes / (1024 * 1024)
+              << " MB, peak " << memory.peak_resident_bytes / (1024 * 1024) << " MB\n";
 }
 
 void print_scene(const LoadedLevel& level) {
@@ -352,10 +387,15 @@ int render_level_frame(const Options& options) {
         default_camera(level, frame.camera.eye, frame.camera.target);
     }
     frame.camera.up = {0.0f, 0.0f, 1.0f};
+    const std::uint64_t render_start = bo2::platform::monotonic_nanoseconds();
     const std::vector<std::uint8_t> pixels =
         bo2::platform::headless::render_level(level.geometry, level.textures, frame);
+    const double render_ms = elapsed_ms(render_start);
     bo2::platform::headless::write_ppm(options.out, frame.width, frame.height, pixels);
     print_scene(level);
+    if (options.stats) {
+        print_stats(level, render_ms);
+    }
     std::cout << "frame: " << options.out << " (" << frame.width << 'x' << frame.height << ")\n";
     return 0;
 }
@@ -372,6 +412,7 @@ int run_sdl(const Options& options) {
     window.camera.up = {0.0f, 0.0f, 1.0f};
     window.material_mode = options.frame_options.material_mode;
     window.lightmap = options.frame_options.lightmap;
+    window.stats = options.stats;
     if (options.big.empty()) {
         return bo2::platform::sdl::run_triangle(window);
     }
@@ -380,6 +421,9 @@ int run_sdl(const Options& options) {
         default_camera(level, window.camera.eye, window.camera.target);
     }
     print_scene(level);
+    if (options.stats) {
+        print_stats(level, -1.0);
+    }
     return bo2::platform::sdl::run_level(level.geometry, level.textures, window);
 #else
     (void)options;

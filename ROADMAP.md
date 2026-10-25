@@ -25,6 +25,7 @@ comparison.
 | Host build skeleton | done | CMake presets, smoke binary and tests |
 | `game.erg` parser | done | Quoted keys/values, CRLF, round-trip fixture; 52 real entries |
 | Platform services | done | FS, log, monotonic clock and memory snapshot; Linux tests |
+| Host diagnostics | done | `--stats`: load breakdown, render, RSS/peak; hardware in #49 |
 | Installer container (SFXI) | done | Reader and synthetic test |
 | Installer chunk decompressor | done | 198/198 chunks; 227-file tree |
 | BIG/RKV parsers | done | 179 `.big`/246,332 entries; 2,666 RKV streams |

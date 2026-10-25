@@ -58,6 +58,11 @@ and assets) is complete.
 - The host platform services are implemented and tested without a window
   or assets: `FileSystem`, `log_message`, the monotonic clock and the
   resident/peak memory snapshot (`src/platform/linux/platform.cpp`).
+- Host diagnostics are measured: `--stats` reports the archive, cell
+  group, texture and light-map load times, the headless/SDL render time
+  and the resident/peak memory. `sanctuary` 640x480 loads in about 250 ms,
+  renders in about 31 ms headless and 35 ms in SDL, with 12-15 MB RSS.
+  Switch hardware numbers are tracked in #49.
 - The `game.erg` configuration parser is verified: quoted keys/values,
   literal backslashes, CRLF, blank lines and an exact round-trip fixture.
   `bo2nx --erg` reads the reference file (52 entries).

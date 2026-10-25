@@ -1,6 +1,7 @@
 #include "bo2/platform/sdl/sdl_backend.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <fstream>
@@ -389,16 +390,26 @@ int run_level(const engine::LevelGeometry& geometry,
     const std::vector<GLuint> lightmap_ids = upload_textures(combined_lightmaps);
     OrbitCamera orbit = make_orbit(options.camera);
     if (!options.screenshot.empty()) {
+        const auto frame_start = std::chrono::steady_clock::now();
         draw_level(geometry, texture_ids, lightmap_ids, model_lightmap_offset,
                    current_camera(orbit), options.width, options.height, options.material_mode,
                    options.lightmap);
         glFinish();
         capture(options.screenshot, options.width, options.height);
+        if (options.stats) {
+            const double frame_ms = static_cast<double>(
+                std::chrono::duration_cast<std::chrono::microseconds>(
+                    std::chrono::steady_clock::now() - frame_start)
+                    .count()) /
+                1000.0;
+            std::cout << "sdl stats: frame " << frame_ms << " ms\n";
+        }
         return 0;
     }
 
     bool running = true;
     bool dragging = false;
+    bool print_stats = options.stats;
     while (running) {
         SDL_Event event;
         while (SDL_PollEvent(&event) != 0) {
@@ -446,10 +457,20 @@ int run_level(const engine::LevelGeometry& geometry,
         if (keys[SDL_SCANCODE_Q] != 0) {
             orbit.target.z -= step;
         }
+        const auto frame_start = std::chrono::steady_clock::now();
         draw_level(geometry, texture_ids, lightmap_ids, model_lightmap_offset,
                    current_camera(orbit), options.width, options.height, options.material_mode,
                    options.lightmap);
         SDL_GL_SwapWindow(context->window);
+        if (print_stats) {
+            const double frame_ms = static_cast<double>(
+                std::chrono::duration_cast<std::chrono::microseconds>(
+                    std::chrono::steady_clock::now() - frame_start)
+                    .count()) /
+                1000.0;
+            std::cout << "sdl stats: frame " << frame_ms << " ms\n";
+            print_stats = false;
+        }
         SDL_Delay(1);
     }
     return 0;

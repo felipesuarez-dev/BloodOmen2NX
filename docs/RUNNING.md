@@ -48,6 +48,27 @@ not the final lighting equation (see `docs/FORMATS/models.md`). A triangle near-
 camera inside the closed shell sees the shell interior, while the
 isometric frame shows the level.
 
+## Diagnostics
+
+`--stats` prints the level load breakdown (archive, cell group, textures,
+light maps), the render time and the resident/peak memory snapshot. It
+works with `--level` and `--sdl`; the SDL backend adds its first-frame
+time.
+
+Measured on this container for `sanctuary` at 640x480 with `--lightmap`:
+
+| Phase | Time |
+|---|---:|
+| BIG archive load | 207-236 ms |
+| Cell group parse | 6 ms |
+| Textures | 5-6 ms |
+| Light maps | 8 ms |
+| Headless render | 30-31 ms |
+| SDL first frame | 34-35 ms |
+| RSS / peak | 12-15 MB |
+
+Hardware (Switch) numbers are tracked in #49.
+
 ## SDL2 + OpenGL window
 
 `--sdl` opens the SDL2 + OpenGL backend. With `--big` it loads the level;
@@ -80,6 +101,7 @@ mouse button orbits, the wheel zooms and `Escape` quits.
 | `--width`, `--height`, `--fov` | Frame size and field of view |
 | `--material <mode>` | Diagnostic material tint: `off`, `diffuse`, `layers`, `layers2x` |
 | `--lightmap` | Sample the `.slm` light maps with the second UV set |
+| `--stats` | Print load breakdown, render time, RSS and peak memory |
 
 Planned with the level pipeline:
 
