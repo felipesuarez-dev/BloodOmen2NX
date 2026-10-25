@@ -29,7 +29,7 @@ The frame is a PPM; no display is needed. The camera is `--eye` and
 `--level` reads the `cellgrup` entry and renders the static level shell.
 The default camera is an isometric view of the whole level; `--eye` and
 `--target` select a free camera. The level axes are Z-up. The command
-also prints the parsed cell, portal, terrain, BSP and instance counts.
+also prints the parsed cell, portal, terrain, BSP, instance, light and marker counts.
 
 ```sh
 BIG=external/installed/media/gogames/bo2/resources/levels/sanctuary/sanctuary.big

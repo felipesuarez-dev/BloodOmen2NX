@@ -72,6 +72,30 @@ struct ModelRange {
     bool present = false;
 };
 
+struct LevelLight {
+    std::uint32_t version = 0;
+    std::uint32_t handle = 0;
+    Vec3 position{0.0f, 0.0f, 0.0f};
+    std::array<float, 4> color{};
+    std::array<float, 5> params{};
+    std::uint32_t type = 0;
+    std::uint32_t flags = 0;
+    std::vector<std::uint32_t> indices;
+};
+
+struct LevelMarker {
+    std::uint32_t version = 0;
+    std::uint32_t id_a = 0;
+    std::uint32_t id_b = 0;
+    std::uint32_t symbol_a = 0;
+    std::uint32_t symbol_b = 0;
+    Vec3 position{0.0f, 0.0f, 0.0f};
+    Vec3 normal{0.0f, 0.0f, 0.0f};
+    std::uint32_t flag = 0;
+    std::uint32_t value = 0;
+    float number = 0.0f;
+};
+
 struct LevelInstance {
     std::uint32_t version = 0;
     std::uint32_t model = 0;
@@ -109,6 +133,8 @@ struct LevelGeometry {
     std::vector<CellAttributeTable> level_attributes;
     std::vector<ModelRange> model_ranges;
     std::vector<LevelInstance> instances;
+    std::vector<LevelLight> lights;
+    std::vector<LevelMarker> markers;
     CellGrid cell_grid;
     CellBsp cell_bsp;
     Vec3 minimum{0.0f, 0.0f, 0.0f};
@@ -119,6 +145,8 @@ struct LevelGeometry {
     bool has_cell_bsp = false;
     bool has_level_attributes = false;
     bool has_instances = false;
+    bool has_lights = false;
+    bool has_markers = false;
     std::uint32_t placed_instances = 0;
     std::uint32_t skipped_instances = 0;
 };

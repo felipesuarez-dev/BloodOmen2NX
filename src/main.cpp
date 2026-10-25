@@ -220,6 +220,12 @@ void print_scene(const LoadedLevel& level) {
                   << geometry.placed_instances << ", skipped " << geometry.skipped_instances
                   << ")\n";
     }
+    if (geometry.has_lights) {
+        std::cout << "lights: " << geometry.lights.size() << "\n";
+    }
+    if (geometry.has_markers) {
+        std::cout << "markers: " << geometry.markers.size() << "\n";
+    }
     if (geometry.has_level_attributes) {
         std::cout << "attrs: " << geometry.level_attributes.size() << " tables\n";
     }

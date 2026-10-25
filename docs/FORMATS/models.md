@@ -147,8 +147,8 @@ The chunks after `cellmdls` are a second chunk stream inside the same
 cellmdls [cellanim] cellinst cellight cellmark cells attrs cellbsp
 ```
 
-`cells`, `attrs`, `cellbsp` and `cellinst` are decoded here.
-`cellight`, `cellmark` and `cellanim` are still opaque.
+`cells`, `attrs`, `cellbsp`, `cellinst`, `cellight` and `cellmark` are
+decoded here. `cellanim` is still opaque.
 
 ### `cells`
 
@@ -220,6 +220,57 @@ models, 73 fit inside a cell within 8 units and one straddles a cell
 boundary. The union of the placed models matches the cell union on X and
 Z. The previous host drew the `cellmdls` vertices as if they were world
 space; the instance pass fixes the level layout.
+
+### `cellight`
+
+Lights are stored with a variable record. The reference levels use version
+3:
+
+```
+u32 light count
+per light:
+  u32  version = 3
+  u32  handle
+  Vec3 position
+  4 × f32 color
+  5 × f32 parameters
+  u8[3] flags
+  u8   type
+       type 1: Vec3 + 2 × f32
+       type 2: Vec3
+  u32  flags
+  u32  index count
+       index count × u32
+```
+
+The host stores the handle, position, color, parameters, type and the
+index list; the three-byte flags and the type-specific vectors are
+skipped. `FUN_00688f20` selects the version and `FUN_00689300` parses
+version 3. The light is not used by the renderer yet; the static frame
+still uses the fixed preview light.
+
+### `cellmark`
+
+Markers use a fixed version 4 record (56 bytes) in the reference levels:
+
+```
+u32 marker count
+per marker:
+  u32  version = 4
+  u32  id A
+  u32  id B
+  u32  symbol A
+  u32  symbol B
+  Vec3 position
+  Vec3 normal
+  u32  flag
+  u32  value
+  f32  number
+```
+
+`FUN_006889a0` selects the version and `FUN_00688c90` parses version 4.
+The symbols are kept raw; the marker kind and the meaning of the numeric
+fields are open. The host exposes the markers but does not render them.
 
 ### `portal2`
 
@@ -315,6 +366,8 @@ Measured on the 135 level containers:
 | BSP depth range | 1..24 |
 | `attrs` body size | 32 bytes in all groups |
 | `cellinst` versions | 4 in level containers; 3 in `hubworld` |
+| `cellight` groups | 114 (version 3) |
+| `cellmark` groups | 131 (version 4) |
 | `sanctuary` instances | 112 (74 placed, 38 skipped) |
 | `canyons/cy01` instances | 575 (429 placed, 146 skipped) |
 | `lowercity/lc01` instances | 512 (400 placed, 112 skipped) |
@@ -356,7 +409,8 @@ interior, while the default isometric frame shows the level.
 - `cells` flags, `cellattr`/`attrs` value semantics, the `portal2`
   plane/index and the BSP traversal.
 - `cellinst` material A/B overrides, flags and the Euler order.
-- `cellight`, `cellmark` and `cellanim`.
+- `cellight` type-specific parameters and the marker symbol semantics.
+- `cellanim`.
 - `model 74` has no `rmd`; its role is unknown.
 - Skeleton, skinning and animation playback.
 - The shared `model` entries versus the `cellmdls` inline models.
@@ -364,6 +418,6 @@ interior, while the default isometric frame shows the level.
 ## Next steps
 
 1. Use the cell grid and BSP for culling and cell visibility.
-2. Decode `cellight`, `cellmark` and the shared `model` entries.
+2. Bind the shared `model` entries and decode `cellanim`.
 3. Decode the material lighting equation.
 4. Decode the animation/skeleton chunks.

@@ -415,6 +415,122 @@ CellBsp read_cell_bsp(const common::Reader& reader, const Chunk& chunk) {
     return bsp;
 }
 
+std::vector<LevelLight> read_lights(const common::Reader& reader, const Chunk& chunk) {
+    if (chunk.data_size < 4) {
+        throw common::ParseError("empty light chunk");
+    }
+    const std::uint32_t count = reader.u32(chunk.data_offset);
+    std::size_t position = chunk.data_offset + 4;
+    const std::size_t end = chunk.data_offset + chunk.data_size;
+    if (count > 65536) {
+        throw common::ParseError("light count is out of range");
+    }
+    const auto need = [&position, end](std::size_t size) {
+        if (position > end || size > end - position) {
+            throw common::ParseError("truncated light record");
+        }
+    };
+    std::vector<LevelLight> lights;
+    lights.reserve(count);
+    for (std::uint32_t index = 0; index < count; ++index) {
+        need(4);
+        LevelLight light;
+        light.version = reader.u32(position);
+        position += 4;
+        if (light.version != 3) {
+            throw common::ParseError("unsupported light version");
+        }
+        need(4);
+        light.handle = reader.u32(position);
+        position += 4;
+        need(12);
+        light.position = read_vec3(reader, position);
+        position += 12;
+        need(16);
+        for (std::size_t channel = 0; channel < 4; ++channel) {
+            light.color[channel] = read_float(reader, position + channel * 4);
+        }
+        position += 16;
+        need(20);
+        for (std::size_t value = 0; value < 5; ++value) {
+            light.params[value] = read_float(reader, position + value * 4);
+        }
+        position += 20;
+        need(4);
+        position += 3;
+        light.type = reader.u8(position);
+        position += 1;
+        if (light.type == 1) {
+            need(20);
+            position += 20;
+        } else if (light.type == 2) {
+            need(12);
+            position += 12;
+        } else if (light.type != 0) {
+            throw common::ParseError("unsupported light type");
+        }
+        need(4);
+        light.flags = reader.u32(position);
+        position += 4;
+        need(4);
+        const std::uint32_t entries = reader.u32(position);
+        position += 4;
+        if (entries > 65536) {
+            throw common::ParseError("light index list is out of range");
+        }
+        need(static_cast<std::size_t>(entries) * 4);
+        light.indices.reserve(entries);
+        for (std::uint32_t entry = 0; entry < entries; ++entry) {
+            light.indices.push_back(reader.u32(position));
+            position += 4;
+        }
+        lights.push_back(light);
+    }
+    if (position != end) {
+        throw common::ParseError("light chunk has a trailer");
+    }
+    return lights;
+}
+
+std::vector<LevelMarker> read_markers(const common::Reader& reader, const Chunk& chunk) {
+    if (chunk.data_size < 4) {
+        throw common::ParseError("empty marker chunk");
+    }
+    const std::uint32_t count = reader.u32(chunk.data_offset);
+    std::size_t position = chunk.data_offset + 4;
+    const std::size_t end = chunk.data_offset + chunk.data_size;
+    if (count > 65536) {
+        throw common::ParseError("marker count is out of range");
+    }
+    std::vector<LevelMarker> markers;
+    markers.reserve(count);
+    for (std::uint32_t index = 0; index < count; ++index) {
+        if (position + 56 > end) {
+            throw common::ParseError("truncated marker record");
+        }
+        LevelMarker marker;
+        marker.version = reader.u32(position);
+        if (marker.version != 4) {
+            throw common::ParseError("unsupported marker version");
+        }
+        marker.id_a = reader.u32(position + 4);
+        marker.id_b = reader.u32(position + 8);
+        marker.symbol_a = reader.u32(position + 12);
+        marker.symbol_b = reader.u32(position + 16);
+        marker.position = read_vec3(reader, position + 20);
+        marker.normal = read_vec3(reader, position + 32);
+        marker.flag = reader.u32(position + 44);
+        marker.value = reader.u32(position + 48);
+        marker.number = read_float(reader, position + 52);
+        markers.push_back(marker);
+        position += 56;
+    }
+    if (position != end) {
+        throw common::ParseError("marker chunk has a trailer");
+    }
+    return markers;
+}
+
 std::vector<LevelInstance> read_instances(const common::Reader& reader, const Chunk& chunk) {
     if (chunk.data_size < 4) {
         throw common::ParseError("empty instance chunk");
@@ -505,6 +621,12 @@ void read_cell_tail(const common::Reader& reader, std::size_t start, std::size_t
         } else if (chunk.name == "cellinst") {
             geometry.instances = read_instances(reader, chunk);
             geometry.has_instances = true;
+        } else if (chunk.name == "cellight") {
+            geometry.lights = read_lights(reader, chunk);
+            geometry.has_lights = true;
+        } else if (chunk.name == "cellmark") {
+            geometry.markers = read_markers(reader, chunk);
+            geometry.has_markers = true;
         } else if (chunk.name == "cellbsp") {
             geometry.cell_bsp = read_cell_bsp(reader, chunk);
             geometry.has_cell_bsp = true;

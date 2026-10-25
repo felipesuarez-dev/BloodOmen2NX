@@ -371,6 +371,45 @@ std::vector<std::uint8_t> build_cell_group(bool with_instances = false) {
     append_table(attributes, "default", {1U, 2U, 0x00bf0103U, 4U, 0x000f0f0fU});
     append_chunk(cell, "attrs", attributes);
 
+    std::vector<std::uint8_t> lights;
+    put32(lights, 1);
+    put32(lights, 3);
+    put32(lights, 0x1234);
+    put_float(lights, 1.0f);
+    put_float(lights, 2.0f);
+    put_float(lights, 3.0f);
+    for (float value : {0.1f, 0.2f, 0.3f, 1.0f}) {
+        put_float(lights, value);
+    }
+    for (float value : {1.0f, 2.0f, 3.0f, 4.0f, 5.0f}) {
+        put_float(lights, value);
+    }
+    lights.push_back(0);
+    lights.push_back(0);
+    lights.push_back(0);
+    lights.push_back(0);
+    put32(lights, 0);
+    put32(lights, 0);
+    append_chunk(cell, "cellight", lights);
+
+    std::vector<std::uint8_t> markers;
+    put32(markers, 1);
+    put32(markers, 4);
+    put32(markers, 1);
+    put32(markers, 2);
+    put32(markers, 3);
+    put32(markers, 4);
+    put_float(markers, 4.0f);
+    put_float(markers, 5.0f);
+    put_float(markers, 6.0f);
+    put_float(markers, 0.0f);
+    put_float(markers, 0.0f);
+    put_float(markers, 1.0f);
+    put32(markers, 1);
+    put32(markers, 2);
+    put_float(markers, 3.5f);
+    append_chunk(cell, "cellmark", markers);
+
     std::vector<std::uint8_t> cells;
     append_cell_grid(cells);
     append_chunk(cell, "cells", cells);
@@ -598,6 +637,22 @@ void test_cell_group() {
     CHECK(geometry.level_attributes[0].name == "default");
     CHECK(geometry.level_attributes[0].values.size() == 5);
     CHECK(geometry.level_attributes[0].values[2] == 0x00bf0103U);
+    CHECK(geometry.has_lights);
+    CHECK(geometry.lights.size() == 1);
+    CHECK(geometry.lights[0].version == 3);
+    CHECK(geometry.lights[0].handle == 0x1234);
+    CHECK(std::fabs(geometry.lights[0].position.y - 2.0f) < 1.0e-5f);
+    CHECK(std::fabs(geometry.lights[0].color[2] - 0.3f) < 1.0e-5f);
+    CHECK(std::fabs(geometry.lights[0].params[4] - 5.0f) < 1.0e-5f);
+    CHECK(geometry.lights[0].type == 0);
+    CHECK(geometry.lights[0].indices.empty());
+    CHECK(geometry.has_markers);
+    CHECK(geometry.markers.size() == 1);
+    CHECK(geometry.markers[0].version == 4);
+    CHECK(geometry.markers[0].symbol_a == 3);
+    CHECK(std::fabs(geometry.markers[0].position.z - 6.0f) < 1.0e-5f);
+    CHECK(std::fabs(geometry.markers[0].normal.z - 1.0f) < 1.0e-5f);
+    CHECK(std::fabs(geometry.markers[0].number - 3.5f) < 1.0e-5f);
     CHECK(throws([&] {
         std::vector<std::uint8_t> broken = data;
         broken.resize(12);
