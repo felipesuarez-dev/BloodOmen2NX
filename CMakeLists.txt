@@ -18,6 +18,7 @@ add_library(bo2_engine STATIC
     src/engine/big_archive.cpp
     src/engine/cell_group.cpp
     src/engine/dds.cpp
+    src/engine/erg.cpp
 )
 target_link_libraries(bo2_engine PUBLIC bo2_common)
 target_compile_options(bo2_engine PRIVATE ${BO2NX_WARNINGS})

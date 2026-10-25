@@ -17,6 +17,7 @@ Inspect a container and render a real texture on the free-camera preview:
 ```sh
 BIG=external/installed/media/gogames/bo2/resources/levels/sanctuary/sanctuary.big
 ./build/linux-debug/bo2nx --list-big "$BIG"
+./build/linux-debug/bo2nx --erg external/installed/data/game.erg
 ./build/linux-debug/bo2nx --frame --big "$BIG" --entry SewBrick3 \
   --out /tmp/bo2-frame.ppm --eye 2.4,1.6,2.4 --target 0,0,0
 ```
@@ -69,6 +70,7 @@ mouse button orbits, the wheel zooms and `Escape` quits.
 | Flag | Purpose |
 |---|---|
 | `--list-big <file>` | List entries (type, size, name) |
+| `--erg <file>` | Parse and print a `game.erg` configuration |
 | `--frame --big <file>` | Render a textured preview frame |
 | `--level --big <level.big>` | Render the static `cellgrup` level shell |
 | `--sdl [--big <file>]` | SDL2 + OpenGL window; no `--big` draws a triangle |

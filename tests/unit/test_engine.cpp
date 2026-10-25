@@ -12,6 +12,7 @@
 #include "bo2/engine/big_archive.hpp"
 #include "bo2/engine/cell_group.hpp"
 #include "bo2/engine/dds.hpp"
+#include "bo2/engine/erg.hpp"
 #include "bo2/engine/math.hpp"
 
 namespace {
@@ -618,6 +619,26 @@ void test_lightmaps() {
     CHECK(maps[0].image.rgba[12] == 0x30);
 }
 
+void test_erg() {
+    const std::string fixture =
+        "\"Debug Common\\Draw UI\"=1\r\n"
+        "NoOutOfCellWarningLighting=1\r\n"
+        "\r\n"
+        "LocaleSet=\"english,spanish\"\r\n"
+        "Volume=\"\"\r\n"
+        "basePath=\"/gogames/bo2/\"\r\n";
+    const bo2::engine::ErgConfig config = bo2::engine::ErgConfig::parse(fixture);
+    CHECK(config.entries().size() == 6);
+    const std::string* value = config.find("NoOutOfCellWarningLighting");
+    CHECK(value != nullptr && *value == "1");
+    value = config.find("LocaleSet");
+    CHECK(value != nullptr && *value == "english,spanish");
+    value = config.find("Volume");
+    CHECK(value != nullptr && value->empty());
+    CHECK(config.serialize() == fixture);
+    CHECK(throws([&] { bo2::engine::ErgConfig::parse("missing equals\n"); }));
+}
+
 void test_model_lightmaps() {
     bo2::engine::LevelGeometry geometry;
     geometry.texture_names = {"Alpha", "Beta"};
@@ -811,6 +832,7 @@ int main() {
     test_cell_instances();
     test_lightmaps();
     test_model_lightmaps();
+    test_erg();
     if (failures != 0) {
         std::cerr << failures << " check(s) failed\n";
         return 1;

@@ -55,6 +55,9 @@ and assets) is complete.
 - Cell lights and markers are parsed: `cellight` version 3 in 114 groups
   and `cellmark` version 4 in 131 groups. `sanctuary` has 13 lights and
   10 markers; the renderer does not consume them yet.
+- The `game.erg` configuration parser is verified: quoted keys/values,
+  literal backslashes, CRLF, blank lines and an exact round-trip fixture.
+  `bo2nx --erg` reads the reference file (52 entries).
 - The `.slm` light maps are parsed: the scanner finds 71 unique entries
   across the cell/object groups of `sanctuary.slm` (cryptexithall,
   crypt, cryptentrancehall, coffins, roofbits, meshes, objects, pilars,
@@ -87,7 +90,6 @@ and assets) is complete.
 - `region`, `planinfo`, `bpackage`, `strtable`, `musicbnk`, `texfont`,
   `liteinfo`.
 - The oracle frame comparison (the original launches under Wine/Xvfb).
-- `game.erg` parser details.
 - Audio or gameplay (the SDL viewer has camera input only).
 - The installer's native RAR decoder is not ported; development
   extraction uses `unrar`. The game does not need the installer decoder.
@@ -98,7 +100,7 @@ and assets) is complete.
 |---|---|---|---|
 | 0 | Shared-model instance light maps and material combination | Map shared `model` instances and combine the light map with `mlyrcolr`/`mlyrctrl` | `docs/FORMATS/litedata.md` |
 | 1 | Shared `model` entries and entity semantics | Bind the shared models and decode the consumers | `docs/FORMATS/models.md` |
-| 2 | `game.erg` parser details | Decompile the key lookup in `bo2.exe` | `docs/FORMATS/erg.md` |
+| 2 | `game.erg` boot-time keys | Decompile the key lookup in `bo2.exe` | `docs/FORMATS/erg.md` |
 | 3 | Original logic tick | Measure from the oracle once it runs, or from the main loop | `docs/ARCHITECTURE.md` |
 | 4 | Level list and streaming model | Derive it from the installer script and `list.txt` | `docs/GAMEPLAY.md` |
 | 5 | Oracle frame comparison | Run the original under Wine/Xvfb and compare frames | `docs/ORACLE_COMPARE.md` |

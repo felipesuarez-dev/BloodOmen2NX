@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <cstdlib>
 #include <exception>
+#include <fstream>
+#include <iterator>
 #include <stdexcept>
 #include <iostream>
 #include <string>
@@ -11,6 +13,7 @@
 #include "bo2/engine/big_archive.hpp"
 #include "bo2/engine/cell_group.hpp"
 #include "bo2/engine/dds.hpp"
+#include "bo2/engine/erg.hpp"
 #include "bo2/platform/headless/software_renderer.hpp"
 #include "bo2/version.hpp"
 #ifdef BO2NX_HAVE_SDL
@@ -21,6 +24,7 @@ namespace {
 
 struct Options {
     std::string list_big;
+    std::string erg;
     bool frame = false;
     bool level = false;
     bool sdl = false;
@@ -99,6 +103,7 @@ Options parse_options(int argc, char** argv) {
                 << "Usage:\n"
                 << "  bo2nx\n"
                 << "  bo2nx --list-big <file.big>\n"
+                << "  bo2nx --erg <game.erg>\n"
                 << "  bo2nx --frame --big <file.big> --out <frame.ppm> [options]\n"
                 << "  bo2nx --level --big <file.big> --out <frame.ppm> [options]\n"
                 << "  bo2nx --sdl [--big <file.big>] [--out <screenshot.ppm>] [options]\n\n"
@@ -115,6 +120,8 @@ Options parse_options(int argc, char** argv) {
         }
         if (argument == "--list-big") {
             options.list_big = next_argument(index, argc, argv);
+        } else if (argument == "--erg") {
+            options.erg = next_argument(index, argc, argv);
         } else if (argument == "--frame") {
             options.frame = true;
         } else if (argument == "--level") {
@@ -149,10 +156,11 @@ Options parse_options(int argc, char** argv) {
             usage_error("unknown argument: " + argument);
         }
     }
-    const int modes = (!options.list_big.empty() ? 1 : 0) + (options.frame ? 1 : 0) +
-                      (options.level ? 1 : 0) + (options.sdl ? 1 : 0);
+    const int modes = (!options.list_big.empty() ? 1 : 0) + (!options.erg.empty() ? 1 : 0) +
+                      (options.frame ? 1 : 0) + (options.level ? 1 : 0) +
+                      (options.sdl ? 1 : 0);
     if (modes > 1) {
-        usage_error("--list-big, --frame, --level and --sdl are mutually exclusive");
+        usage_error("--list-big, --erg, --frame, --level and --sdl are mutually exclusive");
     }
     return options;
 }
@@ -380,6 +388,29 @@ int run_sdl(const Options& options) {
 #endif
 }
 
+int print_erg(const std::string& path) {
+    std::ifstream stream(path, std::ios::binary);
+    if (!stream) {
+        throw std::runtime_error("cannot read " + path);
+    }
+    const std::string text((std::istreambuf_iterator<char>(stream)),
+                           std::istreambuf_iterator<char>());
+    const bo2::engine::ErgConfig config = bo2::engine::ErgConfig::parse(text);
+    std::size_t entries = 0;
+    for (const bo2::engine::ErgEntry& entry : config.entries()) {
+        if (!entry.blank) {
+            ++entries;
+        }
+    }
+    std::cout << "erg: " << path << " (" << entries << " entries)\n";
+    for (const bo2::engine::ErgEntry& entry : config.entries()) {
+        if (!entry.blank) {
+            std::cout << entry.key << '=' << entry.value << '\n';
+        }
+    }
+    return 0;
+}
+
 int list_big(const std::string& path) {
     const bo2::engine::BigArchive archive = bo2::engine::BigArchive::load(path);
     std::cout << "entries: " << archive.entries().size() << '\n';
@@ -425,6 +456,9 @@ int main(int argc, char** argv) {
         const Options options = parse_options(argc, argv);
         if (!options.list_big.empty()) {
             return list_big(options.list_big);
+        }
+        if (!options.erg.empty()) {
+            return print_erg(options.erg);
         }
         if (options.frame) {
             return render_frame(options);

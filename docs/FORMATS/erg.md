@@ -1,6 +1,6 @@
 # `game.erg`
 
-Status: **verified** (text configuration).
+Status: **verified** (text configuration, parser and round-trip fixture).
 
 ## Where it comes from
 
@@ -30,15 +30,49 @@ They confirm that the asset payload lives in `pc.rkv`, not in the
 numbered `.dat` files. The installer expands `pc.rkv` from one of those
 chunks.
 
+## Grammar
+
+One entry per line, CRLF in the reference file:
+
+```
+key=value
+"key with spaces\and backslashes"=1
+"string key"="string value"
+```
+
+Keys and values may be quoted with `"`. Backslashes are literal path
+separators, not escapes; there are no embedded quotes. Unquoted values
+are integers or identifiers. Blank lines are preserved by the encoder.
+Leading and trailing spaces/tabs outside quotes are ignored.
+
+## Implementation
+
+`include/bo2/engine/erg.hpp` and `src/engine/erg.cpp` implement
+`ErgConfig::parse`, `serialize`, `find` and the entry list. The parser
+throws on a missing `=`, an unterminated quote or trailing text after a
+quoted value. The unit fixture covers quoted keys/values, backslashes,
+empty strings and CRLF; `serialize()` reproduces it.
+
+`bo2nx --erg <file>` reads a real file and prints the entries. The
+reference `data/game.erg` parses 52 entries, including:
+
+```
+LocaleSet="english,french,italian,german,spanish"
+Level="slums/sl01"
+basePath="/gogames/bo2/"
+ArchiveFile="gogames\bo2\pc.rkv"
+usebigfile=1
+```
+
 ## Open questions
 
 - Which keys the engine reads at boot and which are debug-only.
 - Whether the file is rewritten by the game (settings) or read-only.
-- The exact parser (section names, quoting, `-` prefixed debug keys).
+- The meaning of the `-` prefixed debug keys.
 
 ## Next steps
 
-1. Find the reader in `bo2.exe` and decompile the key lookup.
-2. Port the parser as a small, tested module.
+1. Use `basePath`, `Level` and `ArchiveFile` in the level loader.
+2. Find the boot-time key lookup in `bo2.exe` and classify the keys.
 3. Keep the sample file local; only the schema and key names go in this
    repository.
