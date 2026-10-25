@@ -119,21 +119,23 @@ class RkvTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "entry flag"):
             parse(data)
 
-    def test_rejects_entry_past_end(self):
+    def test_reports_entry_past_end(self):
         data = build_rkv(
             [("english", [("strstrem", [record("a", 100, 4)])])],
             data=b"OggS".ljust(SECTOR, b"\0"),
         )
-        with self.assertRaisesRegex(ValueError, "out of range"):
-            parse(data)
+        entries = parse(data)
+        self.assertTrue(entries[0].truncated)
+        self.assertEqual(entries[0].stored_size, 0)
 
-    def test_rejects_entry_size_past_end(self):
+    def test_reports_entry_size_past_end(self):
         data = build_rkv(
             [("english", [("strstrem", [record("a", 0, 4096)])])],
             data=b"OggS".ljust(SECTOR, b"\0"),
         )
-        with self.assertRaisesRegex(ValueError, "out of range"):
-            parse(data)
+        entries = parse(data)
+        self.assertTrue(entries[0].truncated)
+        self.assertEqual(entries[0].stored_size, SECTOR)
 
 
 if __name__ == "__main__":

@@ -40,15 +40,17 @@ class RkvError(ValueError):
 
 
 class Entry:
-    __slots__ = ("name", "section", "language", "sector", "size", "offset")
+    __slots__ = ("name", "section", "language", "sector", "size", "offset", "stored_size", "truncated")
 
-    def __init__(self, name, section, language, sector, size, offset):
+    def __init__(self, name, section, language, sector, size, offset, stored_size, truncated):
         self.name = name
         self.section = section
         self.language = language
         self.sector = sector
         self.size = size
         self.offset = offset
+        self.stored_size = stored_size
+        self.truncated = truncated
 
 
 def _u32(data: bytes, offset: int) -> int:
@@ -98,9 +100,11 @@ def parse(data: bytes) -> list[Entry]:
                 pos += 4
                 pos += 4  # zero
                 offset = data_start + sector * SECTOR
-                if offset + size > len(data):
-                    raise RkvError(f"entry data out of range: {name!r}")
-                entries.append(Entry(name, section, language, sector, size, offset))
+                available = max(0, len(data) - offset)
+                stored_size = min(size, available)
+                entries.append(
+                    Entry(name, section, language, sector, size, offset, stored_size, size > available)
+                )
     if pos > index_end:
         raise RkvError("index overruns its declared size")
     return entries
@@ -114,7 +118,8 @@ def cmd_list(args) -> int:
     entries = load(Path(args.container))
     print(f"entries: {len(entries)}")
     for entry in entries:
-        print(f"{entry.size:10d} {entry.section:10s} {entry.name}")
+        marker = f"  truncated {entry.stored_size}/{entry.size}" if entry.truncated else ""
+        print(f"{entry.size:10d} {entry.section:10s} {entry.name}{marker}")
     return 0
 
 
@@ -129,10 +134,18 @@ def cmd_extract(args) -> int:
         if name.is_absolute() or ".." in name.parts:
             print(f"skip unsafe name: {entry.name}", file=sys.stderr)
             continue
-        blob = data[entry.offset : entry.offset + entry.size]
-        if len(blob) != entry.size:
-            print(f"skip truncated entry: {entry.name}", file=sys.stderr)
+        if entry.truncated and not args.allow_truncated:
+            print(
+                f"skip truncated entry: {entry.name} ({entry.stored_size} of {entry.size} bytes)",
+                file=sys.stderr,
+            )
             continue
+        if entry.truncated:
+            print(
+                f"truncated entry: {entry.name} ({entry.stored_size} of {entry.size} bytes)",
+                file=sys.stderr,
+            )
+        blob = data[entry.offset : entry.offset + entry.stored_size]
         target = out / name
         target.parent.mkdir(parents=True, exist_ok=True)
         if target.exists():
@@ -152,6 +165,7 @@ def main() -> int:
     p_extract = sub.add_parser("extract")
     p_extract.add_argument("container")
     p_extract.add_argument("--out", required=True)
+    p_extract.add_argument("--allow-truncated", action="store_true")
     p_extract.set_defaults(func=cmd_extract)
     args = parser.parse_args()
     return args.func(args)
