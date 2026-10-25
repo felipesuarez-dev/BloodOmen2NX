@@ -1,0 +1,51 @@
+# Game assets and original binaries - never commit
+/external/*
+!/external/README.txt
+*.iso
+*.cue
+*.bin
+*.chd
+*.exe
+*.dll
+*.dat
+*.erg
+*.rkv
+*.big
+*.bgx
+*.bik
+*.ogg
+*.wav
+*.zip
+
+# Reversing artifacts (never public)
+/re/decomp/
+/re/ghidra/
+*.gpr
+*.rep/
+
+# Local-only working notes and tooling
+/.local/
+
+# Build output
+build*/
+/out/
+/install/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.venv*/
+
+# Editors and OS
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# Captures and logs
+/tool-output/
+*.log
+/captures/
