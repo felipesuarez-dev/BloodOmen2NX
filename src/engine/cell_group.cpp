@@ -145,6 +145,295 @@ std::int32_t add_texture_name(LevelGeometry& geometry, const std::string& name) 
     return static_cast<std::int32_t>(geometry.texture_names.size() - 1);
 }
 
+std::size_t align_up(std::size_t value, std::size_t alignment) {
+    return (value + alignment - 1) & ~(alignment - 1);
+}
+
+Vec3 read_vec3(const common::Reader& reader, std::size_t offset) {
+    return {read_float(reader, offset), read_float(reader, offset + 4),
+            read_float(reader, offset + 8)};
+}
+
+CellAttributeTable read_attribute_table(const common::Reader& reader, std::size_t start,
+                                        std::size_t end) {
+    if (start + 12 > end) {
+        throw common::ParseError("attribute table is short");
+    }
+    CellAttributeTable table;
+    table.name = chunk_name(reader, start);
+    table.size = reader.u32(start + 8);
+    if (table.size < 12 || static_cast<std::size_t>(table.size) > end - start) {
+        throw common::ParseError("bad attribute table size");
+    }
+    if ((table.size - 12) % 4 != 0) {
+        throw common::ParseError("attribute table payload is not u32 aligned");
+    }
+    const std::size_t count = (table.size - 12) / 4;
+    table.values.reserve(count);
+    for (std::size_t index = 0; index < count; ++index) {
+        table.values.push_back(reader.u32(start + 12 + index * 4));
+    }
+    return table;
+}
+
+std::vector<CellAttributeTable> read_attribute_tables(const common::Reader& reader,
+                                                      const Chunk& chunk) {
+    std::vector<CellAttributeTable> tables;
+    std::size_t position = chunk.data_offset;
+    const std::size_t end = chunk.data_offset + chunk.data_size;
+    while (position < end) {
+        if (position + 12 > end) {
+            throw common::ParseError("truncated attribute table");
+        }
+        const CellAttributeTable table = read_attribute_table(reader, position, end);
+        if (table.size == 0 || static_cast<std::size_t>(table.size) > end - position) {
+            throw common::ParseError("attribute table overruns its chunk");
+        }
+        position += table.size;
+        tables.push_back(table);
+    }
+    if (position != end) {
+        throw common::ParseError("attribute table has a trailer");
+    }
+    return tables;
+}
+
+CellPortal read_portal(const common::Reader& reader, std::size_t& position, std::size_t end) {
+    if (position + 12 > end) {
+        throw common::ParseError("truncated portal");
+    }
+    CellPortal portal;
+    portal.version = reader.u32(position);
+    portal.cell_a = reader.u16(position + 4);
+    portal.cell_b = reader.u16(position + 6);
+    const std::uint32_t count = reader.u32(position + 8);
+    position += 12;
+    if (portal.version != 1 && portal.version != 2) {
+        throw common::ParseError("unsupported portal version");
+    }
+    if (count > 65536 || static_cast<std::size_t>(count) * 12 + position > end) {
+        throw common::ParseError("portal vertices are truncated");
+    }
+    portal.vertices.reserve(count);
+    for (std::uint32_t index = 0; index < count; ++index) {
+        portal.vertices.push_back(read_vec3(reader, position));
+        position += 12;
+    }
+    if (position + 12 > end) {
+        throw common::ParseError("truncated portal plane");
+    }
+    portal.plane = read_vec3(reader, position);
+    position += 12;
+    if (portal.version == 2) {
+        if (position + 4 > end) {
+            throw common::ParseError("truncated portal index");
+        }
+        portal.index = static_cast<std::int32_t>(reader.u32(position));
+        position += 4;
+    }
+    return portal;
+}
+
+std::vector<CellPortal> read_portals(const common::Reader& reader, const Chunk& chunk) {
+    if (chunk.data_size < 4) {
+        throw common::ParseError("empty portal chunk");
+    }
+    const std::uint32_t count = reader.u32(chunk.data_offset);
+    std::size_t position = chunk.data_offset + 4;
+    const std::size_t end = chunk.data_offset + chunk.data_size;
+    if (count > 65536) {
+        throw common::ParseError("portal count is out of range");
+    }
+    std::vector<CellPortal> portals;
+    portals.reserve(count);
+    for (std::uint32_t index = 0; index < count; ++index) {
+        portals.push_back(read_portal(reader, position, end));
+    }
+    if (position != end) {
+        throw common::ParseError("portal chunk has a trailer");
+    }
+    return portals;
+}
+
+std::vector<std::uint32_t> read_terrains(const common::Reader& reader, const Chunk& chunk) {
+    if (chunk.data_size < 4) {
+        throw common::ParseError("empty terrain chunk");
+    }
+    const std::uint32_t count = reader.u32(chunk.data_offset);
+    if (4 + static_cast<std::size_t>(count) * 4 > chunk.data_size) {
+        throw common::ParseError("terrain chunk is short");
+    }
+    std::vector<std::uint32_t> values;
+    values.reserve(count);
+    for (std::uint32_t index = 0; index < count; ++index) {
+        values.push_back(reader.u32(chunk.data_offset + 4 + static_cast<std::size_t>(index) * 4));
+    }
+    return values;
+}
+
+LevelCell read_cell(const common::Reader& reader, std::size_t& position, std::size_t end) {
+    if (position + 36 > end) {
+        throw common::ParseError("truncated cell header");
+    }
+    LevelCell cell;
+    cell.version = reader.u32(position);
+    if (cell.version != 2) {
+        throw common::ParseError("unsupported cell version");
+    }
+    cell.symbol = reader.u16(position + 4);
+    cell.flags = reader.u32(position + 8);
+    cell.minimum = read_vec3(reader, position + 12);
+    cell.maximum = read_vec3(reader, position + 24);
+    position += 36;
+
+    if (position + 16 > end) {
+        throw common::ParseError("truncated cell container");
+    }
+    const std::string name = chunk_name(reader, position);
+    const std::uint32_t total = reader.u32(position + 8);
+    if (name != "default") {
+        throw common::ParseError("cell has no default container");
+    }
+    if (total < 16 || static_cast<std::size_t>(total) > end - position) {
+        throw common::ParseError("bad cell container size");
+    }
+    const std::vector<Chunk> chunks = read_chunks(reader, position + 16, position + total);
+    for (const Chunk& chunk : chunks) {
+        if (chunk.name == "cellattr") {
+            cell.attributes = read_attribute_tables(reader, chunk);
+        } else if (chunk.name == "portal2") {
+            cell.portals = read_portals(reader, chunk);
+        } else if (chunk.name == "terrains") {
+            cell.terrains = read_terrains(reader, chunk);
+        } else if (chunk.name == "dbgmodel") {
+            cell.dbgmodel_size = static_cast<std::uint32_t>(chunk.data_size);
+        }
+    }
+    position += total;
+    return cell;
+}
+
+CellGrid read_cell_grid(const common::Reader& reader, const Chunk& chunk) {
+    if (chunk.data_size < 4) {
+        throw common::ParseError("empty cell grid");
+    }
+    const std::uint32_t count = reader.u32(chunk.data_offset);
+    std::size_t position = chunk.data_offset + 4;
+    const std::size_t end = chunk.data_offset + chunk.data_size;
+    if (count > 65536) {
+        throw common::ParseError("cell count is out of range");
+    }
+    CellGrid grid;
+    grid.cells.reserve(count);
+    for (std::uint32_t index = 0; index < count; ++index) {
+        grid.cells.push_back(read_cell(reader, position, end));
+    }
+    if (position != end) {
+        throw common::ParseError("cell grid has a trailer");
+    }
+    return grid;
+}
+
+std::int32_t read_bsp_node(const common::Reader& reader, std::size_t& position, std::size_t end,
+                           std::size_t base, std::uint32_t depth, std::vector<BspNode>& nodes) {
+    if (depth < 1) {
+        throw common::ParseError("BSP depth exceeded");
+    }
+    if (position >= end) {
+        throw common::ParseError("truncated BSP node");
+    }
+    const std::uint8_t type = reader.u8(position);
+    ++position;
+    if (type == 0) {
+        position = base + align_up(position - base, 2);
+        if (position + 2 > end) {
+            throw common::ParseError("truncated BSP leaf");
+        }
+        BspNode node;
+        node.leaf = true;
+        node.value = reader.u16(position);
+        position += 2;
+        nodes.push_back(node);
+        return static_cast<std::int32_t>(nodes.size() - 1);
+    }
+    if (type != 1) {
+        throw common::ParseError("invalid BSP node type");
+    }
+    position = base + align_up(position - base, 4);
+    if (position + 16 > end) {
+        throw common::ParseError("truncated BSP split");
+    }
+    BspNode node;
+    node.plane = read_vec3(reader, position);
+    node.distance = read_float(reader, position + 12);
+    position += 16;
+    const std::int32_t index = static_cast<std::int32_t>(nodes.size());
+    nodes.push_back(node);
+    const std::int32_t left = read_bsp_node(reader, position, end, base, depth - 1, nodes);
+    const std::int32_t right = read_bsp_node(reader, position, end, base, depth - 1, nodes);
+    nodes[static_cast<std::size_t>(index)].left = left;
+    nodes[static_cast<std::size_t>(index)].right = right;
+    return index;
+}
+
+CellBsp read_cell_bsp(const common::Reader& reader, const Chunk& chunk) {
+    if (chunk.data_size < 12) {
+        throw common::ParseError("truncated BSP header");
+    }
+    CellBsp bsp;
+    bsp.version = reader.u32(chunk.data_offset);
+    bsp.leaf_count = reader.u32(chunk.data_offset + 4);
+    bsp.depth = reader.u32(chunk.data_offset + 8);
+    if (bsp.version != 1) {
+        throw common::ParseError("unsupported BSP version");
+    }
+    if (bsp.depth == 0 || bsp.depth > 64) {
+        throw common::ParseError("BSP depth is out of range");
+    }
+    if (bsp.leaf_count > chunk.data_size / 3) {
+        throw common::ParseError("BSP leaf count is out of range");
+    }
+    std::size_t position = chunk.data_offset + 12;
+    const std::size_t end = chunk.data_offset + chunk.data_size;
+    bsp.nodes.reserve(static_cast<std::size_t>(bsp.leaf_count) * 2);
+    read_bsp_node(reader, position, end, chunk.data_offset, bsp.depth, bsp.nodes);
+    if (position != end) {
+        throw common::ParseError("BSP chunk has a trailer at " +
+                                 std::to_string(position - chunk.data_offset) + " of " +
+                                 std::to_string(chunk.data_size));
+    }
+    std::uint32_t leaves = 0;
+    for (const BspNode& node : bsp.nodes) {
+        if (node.leaf) {
+            ++leaves;
+        }
+    }
+    if (leaves != bsp.leaf_count) {
+        throw common::ParseError("BSP leaf count does not match the header");
+    }
+    return bsp;
+}
+
+void read_cell_tail(const common::Reader& reader, std::size_t start, std::size_t end,
+                    LevelGeometry& geometry) {
+    if (start == end) {
+        return;
+    }
+    const std::vector<Chunk> chunks = read_chunks(reader, start, end);
+    for (const Chunk& chunk : chunks) {
+        if (chunk.name == "cells") {
+            geometry.cell_grid = read_cell_grid(reader, chunk);
+            geometry.has_cell_grid = true;
+        } else if (chunk.name == "attrs") {
+            geometry.level_attributes = read_attribute_tables(reader, chunk);
+            geometry.has_level_attributes = true;
+        } else if (chunk.name == "cellbsp") {
+            geometry.cell_bsp = read_cell_bsp(reader, chunk);
+            geometry.has_cell_bsp = true;
+        }
+    }
+}
+
 std::vector<std::int32_t> read_material_textures(
     const common::Reader& reader, const Chunk* chunk, const std::vector<std::uint16_t>& symbols,
     const std::vector<std::string>& names, LevelGeometry& geometry) {
@@ -338,6 +627,7 @@ LevelGeometry parse_cell_group(const std::vector<std::uint8_t>& data,
         }
         position = model_end;
     }
+    read_cell_tail(reader, position, data.size(), geometry);
     if (geometry.positions.empty() || geometry.triangles.empty()) {
         throw common::ParseError("cell group has no renderable geometry");
     }

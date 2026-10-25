@@ -1,7 +1,7 @@
 # Models and animation
 
-Status: **static cell geometry and base textures decoded and rendered;
-material modulation and animation open**.
+Status: **static cell geometry, base textures and the cell grid/BSP are
+decoded and rendered; material modulation and animation open**.
 
 The static shell of a level lives in the `cellgrup` entry of its `.big`.
 The shared `model` entries (characters, props, particles) use the same
@@ -107,13 +107,148 @@ material color.
 `mlyrcolr` and `mlyrctrl` are parsed as observed (48 and 12 bytes per
 material) but their modulation is not applied yet.
 
+## Cell grid and visibility
+
+The chunks after `cellmdls` are a second chunk stream inside the same
+`cellgrup` payload. The reference levels use this order:
+
+```
+cellmdls [cellanim] cellinst cellight cellmark cells attrs cellbsp
+```
+
+Only `cells`, `attrs` and `cellbsp` are decoded here. `cellinst`,
+`cellight`, `cellmark` and `cellanim` are still opaque.
+
+### `cells`
+
+```
+u32 cell count
+per cell:
+  u32  version = 2
+  u16  resource symbol
+  u16  reserved (0xFFFF)
+  u32  flags
+  Vec3 minimum
+  Vec3 maximum
+  chunk "default":
+    u32 total
+    u32 0
+    subchunks: cellattr, portal2, terrains, dbgmodel
+```
+
+The engine resolves the symbol through its resource table; the host
+keeps the raw value. `flags` and the reserved word are observed, not
+interpreted. `FUN_00687ae0` parses version 2; `FUN_00687920`
+selects the version and `FUN_00687990` is the version 1 parser, which
+does not occur in the reference tree.
+
+The two `Vec3` values are the bounds of the cell, not of the level.
+
+### `portal2`
+
+```
+u32 portal count
+per portal:
+  u32  version (1 or 2)
+  u16  cell A
+  u16  cell B
+  u32  vertex count
+       vertex count × Vec3
+  Vec3 plane
+  u32  index (version 2 only)
+```
+
+Version 1 leaves `index` at -1. `FUN_0068d8e0` parses version 1 and
+`FUN_0068dba0` parses version 2. The three floats after the vertices
+are stored as a `Vec3`; their use as a plane is consistent with the
+layout but not confirmed by a renderer path yet.
+
+### `terrains`
+
+```
+u32 count
+count × u32 terrain id
+```
+
+The host exposes the ids but does not use them yet.
+
+### `dbgmodel`
+
+A debug model chunk. The host records its byte size and skips it.
+
+### Attribute tables
+
+`attrs` and the nested `cellattr` chunk share one table format:
+
+```
+char[8] name
+u32     size (total table size, including the name)
+u32     values[(size - 12) / 4]
+```
+
+`attrs` is one 32-byte `default` table with five values in every
+reference level. `cellattr` is one table per cell and its size varies.
+`FUN_006a8ad0` dispatches the table, `FUN_006bf1d0` selects the version
+and `FUN_006bf250`/`FUN_006bf320` drive the keyword-table parser. The
+value semantics are open.
+
+### `cellbsp`
+
+```
+u32 version = 1
+u32 leaf count
+u32 maximum depth
+node:
+  u8 type
+  0: align 2, u16 value              (leaf)
+  1: align 4, Vec3 plane; f32 distance; left node; right node
+```
+
+The alignment is relative to the start of the `cellbsp` payload, not to
+the file. The recursion is `FUN_0068b270`; `FUN_0066b030` checks the
+version and `FUN_0066b070` reads the header and allocates the root.
+
+The header's leaf count matches the number of leaves in all 162
+reference groups that have both `cells` and `cellbsp`. The depth is the
+maximum recursion depth and ranges from 1 to 24. Leaf values are
+usually `0xFFFF`; the host keeps them raw. The traversal and the exact
+meaning of the split plane are not decoded yet.
+
+### Handler map
+
+`FUN_00665200` is the CellGroup chunk dispatcher. It matches the packed
+name table at `0x87231f` (`cellmdls cellinst cellcams cellolgt cellslgt
+celldlgt cellight cellmark cellorgn cellspln cells`), plus `cellanim`,
+`attrs` and `cellbsp`. `FUN_0079ff50` and `FUN_0078d410` are **not**
+cell-grid handlers: they match `orgnmrkr` and `demodata` from the table
+at `0x879adc`/`0x879ae4`, and `FUN_00793930` runs during teardown. The
+cell loader is the `FUN_00665200` family.
+
+### Cell coverage
+
+Measured on the 135 level containers:
+
+| Metric | Value |
+|---|---:|
+| `cellgrup` entries with `cells` | 173 |
+| Groups with both `cells` and `cellbsp` | 162 |
+| Cell version | 2 in all entries |
+| BSP version | 1 in all entries |
+| BSP leaf count matching the header | 162 / 162 |
+| BSP depth range | 1..24 |
+| `attrs` body size | 32 bytes in all groups |
+
+`sanctuary.big`: 3 cells, 6 portals, 121 terrain ids, 33 BSP nodes
+(17 leaves, depth 8). `canyons/cy01.big`: 8 cells, 32 portals, 674
+terrain ids, 167 BSP nodes (84 leaves, depth 10).
+
 ## Animation
 
 `vtxweigh`, `jointidx`, `animatio` and `animreel` are present in the
 containers. Static cell models carry zero weights; character models use
 the animation chunks. The node hierarchy and keyframe encoding are open.
 
-## Coverage
+## Model coverage
 
 `sanctuary.big`:
 
@@ -137,14 +272,16 @@ interior, while the default isometric frame shows the level.
 
 - `mlyrcolr`/`mlyrctrl` modulation (color, specular, layers).
 - The 40/42-byte `prims` extra record.
-- The cell grid/portal data after the models (visibility and streaming).
+- `cells` flags, `cellattr`/`attrs` value semantics, the `portal2`
+  plane/index and the BSP traversal.
+- `cellinst`, `cellight`, `cellmark` and `cellanim`.
 - `model 74` has no `rmd`; its role is unknown.
 - Skeleton, skinning and animation playback.
 - The shared `model` entries versus the `cellmdls` inline models.
 
 ## Next steps
 
-1. Parse the cell grid/visibility data.
+1. Use the cell grid and BSP for culling and cell visibility.
 2. Apply `mlyrcolr`/`mlyrctrl` modulation.
 3. Decode the animation/skeleton chunks.
 4. Bind the shared `model` entries and entity placements.

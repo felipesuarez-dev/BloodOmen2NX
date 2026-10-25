@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstdint>
@@ -168,6 +169,86 @@ void append_chunk(std::vector<std::uint8_t>& out, const std::string& name,
     out.insert(out.end(), payload.begin(), payload.end());
 }
 
+void append_table(std::vector<std::uint8_t>& out, const std::string& name,
+                  const std::vector<std::uint32_t>& values) {
+    std::string tag = name;
+    tag.resize(8, '\0');
+    append(out, tag);
+    put32(out, static_cast<std::uint32_t>(12 + values.size() * 4));
+    for (std::uint32_t value : values) {
+        put32(out, value);
+    }
+}
+
+void append_cell_grid(std::vector<std::uint8_t>& out) {
+    std::vector<std::uint8_t> attributes;
+    append_table(attributes, "default", {0x00b00103U, 3U, 0xFFFFFFFFU});
+
+    std::vector<std::uint8_t> portal;
+    put32(portal, 1);
+    put32(portal, 2);
+    put16(portal, 2);
+    put16(portal, 3);
+    put32(portal, 3);
+    for (const auto& point : std::vector<std::array<float, 3>>{{0, 0, 0}, {1, 0, 0}, {0, 1, 0}}) {
+        put_float(portal, point[0]);
+        put_float(portal, point[1]);
+        put_float(portal, point[2]);
+    }
+    put_float(portal, 0.0f);
+    put_float(portal, 0.0f);
+    put_float(portal, 1.0f);
+    put32(portal, 5);
+
+    std::vector<std::uint8_t> terrains;
+    put32(terrains, 2);
+    put32(terrains, 10);
+    put32(terrains, 20);
+
+    std::vector<std::uint8_t> container;
+    append_chunk(container, "cellattr", attributes);
+    append_chunk(container, "portal2", portal);
+    append_chunk(container, "terrains", terrains);
+    append_chunk(container, "dbgmodel", {0xAA, 0xBB, 0xCC});
+
+    std::vector<std::uint8_t> cell;
+    put32(cell, 2);
+    put16(cell, 7);
+    put16(cell, 0xFFFF);
+    put32(cell, 0x1234);
+    for (float value : {1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f}) {
+        put_float(cell, value);
+    }
+    append_chunk(cell, "default", container);
+
+    put32(out, 1);
+    out.insert(out.end(), cell.begin(), cell.end());
+}
+
+void append_cell_bsp(std::vector<std::uint8_t>& out) {
+    put32(out, 1);
+    put32(out, 2);
+    put32(out, 2);
+    out.push_back(1);
+    while ((out.size() & 3U) != 0U) {
+        out.push_back(0);
+    }
+    put_float(out, 0.0f);
+    put_float(out, 1.0f);
+    put_float(out, 0.0f);
+    put_float(out, -5.0f);
+    out.push_back(0);
+    if ((out.size() & 1U) != 0U) {
+        out.push_back(0);
+    }
+    put16(out, 0xFFFF);
+    out.push_back(0);
+    if ((out.size() & 1U) != 0U) {
+        out.push_back(0);
+    }
+    put16(out, 3);
+}
+
 std::vector<std::uint8_t> build_cell_group() {
     std::vector<std::uint8_t> positions;
     put32(positions, 4);
@@ -256,10 +337,22 @@ std::vector<std::uint8_t> build_cell_group() {
 
     std::vector<std::uint8_t> cell(8, 0);
     append(cell, "cellmdls");
-    put32(cell, static_cast<std::uint32_t>(model.size()));
+    put32(cell, static_cast<std::uint32_t>(20 + model.size()));
     put32(cell, 0);
     put32(cell, 1);
     cell.insert(cell.end(), model.begin(), model.end());
+
+    std::vector<std::uint8_t> attributes;
+    append_table(attributes, "default", {1U, 2U, 0x00bf0103U, 4U, 0x000f0f0fU});
+    append_chunk(cell, "attrs", attributes);
+
+    std::vector<std::uint8_t> cells;
+    append_cell_grid(cells);
+    append_chunk(cell, "cells", cells);
+
+    std::vector<std::uint8_t> bsp;
+    append_cell_bsp(bsp);
+    append_chunk(cell, "cellbsp", bsp);
     return cell;
 }
 
@@ -374,11 +467,77 @@ void test_cell_group() {
     CHECK(geometry.triangles[2].texture == -1);
     CHECK(std::fabs(geometry.minimum.x) < 1.0e-5f);
     CHECK(std::fabs(geometry.maximum.x - 1.0f) < 1.0e-5f);
+    CHECK(geometry.has_cell_grid);
+    CHECK(geometry.cell_grid.cells.size() == 1);
+    const bo2::engine::LevelCell& cell = geometry.cell_grid.cells[0];
+    CHECK(cell.version == 2);
+    CHECK(cell.symbol == 7);
+    CHECK(cell.flags == 0x1234);
+    CHECK(std::fabs(cell.minimum.z - 3.0f) < 1.0e-5f);
+    CHECK(std::fabs(cell.maximum.x - 4.0f) < 1.0e-5f);
+    CHECK(cell.attributes.size() == 1);
+    CHECK(cell.attributes[0].name == "default");
+    CHECK(cell.attributes[0].size == 24);
+    CHECK(cell.attributes[0].values.size() == 3);
+    CHECK(cell.attributes[0].values[0] == 0x00b00103U);
+    CHECK(cell.terrains.size() == 2);
+    CHECK(cell.terrains[1] == 20);
+    CHECK(cell.portals.size() == 1);
+    const bo2::engine::CellPortal& portal = cell.portals[0];
+    CHECK(portal.version == 2);
+    CHECK(portal.cell_a == 2 && portal.cell_b == 3);
+    CHECK(portal.vertices.size() == 3);
+    CHECK(std::fabs(portal.plane.z - 1.0f) < 1.0e-5f);
+    CHECK(portal.index == 5);
+    CHECK(cell.dbgmodel_size == 3);
+    CHECK(geometry.has_cell_bsp);
+    CHECK(geometry.cell_bsp.leaf_count == 2);
+    CHECK(geometry.cell_bsp.depth == 2);
+    CHECK(geometry.cell_bsp.nodes.size() == 3);
+    CHECK(!geometry.cell_bsp.nodes[0].leaf);
+    CHECK(std::fabs(geometry.cell_bsp.nodes[0].plane.y - 1.0f) < 1.0e-5f);
+    CHECK(std::fabs(geometry.cell_bsp.nodes[0].distance + 5.0f) < 1.0e-5f);
+    CHECK(geometry.cell_bsp.nodes[0].left == 1);
+    CHECK(geometry.cell_bsp.nodes[0].right == 2);
+    CHECK(geometry.cell_bsp.nodes[1].leaf && geometry.cell_bsp.nodes[1].value == 0xFFFF);
+    CHECK(geometry.cell_bsp.nodes[2].leaf && geometry.cell_bsp.nodes[2].value == 3);
+    CHECK(geometry.has_level_attributes);
+    CHECK(geometry.level_attributes.size() == 1);
+    CHECK(geometry.level_attributes[0].name == "default");
+    CHECK(geometry.level_attributes[0].values.size() == 5);
+    CHECK(geometry.level_attributes[0].values[2] == 0x00bf0103U);
     CHECK(throws([&] {
         std::vector<std::uint8_t> broken = data;
         broken.resize(12);
         bo2::engine::parse_cell_group(broken);
     }));
+
+    const auto find = [](const std::vector<std::uint8_t>& bytes, const std::string& name) {
+        const auto found = std::search(bytes.begin(), bytes.end(), name.begin(), name.end());
+        return static_cast<std::size_t>(found - bytes.begin());
+    };
+    const std::size_t cells_at = find(data, "cells");
+    const std::size_t bsp_at = find(data, "cellbsp");
+    const std::size_t attrs_at = find(data, "attrs");
+    CHECK(cells_at + 20 < data.size());
+    CHECK(bsp_at + 28 < data.size());
+    CHECK(attrs_at + 24 < data.size());
+
+    std::vector<std::uint8_t> bad_cell_version = data;
+    patch32(bad_cell_version, cells_at + 20, 3);
+    CHECK(throws([&] { bo2::engine::parse_cell_group(bad_cell_version); }));
+
+    std::vector<std::uint8_t> bad_leaf_count = data;
+    patch32(bad_leaf_count, bsp_at + 20, 3);
+    CHECK(throws([&] { bo2::engine::parse_cell_group(bad_leaf_count); }));
+
+    std::vector<std::uint8_t> bad_node_type = data;
+    bad_node_type[bsp_at + 28] = 2;
+    CHECK(throws([&] { bo2::engine::parse_cell_group(bad_node_type); }));
+
+    std::vector<std::uint8_t> bad_attrs_size = data;
+    patch32(bad_attrs_size, attrs_at + 24, 999);
+    CHECK(throws([&] { bo2::engine::parse_cell_group(bad_attrs_size); }));
 
     std::vector<std::uint16_t> symbols = {100};
     std::vector<std::string> names(101);

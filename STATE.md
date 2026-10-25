@@ -45,11 +45,13 @@ and assets) is complete.
   color.
 - The level renderer clips triangles at the near plane, so a free camera
   inside the shell no longer tears the projection.
+- The cell grid and visibility BSP are decoded: `cells` version 2,
+  `attrs` tables and the recursive `cellbsp`; `bo2nx --level` reports the
+  counts. `sanctuary` has 3 cells, 6 portals and 33 BSP nodes.
 
 ## What is not done
 
 - `mlyrcolr`/`mlyrctrl` material modulation.
-- Cell grid/visibility data after the `cellmdls` models.
 - Animation and skinning (`animatio`, `animreel`, `vtxweigh`, `jointidx`).
 - `region`, `planinfo`, `bpackage`, `strtable`, `musicbnk`, `texfont`,
   `liteinfo`.
@@ -67,7 +69,7 @@ and assets) is complete.
 | # | Unknown | Next action | Read first |
 |---|---|---|---|
 | 0 | `mlyrcolr`/`mlyrctrl` modulation | Decompile the material setup and apply it | `docs/FORMATS/models.md` |
-| 1 | Cell grid and visibility | Parse the data after `cellmdls` | `docs/FORMATS/models.md` |
+| 1 | `cellinst`, `cellight` and `cellmark` records | Decompile the dispatcher branches | `docs/FORMATS/models.md` |
 | 2 | `game.erg` parser details | Decompile the key lookup in `bo2.exe` | `docs/FORMATS/erg.md` |
 | 3 | Original logic tick | Measure from the oracle once it runs, or from the main loop | `docs/ARCHITECTURE.md` |
 | 4 | Level list and streaming model | Derive it from the installer script and `list.txt` | `docs/GAMEPLAY.md` |
@@ -76,10 +78,10 @@ and assets) is complete.
 
 ## Next steps
 
-1. Parse the cell grid/visibility data and apply the material modulation.
-2. Decode animation/skinning and the shared `model` entries.
-3. Add the SDL2 + OpenGL backend when the environment provides the
-   libraries and a display; use the original as the oracle after that.
+1. Apply the `mlyrcolr`/`mlyrctrl` material modulation.
+2. Decode `cellinst`/`cellight`/`cellmark`, animation/skinning and the
+   shared `model` entries.
+3. Add the SDL2 + OpenGL backend and use the original as the oracle.
 
 ## Rules
 

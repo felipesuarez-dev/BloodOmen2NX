@@ -199,6 +199,24 @@ int render_level_frame(const Options& options) {
               << geometry.triangles.size() << ", vertices " << geometry.positions.size()
               << ", textures " << loaded_textures << "/" << geometry.texture_names.size()
               << ")\n";
+    if (geometry.has_cell_grid) {
+        std::size_t portals = 0;
+        std::size_t terrains = 0;
+        for (const bo2::engine::LevelCell& cell : geometry.cell_grid.cells) {
+            portals += cell.portals.size();
+            terrains += cell.terrains.size();
+        }
+        std::cout << "cells: " << geometry.cell_grid.cells.size() << " (portals " << portals
+                  << ", terrains " << terrains << ")\n";
+    }
+    if (geometry.has_cell_bsp) {
+        std::cout << "cellbsp: " << geometry.cell_bsp.nodes.size() << " nodes ("
+                  << geometry.cell_bsp.leaf_count << " leaves, depth "
+                  << geometry.cell_bsp.depth << ")\n";
+    }
+    if (geometry.has_level_attributes) {
+        std::cout << "attrs: " << geometry.level_attributes.size() << " tables\n";
+    }
     std::cout << "frame: " << options.out << " (" << frame.width << 'x' << frame.height << ")\n";
     return 0;
 }
