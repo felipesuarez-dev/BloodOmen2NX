@@ -16,6 +16,7 @@ PLATFORM_FEATURES = [
     ("Validated asset extraction", "done"),
     ("Headless host first frame", "done"),
     ("Level geometry (cellgrup)", "done"),
+    ("Level textures (DDS binding)", "done"),
     ("Host renderer (OpenGL)", "todo"),
     ("Switch renderer (deko3d)", "todo"),
     ("Audio", "todo"),

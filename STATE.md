@@ -39,15 +39,21 @@ and assets) is complete.
 - The static level shell is loaded: `cellgrup` parsing, world-space
   vertices, per-material colors and a free camera. `bo2nx --level` renders
   `sanctuary` (75/76 models, 5,107 triangles) to a PPM.
+- The level binds its DDS textures: the cellgrup symbol list resolves the
+  model materials, the first UV set maps the texture coordinates, and
+  33/34 `sanctuary` textures are bound; the rest fall back to the material
+  color.
 
 ## What is not done
 
-- Level textures/material binding: the current frame uses flat material
-  colors; the `texture`/`uvs`/`mlyrcolr` path is not bound yet.
+- `mlyrcolr`/`mlyrctrl` material modulation.
+- Near-plane clipping for interior cameras.
 - Cell grid/visibility data after the `cellmdls` models.
 - Animation and skinning (`animatio`, `animreel`, `vtxweigh`, `jointidx`).
 - `region`, `planinfo`, `bpackage`, `strtable`, `musicbnk`, `texfont`,
   `liteinfo`.
+- SDL2 + OpenGL host backend and the oracle frame comparison (the
+  development container has no libraries, display or Wine).
 - SDL2 + OpenGL host backend (the development container has no libraries
   or display).
 - `game.erg` parser details.
@@ -59,21 +65,20 @@ and assets) is complete.
 
 | # | Unknown | Next action | Read first |
 |---|---|---|---|
-| 0 | Material/texture binding | Validate the `texture`/`uvs`/`textures` path and bind DDS | `docs/FORMATS/models.md` |
+| 0 | `mlyrcolr`/`mlyrctrl` modulation | Decompile the material setup and apply it | `docs/FORMATS/models.md` |
 | 1 | Cell grid and visibility | Parse the data after `cellmdls` | `docs/FORMATS/models.md` |
 | 2 | `game.erg` parser details | Decompile the key lookup in `bo2.exe` | `docs/FORMATS/erg.md` |
 | 3 | Original logic tick | Measure from the oracle once it runs, or from the main loop | `docs/ARCHITECTURE.md` |
 | 4 | Level list and streaming model | Derive it from the installer script and `list.txt` | `docs/GAMEPLAY.md` |
-| 5 | Level renderer | Textures, near-plane clipping and SDL2+OpenGL | `docs/ARCHITECTURE.md` |
+| 5 | Level renderer | Near-plane clipping, SDL2+OpenGL and the oracle frame | `docs/ARCHITECTURE.md` |
 | 6 | `animatio` and `animreel` layout | Decompile the animation loader | `docs/FORMATS/models.md` |
 
 ## Next steps
 
-1. Bind the `cellgrup` textures/material path and validate the UVs.
-2. Add the near-plane clipper for interior cameras.
-3. Parse the cell grid/visibility data.
-4. Decode animation/skinning and the shared `model` entries.
-5. Add the SDL2 + OpenGL backend when the environment provides the
+1. Add the near-plane clipper for interior cameras.
+2. Parse the cell grid/visibility data and apply the material modulation.
+3. Decode animation/skinning and the shared `model` entries.
+4. Add the SDL2 + OpenGL backend when the environment provides the
    libraries and a display; use the original as the oracle after that.
 
 ## Rules

@@ -20,7 +20,7 @@
 </div>
 
 [status-badge]: https://img.shields.io/badge/phase-M2%20in%20progress-orange
-[overall-badge]: https://img.shields.io/badge/overall-5.8%25-yellow
+[overall-badge]: https://img.shields.io/badge/overall-6.2%25-yellow
 [fn-badge]: https://img.shields.io/badge/functions-0%20%2F%2018097-lightgrey
 [levels-badge]: https://img.shields.io/badge/levels-0%20%2F%20TBD-lightgrey
 [cpp-badge]: https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white
@@ -59,13 +59,13 @@ This is a *functional* port, not a byte-matching decompilation: it does not rebu
 ## Status
 
 <!-- progress:start -->
-**Overall progress: 5.8%**
+**Overall progress: 6.2%**
 
 | Component | Weight | Progress | Score |
 |---|---:|---:|---:|
 | Functions translated / in-scope | 60% | 0 / 18097 | 0.00% |
 | Levels completable | 30% | 0 / TBD | 0.00% |
-| Platform features | 10% | 7 / 12 | 58.33% |
+| Platform features | 10% | 8 / 13 | 61.54% |
 
 Function map: 35513 rows. Levels and platform features are defined in [`tools/gen/progress_data.py`](tools/gen/progress_data.py).
 <!-- progress:end -->
@@ -78,7 +78,7 @@ Function map: 35513 rows. Levels and platform features are defined in [`tools/ge
 | Host backend (headless software) | First frame: real DDS texture, free camera, PPM output |
 | Host backend (SDL2 + OpenGL) | Pending; the dev container has no SDL2/OpenGL/display |
 | C++ engine readers (BIG/DDS) | Validated on the installed tree |
-| Level geometry | `sanctuary` cellgrup renders headless (75 models, 5,107 triangles); textures pending |
+| Level geometry and textures | `sanctuary` cellgrup renders headless (75 models, 5,107 triangles, 33/34 DDS textures) |
 | Switch backend (libnx + deko3d) | Not started |
 | `game.erg` | Decoded (text configuration) |
 | `.big` and `pc.rkv` | Validated against the installed Spanish build: 179 `.big` (246,332 entries) and 2,666 RKV streams |
