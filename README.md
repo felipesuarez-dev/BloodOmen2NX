@@ -19,7 +19,7 @@
 
 </div>
 
-[status-badge]: https://img.shields.io/badge/phase-M1%20in%20progress-orange
+[status-badge]: https://img.shields.io/badge/phase-M1%20complete-brightgreen
 [cpp-badge]: https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white
 [cmake-badge]: https://img.shields.io/badge/build-CMake%20presets-064F8C?logo=cmake&logoColor=white
 [platform-badge]: https://img.shields.io/badge/platform-Linux%20dev%20%7C%20Switch%20target-lightgrey
@@ -56,13 +56,13 @@ This is a *functional* port, not a byte-matching decompilation: it does not rebu
 ## Status
 
 <!-- progress:start -->
-**Overall progress: 2.8%**
+**Overall progress: 5.0%**
 
 | Component | Weight | Progress | Score |
 |---|---:|---:|---:|
 | Functions translated / in-scope | 60% | 0 / 18097 | 0.00% |
 | Levels completable | 30% | 0 / TBD | 0.00% |
-| Platform features | 10% | 2 / 9 | 27.78% |
+| Platform features | 10% | 5 / 10 | 50.00% |
 
 Function map: 35513 rows. Levels and platform features are defined in [`tools/gen/progress_data.py`](tools/gen/progress_data.py).
 <!-- progress:end -->
@@ -75,8 +75,9 @@ Function map: 35513 rows. Levels and platform features are defined in [`tools/ge
 | Host backend (SDL2 + OpenGL) | Not started |
 | Switch backend (libnx + deko3d) | Not started |
 | `game.erg` | Decoded (text configuration) |
-| `.big` and `pc.rkv` | Public specs, parsers and synthetic tests; not validated against this build |
-| Installer `data/*.dat` | Identified as a custom encrypted archive; not ported |
+| `.big` and `pc.rkv` | Validated against the installed Spanish build: 179 `.big` (246,332 entries) and 2,666 RKV streams |
+| Installer `data/*.dat` | Decoded; `tools/bo2fmt/installer.py` materializes the 227-file tree |
+| Installed game tree | 227 files, 1.9 GB; manifest hash in `docs/PROVENANCE.md` |
 | Renderer, audio, input | Not started |
 | Game logic translation | Not started |
 | Original game as oracle | Not started |

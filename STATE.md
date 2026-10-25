@@ -1,6 +1,7 @@
 # State
 
-Current milestone: **M1 — containers and assets**. M0 (laboratory and binary truth) is complete.
+Current milestone: **M2 — host skeleton and first frame**. M1 (containers
+and assets) is complete.
 
 ## What is done
 
@@ -17,42 +18,49 @@ Current milestone: **M1 — containers and assets**. M0 (laboratory and binary t
   exported, 18,097 game candidates seeded in `re/FUNCTION_MAP.csv`.
 - Prior art integrated (`docs/PRIOR_ART.md`): `.big` (`goefile`) and
   `pc.rkv` audio formats documented, DDS textures and Ogg audio confirmed.
-- `tools/bo2fmt/big.py` and `rkv.py` implemented with synthetic tests.
-- Installer archive identified: custom encrypted container (32-round
-  XTEA-like cipher, fixed S-box, embedded password), not zlib or RAR.
-- Installer script read: the numbered `data/*.dat` are compressed chunks
-  that expand to `pc.rkv`, `code.big`, level `.big` files and `.san`
-  animations; the movies are copied to `data/` unchanged.
+- Installer chunk pipeline decoded: `tools/bo2fmt/installer.py` and
+  `tools/bo2fmt/bo2cipher.c`; 198/198 chunks; a 227-file tree (1.9 GB) in
+  `external/installed`, with its manifest hash in `docs/PROVENANCE.md`.
+- `.big` parser validated against the installed tree: 179 files, 246,332
+  entries, 0 parse errors; 22,483 DDS textures and 5,168 models.
+- `pc.rkv` validated: 2,666 Ogg Vorbis streams; the first is mono
+  44.1 kHz. The last stream is 49,152 of 50,002 bytes in the reference
+  archive; the parser reports it as truncated.
+- One DDS (32x16 DXT5, six mip levels) and one model payload extracted;
+  the model starts with an `rmd` chunk.
+- Installer S-box and password offsets documented in
+  `docs/FORMATS/dat.md`; neither is stored in the repository.
 
 ## What is not done
 
-- No installed tree yet: parsers cannot be validated against real data.
-- `.big` and `pc.rkv` parsers are spec-level, not decoded for this build.
-- Per-type payloads (models, cell groups, animation, textures) are open.
-- Function map not triaged by subsystem yet.
-- Installer decompressor not ported; it is optional, not a gate.
-- No renderer, audio, input or gameplay.
+- Per-type payloads: `model`, `cellgrup`, `region`, `planinfo`,
+  `animatio`, `animreel`, `strtable`, `musicbnk`, `texfont`, `liteinfo`.
+- `game.erg` parser details.
+- Renderer, audio, input or gameplay.
+- The installer's native RAR decoder is not ported; development
+  extraction uses `unrar`. The game does not need the installer decoder.
 
 ## Known unknowns (ranked)
 
 | # | Unknown | Next action | Read first |
 |---|---|---|---|
-| 0 | Installer decompressor for `data/*.dat` | Reverse the routine in `install2.dat` or the reader in `bo2.exe` | `docs/FORMATS/dat.md` |
-| 1 | `pc.rkv` layout | Expand one chunk, parse the archive index | `docs/FORMATS/dat.md` |
+| 0 | Model payload layout | Decompile the model loader; document the `rmd` chunks | `docs/FORMATS/big.md` |
+| 1 | `cellgrup`, `region`, `planinfo` | Decompile the level loader; document the records | `docs/FORMATS/big.md` |
 | 2 | `game.erg` parser details | Decompile the key lookup in `bo2.exe` | `docs/FORMATS/erg.md` |
 | 3 | Original logic tick | Measure from the oracle once it runs, or from the main loop | `docs/ARCHITECTURE.md` |
 | 4 | Level list and streaming model | Derive it from the installer script and `list.txt` | `docs/GAMEPLAY.md` |
 | 5 | Renderer pipeline | First level render on the host backend | `docs/ARCHITECTURE.md` |
+| 6 | `animatio` and `animreel` layout | Decompile the animation loader | `docs/FORMATS/models.md` |
 
 ## Next steps
 
-1. Triage the 18,097 game candidates by subsystem and recover functions
-   missed by auto-analysis.
-2. Reverse the installer decompressor and expand one `data/*.dat` chunk.
-3. Parse `game.erg` and `pc.rkv`; write the parsers with synthetic
-   fixtures.
-5. Re-pack one asset and verify it with the original.
-6. Start the host backend once M1 passes.
+1. Start M2: host backend skeleton, first frame with a level, textures
+   and a free camera.
+2. Port the validated `.big` and `pc.rkv` readers and the DDS/model
+   loaders to `src/engine/`.
+3. Document the model and level payloads.
+4. Parse `game.erg` and the `pc.rkv` event table.
+5. Use the original under Wine as the oracle once a backend can render.
 
 ## Rules
 

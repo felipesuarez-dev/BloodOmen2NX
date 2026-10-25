@@ -49,6 +49,25 @@ The extracted copies live under `external/installer/sfxi/` (gitignored).
 The repository documents the container format and the configuration
 shape, not their content.
 
+## Installed tree
+
+Materialized with `tools/bo2fmt/installer.py` from the reference ISO, the
+SFXI resources of `install2.dat` and the 198 `data/*.dat` chunks. The
+local copy is `external/installed/` (gitignored).
+
+| Metric | Value |
+|---|---:|
+| Files | 227 |
+| Size | 1,968,053,271 bytes |
+| Manifest SHA-256 | `b17a1e8ab9a9af108c7c6949821713f78f1d89424674167706f5fef5c86032a1` |
+
+Manifest command:
+
+```sh
+cd external/installed
+find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum
+```
+
 ## Chain of custody
 
 1. Keep the reference ISO and the extracted files under `external/`.

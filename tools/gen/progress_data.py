@@ -11,8 +11,9 @@ LEVELS = []
 PLATFORM_FEATURES = [
     ("Host build skeleton", "done"),
     ("Installer container (SFXI)", "done"),
-    ("BIG/RKV parsers (spec)", "partial"),
-    ("Validated asset extraction", "todo"),
+    ("Installer chunk decompressor", "done"),
+    ("BIG/RKV parsers", "done"),
+    ("Validated asset extraction", "done"),
     ("Host renderer (OpenGL)", "todo"),
     ("Switch renderer (deko3d)", "todo"),
     ("Audio", "todo"),
