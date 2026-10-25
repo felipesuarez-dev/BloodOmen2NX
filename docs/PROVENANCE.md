@@ -1,0 +1,59 @@
+# Provenance
+
+How every external artifact used by this project was obtained. Game files
+and original binaries are never committed; only hashes and derived facts
+are recorded here.
+
+## Target build
+
+- Game: Blood Omen 2
+- Platform: PC (Windows, 32-bit)
+- Edition: Spanish GoldMaster, version 1.02
+- Developer: Crystal Dynamics
+- Publisher: Eidos Interactive
+
+The embedded build path in `bo2.exe` is
+`P:\gogames\bo2\build\bo2___Win32_Spanish_GoldMaster\bo2.pdb`, which
+identifies the GOG-derived Spanish GoldMaster build.
+
+## Reference media
+
+| File | Size (bytes) | SHA-256 |
+|---|---:|---|
+| `Legacy Of Kain Blood Omen II.iso` | 1,207,830,528 | `cb118cd46d778ce4e8cb768a8f2bb71def006b8211611e6d4e05cf0b1b64456e` |
+
+Local copy:
+`/home/felipe/DECOMPILACION/blood-omen-2/Legacy Of Kain Blood Omen II-PC/Legacy Of Kain Blood Omen II.iso`
+(gitignored).
+
+## Extracted binaries
+
+| File | Size (bytes) | SHA-256 |
+|---|---:|---|
+| `setup.exe` | 634,880 | `14da8333c668ff47573cd967427d48deae0725d5489487c15a524998f3fe2d10` |
+| `install2.dat` | 3,579,904 | `0ad7ed62aba32bd78ce3e9680ef607c8f457f90fcf4d747656a6be8f0b54473b` |
+| `bo2.exe` | 5,378,124 | `91758398a17de9c9f974a8a102762a534fb523d40fa6868a5e5a4f0483b2753c` |
+
+Local copies live under `external/iso/` (gitignored).
+
+## Installer contents
+
+`install2.dat` contains an SFXI resource (`FILESYS/107`) with 24 entries.
+Two are relevant to the port:
+
+| Entry | Compressed | Uncompressed |
+|---|---:|---:|
+| `game.erg` | 754 | 1,708 |
+| `list.txt` | 6,816 | 68,932 |
+
+The extracted copies live under `external/installer/sfxi/` (gitignored).
+The repository documents the container format and the configuration
+shape, not their content.
+
+## Chain of custody
+
+1. Keep the reference ISO and the extracted files under `external/`.
+2. Record hashes in this file before first use.
+3. Run `scripts/check_no_assets.sh` before every commit.
+4. Never commit game data, original code, decompiled dumps or verbatim
+   game text.
