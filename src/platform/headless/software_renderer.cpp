@@ -461,10 +461,15 @@ std::vector<std::uint8_t> render_level(const engine::LevelGeometry& geometry,
                 : uv[2],
         };
         const engine::Image* lightmap = nullptr;
-        if (options.lightmap && textured &&
-            static_cast<std::size_t>(triangle.texture) < geometry.lightmaps.size() &&
-            !geometry.lightmaps[static_cast<std::size_t>(triangle.texture)].empty()) {
-            lightmap = &geometry.lightmaps[static_cast<std::size_t>(triangle.texture)];
+        if (options.lightmap && textured) {
+            if (triangle.lightmap >= 0 &&
+                static_cast<std::size_t>(triangle.lightmap) < geometry.model_lightmaps.size() &&
+                !geometry.model_lightmaps[static_cast<std::size_t>(triangle.lightmap)].empty()) {
+                lightmap = &geometry.model_lightmaps[static_cast<std::size_t>(triangle.lightmap)];
+            } else if (static_cast<std::size_t>(triangle.texture) < geometry.lightmaps.size() &&
+                       !geometry.lightmaps[static_cast<std::size_t>(triangle.texture)].empty()) {
+                lightmap = &geometry.lightmaps[static_cast<std::size_t>(triangle.texture)];
+            }
         }
         ClipVertex clipped_input[3];
         for (int corner = 0; corner < 3; ++corner) {

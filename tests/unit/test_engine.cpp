@@ -618,6 +618,42 @@ void test_lightmaps() {
     CHECK(maps[0].image.rgba[12] == 0x30);
 }
 
+void test_model_lightmaps() {
+    bo2::engine::LevelGeometry geometry;
+    geometry.texture_names = {"Alpha", "Beta"};
+    geometry.model_ranges.resize(3);
+    geometry.model_ranges[0].present = true;
+    geometry.model_ranges[0].vertex_count = 4;
+    geometry.model_ranges[1].present = true;
+    geometry.model_ranges[1].vertex_count = 8;
+    geometry.triangles = {{0, 1, 2, 0, 0, 0, -1}, {0, 1, 2, 0, 1, 1, -1},
+                          {0, 1, 2, 0, 2, 1, -1}};
+    std::vector<bo2::engine::LevelLightMap> maps(3);
+    maps[0].name = "room-alpha";
+    maps[0].group = "room";
+    maps[0].group_vertex_count = 4;
+    maps[0].image.width = 1;
+    maps[0].image.height = 1;
+    maps[0].image.rgba = {10, 10, 10, 255};
+    maps[1].name = "room-beta";
+    maps[1].group = "room";
+    maps[1].group_vertex_count = 4;
+    maps[1].image.width = 1;
+    maps[1].image.height = 1;
+    maps[1].image.rgba = {20, 20, 20, 255};
+    maps[2].name = "room2-beta";
+    maps[2].group = "room2";
+    maps[2].group_vertex_count = 8;
+    maps[2].image.width = 1;
+    maps[2].image.height = 1;
+    maps[2].image.rgba = {30, 30, 30, 255};
+    bo2::engine::assign_model_lightmaps(geometry, maps);
+    CHECK(geometry.model_lightmaps.size() == 2);
+    CHECK(geometry.triangles[0].lightmap == 0);
+    CHECK(geometry.triangles[1].lightmap == 1);
+    CHECK(geometry.triangles[2].lightmap == -1);
+}
+
 void test_cell_group() {
     const std::vector<std::uint8_t> data = build_cell_group();
     const bo2::engine::LevelGeometry geometry = bo2::engine::parse_cell_group(data);
@@ -772,6 +808,7 @@ int main() {
     test_cell_group();
     test_cell_instances();
     test_lightmaps();
+    test_model_lightmaps();
     if (failures != 0) {
         std::cerr << failures << " check(s) failed\n";
         return 1;

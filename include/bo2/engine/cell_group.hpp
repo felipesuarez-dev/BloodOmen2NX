@@ -17,6 +17,7 @@ struct LevelTriangle {
     std::uint32_t material = 0;
     std::uint32_t model = 0;
     std::int32_t texture = -1;
+    std::int32_t lightmap = -1;
 };
 
 struct MaterialControl {
@@ -38,6 +39,8 @@ enum class MaterialMode { Off, Diffuse, Layers, Layers2x };
 
 struct LevelLightMap {
     std::string name;
+    std::string group;
+    std::uint32_t group_vertex_count = 0;
     Image image;
 };
 
@@ -59,6 +62,7 @@ struct CellPortal {
 struct LevelCell {
     std::uint32_t version = 0;
     std::uint16_t symbol = 0;
+    std::string name;
     std::uint32_t flags = 0;
     Vec3 minimum{0.0f, 0.0f, 0.0f};
     Vec3 maximum{0.0f, 0.0f, 0.0f};
@@ -138,6 +142,7 @@ struct LevelGeometry {
     std::vector<Vec2> lightmap_texcoords;
     std::vector<std::string> texture_names;
     std::vector<Image> lightmaps;
+    std::vector<Image> model_lightmaps;
     std::vector<LevelTriangle> triangles;
     std::vector<MaterialLayer> materials;
     std::vector<CellAttributeTable> level_attributes;
@@ -169,5 +174,7 @@ LevelGeometry parse_cell_group(const std::vector<std::uint8_t>& data,
 Vec3 material_tint(const LevelGeometry& geometry, const LevelTriangle& triangle,
                    MaterialMode mode);
 std::vector<LevelLightMap> parse_lightmaps(const std::vector<std::uint8_t>& data);
+void assign_model_lightmaps(LevelGeometry& geometry,
+                            const std::vector<LevelLightMap>& lightmaps);
 
 }  // namespace bo2::engine

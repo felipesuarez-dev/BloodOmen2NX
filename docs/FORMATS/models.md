@@ -161,8 +161,10 @@ and the group `cryptexithall`; the 13 is the group name length, not a
 light count. The file contains 71 light-map entries across the
 cell/object groups. The host applies them with `--lightmap`, sampled with
 the model's second UV set; 16 of the 34 sanctuary textures resolve. The
-per-cell/object selection and the exact combination with the material
-layers are open; the `--material` modes stay diagnostic.
+loader also matches a model's vertex count to the light-map group (34
+model light maps, 2,745 triangles in sanctuary); duplicate vertex counts
+use the first group. The exact combination with the material layers is
+open; the `--material` modes stay diagnostic.
 
 The observed `mtlctrl` record is `{0, 0x004c0000, 0x00000100}` per
 material. The observed `mlyrctrl` record is `{0x000a0000|1|6, 1.0, 0, 0}`;

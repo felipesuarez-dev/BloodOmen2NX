@@ -72,10 +72,19 @@ entry per texture wins.
 
 `parse_lightmaps` in `src/engine/cell_group.cpp` scans the whole file for
 entry signatures, expands the palette and indices into a grayscale
-`Image`, and deduplicates by full name. The loader matches the entries to
-`LevelGeometry::texture_names` by name suffix; the first match (the first
-cell group in the file) wins. The model reader stores the second UV set
-in `LevelGeometry::lightmap_texcoords`.
+`Image`, and deduplicates by full name. It also reads the group vertex
+count: the `u32` immediately after the group's last entry. The observed
+counts match the model vertex counts (for example `cryptexithall` 116,
+`crypt` 2,298, `coffin01..05` 48, `cryptentrancehall` 652, the roofbits
+153/161, the pilars 206/122).
+
+`assign_model_lightmaps` groups the entries by their prefix and matches a
+model's vertex count to a group. Within the group it picks the entry
+whose name ends with the model's texture name. In `sanctuary` this
+produces 34 model light maps covering 2,745 triangles. When several
+groups share a vertex count (the 48-vertex coffins) the first group in
+file order wins; the per-instance choice is open. The model reader
+stores the second UV set in `LevelGeometry::lightmap_texcoords`.
 
 `bo2nx --level --lightmap` samples the light map with those UVs and uses
 its luminance as the light factor (`texture × tint × light map`). The
@@ -85,12 +94,11 @@ against the no-lightmap + five-entry version.
 
 ## Open questions
 
-- Per-cell/per-object light-map selection: the first matching entry by
-  texture name is an approximation; the group name and the second UV set
-  should choose the exact entry.
+- Per-instance selection when several groups share a vertex count (the
+  48-vertex coffins, the 153/161-vertex roofbits).
+- The group header fields after the name (12, 13 or 9 bytes depending on
+  the group).
 - The per-vertex data after each group (`u32 count` + `count × 16
   bytes`); it may be vertex colours or light-map UVs.
-- The group-header fields after the name (12, 13 or 9 bytes depending on
-  the group).
 - The exact combination of the light map with `mlyrcolr`/`mlyrctrl`.
 - Whether the second UV set is always the light-map set.

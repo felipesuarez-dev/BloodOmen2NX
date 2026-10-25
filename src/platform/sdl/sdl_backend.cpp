@@ -158,9 +158,9 @@ engine::Mat4 view_projection(const Camera& camera, float aspect, float near_plan
 }
 
 void draw_level(const engine::LevelGeometry& geometry, const std::vector<GLuint>& textures,
-                const std::vector<GLuint>& lightmaps, const Camera& camera,
-                std::uint32_t width, std::uint32_t height, engine::MaterialMode material_mode,
-                bool use_lightmap) {
+                const std::vector<GLuint>& lightmaps, std::size_t model_lightmap_offset,
+                const Camera& camera, std::uint32_t width, std::uint32_t height,
+                engine::MaterialMode material_mode, bool use_lightmap) {
     glViewport(0, 0, static_cast<GLsizei>(width), static_cast<GLsizei>(height));
     glClearColor(20.0f / 255.0f, 22.0f / 255.0f, 30.0f / 255.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -211,11 +211,18 @@ void draw_level(const engine::LevelGeometry& geometry, const std::vector<GLuint>
                                                                  : engine::Vec2{},
         };
         const engine::Vec3 tint = engine::material_tint(geometry, triangle, material_mode);
-        const GLuint lightmap_id =
-            (use_lightmap && textured &&
-             static_cast<std::size_t>(triangle.texture) < lightmaps.size())
-                ? lightmaps[static_cast<std::size_t>(triangle.texture)]
-                : 0;
+        GLuint lightmap_id = 0;
+        if (use_lightmap && textured) {
+            const std::size_t model_index =
+                triangle.lightmap >= 0
+                    ? model_lightmap_offset + static_cast<std::size_t>(triangle.lightmap)
+                    : lightmaps.size();
+            if (model_index < lightmaps.size()) {
+                lightmap_id = lightmaps[model_index];
+            } else if (static_cast<std::size_t>(triangle.texture) < model_lightmap_offset) {
+                lightmap_id = lightmaps[static_cast<std::size_t>(triangle.texture)];
+            }
+        }
         const engine::Vec2 light_uv[3] = {
             (textured && triangle.a < geometry.lightmap_texcoords.size())
                 ? geometry.lightmap_texcoords[triangle.a]
@@ -375,11 +382,16 @@ int run_level(const engine::LevelGeometry& geometry,
               const std::vector<engine::Image>& textures, const WindowOptions& options) {
     auto context = create_context(options, options.title);
     const std::vector<GLuint> texture_ids = upload_textures(textures);
-    const std::vector<GLuint> lightmap_ids = upload_textures(geometry.lightmaps);
+    std::vector<engine::Image> combined_lightmaps = geometry.lightmaps;
+    const std::size_t model_lightmap_offset = combined_lightmaps.size();
+    combined_lightmaps.insert(combined_lightmaps.end(), geometry.model_lightmaps.begin(),
+                              geometry.model_lightmaps.end());
+    const std::vector<GLuint> lightmap_ids = upload_textures(combined_lightmaps);
     OrbitCamera orbit = make_orbit(options.camera);
     if (!options.screenshot.empty()) {
-        draw_level(geometry, texture_ids, lightmap_ids, current_camera(orbit), options.width,
-                   options.height, options.material_mode, options.lightmap);
+        draw_level(geometry, texture_ids, lightmap_ids, model_lightmap_offset,
+                   current_camera(orbit), options.width, options.height, options.material_mode,
+                   options.lightmap);
         glFinish();
         capture(options.screenshot, options.width, options.height);
         return 0;
@@ -434,8 +446,9 @@ int run_level(const engine::LevelGeometry& geometry,
         if (keys[SDL_SCANCODE_Q] != 0) {
             orbit.target.z -= step;
         }
-        draw_level(geometry, texture_ids, lightmap_ids, current_camera(orbit), options.width,
-                   options.height, options.material_mode, options.lightmap);
+        draw_level(geometry, texture_ids, lightmap_ids, model_lightmap_offset,
+                   current_camera(orbit), options.width, options.height, options.material_mode,
+                   options.lightmap);
         SDL_GL_SwapWindow(context->window);
         SDL_Delay(1);
     }

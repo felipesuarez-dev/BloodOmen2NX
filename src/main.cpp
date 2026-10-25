@@ -242,6 +242,7 @@ LoadedLevel load_level(const Options& options) {
         lightmap_entries = bo2::engine::parse_lightmaps(archive.extract(*litedata));
         level.lightmap_entries = lightmap_entries.size();
     }
+    bo2::engine::assign_model_lightmaps(level.geometry, lightmap_entries);
     level.geometry.lightmaps.reserve(level.geometry.texture_names.size());
     for (const std::string& name : level.geometry.texture_names) {
         const std::string normalized = normalize_texture_name(name);
@@ -281,7 +282,18 @@ void print_scene(const LoadedLevel& level) {
             terrains += cell.terrains.size();
         }
         std::cout << "cells: " << geometry.cell_grid.cells.size() << " (portals " << portals
-                  << ", terrains " << terrains << ")\n";
+                  << ", terrains " << terrains << ")";
+        if (!geometry.cell_grid.cells.empty()) {
+            std::cout << " [";
+            for (std::size_t index = 0; index < geometry.cell_grid.cells.size(); ++index) {
+                if (index != 0) {
+                    std::cout << ", ";
+                }
+                std::cout << geometry.cell_grid.cells[index].name;
+            }
+            std::cout << "]";
+        }
+        std::cout << "\n";
     }
     if (geometry.has_cell_bsp) {
         std::cout << "cellbsp: " << geometry.cell_bsp.nodes.size() << " nodes ("
@@ -301,6 +313,16 @@ void print_scene(const LoadedLevel& level) {
     }
     if (geometry.has_level_attributes) {
         std::cout << "attrs: " << geometry.level_attributes.size() << " tables\n";
+    }
+    if (!geometry.model_lightmaps.empty()) {
+        std::size_t lit_triangles = 0;
+        for (const bo2::engine::LevelTriangle& triangle : geometry.triangles) {
+            if (triangle.lightmap >= 0) {
+                ++lit_triangles;
+            }
+        }
+        std::cout << "model lightmaps: " << geometry.model_lightmaps.size() << " (triangles "
+                  << lit_triangles << ")\n";
     }
 }
 

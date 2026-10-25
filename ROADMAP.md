@@ -34,7 +34,7 @@ comparison.
 | Cell instances and placement | done | `cellinst` v3/v4; local `cellmdls` templates placed in world space |
 | Cell lights and markers | done | `cellight` v3 and `cellmark` v4 parsed; renderer consumer pending |
 | Material layer records | done | `mlyrcolr`/`mlyrctrl`; diagnostic `--material` tints |
-| Light maps (`litedata`) | done | 71 `.slm` entries, second UV set, `--lightmap`; per-object selection open |
+| Light maps (`litedata`) | done | 71 `.slm` entries, per-model group match, `--lightmap`; per-instance open |
 | Host renderer (OpenGL) | done | SDL2/OpenGL window, free camera and Xvfb capture |
 | Switch renderer (deko3d) | todo | M2+ |
 | Audio | todo | M2+ |

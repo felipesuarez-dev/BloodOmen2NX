@@ -4,9 +4,11 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <cctype>
 #include <cstdint>
 #include <cstring>
 #include <limits>
+#include <map>
 #include <set>
 #include <string>
 #include <utility>
@@ -274,7 +276,9 @@ std::vector<std::uint32_t> read_terrains(const common::Reader& reader, const Chu
     return values;
 }
 
-LevelCell read_cell(const common::Reader& reader, std::size_t& position, std::size_t end) {
+LevelCell read_cell(const common::Reader& reader, std::size_t& position, std::size_t end,
+                    const std::vector<std::uint16_t>& symbols,
+                    const std::vector<std::string>& names) {
     if (position + 36 > end) {
         throw common::ParseError("truncated cell header");
     }
@@ -284,6 +288,9 @@ LevelCell read_cell(const common::Reader& reader, std::size_t& position, std::si
         throw common::ParseError("unsupported cell version");
     }
     cell.symbol = reader.u16(position + 4);
+    if (cell.symbol < symbols.size() && symbols[cell.symbol] < names.size()) {
+        cell.name = names[symbols[cell.symbol]];
+    }
     cell.flags = reader.u32(position + 8);
     cell.minimum = read_vec3(reader, position + 12);
     cell.maximum = read_vec3(reader, position + 24);
@@ -316,7 +323,9 @@ LevelCell read_cell(const common::Reader& reader, std::size_t& position, std::si
     return cell;
 }
 
-CellGrid read_cell_grid(const common::Reader& reader, const Chunk& chunk) {
+CellGrid read_cell_grid(const common::Reader& reader, const Chunk& chunk,
+                        const std::vector<std::uint16_t>& symbols,
+                        const std::vector<std::string>& names) {
     if (chunk.data_size < 4) {
         throw common::ParseError("empty cell grid");
     }
@@ -329,7 +338,7 @@ CellGrid read_cell_grid(const common::Reader& reader, const Chunk& chunk) {
     CellGrid grid;
     grid.cells.reserve(count);
     for (std::uint32_t index = 0; index < count; ++index) {
-        grid.cells.push_back(read_cell(reader, position, end));
+        grid.cells.push_back(read_cell(reader, position, end, symbols, names));
     }
     if (position != end) {
         throw common::ParseError("cell grid has a trailer");
@@ -608,14 +617,15 @@ Vec3 rotate_euler(const Vec3& value, const Vec3& angles) {
 }
 
 void read_cell_tail(const common::Reader& reader, std::size_t start, std::size_t end,
-                    LevelGeometry& geometry) {
+                    const std::vector<std::uint16_t>& symbols,
+                    const std::vector<std::string>& names, LevelGeometry& geometry) {
     if (start == end) {
         return;
     }
     const std::vector<Chunk> chunks = read_chunks(reader, start, end);
     for (const Chunk& chunk : chunks) {
         if (chunk.name == "cells") {
-            geometry.cell_grid = read_cell_grid(reader, chunk);
+            geometry.cell_grid = read_cell_grid(reader, chunk, symbols, names);
             geometry.has_cell_grid = true;
         } else if (chunk.name == "attrs") {
             geometry.level_attributes = read_attribute_tables(reader, chunk);
@@ -986,7 +996,7 @@ LevelGeometry parse_cell_group(const std::vector<std::uint8_t>& data,
         }
         position = model_end;
     }
-    read_cell_tail(reader, position, data.size(), geometry);
+    read_cell_tail(reader, position, data.size(), symbols, names, geometry);
     place_instances(geometry);
     if (geometry.positions.empty() || geometry.triangles.empty()) {
         throw common::ParseError("cell group has no renderable geometry");
@@ -1016,6 +1026,7 @@ std::vector<LevelLightMap> parse_lightmaps(const std::vector<std::uint8_t>& data
         return maps;
     }
     std::set<std::string> seen;
+    std::map<std::string, std::size_t> group_ends;
     std::size_t position = 12 + group_length + 12;
     while (position + 4 <= data.size()) {
         const std::uint32_t name_length = reader.u32(position);
@@ -1049,6 +1060,8 @@ std::vector<LevelLightMap> parse_lightmaps(const std::vector<std::uint8_t>& data
                 LevelLightMap map;
                 map.name.assign(reinterpret_cast<const char*>(data.data() + position + 4),
                                 name_length);
+                const std::size_t separator = map.name.find('-');
+                map.group = separator == std::string::npos ? map.name : map.name.substr(0, separator);
                 std::array<std::uint8_t, 16> luminance{};
                 for (std::size_t index = 0; index < luminance.size(); ++index) {
                     luminance[index] = static_cast<std::uint8_t>(
@@ -1069,6 +1082,7 @@ std::vector<LevelLightMap> parse_lightmaps(const std::vector<std::uint8_t>& data
                     map.image.rgba[index * 4 + 2] = value;
                     map.image.rgba[index * 4 + 3] = 255;
                 }
+                group_ends[map.group] = indices_offset + index_bytes;
                 if (seen.insert(map.name).second) {
                     maps.push_back(std::move(map));
                 }
@@ -1078,7 +1092,99 @@ std::vector<LevelLightMap> parse_lightmaps(const std::vector<std::uint8_t>& data
         }
         ++position;
     }
+    for (LevelLightMap& map : maps) {
+        const auto found = group_ends.find(map.group);
+        if (found != group_ends.end() && found->second + 4 <= data.size()) {
+            const std::uint32_t count = reader.u32(found->second);
+            if (count <= 1000000) {
+                map.group_vertex_count = count;
+            }
+        }
+    }
     return maps;
+}
+
+void assign_model_lightmaps(LevelGeometry& geometry,
+                            const std::vector<LevelLightMap>& lightmaps) {
+    if (lightmaps.empty() || geometry.model_ranges.empty()) {
+        return;
+    }
+    const auto normalized = [](const std::string& name) {
+        std::string result;
+        result.reserve(name.size());
+        for (char character : name) {
+            if (character == '/') {
+                result.push_back('-');
+            } else {
+                result.push_back(static_cast<char>(
+                    std::tolower(static_cast<unsigned char>(character))));
+            }
+        }
+        return result;
+    };
+    struct Group {
+        std::string name;
+        std::uint32_t vertex_count = 0;
+        std::vector<const LevelLightMap*> entries;
+    };
+    std::vector<Group> groups;
+    std::map<std::string, std::size_t> group_index;
+    for (const LevelLightMap& map : lightmaps) {
+        auto found = group_index.find(map.group);
+        if (found == group_index.end()) {
+            group_index.emplace(map.group, groups.size());
+            groups.push_back({map.group, map.group_vertex_count, {&map}});
+        } else {
+            Group& group = groups[found->second];
+            if (group.vertex_count == 0) {
+                group.vertex_count = map.group_vertex_count;
+            }
+            group.entries.push_back(&map);
+        }
+    }
+    std::map<const LevelLightMap*, std::int32_t> image_index;
+    for (LevelTriangle& triangle : geometry.triangles) {
+        if (triangle.model >= geometry.model_ranges.size()) {
+            continue;
+        }
+        const ModelRange& range = geometry.model_ranges[triangle.model];
+        if (!range.present) {
+            continue;
+        }
+        const Group* match = nullptr;
+        for (const Group& group : groups) {
+            if (group.vertex_count == range.vertex_count) {
+                match = &group;
+                break;
+            }
+        }
+        if (match == nullptr || triangle.texture < 0 ||
+            static_cast<std::size_t>(triangle.texture) >= geometry.texture_names.size()) {
+            continue;
+        }
+        const std::string texture = normalized(geometry.texture_names[triangle.texture]);
+        const LevelLightMap* entry = nullptr;
+        for (const LevelLightMap* candidate : match->entries) {
+            if (candidate->name.size() >= texture.size() &&
+                candidate->name.compare(candidate->name.size() - texture.size(), texture.size(),
+                                        texture) == 0) {
+                entry = candidate;
+                break;
+            }
+        }
+        if (entry == nullptr) {
+            continue;
+        }
+        auto found = image_index.find(entry);
+        if (found == image_index.end()) {
+            const std::int32_t index = static_cast<std::int32_t>(geometry.model_lightmaps.size());
+            geometry.model_lightmaps.push_back(entry->image);
+            image_index.emplace(entry, index);
+            triangle.lightmap = index;
+        } else {
+            triangle.lightmap = found->second;
+        }
+    }
 }
 
 Vec3 material_tint(const LevelGeometry& geometry, const LevelTriangle& triangle,
