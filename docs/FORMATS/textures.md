@@ -1,14 +1,20 @@
 # Textures
 
-Status: **unknown**.
+Status: **payload identified as DDS** by public parsers; not yet extracted
+from our build.
+
+A `texture` chunk inside a `.big` carries a standard DDS payload (`DDS `
+magic). The font is an uncompressed A8R8G8B8 256x256 DDS plus `texfont`
+glyph records: a 24-byte table header and 87 records of 20 bytes
+(`u8 code`, three `0xFF`, four floats for x, y, w, h). The Spanish build
+uses the same glyph codes for accented characters.
 
 ## Open questions
 
-- Pixel formats: indexed palettes, 16-bit, 32-bit, compression.
-- Palette layout and endianness.
-- Texture pages and atlas packing.
-- Mipmaps and swizzling.
-- Where the texture table lives.
+- Whether every `texture` chunk is DDS or some are another codec.
+- Mipmap and swizzle handling.
+- Atlas packing and material binding.
+- The per-face texture index in the model payload.
 
 ## Next steps
 

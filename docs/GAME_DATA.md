@@ -5,17 +5,24 @@ for PC, version 1.02 Spanish GoldMaster.
 
 ## What the port needs
 
-The final asset requirements will be confirmed in M1. The first expected
-layout is:
+The port reads an **installed** tree, not the ISO. The ISO is an
+installer whose numbered chunks are encrypted; see `docs/FORMATS/dat.md`.
+The expected installed layout is:
 
 ```
 <data-dir>/
   bo2.exe                 (reference only; never executed by the port)
   data/
-    game.erg
-    <asset containers>
-  <video>.dat             (Bink videos)
+    game.erg              text configuration
+    pc.rkv                audio archive (Ogg Vorbis)
+    Code.big, PreCode.big code, font and shared resources
+    resources/levels/...  level .big files
+    kain*.big             Kain models and textures per chapter
+    *.dat                 Bink videos
 ```
+
+`pc.rkv` is audio, not the master asset file. Level, model, texture and
+entity data lives in the `.big` files (`docs/FORMATS/big.md`).
 
 ## Where it lives
 
@@ -40,7 +47,8 @@ artifact are in `docs/PROVENANCE.md`. Nothing is downloaded by the build.
 
 ## Installing from the ISO
 
-The reference ISO is an installer, not an installed game. M0 extracts
-`setup.exe` and `install2.dat` statically instead of running the Windows
-installer. The resulting layout is recorded in `docs/PROVENANCE.md` and in
-`docs/FORMATS/`.
+The reference ISO is an installer, not an installed game. The installer
+uses a custom encrypted archive; the fast path is to install the game on
+Windows (or use a GOG/Steam copy) and copy the installed tree to
+`external/installed/`. The ISO remains the provenance reference. See
+`docs/FORMATS/dat.md`.

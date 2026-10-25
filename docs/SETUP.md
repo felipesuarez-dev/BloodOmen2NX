@@ -20,7 +20,9 @@ Ghidra and a JDK 21 are required for the binary analysis. The sibling
 project pins Ghidra 12.1.4, which is a known-good version for the same
 era of MSVC binaries.
 
-1. Install JDK 21 (`sudo apt install openjdk-21-jdk`).
+1. Install JDK 21. On this machine the container has no system Java, so
+   the JDK is unpacked under `~/tools/jdk-21` and the analysis commands
+   set `JAVA_HOME=~/tools/jdk-21`.
 2. Download Ghidra from `https://ghidra-sre.org` and unzip it under
    `~/tools/ghidra`.
 3. Create a local Python environment outside the repository for `pefile`

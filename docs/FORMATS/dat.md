@@ -16,9 +16,30 @@ These are not the final asset containers. The installer script
 ```
 
 The numbered `data/<n>.dat` files on the ISO are the compressed payloads;
-the installer expands them to the real tree. `pc.rkv` is the main archive
-declared by `game.erg` (`ArchiveFile`). `data/list.txt` (copied as-is)
-holds the asset path list used to build or address that archive.
+the installer expands them to the real tree. `pc.rkv` is the **audio**
+archive declared by `game.erg` (`ArchiveFile`), not the master asset file:
+the level, model, texture and entity data lives in `.big` files with a
+`goefile` header (`docs/FORMATS/big.md`). `data/list.txt` (copied as-is)
+holds the asset path list.
+
+## Encoding (M1 finding)
+
+The chunks are not zlib and not standard RAR. The installer executor
+(`install2.dat`, function at `0x401b30`) reconstructs a header from the
+first four bytes of each chunk, the file number and the entry name, then
+calls a custom extractor at `0x405810`. The extractor setup at `0x405490`
+initializes a 256-byte S-box and a 128-bit key, mixes in an embedded
+password through a CRC table, and applies a 32-round XTEA-like block
+cipher (`0x405110`) before decompressing into a 1 MB buffer.
+
+Consequences:
+
+- We know the code path and the key setup, but the custom compressor and
+  the archive framing are not ported yet.
+- The password and key material are not published here.
+- The fast path to a working asset tree is an installation made by the
+  owner on Windows (or a GOG/Steam copy), which is a legitimate oracle.
+  The custom decompressor remains an optional reverse-engineering target.
 
 The installer also copies the Bink movies (`eidos.dat`, `crystal.dat`,
 `bo2intro.dat`, `awakens.dat`, `outro.dat`, `spooky.dat`, `sr2_trailer.dat`,

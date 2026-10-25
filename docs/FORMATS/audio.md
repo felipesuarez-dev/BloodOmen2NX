@@ -4,12 +4,14 @@ Status: **observed**, not decoded.
 
 ## Observed
 
-- Community documentation states that the PC version uses Ogg Vorbis for
-  sound effects, dialogue and music, while the PS2 version uses Sony ADPCM
-  and a tracker-style music format.
+- The PC version uses Ogg Vorbis for sound effects, dialogue and music.
+  A public MIT parser and inventory confirm it: `pc.rkv` holds 2,824 Ogg
+  streams under `vo/`, `streams/wav/` and `music/wav/`.
+- The PS2 version uses Sony ADPCM; GameCube uses DSP. Both are covered by
+  vgmstream, but they are out of scope for the PC port.
 - No `OggS` marker was found in the sampled `.dat` payloads on the
-  reference ISO, so the Ogg streams are either inside a decoded region,
-  compressed, or not in those samples.
+  reference ISO because those chunks are encrypted installer containers;
+  the audio lives in `pc.rkv`, which the installer expands from them.
 
 ## Open questions
 

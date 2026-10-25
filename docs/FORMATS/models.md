@@ -4,7 +4,14 @@ Status: **unknown**.
 
 The engine lineage is the one used by *Mad Dash Racing* (Crystal Dynamics).
 The original console and PC builds share the same content, but the PC
-container layout is the one that matters here.
+container layout is the one that matters here. Models live inside
+`.big` files as `model` chunks; the taxonomy also includes `cellgrup`,
+`region`, `planinfo`, `animatio` and `animreel`.
+
+Public experimental converters describe separate vertex, normal, UV and
+index streams, a per-face texture index list, submeshes, and skinning
+weights per vertex. Those are hints, not a spec; the converters report
+known failures on some files.
 
 ## Open questions
 

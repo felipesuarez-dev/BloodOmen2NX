@@ -126,5 +126,22 @@ provide symbols.
 - `pc.rkv` is the main archive declared by `game.erg`; it is expanded
   from the numbered chunks by the installer's decompressor.
 
-The decompressor is the M1 gate. It lives in `install2.dat` and has not
-been reverse-engineered yet.
+## Installer archive (M1)
+
+The chunk executor is `install2.dat` at `0x401b30`; the script parser is
+`0x401540`/`0x4019e0`. For `InstallType = decompress` with a numbered
+chunk it:
+
+1. reads the first four bytes of `data/<n>.dat`;
+2. builds a header from those bytes, the file number and the entry name;
+3. calls the extractor at `0x405810`.
+
+The extractor setup at `0x405490` initializes a 256-byte S-box and a
+128-bit key, mixes an embedded password through a CRC table, and runs a
+32-round XTEA-like block cipher (`0x405110`) before decompressing into a
+1 MB buffer. The chunks are not zlib and not standard RAR.
+
+This is a custom encrypted archive. The fast path to a usable asset tree
+is an installation made by the owner on Windows, or a GOG/Steam copy; the
+custom decompressor remains an optional target and is not allowed to
+block M1.

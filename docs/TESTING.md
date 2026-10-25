@@ -4,7 +4,7 @@
 
 | Level | What | When | Assets needed |
 |---|---|---|---|
-| Unit | LE readers, math, parsers on synthetic fixtures, state machines | Always | No |
+| Unit | LE readers, math, parsers on synthetic fixtures (SFXI, BIG, RKV), state machines | Always | No |
 | Parity Python/C++ | Same input to the reference parser and the C++ parser -> identical output | Always | No (fixtures) |
 | Integration (asset-gated) | Parsers over the user's real assets -> counts and SHA-256 manifests | `BO2NX_ASSETS_DIR` set | Yes, skips otherwise |
 | Render golden | Offscreen render of a scene or texture -> PNG hash | `BO2NX_ASSETS_DIR` set | Yes, goldens local |
@@ -15,6 +15,9 @@
 ## Rules
 
 - Every feature or fix lands with its tests in the same commit.
+- Parser tests are **spec tests**: they prove the implementation matches
+  the documented layout, not that the layout is correct for this build.
+  Real-data validation is a separate gate.
 - Asset-dependent tests skip cleanly when `BO2NX_ASSETS_DIR` is unset;
   they never fail for lack of assets.
 - Committed goldens contain only derived facts (hashes, counts,
