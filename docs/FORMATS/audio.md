@@ -1,6 +1,7 @@
 # Audio
 
-Status: **`pc.rkv` decoded; event table unknown**.
+Status: **`pc.rkv` decoded; `sound` metadata and `strmfile` scripts
+extracted; the meaning of the `sound` property fields is open**.
 
 ## Observed
 
@@ -19,6 +20,10 @@ Status: **`pc.rkv` decoded; event table unknown**.
 - Music: streamed Ogg or a separate module format.
 - Event table: which entity or script triggers each sound. The `sound`
   and `strmfile` entries live in the `.big` files.
+- `sound` payload layout: NUL-terminated record name, u32 total size, two
+  header u32 values, then 8-byte `(u16 key, u16 field, u32 value)` records.
+  Some records leave a four-byte remainder. The keys and fields are not
+  interpreted yet.
 
 ## Next steps
 
@@ -26,3 +31,15 @@ Status: **`pc.rkv` decoded; event table unknown**.
 2. Decode more streams and compare them with the original's output.
 3. Feed `vo/`, `streams/wav/` and `music/wav/` into the host audio
    backend.
+
+## Extraction tools
+
+```sh
+python3 tools/bo2fmt/rkv.py extract pc.rkv --out audio
+python3 tools/bo2fmt/audio.py sounds level.big --out sounds.json
+python3 tools/bo2fmt/audio.py strmfiles level.big --out events
+```
+
+`sounds` records the entry name, version, flags, property records and any
+remainder. `strmfiles` writes the entity/event scripts with their original
+CRLF line endings.

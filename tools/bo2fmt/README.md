@@ -66,6 +66,8 @@ Requirements:
 | `big.py` | `.big` (`goefile`) content container | Verified: 179 files, 246,332 entries |
 | `rkv.py` | `pc.rkv` audio archive | Verified: 2,666 Ogg streams |
 | `bo2fmt.py` | Umbrella list/unpack/repack CLI | BIG and RKV list/unpack; BIG repack verified byte-identical |
+| `audio.py` | `sound` metadata and `strmfile` extraction | Verified on the installed tree; field semantics open |
+| `compare_frames.py` | Frame side-by-side, diff and metrics | Synthetic tests; oracle capture blocked |
 
 The numbered `data/*.dat` pipeline is documented in
 `docs/FORMATS/dat.md`. The content and audio containers are documented in
