@@ -15,6 +15,7 @@
 #include "bo2/engine/cell_group.hpp"
 #include "bo2/engine/dds.hpp"
 #include "bo2/engine/erg.hpp"
+#include "bo2/engine/navigation.hpp"
 #include "bo2/engine/ogg.hpp"
 #include "bo2/engine/tick.hpp"
 #include "bo2/platform/platform.hpp"
@@ -375,6 +376,9 @@ void print_scene(const LoadedLevel& level) {
             std::cout << "]";
         }
         std::cout << "\n";
+        const bo2::engine::CellNavigation navigation(geometry.cell_grid);
+        std::cout << "nav: " << geometry.cell_grid.cells.size() << " cells, "
+                  << navigation.connections() << " links\n";
     }
     if (geometry.has_cell_bsp) {
         std::cout << "cellbsp: " << geometry.cell_bsp.nodes.size() << " nodes ("

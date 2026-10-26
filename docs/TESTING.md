@@ -13,7 +13,7 @@
 | Render golden | Offscreen render of a scene or texture -> PNG hash | `BO2NX_ASSETS_DIR` set | Yes, goldens local |
 | Frame comparator | Side-by-side, diff, tile/region metrics on two PPMs | Manual and Python unit test | No (synthetic PPM) |
 | Headless loop | `FixedStep` unit tests and `bo2nx --headless --frames N` | Always | No |
-| World foundation | Entity filtering, frustum planes and cell streaming | Always | No |
+| World foundation | Entity filtering, frustum planes, cell streaming and navigation paths | Always | No |
 | Headless regression | `bo2nx --headless --frames N --dump-state` -> canonical hash | Pending | Mixed |
 | Oracle | Port vs original under Wine (screenshots, state, saves, audio) | Milestones | See `docs/RUNNING.md` |
 | SDL smoke | SDL2/OpenGL triangle under Xvfb -> PPM | When SDL2 and Xvfb are present | No |

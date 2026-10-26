@@ -22,6 +22,7 @@ add_library(bo2_engine STATIC
     src/engine/cell_group.cpp
     src/engine/dds.cpp
     src/engine/erg.cpp
+    src/engine/navigation.cpp
     src/engine/ogg.cpp
     src/engine/tick.cpp
     src/engine/world.cpp
@@ -86,6 +87,11 @@ if(BUILD_TESTING)
     target_link_libraries(bo2nx_renderer_tests PRIVATE bo2_platform_headless)
     target_compile_options(bo2nx_renderer_tests PRIVATE ${BO2NX_WARNINGS})
     add_test(NAME renderer COMMAND bo2nx_renderer_tests)
+
+    add_executable(bo2nx_navigation_tests tests/unit/test_navigation.cpp)
+    target_link_libraries(bo2nx_navigation_tests PRIVATE bo2_engine)
+    target_compile_options(bo2nx_navigation_tests PRIVATE ${BO2NX_WARNINGS})
+    add_test(NAME navigation COMMAND bo2nx_navigation_tests)
 
     add_executable(bo2nx_world_tests tests/unit/test_world.cpp)
     target_link_libraries(bo2nx_world_tests PRIVATE bo2_engine)
