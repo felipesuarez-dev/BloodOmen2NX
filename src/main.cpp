@@ -13,6 +13,7 @@
 
 #include "bo2/engine/big_archive.hpp"
 #include "bo2/engine/cell_group.hpp"
+#include "bo2/engine/collision.hpp"
 #include "bo2/engine/dds.hpp"
 #include "bo2/engine/erg.hpp"
 #include "bo2/engine/navigation.hpp"
@@ -386,6 +387,8 @@ void print_scene(const LoadedLevel& level) {
                   << geometry.cell_bsp.leaf_count << " leaves, depth "
                   << geometry.cell_bsp.depth << ")\n";
     }
+    const bo2::engine::CollisionWorld collision_world(geometry);
+    std::cout << "collision mesh: " << collision_world.triangles() << " triangles\n";
     if (!geometry.collisions.empty()) {
         std::size_t bytes = 0;
         for (const bo2::engine::LevelCollision& collision : geometry.collisions) {

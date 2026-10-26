@@ -102,8 +102,9 @@ and assets) is complete.
   hysteresis; `CellNavigation` builds a cell graph from portals and finds
   a shortest path. The level viewer populates the world from 23 sanctuary
   lights/markers and reports frustum-visible entities and active cells.
-  Game-specific entities, collision semantics and state serialization are
-  still pending.
+  A triangle-soup `CollisionWorld` provides sphere overlap and ray casts;
+  the compressed `collmodc` runtime and game-specific entities remain
+  pending.
 
 ## What is not done
 
