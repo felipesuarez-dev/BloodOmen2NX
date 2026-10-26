@@ -1068,6 +1068,43 @@ LevelGeometry parse_cell_group(const std::vector<std::uint8_t>& data) {
     return parse_cell_group(data, no_symbols, no_names);
 }
 
+LevelGeometry parse_model_asset(const std::vector<std::uint8_t>& data,
+                                const std::vector<std::uint16_t>& symbols,
+                                const std::vector<std::string>& names) {
+    if (data.size() < 20) {
+        throw common::ParseError("model asset is shorter than its header");
+    }
+    const common::Reader reader(data);
+    if (reader.u32(0) != 105) {
+        throw common::ParseError("unsupported model asset version");
+    }
+    const std::string name = reader.cstr(4, data.size());
+    const std::size_t name_end = 4 + name.size();
+    const std::uint32_t size = reader.u32(name_end + 1);
+    const std::size_t chunks_start = name_end + 9;
+    const std::size_t end = 4 + size;
+    if (size < 16 || chunks_start > end || end > data.size()) {
+        throw common::ParseError("bad model asset size");
+    }
+    const std::vector<Chunk> chunks = read_chunks(reader, chunks_start, end);
+    const Chunk* rmd = find_chunk(chunks, "rmd");
+    if (rmd == nullptr) {
+        throw common::ParseError("model asset has no rmd chunk");
+    }
+    LevelGeometry geometry;
+    geometry.model_ranges.assign(1, ModelRange{});
+    parse_model(reader, *rmd, 0, symbols, names, geometry);
+    ModelRange& range = geometry.model_ranges[0];
+    range.first_vertex = 0;
+    range.vertex_count = static_cast<std::uint32_t>(geometry.positions.size());
+    range.first_triangle = 0;
+    range.triangle_count = static_cast<std::uint32_t>(geometry.triangles.size());
+    range.present = !geometry.triangles.empty();
+    geometry.model_count = range.present ? 1 : 0;
+    compute_bounds(geometry);
+    return geometry;
+}
+
 std::vector<LevelLightMap> parse_lightmaps(const std::vector<std::uint8_t>& data) {
     std::vector<LevelLightMap> maps;
     if (data.size() < 12) {

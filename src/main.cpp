@@ -240,6 +240,7 @@ struct LoadedLevel {
     std::size_t loaded_textures = 0;
     std::size_t loaded_lightmaps = 0;
     std::size_t lightmap_entries = 0;
+    std::size_t entity_models = 0;
     std::vector<bo2::engine::RegionEntity> region_entities;
     std::string name;
     double load_ms = 0.0;
@@ -267,6 +268,59 @@ std::string normalize_texture_name(const std::string& name) {
     return result;
 }
 
+std::string model_basename(const std::string& name) {
+    const std::size_t separator = name.find_last_of("/\\");
+    return separator == std::string::npos ? name : name.substr(separator + 1);
+}
+
+const bo2::engine::BigEntry* find_model_entry(const bo2::engine::BigArchive& archive,
+                                              const std::string& short_name) {
+    for (const bo2::engine::BigEntry& entry : archive.entries()) {
+        if (!bo2::engine::iequals(entry.type, "model")) {
+            continue;
+        }
+        const std::string base = model_basename(entry.name);
+        if (bo2::engine::iequals(base, short_name)) {
+            return &entry;
+        }
+        if (short_name.size() > base.size() &&
+            bo2::engine::iequals(short_name.substr(short_name.size() - base.size()), base)) {
+            return &entry;
+        }
+    }
+    return nullptr;
+}
+
+void append_entity_geometry(bo2::engine::LevelGeometry& target,
+                            const bo2::engine::LevelGeometry& source,
+                            const bo2::engine::Vec3& offset) {
+    const std::uint32_t vertex_base = static_cast<std::uint32_t>(target.positions.size());
+    const std::uint32_t texture_base = static_cast<std::uint32_t>(target.texture_names.size());
+    for (const bo2::engine::Vec3& position : source.positions) {
+        target.positions.push_back(position + offset);
+    }
+    target.normals.insert(target.normals.end(), source.normals.begin(), source.normals.end());
+    target.texcoords.insert(target.texcoords.end(), source.texcoords.begin(),
+                           source.texcoords.end());
+    target.lightmap_texcoords.insert(target.lightmap_texcoords.end(),
+                                     source.lightmap_texcoords.begin(),
+                                     source.lightmap_texcoords.end());
+    for (bo2::engine::LevelTriangle triangle : source.triangles) {
+        triangle.a += vertex_base;
+        triangle.b += vertex_base;
+        triangle.c += vertex_base;
+        triangle.model = 0xFFFFFFFFU;
+        triangle.instance = 0xFFFFFFFFU;
+        if (triangle.texture >= 0) {
+            triangle.texture += static_cast<std::int32_t>(texture_base);
+        }
+        triangle.lightmap = -1;
+        target.triangles.push_back(triangle);
+    }
+    target.texture_names.insert(target.texture_names.end(), source.texture_names.begin(),
+                                source.texture_names.end());
+}
+
 LoadedLevel load_level(const Options& options) {
     if (options.big.empty()) {
         usage_error("--level requires --big");
@@ -291,6 +345,35 @@ LoadedLevel load_level(const Options& options) {
     level.geometry = bo2::engine::parse_cell_group(archive.extract(*entry), entry->symbols,
                                                    archive.names());
     level.parse_ms = elapsed_ms(parse_start);
+    for (const bo2::engine::BigEntry& candidate : archive.entries()) {
+        if (!bo2::engine::iequals(candidate.type, "region")) {
+            continue;
+        }
+        try {
+            for (const bo2::engine::RegionEntityTable& table :
+                 bo2::engine::parse_region_entities(archive.extract(candidate))) {
+                level.region_entities.insert(level.region_entities.end(), table.entities.begin(),
+                                             table.entities.end());
+            }
+        } catch (const std::exception&) {
+            level.region_entities.clear();
+        }
+    }
+    for (const bo2::engine::RegionEntity& entity : level.region_entities) {
+        const bo2::engine::BigEntry* model_entry = find_model_entry(archive, entity.model);
+        if (model_entry == nullptr) {
+            continue;
+        }
+        try {
+            const bo2::engine::LevelGeometry asset = bo2::engine::parse_model_asset(
+                archive.extract(*model_entry), model_entry->symbols, archive.names());
+            if (!asset.triangles.empty()) {
+                append_entity_geometry(level.geometry, asset, entity.position);
+                ++level.entity_models;
+            }
+        } catch (const std::exception&) {
+        }
+    }
     const std::uint64_t textures_start = bo2::platform::monotonic_nanoseconds();
     level.textures.reserve(level.geometry.texture_names.size());
     for (const std::string& name : level.geometry.texture_names) {
@@ -307,20 +390,6 @@ LoadedLevel load_level(const Options& options) {
         }
     }
     level.textures_ms = elapsed_ms(textures_start);
-    for (const bo2::engine::BigEntry& candidate : archive.entries()) {
-        if (!bo2::engine::iequals(candidate.type, "region")) {
-            continue;
-        }
-        try {
-            for (const bo2::engine::RegionEntityTable& table :
-                 bo2::engine::parse_region_entities(archive.extract(candidate))) {
-                level.region_entities.insert(level.region_entities.end(), table.entities.begin(),
-                                             table.entities.end());
-            }
-        } catch (const std::exception&) {
-            level.region_entities.clear();
-        }
-    }
     const std::uint64_t lightmaps_start = bo2::platform::monotonic_nanoseconds();
     const bo2::engine::BigEntry* litedata = nullptr;
     for (const bo2::engine::BigEntry& candidate : archive.entries()) {
@@ -411,6 +480,9 @@ void print_scene(const LoadedLevel& level) {
     }
     const bo2::engine::CollisionWorld collision_world(geometry);
     std::cout << "collision mesh: " << collision_world.triangles() << " triangles\n";
+    if (level.entity_models != 0) {
+        std::cout << "entity models: " << level.entity_models << "\n";
+    }
     if (!geometry.collisions.empty()) {
         std::size_t bytes = 0;
         for (const bo2::engine::LevelCollision& collision : geometry.collisions) {

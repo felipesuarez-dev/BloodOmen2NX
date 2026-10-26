@@ -187,6 +187,9 @@ LevelGeometry parse_cell_group(const std::vector<std::uint8_t>& data);
 LevelGeometry parse_cell_group(const std::vector<std::uint8_t>& data,
                                const std::vector<std::uint16_t>& symbols,
                                const std::vector<std::string>& names);
+LevelGeometry parse_model_asset(const std::vector<std::uint8_t>& data,
+                                const std::vector<std::uint16_t>& symbols,
+                                const std::vector<std::string>& names);
 
 Vec3 material_tint(const LevelGeometry& geometry, const LevelTriangle& triangle,
                    MaterialMode mode);

@@ -97,6 +97,11 @@ if(BUILD_TESTING)
     target_compile_options(bo2nx_renderer_tests PRIVATE ${BO2NX_WARNINGS})
     add_test(NAME renderer COMMAND bo2nx_renderer_tests)
 
+    add_executable(bo2nx_model_asset_tests tests/unit/test_model_asset.cpp)
+    target_link_libraries(bo2nx_model_asset_tests PRIVATE bo2_engine)
+    target_compile_options(bo2nx_model_asset_tests PRIVATE ${BO2NX_WARNINGS})
+    add_test(NAME model_asset COMMAND bo2nx_model_asset_tests)
+
     add_executable(bo2nx_region_tests tests/unit/test_region.cpp)
     target_link_libraries(bo2nx_region_tests PRIVATE bo2_engine)
     target_compile_options(bo2nx_region_tests PRIVATE ${BO2NX_WARNINGS})
