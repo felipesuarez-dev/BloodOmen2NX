@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project(bo2nx VERSION 0.1.0 LANGUAGES CXX)
+project(bo2nx VERSION 0.1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -14,11 +14,16 @@ add_library(bo2_common STATIC
 target_include_directories(bo2_common PUBLIC include)
 target_compile_options(bo2_common PRIVATE ${BO2NX_WARNINGS})
 
+set_source_files_properties(third_party/stb_vorbis.c PROPERTIES COMPILE_OPTIONS "-w")
+
 add_library(bo2_engine STATIC
+    src/engine/audio.cpp
     src/engine/big_archive.cpp
     src/engine/cell_group.cpp
     src/engine/dds.cpp
     src/engine/erg.cpp
+    src/engine/ogg.cpp
+    third_party/stb_vorbis.c
 )
 target_link_libraries(bo2_engine PUBLIC bo2_common)
 target_compile_options(bo2_engine PRIVATE ${BO2NX_WARNINGS})
@@ -43,6 +48,7 @@ if(BO2NX_ENABLE_SDL)
     find_package(OpenGL QUIET)
     if(SDL2_FOUND AND OPENGL_FOUND)
         add_library(bo2_platform_sdl STATIC
+            src/platform/sdl/audio.cpp
             src/platform/sdl/render_pipeline.cpp
             src/platform/sdl/sdl_backend.cpp
         )
@@ -78,6 +84,11 @@ if(BUILD_TESTING)
     target_link_libraries(bo2nx_renderer_tests PRIVATE bo2_platform_headless)
     target_compile_options(bo2nx_renderer_tests PRIVATE ${BO2NX_WARNINGS})
     add_test(NAME renderer COMMAND bo2nx_renderer_tests)
+
+    add_executable(bo2nx_audio_tests tests/unit/test_audio.cpp)
+    target_link_libraries(bo2nx_audio_tests PRIVATE bo2_engine)
+    target_compile_options(bo2nx_audio_tests PRIVATE ${BO2NX_WARNINGS})
+    add_test(NAME audio COMMAND bo2nx_audio_tests)
 
     add_executable(bo2nx_platform_tests tests/unit/test_platform.cpp)
     target_link_libraries(bo2nx_platform_tests PRIVATE bo2_platform_core)

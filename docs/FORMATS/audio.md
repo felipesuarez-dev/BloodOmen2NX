@@ -1,7 +1,8 @@
 # Audio
 
 Status: **`pc.rkv` decoded; `sound` metadata and `strmfile` scripts
-extracted; the meaning of the `sound` property fields is open**.
+extracted; the host decodes and mixes the Ogg streams; the meaning of the
+`sound` property fields is open**.
 
 ## Observed
 
@@ -30,7 +31,8 @@ extracted; the meaning of the `sound` property fields is open**.
 1. Document the `sound`/`strmfile` event table.
 2. Decode more streams and compare them with the original's output.
 3. Feed `vo/`, `streams/wav/` and `music/wav/` into the host audio
-   backend.
+   backend. The host decoder and mixer are implemented; integration with
+   the event table is pending.
 
 ## Extraction tools
 

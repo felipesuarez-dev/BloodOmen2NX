@@ -105,8 +105,10 @@ and assets) is complete.
 - Collision semantics: the raw `collmodc` payload is extracted for every
   model, but the compressed vertices, edges/faces and the collision
   runtime are not decoded. Entity/player logic is also open.
-- Audio playback: Ogg streams extract from `pc.rkv`, but the decoder and
-  mixer (#27) and the `sound`/`strmfile` event table (#17) are open.
+- Audio playback is implemented: `pc.rkv` streams decode (floor-0 via
+  `libvorbisfile`, floor-1 via the bundled fallback), one music voice and
+  one-shot events mix to SDL, and `--event-ogg`/`--music-ogg` demonstrate
+  it. Wiring the `sound`/`strmfile` event table to gameplay is pending.
 - `region`, `planinfo`, `bpackage`, `strtable`, `musicbnk`, `texfont`,
   `liteinfo`.
 - The oracle frame comparison (the original launches under Wine/Xvfb).

@@ -69,6 +69,25 @@ Measured on this container for `sanctuary` at 640x480 with `--lightmap`:
 
 Hardware (Switch) numbers are tracked in #49.
 
+## Audio
+
+The host audio path decodes Ogg Vorbis and mixes one looping music track
+with one-shot events. Extract streams from the game's `pc.rkv` with the
+Python tool, then play them:
+
+```sh
+python3 tools/bo2fmt/rkv.py extract \
+  external/installed/media/gogames/bo2/pc.rkv --out /tmp/bo2-audio
+./build/linux-debug/bo2nx --event-ogg /tmp/bo2-audio/STR_CHEAT \
+  --music-ogg /tmp/bo2-audio/SD_bar_insidehum_03 --audio-seconds 5
+```
+
+The event plays once and the music loops; `--audio-seconds` bounds the
+demo. The reference streams use the Vorbis floor-0 mode, which the host
+reads through `libvorbisfile.so.3`; the bundled `stb_vorbis` fallback
+covers floor-1 streams when the system library is unavailable. The mixer
+is unit-tested with synthetic PCM.
+
 ## SDL2 + OpenGL window
 
 `--sdl` opens the SDL2 + OpenGL backend. With `--big` it loads the level

@@ -45,7 +45,7 @@ comparison.
 | Renderer pipeline | done | GLSL 1.20 + VBO/IBO, ordered runs; SDL frame 20-22 ms |
 | Frame comparator | done | Side-by-side, diff, tile/region metrics; oracle frame blocked |
 | Switch renderer (deko3d) | todo | M2+ |
-| Audio | wip | Ogg/sound extraction done; mixer/decoder pending #27 |
+| Audio | done | Ogg extraction, floor-0/1 decoder, stereo mixer, SDL output and event demo |
 | Video (Bink) | todo | M4; inventory and transcode plan done in `docs/FORMATS/video.md` |
 
 ## Rules

@@ -1,21 +1,26 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdint>
+#include <chrono>
 #include <cstdlib>
 #include <exception>
 #include <stdexcept>
 #include <iostream>
+#include <memory>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "bo2/engine/big_archive.hpp"
 #include "bo2/engine/cell_group.hpp"
 #include "bo2/engine/dds.hpp"
 #include "bo2/engine/erg.hpp"
+#include "bo2/engine/ogg.hpp"
 #include "bo2/platform/platform.hpp"
 #include "bo2/platform/headless/software_renderer.hpp"
 #include "bo2/version.hpp"
 #ifdef BO2NX_HAVE_SDL
+#include "bo2/platform/sdl/audio.hpp"
 #include "bo2/platform/sdl/sdl_backend.hpp"
 #endif
 
@@ -33,6 +38,9 @@ struct Options {
     std::string big;
     std::string entry;
     std::string out;
+    std::string event_ogg;
+    std::string music_ogg;
+    float audio_seconds = 5.0f;
     bo2::platform::headless::FrameOptions frame_options;
 };
 
@@ -106,7 +114,8 @@ Options parse_options(int argc, char** argv) {
                 << "  bo2nx --erg <game.erg>\n"
                 << "  bo2nx --frame --big <file.big> --out <frame.ppm> [options]\n"
                 << "  bo2nx --level --big <file.big> --out <frame.ppm> [options]\n"
-                << "  bo2nx --sdl [--big <file.big>] [--out <screenshot.ppm>] [options]\n\n"
+                << "  bo2nx --sdl [--big <file.big>] [--out <screenshot.ppm>] [options]\n"
+                << "  bo2nx --event-ogg <event.ogg> [--music-ogg <music.ogg>] [--audio-seconds n]\n\n"
                 << "Frame options:\n"
                 << "  --entry <substring>   texture entry (default: first texture)\n"
                 << "  --width <n>           frame width (default 640)\n"
@@ -116,7 +125,10 @@ Options parse_options(int argc, char** argv) {
                 << "  --fov <degrees>       vertical field of view (default 55)\n"
                 << "  --material <mode>     material tint: off, diffuse, layers, layers2x\n"
                 << "  --lightmap            sample the .slm light maps on textured surfaces\n"
-                << "  --stats               print load, parse, render and memory numbers\n";
+                << "  --stats               print load, parse, render and memory numbers\n"
+                << "  --event-ogg <file>     play one Ogg event\n"
+                << "  --music-ogg <file>     loop an Ogg music track\n"
+                << "  --audio-seconds <n>    audio demo duration (default 5)\n";
             std::exit(0);
         }
         if (argument == "--list-big") {
@@ -155,15 +167,25 @@ Options parse_options(int argc, char** argv) {
             options.frame_options.lightmap = true;
         } else if (argument == "--stats") {
             options.stats = true;
+        } else if (argument == "--event-ogg") {
+            options.event_ogg = next_argument(index, argc, argv);
+        } else if (argument == "--music-ogg") {
+            options.music_ogg = next_argument(index, argc, argv);
+        } else if (argument == "--audio-seconds") {
+            options.audio_seconds = parse_float(next_argument(index, argc, argv), "audio-seconds");
+            if (options.audio_seconds <= 0.0f || options.audio_seconds > 600.0f) {
+                usage_error("audio-seconds must be between 0 and 600");
+            }
         } else {
             usage_error("unknown argument: " + argument);
         }
     }
+    const bool audio = !options.event_ogg.empty() || !options.music_ogg.empty();
     const int modes = (!options.list_big.empty() ? 1 : 0) + (!options.erg.empty() ? 1 : 0) +
                       (options.frame ? 1 : 0) + (options.level ? 1 : 0) +
-                      (options.sdl ? 1 : 0);
+                      (options.sdl ? 1 : 0) + (audio ? 1 : 0);
     if (modes > 1) {
-        usage_error("--list-big, --erg, --frame, --level and --sdl are mutually exclusive");
+        usage_error("--list-big, --erg, --frame, --level, --sdl and audio are mutually exclusive");
     }
     return options;
 }
@@ -449,6 +471,40 @@ int run_sdl(const Options& options) {
 #endif
 }
 
+int run_audio(const Options& options) {
+#ifdef BO2NX_HAVE_SDL
+    std::shared_ptr<const bo2::engine::PcmClip> event;
+    std::shared_ptr<const bo2::engine::PcmClip> music;
+    if (!options.event_ogg.empty()) {
+        event = bo2::engine::decode_ogg(bo2::platform::FileSystem::read_binary(options.event_ogg));
+    }
+    if (!options.music_ogg.empty()) {
+        music = bo2::engine::decode_ogg(bo2::platform::FileSystem::read_binary(options.music_ogg));
+    }
+    bo2::platform::sdl::AudioDevice device;
+    if (music != nullptr) {
+        device.start_music(music);
+    }
+    if (event != nullptr) {
+        device.play_event(event);
+    }
+    std::cout << "audio: event " << (event ? event->frames() : 0) << " frames, music "
+              << (music ? music->frames() : 0) << " frames, " << device.sample_rate() << " Hz\n";
+    const std::uint64_t start = bo2::platform::monotonic_nanoseconds();
+    const double limit = static_cast<double>(options.audio_seconds) * 1.0e9;
+    while (static_cast<double>(bo2::platform::monotonic_nanoseconds() - start) < limit) {
+        if (event != nullptr && music == nullptr && !device.events_active()) {
+            break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(25));
+    }
+    return 0;
+#else
+    (void)options;
+    throw std::runtime_error("this build has no SDL2 audio backend");
+#endif
+}
+
 int print_erg(const std::string& path) {
     const std::string text = bo2::platform::FileSystem::read_text(path);
     const bo2::engine::ErgConfig config = bo2::engine::ErgConfig::parse(text);
@@ -524,6 +580,9 @@ int main(int argc, char** argv) {
         }
         if (options.sdl) {
             return run_sdl(options);
+        }
+        if (!options.event_ogg.empty() || !options.music_ogg.empty()) {
+            return run_audio(options);
         }
         std::cout << bo2::kProjectName << ' ' << bo2::version() << '\n';
         return 0;
