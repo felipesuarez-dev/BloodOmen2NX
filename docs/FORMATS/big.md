@@ -127,8 +127,8 @@ exposes them. The `language index` is stored but not interpreted.
 
 - The meaning of the language index and of the `n` u16 values, beyond
   the `cellgrup` symbol list.
-- `region`, `planinfo`, `animatio`, `animreel`, `strtable`, `musicbnk`,
-  `texfont`, `liteinfo`.
+- `planinfo`, `animatio`, `animreel`, `strtable`, `musicbnk`, `texfont`,
+  `liteinfo`; `region` is decoded in `docs/FORMATS/region.md`.
 - The `region`, `planinfo` and shared `model` records (the `cellgrup` tail is decoded in `docs/FORMATS/models.md`).
 - Which types the renderer and audio backend consume first.
 

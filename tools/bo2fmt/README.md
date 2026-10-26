@@ -70,6 +70,7 @@ Requirements:
 | `bo2fmt.py` | Umbrella list/unpack/repack CLI | BIG and RKV list/unpack; BIG repack verified byte-identical |
 | `audio.py` | `sound` metadata and `strmfile` extraction | Verified on the installed tree; field semantics open |
 | `model.py` | model, skeleton and raw animation extraction | Verified: 5,168 models, 1,586 skinned |
+| `region.py` | entity table extraction | Verified: 15,632 entities, 533 models, 0 errors |
 | `compare_frames.py` | Frame side-by-side, diff and metrics | Synthetic tests; oracle capture blocked |
 
 The numbered `data/*.dat` pipeline is documented in

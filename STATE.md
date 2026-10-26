@@ -107,7 +107,8 @@ and assets) is complete.
   A triangle-soup `CollisionWorld` provides sphere overlap and ray casts.
   A provisional `PlayerController` moves a body with collision, gravity,
   jumping and a first-person camera; its speeds and input mapping are not
-  yet a faithful translation and require decompilation.
+  yet a faithful translation and require decompilation. The `region`
+  entity table is decoded: 15,632 entities and 533 model names, 0 errors.
   The compressed `collmodc` runtime and game-specific entities remain
   pending.
 
