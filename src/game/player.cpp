@@ -74,6 +74,11 @@ void PlayerController::look(float yaw_delta, float pitch_delta) {
     state_.pitch = std::clamp(state_.pitch + pitch_delta, -1.2f, 1.2f);
 }
 
+void PlayerController::restore(const PlayerState& state) {
+    state_ = state;
+    state_.vertical_velocity = 0.0f;
+}
+
 const PlayerState& PlayerController::state() const {
     return state_;
 }

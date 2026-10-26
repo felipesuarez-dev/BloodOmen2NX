@@ -110,8 +110,9 @@ the arrow keys to move the target, `A`/`D` to strafe, the right mouse
 button to orbit, the wheel to zoom and `Escape` to quit.
 
 `--play` opens the provisional third-person player instead: `WASD` moves,
-the right mouse button looks, `Shift`/`R` runs, `Space` jumps and
-`Escape` quits. The follow camera is clamped by the level collision mesh. The movement constants are placeholders until the
+the right mouse button looks, `Shift`/`R` runs, `Space` jumps, `F5`/`F9`
+save/load the checkpoint slot and `Escape` quits. The follow camera is
+clamped by the level collision mesh; two bars show health and mana. The movement constants are placeholders until the
 original player/camera functions are decompiled; this mode is a
 development harness, not a faithful Kain controller.
 

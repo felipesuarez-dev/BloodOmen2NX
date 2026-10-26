@@ -61,6 +61,19 @@ void test_jump_and_land() {
     CHECK(std::fabs(player.state().position.z) < 1.0e-4f);
 }
 
+void test_restore() {
+    const bo2::engine::LevelGeometry floor = make_floor();
+    bo2::engine::CollisionWorld collision(floor);
+    bo2::game::PlayerController player(collision, {0.0f, 0.0f, 0.0f});
+    bo2::game::PlayerState target;
+    target.position = {3.0f, 4.0f, 0.0f};
+    target.yaw = 1.0f;
+    player.restore(target);
+    CHECK(player.state().position.x == 3.0f);
+    CHECK(player.state().yaw == 1.0f);
+    CHECK(player.state().vertical_velocity == 0.0f);
+}
+
 void test_camera_look() {
     const bo2::engine::LevelGeometry floor = make_floor();
     bo2::engine::CollisionWorld collision(floor);
@@ -77,6 +90,7 @@ void test_camera_look() {
 int main() {
     test_movement_and_collision();
     test_jump_and_land();
+    test_restore();
     test_camera_look();
     if (failures != 0) {
         std::cerr << failures << " check(s) failed\n";

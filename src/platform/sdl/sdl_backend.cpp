@@ -1,5 +1,6 @@
 #include "bo2/game/camera.hpp"
 #include "bo2/game/player.hpp"
+#include "bo2/game/save.hpp"
 #include "bo2/engine/collision.hpp"
 #include "bo2/platform/input.hpp"
 #include "bo2/platform/sdl/sdl_backend.hpp"
@@ -314,6 +315,41 @@ SDL_GameController* open_controller(int index) {
     return SDL_GameControllerOpen(index);
 }
 
+void draw_hud(std::uint32_t width, std::uint32_t height, const game::HudState& hud) {
+    glDisable(GL_TEXTURE_2D);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glOrtho(0.0, static_cast<double>(width), static_cast<double>(height), 0.0, -1.0, 1.0);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    const float bar_width = static_cast<float>(width) * 0.3f;
+    const float bar_height = static_cast<float>(height) * 0.025f;
+    const float x = static_cast<float>(width) * 0.03f;
+    const float y = static_cast<float>(height) * 0.93f;
+    auto bar = [&](float position, float fraction, float red, float green, float blue) {
+        glColor3f(0.1f, 0.1f, 0.1f);
+        glBegin(GL_QUADS);
+        glVertex2f(x, y + position);
+        glVertex2f(x + bar_width, y + position);
+        glVertex2f(x + bar_width, y + position + bar_height);
+        glVertex2f(x, y + position + bar_height);
+        glEnd();
+        glColor3f(red, green, blue);
+        glBegin(GL_QUADS);
+        glVertex2f(x, y + position);
+        glVertex2f(x + bar_width * fraction, y + position);
+        glVertex2f(x + bar_width * fraction, y + position + bar_height);
+        glVertex2f(x, y + position + bar_height);
+        glEnd();
+    };
+    bar(0.0f, std::clamp(hud.health / 100.0f, 0.0f, 1.0f), 0.85f, 0.15f, 0.15f);
+    bar(bar_height * 1.6f, std::clamp(hud.mana / 100.0f, 0.0f, 1.0f), 0.15f, 0.3f, 0.9f);
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_TEXTURE_2D);
+}
+
 void draw_player(const engine::Vec3& position) {
     glDisable(GL_TEXTURE_2D);
     glDisable(GL_DEPTH_TEST);
@@ -447,6 +483,9 @@ int run_level(const engine::LevelGeometry& geometry,
     bool dragging = false;
     bool print_stats = options.stats;
     Uint32 last_ticks = SDL_GetTicks();
+    std::uint64_t play_tick = 0;
+    game::CheckpointSlots checkpoints;
+    game::HudState hud;
     while (running) {
         SDL_Event event;
         while (SDL_PollEvent(&event) != 0) {
@@ -460,6 +499,24 @@ int run_level(const engine::LevelGeometry& geometry,
                            SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(controller))) {
                 SDL_GameControllerClose(controller);
                 controller = nullptr;
+            } else if (player != nullptr && event.type == SDL_KEYDOWN &&
+                       event.key.keysym.sym == SDLK_F5) {
+                game::SaveGame save;
+                save.level = options.title;
+                save.player = player->state();
+                save.hud = hud;
+                save.tick = play_tick;
+                checkpoints.store(0, save);
+                std::cout << "checkpoint saved\n";
+            } else if (player != nullptr && event.type == SDL_KEYDOWN &&
+                       event.key.keysym.sym == SDLK_F9) {
+                const auto save = checkpoints.load(0);
+                if (save.has_value()) {
+                    player->restore(save->player);
+                    hud = save->hud;
+                    follow->update(player->state(), *collision);
+                    std::cout << "checkpoint loaded\n";
+                }
             } else if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_RIGHT) {
                 dragging = true;
             } else if (event.type == SDL_MOUSEBUTTONUP && event.button.button == SDL_BUTTON_RIGHT) {
@@ -511,6 +568,7 @@ int run_level(const engine::LevelGeometry& geometry,
             player_input.jump = state.action(InputAction::Jump);
             player->step(player_input, static_cast<double>(dt));
             follow->update(player->state(), *collision);
+            ++play_tick;
         } else {
             const float step = std::max(0.01f, orbit.distance * 0.01f) *
                                (state.action(InputAction::Run) ? 2.0f : 1.0f);
@@ -546,6 +604,9 @@ int run_level(const engine::LevelGeometry& geometry,
                    active_camera(), options.width, options.height, options.material_mode,
                    options.lightmap);
         draw_player(player ? player->state().position : orbit.target);
+        if (player) {
+            draw_hud(options.width, options.height, hud);
+        }
         SDL_GL_SwapWindow(context->window);
         if (print_stats) {
             const double frame_ms = static_cast<double>(

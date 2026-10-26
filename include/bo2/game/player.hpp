@@ -28,6 +28,7 @@ public:
 
     void step(const PlayerInput& input, double seconds);
     void look(float yaw_delta, float pitch_delta);
+    void restore(const PlayerState& state);
     const PlayerState& state() const;
     bo2::engine::Vec3 camera_eye() const;
     bo2::engine::Vec3 camera_target() const;

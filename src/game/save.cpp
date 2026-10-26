@@ -74,6 +74,9 @@ std::vector<std::uint8_t> serialize_save(const SaveGame& save) {
     put_float(data, save.player.pitch);
     put_float(data, save.player.vertical_velocity);
     data.push_back(save.player.grounded ? 1 : 0);
+    put_float(data, save.hud.health);
+    put_float(data, save.hud.mana);
+    put_u32(data, save.hud.weapon);
     put_u64(data, save.tick);
     return data;
 }
@@ -105,6 +108,9 @@ SaveGame deserialize_save(const std::vector<std::uint8_t>& data) {
         throw std::runtime_error("truncated save flags");
     }
     save.player.grounded = data[offset++] != 0;
+    save.hud.health = read_float(data, offset);
+    save.hud.mana = read_float(data, offset);
+    save.hud.weapon = read_u32(data, offset);
     save.tick = read_u64(data, offset);
     if (offset != data.size()) {
         throw std::runtime_error("save has trailing bytes");
@@ -119,6 +125,40 @@ std::uint64_t save_hash(const std::vector<std::uint8_t>& data) {
         hash *= 1099511628211ULL;
     }
     return hash;
+}
+
+Checkpoint::Checkpoint(std::string level, const bo2::engine::Vec3& position, float radius)
+    : level_(std::move(level)), position_(position), radius_(radius) {}
+
+std::optional<SaveGame> Checkpoint::update(const PlayerState& player, std::uint64_t tick,
+                                           const HudState& hud) {
+    const bo2::engine::Vec3 difference = player.position - position_;
+    const bool now_inside = bo2::engine::length(difference) <= radius_;
+    const bool entered = now_inside && !inside_;
+    inside_ = now_inside;
+    if (!entered || triggered_) {
+        return std::nullopt;
+    }
+    triggered_ = true;
+    SaveGame save;
+    save.level = level_;
+    save.player = player;
+    save.hud = hud;
+    save.tick = tick;
+    return save;
+}
+
+bool Checkpoint::inside() const {
+    return inside_;
+}
+
+bool Checkpoint::triggered() const {
+    return triggered_;
+}
+
+void Checkpoint::reset() {
+    inside_ = false;
+    triggered_ = false;
 }
 
 bool CheckpointSlots::store(std::uint32_t slot, const SaveGame& save) {
