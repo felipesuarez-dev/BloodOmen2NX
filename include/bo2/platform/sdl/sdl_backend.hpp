@@ -26,6 +26,7 @@ struct WindowOptions {
     engine::MaterialMode material_mode = engine::MaterialMode::Off;
     bool lightmap = false;
     bool stats = false;
+    bool play = false;
     Camera camera;
 };
 

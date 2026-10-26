@@ -27,6 +27,7 @@ public:
     PlayerController(bo2::engine::CollisionWorld& collision, const bo2::engine::Vec3& start);
 
     void step(const PlayerInput& input, double seconds);
+    void look(float yaw_delta, float pitch_delta);
     const PlayerState& state() const;
     bo2::engine::Vec3 camera_eye() const;
     bo2::engine::Vec3 camera_target() const;

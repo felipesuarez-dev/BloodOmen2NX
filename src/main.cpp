@@ -37,6 +37,7 @@ struct Options {
     bool frame = false;
     bool level = false;
     bool sdl = false;
+    bool play = false;
     bool headless = false;
     bool stats = false;
     std::uint32_t frames = 0;
@@ -123,6 +124,7 @@ Options parse_options(int argc, char** argv) {
                 << "  bo2nx --frame --big <file.big> --out <frame.ppm> [options]\n"
                 << "  bo2nx --level --big <file.big> --out <frame.ppm> [options]\n"
                 << "  bo2nx --sdl [--big <file.big>] [--out <screenshot.ppm>] [options]\n"
+                << "  bo2nx --play --big <file.big> [options]\n"
                 << "  bo2nx --event-ogg <event.ogg> [--music-ogg <music.ogg>] [--audio-seconds n]\n"
                 << "  bo2nx --headless --frames <n> [--tick-rate <hz>]\n\n"
                 << "Frame options:\n"
@@ -138,6 +140,7 @@ Options parse_options(int argc, char** argv) {
                 << "  --event-ogg <file>     play one Ogg event\n"
                 << "  --music-ogg <file>     loop an Ogg music track\n"
                 << "  --audio-seconds <n>    audio demo duration (default 5)\n"
+                << "  --play                 player-controlled first-person viewer\n"
                 << "  --headless             run the fixed-step loop without a window\n"
                 << "  --frames <n>           fixed-step iterations for --headless\n"
                 << "  --tick-rate <hz>       logic ticks per second (default 60)\n";
@@ -152,6 +155,9 @@ Options parse_options(int argc, char** argv) {
         } else if (argument == "--level") {
             options.level = true;
         } else if (argument == "--sdl") {
+            options.sdl = true;
+        } else if (argument == "--play") {
+            options.play = true;
             options.sdl = true;
         } else if (argument == "--headless") {
             options.headless = true;
@@ -555,6 +561,7 @@ int run_sdl(const Options& options) {
     window.material_mode = options.frame_options.material_mode;
     window.lightmap = options.frame_options.lightmap;
     window.stats = options.stats;
+    window.play = options.play;
     if (options.big.empty()) {
         return bo2::platform::sdl::run_triangle(window);
     }

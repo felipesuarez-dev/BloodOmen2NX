@@ -1,3 +1,5 @@
+#include "bo2/game/player.hpp"
+#include "bo2/engine/collision.hpp"
 #include "bo2/platform/input.hpp"
 #include "bo2/platform/sdl/sdl_backend.hpp"
 #include "render_pipeline.hpp"
@@ -388,10 +390,29 @@ int run_level(const engine::LevelGeometry& geometry,
     detail::LevelPipeline pipeline;
     pipeline.upload(geometry);
     OrbitCamera orbit = make_orbit(options.camera);
+    std::unique_ptr<engine::CollisionWorld> collision;
+    std::unique_ptr<game::PlayerController> player;
+    if (options.play) {
+        collision = std::make_unique<engine::CollisionWorld>(geometry);
+        engine::Vec3 start = options.camera.target;
+        start.z += 1.0f;
+        player = std::make_unique<game::PlayerController>(*collision, start);
+    }
+    const auto active_camera = [&]() {
+        if (player) {
+            Camera value;
+            value.eye = player->camera_eye();
+            value.target = player->camera_target();
+            value.up = {0.0f, 0.0f, 1.0f};
+            value.fov_degrees = options.camera.fov_degrees;
+            return value;
+        }
+        return current_camera(orbit);
+    };
     if (!options.screenshot.empty()) {
         const auto frame_start = std::chrono::steady_clock::now();
         draw_level(geometry, texture_ids, lightmap_ids, model_lightmap_offset, pipeline,
-                   current_camera(orbit), options.width, options.height, options.material_mode,
+                   active_camera(), options.width, options.height, options.material_mode,
                    options.lightmap);
         glFinish();
         capture(options.screenshot, options.width, options.height);
@@ -421,6 +442,7 @@ int run_level(const engine::LevelGeometry& geometry,
     bool running = true;
     bool dragging = false;
     bool print_stats = options.stats;
+    Uint32 last_ticks = SDL_GetTicks();
     while (running) {
         SDL_Event event;
         while (SDL_PollEvent(&event) != 0) {
@@ -439,10 +461,15 @@ int run_level(const engine::LevelGeometry& geometry,
             } else if (event.type == SDL_MOUSEBUTTONUP && event.button.button == SDL_BUTTON_RIGHT) {
                 dragging = false;
             } else if (event.type == SDL_MOUSEMOTION && dragging) {
-                orbit.yaw -= static_cast<float>(event.motion.xrel) * 0.005f;
-                orbit.pitch += static_cast<float>(event.motion.yrel) * 0.005f;
-                orbit.pitch = std::clamp(orbit.pitch, -1.5f, 1.5f);
-            } else if (event.type == SDL_MOUSEWHEEL) {
+                if (player) {
+                    player->look(-static_cast<float>(event.motion.xrel) * 0.005f,
+                                 static_cast<float>(event.motion.yrel) * 0.005f);
+                } else {
+                    orbit.yaw -= static_cast<float>(event.motion.xrel) * 0.005f;
+                    orbit.pitch += static_cast<float>(event.motion.yrel) * 0.005f;
+                    orbit.pitch = std::clamp(orbit.pitch, -1.5f, 1.5f);
+                }
+            } else if (event.type == SDL_MOUSEWHEEL && player == nullptr) {
                 orbit.distance *= 1.0f - static_cast<float>(event.wheel.y) * 0.1f;
                 orbit.distance = std::max(0.1f, orbit.distance);
             }
@@ -467,37 +494,53 @@ int run_level(const engine::LevelGeometry& geometry,
             std::clamp((state.action(InputAction::MoveRight) ? 1.0f : 0.0f) -
                            (state.action(InputAction::MoveLeft) ? 1.0f : 0.0f) + state.move_x,
                        -1.0f, 1.0f);
-        const float step = std::max(0.01f, orbit.distance * 0.01f) *
-                           (state.action(InputAction::Run) ? 2.0f : 1.0f);
-        const engine::Vec3 view = engine::normalize(orbit.target - current_camera(orbit).eye);
-        engine::Vec3 forward{view.x, view.y, 0.0f};
-        if (engine::length(forward) < 1.0e-6f) {
-            forward = {1.0f, 0.0f, 0.0f};
+        if (player) {
+            const Uint32 now = SDL_GetTicks();
+            const float dt = std::clamp(static_cast<float>(now - last_ticks) / 1000.0f, 0.0f, 0.1f);
+            last_ticks = now;
+            game::PlayerInput player_input;
+            player_input.move_x = right_axis;
+            player_input.move_y = forward_axis;
+            player_input.look_x = state.look_x;
+            player_input.look_y = state.look_y;
+            player_input.run = state.action(InputAction::Run);
+            player_input.jump = state.action(InputAction::Jump);
+            player->step(player_input, static_cast<double>(dt));
         } else {
-            forward = engine::normalize(forward);
+            const float step = std::max(0.01f, orbit.distance * 0.01f) *
+                               (state.action(InputAction::Run) ? 2.0f : 1.0f);
+            const engine::Vec3 view = engine::normalize(orbit.target - current_camera(orbit).eye);
+            engine::Vec3 forward{view.x, view.y, 0.0f};
+            if (engine::length(forward) < 1.0e-6f) {
+                forward = {1.0f, 0.0f, 0.0f};
+            } else {
+                forward = engine::normalize(forward);
+            }
+            const engine::Vec3 right =
+                engine::normalize(engine::cross(forward, {0.0f, 0.0f, 1.0f}));
+            orbit.target =
+                orbit.target + forward * (forward_axis * step) + right * (right_axis * step);
+            orbit.yaw -= state.look_x * 0.05f;
+            orbit.pitch += state.look_y * 0.05f;
+            if (state.action(InputAction::LookUp)) {
+                orbit.pitch += 0.02f;
+            }
+            if (state.action(InputAction::LookDown)) {
+                orbit.pitch -= 0.02f;
+            }
+            if (state.action(InputAction::LookLeft)) {
+                orbit.yaw += 0.02f;
+            }
+            if (state.action(InputAction::LookRight)) {
+                orbit.yaw -= 0.02f;
+            }
+            orbit.pitch = std::clamp(orbit.pitch, -1.5f, 1.5f);
         }
-        const engine::Vec3 right = engine::normalize(engine::cross(forward, {0.0f, 0.0f, 1.0f}));
-        orbit.target = orbit.target + forward * (forward_axis * step) + right * (right_axis * step);
-        orbit.yaw -= state.look_x * 0.05f;
-        orbit.pitch += state.look_y * 0.05f;
-        if (state.action(InputAction::LookUp)) {
-            orbit.pitch += 0.02f;
-        }
-        if (state.action(InputAction::LookDown)) {
-            orbit.pitch -= 0.02f;
-        }
-        if (state.action(InputAction::LookLeft)) {
-            orbit.yaw += 0.02f;
-        }
-        if (state.action(InputAction::LookRight)) {
-            orbit.yaw -= 0.02f;
-        }
-        orbit.pitch = std::clamp(orbit.pitch, -1.5f, 1.5f);
         const auto frame_start = std::chrono::steady_clock::now();
         draw_level(geometry, texture_ids, lightmap_ids, model_lightmap_offset, pipeline,
-                   current_camera(orbit), options.width, options.height, options.material_mode,
+                   active_camera(), options.width, options.height, options.material_mode,
                    options.lightmap);
-        draw_player(orbit.target);
+        draw_player(player ? player->state().position : orbit.target);
         SDL_GL_SwapWindow(context->window);
         if (print_stats) {
             const double frame_ms = static_cast<double>(

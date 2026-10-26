@@ -69,6 +69,11 @@ void PlayerController::step(const PlayerInput& input, double seconds) {
     }
 }
 
+void PlayerController::look(float yaw_delta, float pitch_delta) {
+    state_.yaw += yaw_delta;
+    state_.pitch = std::clamp(state_.pitch + pitch_delta, -1.2f, 1.2f);
+}
+
 const PlayerState& PlayerController::state() const {
     return state_;
 }

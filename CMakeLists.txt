@@ -64,8 +64,8 @@ if(BO2NX_ENABLE_SDL)
             src/platform/sdl/render_pipeline.cpp
             src/platform/sdl/sdl_backend.cpp
         )
-        target_link_libraries(bo2_platform_sdl PUBLIC bo2_engine bo2_platform_core SDL2::SDL2
-                                                     OpenGL::GL)
+        target_link_libraries(bo2_platform_sdl PUBLIC bo2_engine bo2_game bo2_platform_core
+                                                     SDL2::SDL2 OpenGL::GL)
         target_include_directories(bo2_platform_sdl PUBLIC include)
         target_compile_options(bo2_platform_sdl PRIVATE ${BO2NX_WARNINGS})
         set(BO2NX_HAVE_SDL ON)

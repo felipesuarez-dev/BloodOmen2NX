@@ -105,10 +105,15 @@ xvfb-run -a ./build/linux-debug/bo2nx --sdl --out /tmp/sdl-triangle.ppm
 ```
 
 With `--out` the backend renders one frame, captures the framebuffer and
-exits; without it the window stays open. The camera target is the player
-placeholder; `W`/`S` or the arrow keys move it, `A`/`D` strafe, the right
-mouse button orbits, the wheel zooms and `Escape` quits. The real actor
-arrives with the M3 game logic.
+exits; without it the window stays open. The orbit viewer uses `W`/`S` or
+the arrow keys to move the target, `A`/`D` to strafe, the right mouse
+button to orbit, the wheel to zoom and `Escape` to quit.
+
+`--play` opens the provisional first-person player instead: `WASD` moves,
+the right mouse button looks, `Shift`/`R` runs, `Space` jumps and
+`Escape` quits. The movement constants are placeholders until the
+original player/camera functions are decompiled; this mode is a
+development harness, not a faithful Kain controller.
 
 Controls are defined in `include/bo2/platform/input.hpp`; the mapping is
 provisional until the original controls are recovered from `bo2.exe`.
