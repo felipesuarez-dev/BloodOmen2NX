@@ -14,6 +14,8 @@ live in `external/ghidra` (gitignored) and are analysed as
 | `DecompileAt.java` | Decompile the function at or containing each address |
 | `XrefsTo.java` | List references to each address |
 | `MakeFunction.java` | Disassemble and create a function missed by auto-analysis |
+| `RecoverFunctions.java` | Recover all executable targets referenced by instructions |
+| `RecoverFunctionsFiltered.java` | Recover call/jump targets only |
 
 ## Usage
 

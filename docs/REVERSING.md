@@ -42,7 +42,9 @@ Ghidra auto-analysis misses functions reached only through indirect calls,
 window procedures and callbacks. The sibling project recovered about 218
 missing functions in a 190 KB binary. Expect the same here.
 
-The recovery pass:
+The recovery pass is implemented by
+`tools/ghidra/ghidra_scripts/RecoverFunctions.java` (all code references)
+and `RecoverFunctionsFiltered.java` (call/jump references only):
 
 1. Find code references that are not defined as functions (disassemble and
    create functions).
@@ -50,6 +52,11 @@ The recovery pass:
 3. Cross-check with strings and RTTI.
 4. Re-export the function list and merge it into `re/FUNCTION_MAP.csv`
    without overwriting existing rows.
+
+A fresh import on 2026-10-26 found 3,994 call/jump candidates that were not
+functions; the unfiltered pass found more candidates, including data
+references. The recovered set still needs manual classification before it
+is merged into the function map.
 
 ## Naming
 
