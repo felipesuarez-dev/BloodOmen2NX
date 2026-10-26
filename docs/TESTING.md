@@ -12,7 +12,8 @@
 | Integration (asset-gated) | Parsers over the user's real assets -> counts and SHA-256 manifests | `BO2NX_ASSETS_DIR` set | Yes, skips otherwise |
 | Render golden | Offscreen render of a scene or texture -> PNG hash | `BO2NX_ASSETS_DIR` set | Yes, goldens local |
 | Frame comparator | Side-by-side, diff, tile/region metrics on two PPMs | Manual and Python unit test | No (synthetic PPM) |
-| Headless regression | `bo2nx --headless --frames N --dump-state` -> canonical hash | Always (synthetic) / gated (real levels) | Mixed |
+| Headless loop | `FixedStep` unit tests and `bo2nx --headless --frames N` | Always | No |
+| Headless regression | `bo2nx --headless --frames N --dump-state` -> canonical hash | Pending | Mixed |
 | Oracle | Port vs original under Wine (screenshots, state, saves, audio) | Milestones | See `docs/RUNNING.md` |
 | SDL smoke | SDL2/OpenGL triangle under Xvfb -> PPM | When SDL2 and Xvfb are present | No |
 | Sanitizers | ASan + UBSan over unit and integration | `linux-asan` preset | No |

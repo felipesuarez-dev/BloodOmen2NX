@@ -23,6 +23,7 @@ add_library(bo2_engine STATIC
     src/engine/dds.cpp
     src/engine/erg.cpp
     src/engine/ogg.cpp
+    src/engine/tick.cpp
     third_party/stb_vorbis.c
 )
 target_link_libraries(bo2_engine PUBLIC bo2_common ${CMAKE_DL_LIBS})
@@ -84,6 +85,11 @@ if(BUILD_TESTING)
     target_link_libraries(bo2nx_renderer_tests PRIVATE bo2_platform_headless)
     target_compile_options(bo2nx_renderer_tests PRIVATE ${BO2NX_WARNINGS})
     add_test(NAME renderer COMMAND bo2nx_renderer_tests)
+
+    add_executable(bo2nx_tick_tests tests/unit/test_tick.cpp)
+    target_link_libraries(bo2nx_tick_tests PRIVATE bo2_engine)
+    target_compile_options(bo2nx_tick_tests PRIVATE ${BO2NX_WARNINGS})
+    add_test(NAME tick COMMAND bo2nx_tick_tests)
 
     add_executable(bo2nx_audio_tests tests/unit/test_audio.cpp)
     target_link_libraries(bo2nx_audio_tests PRIVATE bo2_engine)

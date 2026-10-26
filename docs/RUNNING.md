@@ -10,7 +10,8 @@ ctest --preset linux-debug --output-on-failure
 ```
 
 The host binary inspects `.big` containers, renders frames without a
-window and can open an SDL2 + OpenGL window when the backend is built.
+window, runs a fixed-step headless loop and can open an SDL2 + OpenGL
+window when the backend is built.
 
 Inspect a container and render a real texture on the free-camera preview:
 
@@ -138,14 +139,15 @@ provisional until the original controls are recovered from `bo2.exe`.
 | `--material <mode>` | Diagnostic material tint: `off`, `diffuse`, `layers`, `layers2x` |
 | `--lightmap` | Sample the `.slm` light maps with the second UV set |
 | `--stats` | Print load breakdown, render time, RSS and peak memory |
+| `--headless` | Run the fixed-step loop without a window |
+| `--frames <n>` | Fixed-step iterations for `--headless` |
+| `--tick-rate <hz>` | Logic ticks per second (default 60) |
 
 Planned with the level pipeline:
 
 | Flag | Purpose |
 |---|---|
 | `--data-dir <dir>` | Game installation to read |
-| `--headless` | No window; fixed ticks |
-| `--frames N` | Run exactly N logic ticks |
 | `--dump-state <file>` | Canonical state serialization for regression tests |
 
 ## Switch build (M2)

@@ -16,6 +16,7 @@
 #include "bo2/engine/dds.hpp"
 #include "bo2/engine/erg.hpp"
 #include "bo2/engine/ogg.hpp"
+#include "bo2/engine/tick.hpp"
 #include "bo2/platform/platform.hpp"
 #include "bo2/platform/headless/software_renderer.hpp"
 #include "bo2/version.hpp"
@@ -32,7 +33,10 @@ struct Options {
     bool frame = false;
     bool level = false;
     bool sdl = false;
+    bool headless = false;
     bool stats = false;
+    std::uint32_t frames = 0;
+    std::uint32_t tick_rate = 60;
     bool eye_set = false;
     bool target_set = false;
     std::string big;
@@ -115,7 +119,8 @@ Options parse_options(int argc, char** argv) {
                 << "  bo2nx --frame --big <file.big> --out <frame.ppm> [options]\n"
                 << "  bo2nx --level --big <file.big> --out <frame.ppm> [options]\n"
                 << "  bo2nx --sdl [--big <file.big>] [--out <screenshot.ppm>] [options]\n"
-                << "  bo2nx --event-ogg <event.ogg> [--music-ogg <music.ogg>] [--audio-seconds n]\n\n"
+                << "  bo2nx --event-ogg <event.ogg> [--music-ogg <music.ogg>] [--audio-seconds n]\n"
+                << "  bo2nx --headless --frames <n> [--tick-rate <hz>]\n\n"
                 << "Frame options:\n"
                 << "  --entry <substring>   texture entry (default: first texture)\n"
                 << "  --width <n>           frame width (default 640)\n"
@@ -128,7 +133,10 @@ Options parse_options(int argc, char** argv) {
                 << "  --stats               print load, parse, render and memory numbers\n"
                 << "  --event-ogg <file>     play one Ogg event\n"
                 << "  --music-ogg <file>     loop an Ogg music track\n"
-                << "  --audio-seconds <n>    audio demo duration (default 5)\n";
+                << "  --audio-seconds <n>    audio demo duration (default 5)\n"
+                << "  --headless             run the fixed-step loop without a window\n"
+                << "  --frames <n>           fixed-step iterations for --headless\n"
+                << "  --tick-rate <hz>       logic ticks per second (default 60)\n";
             std::exit(0);
         }
         if (argument == "--list-big") {
@@ -141,6 +149,15 @@ Options parse_options(int argc, char** argv) {
             options.level = true;
         } else if (argument == "--sdl") {
             options.sdl = true;
+        } else if (argument == "--headless") {
+            options.headless = true;
+        } else if (argument == "--frames") {
+            options.frames = parse_dimension(next_argument(index, argc, argv), "frames");
+        } else if (argument == "--tick-rate") {
+            options.tick_rate = parse_dimension(next_argument(index, argc, argv), "tick-rate");
+            if (options.tick_rate > 1000) {
+                usage_error("tick-rate must be at most 1000");
+            }
         } else if (argument == "--big") {
             options.big = next_argument(index, argc, argv);
         } else if (argument == "--entry") {
@@ -183,9 +200,9 @@ Options parse_options(int argc, char** argv) {
     const bool audio = !options.event_ogg.empty() || !options.music_ogg.empty();
     const int modes = (!options.list_big.empty() ? 1 : 0) + (!options.erg.empty() ? 1 : 0) +
                       (options.frame ? 1 : 0) + (options.level ? 1 : 0) +
-                      (options.sdl ? 1 : 0) + (audio ? 1 : 0);
+                      (options.sdl ? 1 : 0) + (options.headless ? 1 : 0) + (audio ? 1 : 0);
     if (modes > 1) {
-        usage_error("--list-big, --erg, --frame, --level, --sdl and audio are mutually exclusive");
+        usage_error("--list-big, --erg, --frame, --level, --sdl, --headless and audio are mutually exclusive");
     }
     return options;
 }
@@ -505,6 +522,25 @@ int run_audio(const Options& options) {
 #endif
 }
 
+int run_headless(const Options& options) {
+    if (options.frames == 0) {
+        usage_error("--headless requires --frames");
+    }
+    bo2::engine::FixedStep loop(1.0 / static_cast<double>(options.tick_rate));
+    std::uint32_t completed = 0;
+    while (completed < options.frames) {
+        const std::uint32_t steps =
+            loop.advance(1.0 / static_cast<double>(options.tick_rate), {});
+        if (steps == 0) {
+            break;
+        }
+        completed += steps;
+    }
+    std::cout << "headless: " << loop.ticks() << " ticks at " << options.tick_rate
+              << " Hz (step " << loop.step_seconds() << " s)\n";
+    return 0;
+}
+
 int print_erg(const std::string& path) {
     const std::string text = bo2::platform::FileSystem::read_text(path);
     const bo2::engine::ErgConfig config = bo2::engine::ErgConfig::parse(text);
@@ -577,6 +613,9 @@ int main(int argc, char** argv) {
         }
         if (options.level) {
             return render_level_frame(options);
+        }
+        if (options.headless) {
+            return run_headless(options);
         }
         if (options.sdl) {
             return run_sdl(options);

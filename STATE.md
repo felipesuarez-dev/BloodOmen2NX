@@ -95,6 +95,10 @@ and assets) is complete.
   fixed-function path. It uses the same engine data as the headless path;
   a 640x480 sanctuary frame is within 0.2% RMSE of the software renderer.
 
+- The fixed-step loop (`FixedStep`) and `--headless --frames N` are in
+  place; the accumulator is clamped to 0.25 s and the tick rate defaults
+  to 60 Hz. Game updates and state serialization are still pending.
+
 ## What is not done
 
 - Shared-model instance light maps, the per-vertex data, the
