@@ -25,7 +25,7 @@ add_library(bo2_engine STATIC
     src/engine/ogg.cpp
     third_party/stb_vorbis.c
 )
-target_link_libraries(bo2_engine PUBLIC bo2_common)
+target_link_libraries(bo2_engine PUBLIC bo2_common ${CMAKE_DL_LIBS})
 target_compile_options(bo2_engine PRIVATE ${BO2NX_WARNINGS})
 
 add_library(bo2_platform_core STATIC
