@@ -77,3 +77,26 @@ oracle frame is still blocked by the Wine crash described above.
 - Keep oracle captures under `external/captures/` (gitignored). Only derived
   facts (hashes, dimensions, counts) are committed.
 - Record every divergence with a `FUN_` reference and a next action.
+
+## Wine unlock attempt (2026-10-26)
+
+A patched copy (`tools/oracle/patch_bo2_oracle.py`, output kept under
+`external/`) now gets past the original `0x56E2C9` crash:
+
+- the 2D scale hook returns when the display object is null;
+- all 152 `femms` (3DNow) instructions are replaced by `emms`, because Wine
+  raises `EXCEPTION_ILLEGAL_INSTRUCTION` on `femms`;
+- the device-init `int3` at `0x568763` is skipped for diagnosis.
+
+The game reaches the warning and video-configuration dialogs. Accepting the
+configuration then fails in `FUN_0055F480` (device/display initialization)
+and the subsequent path hits the skipped assert / a null device. The
+resolution list is empty under Wine; forcing mode index 0 does not fix
+device creation. `d8vk-v1.0` was installed into the private prefix and
+initializes Vulkan/llvmpipe, but the same device-init failure remains.
+
+The working layout is `external/oracle_game/` (game files at the root,
+`bo2.exe` patched copy); launch with `wine ./bo2.exe` from that directory so
+argv[0] carries separators. Next steps: inspect `FUN_0055F480` return point
+under `winedbg`/gdb, or provide a 32-bit D3D8 mode that Wine accepts
+(possibly a newer Wine or a native d3d8 runtime).
