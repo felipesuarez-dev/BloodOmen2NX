@@ -86,7 +86,9 @@ group. The six 48-vertex coffins and the six 153/161-vertex roofbits get
 different groups instead of sharing the first one. Within the group it
 picks the entry whose name ends with the model's texture name. In
 `sanctuary` this produces 62 model light maps covering 2,769 triangles;
-`cy01` now covers 15,217 triangles and `lc01` 7,116.
+`cy01` now covers 15,217 triangles and `lc01` 7,116. Entity models use
+`assign_named_model_lightmaps` (group name equals the model short name)
+before the vertex-count fallback.
 The model reader stores the second UV set in
 `LevelGeometry::lightmap_texcoords`. Shared `model` entries (props not in
 `cellmdls`) still need their own instance mapping.
@@ -99,8 +101,9 @@ against the no-lightmap + five-entry version.
 
 ## Open questions
 
-- Instance mapping for the shared `model` entries (props not in
-  `cellmdls`).
+- Instance mapping for shared `model` entries that are not placed by
+  `cellinst`. Region entities now use group-name matching (with a
+  vertex-count fallback) for their models.
 - The group header fields after the name (12, 13 or 9 bytes depending on
   the group).
 - The per-vertex data after each group (`u32 count` + `count × 16

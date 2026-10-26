@@ -112,7 +112,7 @@ and assets) is complete.
   translation and require decompilation. The `region` entity table is
   decoded (15,632 entities, 533 model names, 0 errors); entity models are
   resolved and appended as geometry (13 in sanctuary, 119 in cy01, 72 in
-  lc01), without shared-model light-map selection yet.
+  lc01), with named light-map selection and a vertex-count fallback.
   The compressed `collmodc` runtime and game-specific entities remain
   pending.
 
