@@ -107,8 +107,8 @@ and assets) is complete.
   cells.
   A triangle-soup `CollisionWorld` provides sphere overlap and ray casts.
   A provisional `PlayerController` moves a body with collision, gravity,
-  jumping and a first-person camera, and `bo2nx --play` drives it in the
-  SDL level viewer. Its speeds and input mapping are not yet a faithful
+  jumping and a collision-clamped third-person follow camera, and
+  `bo2nx --play` drives it in the SDL level viewer. Its speeds and input mapping are not yet a faithful
   translation and require decompilation. The `region` entity table is
   decoded (15,632 entities, 533 model names, 0 errors); entity models are
   resolved and appended as geometry (13 in sanctuary, 119 in cy01, 72 in

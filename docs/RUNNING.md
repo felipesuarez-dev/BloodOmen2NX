@@ -109,9 +109,9 @@ exits; without it the window stays open. The orbit viewer uses `W`/`S` or
 the arrow keys to move the target, `A`/`D` to strafe, the right mouse
 button to orbit, the wheel to zoom and `Escape` to quit.
 
-`--play` opens the provisional first-person player instead: `WASD` moves,
+`--play` opens the provisional third-person player instead: `WASD` moves,
 the right mouse button looks, `Shift`/`R` runs, `Space` jumps and
-`Escape` quits. The movement constants are placeholders until the
+`Escape` quits. The follow camera is clamped by the level collision mesh. The movement constants are placeholders until the
 original player/camera functions are decompiled; this mode is a
 development harness, not a faithful Kain controller.
 

@@ -39,7 +39,7 @@ comparison.
 | Cell lights and markers | done | `cellight` v3 and `cellmark` v4 parsed; renderer consumer pending |
 | Collision payload | done | `collmodc` raw payload per model, header counts; runtime decode pending |
 | Skeleton and animations | done | 5,168 models parsed, 1,586 skinned; animation payloads extracted raw |
-| M3 loop/world | wip | FixedStep, region entities, shared model geometry/lightmaps, culling, streaming, navigation, collision and a provisional `--play` controller with tests |
+| M3 loop/world | wip | FixedStep, region entities, shared models, culling, streaming, navigation, collision and a provisional third-person `--play` controller with tests |
 | Material layer records | done | `mlyrcolr`/`mlyrctrl`; diagnostic `--material` tints |
 | Light maps (`litedata`) | done | 71 `.slm` entries, per-instance match with model fallback, `--lightmap`; external shared models open |
 | Host renderer (OpenGL) | done | SDL2/OpenGL window, free camera and Xvfb capture |

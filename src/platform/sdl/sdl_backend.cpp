@@ -1,3 +1,4 @@
+#include "bo2/game/camera.hpp"
 #include "bo2/game/player.hpp"
 #include "bo2/engine/collision.hpp"
 #include "bo2/platform/input.hpp"
@@ -392,17 +393,20 @@ int run_level(const engine::LevelGeometry& geometry,
     OrbitCamera orbit = make_orbit(options.camera);
     std::unique_ptr<engine::CollisionWorld> collision;
     std::unique_ptr<game::PlayerController> player;
+    std::unique_ptr<game::FollowCamera> follow;
     if (options.play) {
         collision = std::make_unique<engine::CollisionWorld>(geometry);
         engine::Vec3 start = options.camera.target;
         start.z += 1.0f;
         player = std::make_unique<game::PlayerController>(*collision, start);
+        follow = std::make_unique<game::FollowCamera>(4.0f);
+        follow->update(player->state(), *collision);
     }
     const auto active_camera = [&]() {
-        if (player) {
+        if (follow) {
             Camera value;
-            value.eye = player->camera_eye();
-            value.target = player->camera_target();
+            value.eye = follow->eye();
+            value.target = follow->target();
             value.up = {0.0f, 0.0f, 1.0f};
             value.fov_degrees = options.camera.fov_degrees;
             return value;
@@ -506,6 +510,7 @@ int run_level(const engine::LevelGeometry& geometry,
             player_input.run = state.action(InputAction::Run);
             player_input.jump = state.action(InputAction::Jump);
             player->step(player_input, static_cast<double>(dt));
+            follow->update(player->state(), *collision);
         } else {
             const float step = std::max(0.01f, orbit.distance * 0.01f) *
                                (state.action(InputAction::Run) ? 2.0f : 1.0f);
