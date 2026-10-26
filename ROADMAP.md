@@ -38,6 +38,7 @@ comparison.
 | Cell instances and placement | done | `cellinst` v3/v4; local `cellmdls` templates placed in world space |
 | Cell lights and markers | done | `cellight` v3 and `cellmark` v4 parsed; renderer consumer pending |
 | Collision payload | done | `collmodc` raw payload per model, header counts; runtime decode pending |
+| Skeleton and animations | done | 5,168 models parsed, 1,586 skinned; animation payloads extracted raw |
 | Material layer records | done | `mlyrcolr`/`mlyrctrl`; diagnostic `--material` tints |
 | Light maps (`litedata`) | done | 71 `.slm` entries, per-model ordered match, `--lightmap`; shared-model instances open |
 | Host renderer (OpenGL) | done | SDL2/OpenGL window, free camera and Xvfb capture |

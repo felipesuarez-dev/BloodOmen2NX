@@ -67,6 +67,7 @@ Requirements:
 | `rkv.py` | `pc.rkv` audio archive | Verified: 2,666 Ogg streams |
 | `bo2fmt.py` | Umbrella list/unpack/repack CLI | BIG and RKV list/unpack; BIG repack verified byte-identical |
 | `audio.py` | `sound` metadata and `strmfile` extraction | Verified on the installed tree; field semantics open |
+| `model.py` | model, skeleton and raw animation extraction | Verified: 5,168 models, 1,586 skinned |
 | `compare_frames.py` | Frame side-by-side, diff and metrics | Synthetic tests; oracle capture blocked |
 
 The numbered `data/*.dat` pipeline is documented in

@@ -350,6 +350,16 @@ void print_scene(const LoadedLevel& level) {
         std::cout << "collision: " << geometry.collisions.size() << " models (" << bytes
                   << " bytes)\n";
     }
+    if (!geometry.skeletons.empty()) {
+        std::size_t bones = 0;
+        std::size_t weights = 0;
+        for (const bo2::engine::ModelSkeleton& skeleton : geometry.skeletons) {
+            bones += skeleton.bones.size();
+            weights += skeleton.weights.size();
+        }
+        std::cout << "skeletons: " << geometry.skeletons.size() << " models (" << bones
+                  << " bones, " << weights << " weights)\n";
+    }
     if (geometry.has_instances) {
         std::cout << "instances: " << geometry.instances.size() << " (placed "
                   << geometry.placed_instances << ", skipped " << geometry.skipped_instances

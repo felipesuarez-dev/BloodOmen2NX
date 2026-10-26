@@ -65,8 +65,9 @@ u32   2
 | `mtlctrl` | `u32 count` + `count` × 12 bytes | Three `u32` values; semantics open |
 | `texture` | `u32 start`, `u32 count` + per-material records | Texture symbol per material; bound by the host |
 | `mdlattr` | Named attribute table | Model metadata |
-| `vtxweigh` | `u32 count` + weights | Skinning; static cell models are zero |
-| `jointidx` | `u32 count` + joint indices | Skinning |
+| `vtxweigh` | `u32 count` + `count` floats | Per-vertex skin weights |
+| `jointidx` | `u32 count` + `count` u16 | Per-vertex joint indices |
+| `skeleton` / `modlskel` | `u32 count` + `count` × (u32, u32) + 96 × count bytes | Bone hierarchy and bind pose |
 | `collmodc` | Collision model | Raw payload extracted; layout below |
 
 ### `prims`
@@ -467,7 +468,8 @@ interior, while the default isometric frame shows the level.
 - `cellight` type-specific parameters and the marker symbol semantics.
 - `cellanim`.
 - `model 74` has no `rmd`; its role is unknown.
-- Skeleton, skinning and animation playback.
+- Skeleton pose evaluation, skinning and animation playback.
+- `animatio`/`animreel` keyframe encoding.
 - The shared `model` entries versus the `cellmdls` inline models.
 
 ## Next steps
@@ -475,4 +477,4 @@ interior, while the default isometric frame shows the level.
 1. Use the cell grid and BSP for culling and cell visibility.
 2. Bind the shared `model` entries and decode `cellanim`.
 3. Match the light-map group to the cell/object and combine it with the material layers.
-4. Decode the animation/skeleton chunks.
+4. Decode the `animatio`/`animreel` keyframe streams.

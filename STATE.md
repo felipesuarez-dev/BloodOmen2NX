@@ -99,7 +99,9 @@ and assets) is complete.
 
 - Shared-model instance light maps, the per-vertex data, the
   material/light-map combination and the vertex diffuse equation.
-- Animation and skinning (`animatio`, `animreel`, `vtxweigh`, `jointidx`).
+- Skeleton pose evaluation and skinning: the hierarchy, weights and joint
+  indices are extracted, but the bind-pose and animation keyframe
+  evaluation are open. `animatio`/`animreel` payloads are extracted raw.
 - Collision semantics: the raw `collmodc` payload is extracted for every
   model, but the compressed vertices, edges/faces and the collision
   runtime are not decoded. Entity/player logic is also open.

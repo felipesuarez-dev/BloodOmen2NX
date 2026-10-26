@@ -90,6 +90,14 @@ struct LevelCollision {
     std::vector<std::uint8_t> data;
 };
 
+struct ModelSkeleton {
+    std::uint32_t model = 0;
+    std::vector<std::pair<std::uint32_t, std::uint32_t>> bones;
+    std::vector<float> weights;
+    std::vector<std::uint16_t> joints;
+    std::vector<std::uint8_t> bind_pose;
+};
+
 struct LevelLight {
     std::uint32_t version = 0;
     std::uint32_t handle = 0;
@@ -154,6 +162,7 @@ struct LevelGeometry {
     std::vector<CellAttributeTable> level_attributes;
     std::vector<ModelRange> model_ranges;
     std::vector<LevelCollision> collisions;
+    std::vector<ModelSkeleton> skeletons;
     std::vector<LevelInstance> instances;
     std::vector<LevelLight> lights;
     std::vector<LevelMarker> markers;

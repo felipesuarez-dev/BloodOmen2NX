@@ -989,6 +989,50 @@ LevelGeometry parse_cell_group(const std::vector<std::uint8_t>& data,
                                                                          collision->data_size));
             geometry.collisions.push_back(std::move(entry));
         }
+        const Chunk* skeleton = find_chunk(chunks, "skel");
+        const Chunk* weights = find_chunk(chunks, "vtxweigh");
+        const Chunk* joints = find_chunk(chunks, "jointidx");
+        if (skeleton != nullptr || weights != nullptr || joints != nullptr) {
+            ModelSkeleton entry;
+            entry.model = model;
+            if (skeleton != nullptr && skeleton->data_size >= 4) {
+                const std::uint32_t count = reader.u32(skeleton->data_offset);
+                const std::size_t bone_bytes = static_cast<std::size_t>(count) * 8;
+                if (4 + bone_bytes <= skeleton->data_size) {
+                    for (std::uint32_t index = 0; index < count; ++index) {
+                        const std::size_t offset =
+                            skeleton->data_offset + 4 + static_cast<std::size_t>(index) * 8;
+                        entry.bones.emplace_back(reader.u32(offset), reader.u32(offset + 4));
+                    }
+                    const std::size_t used = 4 + bone_bytes;
+                    entry.bind_pose.assign(
+                        data.begin() + static_cast<std::ptrdiff_t>(skeleton->data_offset + used),
+                        data.begin() + static_cast<std::ptrdiff_t>(skeleton->data_offset +
+                                                                   skeleton->data_size));
+                }
+            }
+            if (weights != nullptr && weights->data_size >= 4) {
+                const std::uint32_t count = reader.u32(weights->data_offset);
+                if (4 + static_cast<std::size_t>(count) * 4 <= weights->data_size) {
+                    entry.weights.reserve(count);
+                    for (std::uint32_t index = 0; index < count; ++index) {
+                        entry.weights.push_back(
+                            read_float(reader, weights->data_offset + 4 + index * 4));
+                    }
+                }
+            }
+            if (joints != nullptr && joints->data_size >= 4) {
+                const std::uint32_t count = reader.u32(joints->data_offset);
+                if (4 + static_cast<std::size_t>(count) * 2 <= joints->data_size) {
+                    entry.joints.reserve(count);
+                    for (std::uint32_t index = 0; index < count; ++index) {
+                        entry.joints.push_back(
+                            reader.u16(joints->data_offset + 4 + index * 2));
+                    }
+                }
+            }
+            geometry.skeletons.push_back(std::move(entry));
+        }
         const std::size_t first_vertex = geometry.positions.size();
         const std::size_t first_triangle = geometry.triangles.size();
         if (rmd == nullptr) {
