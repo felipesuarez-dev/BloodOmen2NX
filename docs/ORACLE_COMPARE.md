@@ -54,6 +54,22 @@ with `bo2.exe`, `data/` and the `code.big`/`pc.rkv`/`resources` files at
 the root. The oracle remains optional and time-boxed; see
 `docs/RUNNING.md`.
 
+## Frame comparator
+
+`tools/compare_frames.py` takes two binary PPM frames, writes a
+side-by-side image, an amplified difference image and a JSON report, and
+reports whole-frame, N x N tile and named-region metrics. The tile and
+region reports isolate the world, UI and lighting layers for review.
+
+```sh
+python3 tools/compare_frames.py port.ppm oracle.ppm --out /tmp/gate \
+  --tiles 4 --region ui:0,320,640,160 --region world:0,0,640,320 --diff-gain 4
+```
+
+It writes `/tmp/gate-side-by-side.ppm`, `/tmp/gate-diff.ppm` and
+`/tmp/gate-metrics.json`. The script is tested with synthetic frames; the
+oracle frame is still blocked by the Wine crash described above.
+
 ## Rules
 
 - A screenshot comparison is a gate, not a demo. Do not show a level until
