@@ -466,7 +466,7 @@ void print_visibility(const LoadedLevel& level, const bo2::engine::Vec3& eye,
                       const bo2::engine::Vec3& target, float fov_degrees,
                       std::uint32_t width, std::uint32_t height) {
     const bo2::engine::LevelGeometry& geometry = level.geometry;
-    if (geometry.markers.empty() && geometry.lights.empty()) {
+    if (level.region_entities.empty() && geometry.markers.empty() && geometry.lights.empty()) {
         return;
     }
     bo2::engine::EntityWorld world;
