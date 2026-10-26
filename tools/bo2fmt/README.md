@@ -11,12 +11,14 @@ python3 tools/bo2fmt/bo2fmt.py list <container>
 python3 tools/bo2fmt/bo2fmt.py unpack <container> --out <dir>
 python3 tools/bo2fmt/bo2fmt.py repack <dir> --out <container>
 python3 tools/bo2fmt/bo2fmt.py info <file>
+python3 tools/bo2fmt/bo2fmt.py verify <container.big>
 ```
 
 `unpack` writes `manifest.json` with the BIG entry metadata (type, name,
 language, symbols and padding). `repack` rebuilds the container from that
 manifest and is byte-identical when the extracted data is unchanged.
-RKV containers can be listed and unpacked; they are not repacked.
+`verify` performs the full unpack/repack cycle and fails unless the bytes
+match. RKV containers can be listed and unpacked; they are not repacked.
 
 ## Installer extraction
 

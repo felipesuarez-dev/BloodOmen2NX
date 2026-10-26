@@ -49,6 +49,16 @@ class Bo2fmtTest(unittest.TestCase):
             self.assertEqual(manifest["entries"][0]["symbols"], [9, 10, 11])
             self.assertEqual(manifest["entries"][0]["language"], 3)
 
+    def test_verify_round_trip(self):
+        entries = [big.Entry("model", "a", 0, 3, 0, b"abc")]
+        data = big.build(["a"], entries)
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "input.big"
+            source.write_bytes(data)
+            args = type("Args", (), {"container": str(source), "work": None})()
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(bo2fmt.cmd_verify(args), 0)
+
     def test_detect(self):
         self.assertEqual(bo2fmt.detect(b"goefile\0" + b"\0" * 32), "big")
         self.assertEqual(bo2fmt.detect(b"\1\0\0\0" + b"\0" * 32), "rkv")

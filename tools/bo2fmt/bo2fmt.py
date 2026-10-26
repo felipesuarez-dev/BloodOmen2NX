@@ -18,6 +18,7 @@ import argparse
 import json
 import re
 import sys
+import tempfile
 from pathlib import Path
 
 import big
@@ -187,6 +188,31 @@ def cmd_repack(args) -> int:
     return repack_big(Path(args.source), Path(args.out))
 
 
+def cmd_verify(args) -> int:
+    source = Path(args.container)
+    original = source.read_bytes()
+    if detect(original) != "big":
+        raise ValueError("verify currently supports BIG containers")
+    if args.work:
+        work = Path(args.work)
+        work.mkdir(parents=True, exist_ok=True)
+        temporary = None
+    else:
+        temporary = tempfile.TemporaryDirectory()
+        work = Path(temporary.name)
+    unpacked = work / "unpacked"
+    rebuilt = work / "rebuilt.big"
+    unpack_big(source, unpacked)
+    repack_big(unpacked, rebuilt)
+    result = rebuilt.read_bytes()
+    if result != original:
+        raise ValueError(
+            f"{source} does not round-trip ({len(original)} bytes in, {len(result)} out)"
+        )
+    print(f"verified byte-identical: {source} ({len(original)} bytes)")
+    return 0
+
+
 def cmd_info(args) -> int:
     path = Path(args.file)
     data = path.read_bytes()
@@ -229,6 +255,10 @@ def main() -> int:
     p_info = sub.add_parser("info", help="show the container type and entry counts")
     p_info.add_argument("file")
     p_info.set_defaults(func=cmd_info)
+    p_verify = sub.add_parser("verify", help="unpack, repack and compare bytes")
+    p_verify.add_argument("container")
+    p_verify.add_argument("--work", help="keep the unpacked tree in this directory")
+    p_verify.set_defaults(func=cmd_verify)
     args = parser.parse_args()
     try:
         return args.func(args)
