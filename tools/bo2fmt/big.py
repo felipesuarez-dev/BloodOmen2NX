@@ -56,14 +56,21 @@ class BigError(ValueError):
 
 
 class Entry:
-    __slots__ = ("type", "name", "language", "size", "offset", "data")
+    __slots__ = ("type", "name", "name_index", "language", "size", "offset", "symbols",
+                 "symbols_padding", "extra", "trailer", "data")
 
-    def __init__(self, type_name, name, language, size, offset, data):
+    def __init__(self, type_name, name, language, size, offset, data, symbols=(),
+                 name_index=-1, symbols_padding=b"", extra=b"", trailer=b""):
         self.type = type_name
         self.name = name
+        self.name_index = name_index
         self.language = language
         self.size = size
         self.offset = offset
+        self.symbols = tuple(symbols)
+        self.symbols_padding = symbols_padding
+        self.extra = extra
+        self.trailer = trailer
         self.data = data
 
 
@@ -134,6 +141,12 @@ def parse(data: bytes) -> tuple[list[str], list[Entry]]:
         data_offset = entry_end - padded
         if data_offset < data_length_at + 4 or data_offset > entry_end:
             raise BigError(f"bad data range at {pos:#x}")
+        symbol_count = _u32(data, pos + 36)
+        symbols_start = pos + 40
+        symbols_end = pos + 20 + symbols_size
+        if symbols_start + 2 * symbol_count > symbols_end:
+            raise BigError(f"bad symbol values at {pos:#x}")
+        symbols = tuple(_u16(data, symbols_start + 2 * index) for index in range(symbol_count))
         entries.append(
             Entry(
                 type_name,
@@ -142,6 +155,11 @@ def parse(data: bytes) -> tuple[list[str], list[Entry]]:
                 data_length,
                 data_offset,
                 data[data_offset : data_offset + data_length],
+                symbols,
+                name_index,
+                data[symbols_start + 2 * symbol_count : symbols_end],
+                data[data_length_at + 4 : data_offset],
+                data[data_offset + data_length : entry_end],
             )
         )
         pos = entry_end
@@ -150,6 +168,91 @@ def parse(data: bytes) -> tuple[list[str], list[Entry]]:
 
 def load(path: Path) -> tuple[list[str], list[Entry]]:
     return parse(path.read_bytes())
+
+
+def name_padding(data: bytes) -> int:
+    """Return the byte used to pad the name table, or 0 when there is none."""
+    if len(data) < 0x24 or data[:8] != MAGIC:
+        raise BigError("not a goefile container")
+    entries_start = 0x10 + _u32(data, 0x18)
+    pos = 0x24
+    for _ in range(_u32(data, 0x20)):
+        _, pos = _cstr(data, pos, entries_start)
+    return data[pos] if pos < entries_start else 0
+
+
+def build(names: list[str], entries: list[Entry], name_padding: int = 0) -> bytes:
+    """Serialize a goefile container from a name table and entries."""
+    names = list(names)
+    name_index: dict[str, int] = {}
+    for index, name in enumerate(names):
+        name_index.setdefault(name, index)
+    for entry in entries:
+        if entry.name not in name_index:
+            name_index[entry.name] = len(names)
+            names.append(entry.name)
+
+    names_blob = b"".join(name.encode("latin1") + b"\0" for name in names)
+    directory = (
+        SYMLIST
+        + struct.pack("<I", 0)
+        + struct.pack("<I", 0)
+        + struct.pack("<I", len(names))
+        + names_blob
+    )
+    if len(directory) & 1:
+        directory += bytes([name_padding & 0xFF])
+    directory_length = len(directory)
+    directory = directory[:8] + struct.pack("<I", directory_length) + directory[12:]
+
+    out = bytearray(
+        MAGIC
+        + struct.pack("<I", 0)
+        + struct.pack("<I", 1)
+        + directory
+    )
+    for entry in entries:
+        type_blob = entry.type.encode("latin1")
+        if len(type_blob) > 8 or b"\0" in type_blob:
+            raise BigError(f"bad entry type for {entry.name!r}")
+        index = entry.name_index
+        if index < 0 or index >= len(names) or names[index] != entry.name:
+            index = name_index[entry.name]
+        if not 0 <= entry.language <= 0xFFFF:
+            raise BigError(f"bad language for {entry.name!r}")
+        if any(value < 0 or value > 0xFFFF for value in entry.symbols):
+            raise BigError(f"bad symbol value for {entry.name!r}")
+        values_blob = b"".join(struct.pack("<H", value) for value in entry.symbols)
+        symbols_size = (20 + len(values_blob) + 3) & ~3
+        body = (
+            SYMLIST
+            + struct.pack("<I", symbols_size)
+            + struct.pack("<I", 0)
+            + struct.pack("<I", len(entry.symbols))
+            + values_blob
+            + (entry.symbols_padding
+               if len(entry.symbols_padding) == symbols_size - 20 - len(values_blob)
+               else b"\0" * (symbols_size - 20 - len(values_blob)))
+            + struct.pack("<I", len(entry.data))
+            + entry.extra
+            + entry.data
+            + entry.trailer
+        )
+        entry_length = 20 + len(body)
+        if not entry.trailer:
+            pad = (-entry_length) % 4
+            body += b"\0" * pad
+            entry_length += pad
+        out += (
+            type_blob.ljust(8, b"\0")
+            + struct.pack("<I", entry_length)
+            + struct.pack("<I", 0)
+            + struct.pack("<H", index)
+            + struct.pack("<H", entry.language)
+            + body
+        )
+    struct.pack_into("<I", out, 8, len(out))
+    return bytes(out)
 
 
 def cmd_list(args) -> int:

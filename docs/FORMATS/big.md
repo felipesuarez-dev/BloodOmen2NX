@@ -68,7 +68,9 @@ data = entry_start + entry_length - align4(data_length)
 ```
 
 The parser checks that both formulas agree and that the payload fits
-inside the entry.
+inside the entry. Some entries carry a small gap between the data-length
+field and the payload; the reader skips it and the host writer preserves
+it, so an unpacked and unchanged container repacks byte for byte.
 
 ## Validation
 

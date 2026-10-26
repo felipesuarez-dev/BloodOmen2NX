@@ -5,7 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools" / "bo2fmt"))
 
-from big import parse  # noqa: E402
+from big import Entry, build, parse  # noqa: E402
 
 
 def build_big(entries):
@@ -140,6 +140,40 @@ class BigTest(unittest.TestCase):
         data = build_big([("a", "model", b"abcdefgh")])
         with self.assertRaisesRegex(ValueError, "entry length"):
             parse(data[:-4])
+
+    def test_build_round_trip(self):
+        data = build_big(
+            [
+                ("sl01/level", "model", b"MODELDATA"),
+                ("sl01/texture", "texture", b"DDS " + b"\0" * 12),
+            ]
+        )
+        names, entries = parse(data)
+        self.assertEqual(build(names, entries), data)
+
+    def test_build_preserves_symbols_and_language(self):
+        data = build_big([("a", "texture", b"DDS " + b"\0" * 4, (7, 8, 9, 10))])
+        names, entries = parse(data)
+        rebuilt = Entry(
+            entries[0].type,
+            entries[0].name,
+            entries[0].language,
+            entries[0].size,
+            0,
+            entries[0].data,
+            entries[0].symbols,
+            entries[0].name_index,
+        )
+        self.assertEqual(build(names, [rebuilt]), data)
+        _, second = parse(build(names, [rebuilt]))
+        self.assertEqual(second[0].symbols, (7, 8, 9, 10))
+
+    def test_build_rejects_bad_type(self):
+        data = build_big([("a", "model", b"abc")])
+        names, entries = parse(data)
+        entries[0].type = "toolongtype"
+        with self.assertRaises(ValueError):
+            build(names, entries)
 
     def test_rejects_trailing_junk(self):
         data = build_big([("a", "model", b"abc")])
