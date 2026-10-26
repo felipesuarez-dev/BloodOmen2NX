@@ -79,6 +79,28 @@ bool EntityWorld::set_position(EntityId id, const Vec3& position) {
     return false;
 }
 
+bool EntityWorld::damage(EntityId id, float amount) {
+    for (Entity& entity : entities_) {
+        if (entity.id == id) {
+            entity.health = std::max(0.0f, entity.health - amount);
+            return true;
+        }
+    }
+    return false;
+}
+
+std::vector<EntityId> EntityWorld::in_sphere(const Vec3& center, float radius) const {
+    std::vector<EntityId> result;
+    const float radius_squared = radius * radius;
+    for (const Entity& entity : entities_) {
+        const Vec3 difference = entity.position - center;
+        if (dot(difference, difference) <= radius_squared) {
+            result.push_back(entity.id);
+        }
+    }
+    return result;
+}
+
 bool EntityWorld::set_cell(EntityId id, std::uint32_t cell) {
     for (Entity& entity : entities_) {
         if (entity.id == id) {

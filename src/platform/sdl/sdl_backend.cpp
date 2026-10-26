@@ -566,6 +566,7 @@ int run_level(const engine::LevelGeometry& geometry,
             player_input.look_y = state.look_y;
             player_input.run = state.action(InputAction::Run);
             player_input.jump = state.action(InputAction::Jump);
+            player_input.attack = state.action(InputAction::Attack);
             player->step(player_input, static_cast<double>(dt));
             follow->update(player->state(), *collision);
             ++play_tick;

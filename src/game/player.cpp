@@ -16,6 +16,9 @@ constexpr float kEyeHeight = 1.7f;
 constexpr float kBodyRadius = 0.4f;
 constexpr float kBodyClearance = 0.05f;
 constexpr float kLookSpeed = 2.0f;
+constexpr float kAttackCooldown = 0.45f;
+constexpr float kAttackRange = 2.2f;
+constexpr float kAttackRadius = 1.0f;
 
 }  // namespace
 
@@ -54,6 +57,13 @@ void PlayerController::step(const PlayerInput& input, double seconds) {
     const bo2::engine::Vec3 ray_origin =
         state_.position + bo2::engine::Vec3{0.0f, 0.0f, kEyeHeight};
     const auto ground = collision_.raycast(ray_origin, {0.0f, 0.0f, -1.0f}, kEyeHeight + 1.0f);
+    if (state_.attack_cooldown > 0.0f) {
+        state_.attack_cooldown = std::max(0.0f, state_.attack_cooldown - dt);
+    }
+    if (input.attack && state_.attack_cooldown <= 0.0f) {
+        state_.attack_cooldown = kAttackCooldown;
+        state_.combo = (state_.combo + 1) % 3;
+    }
     if (input.jump && state_.grounded) {
         state_.vertical_velocity = kJumpSpeed;
         state_.grounded = false;
@@ -77,6 +87,19 @@ void PlayerController::look(float yaw_delta, float pitch_delta) {
 void PlayerController::restore(const PlayerState& state) {
     state_ = state;
     state_.vertical_velocity = 0.0f;
+}
+
+bool PlayerController::attack(std::vector<std::uint64_t>& targets,
+                              const bo2::engine::EntityWorld& world) const {
+    if (state_.attack_cooldown > kAttackCooldown * 0.5f) {
+        return false;
+    }
+    const float cosine = std::cos(state_.yaw);
+    const float sine = std::sin(state_.yaw);
+    const bo2::engine::Vec3 center =
+        state_.position + bo2::engine::Vec3{cosine * kAttackRange, sine * kAttackRange, 1.0f};
+    targets = world.in_sphere(center, kAttackRadius);
+    return !targets.empty();
 }
 
 const PlayerState& PlayerController::state() const {

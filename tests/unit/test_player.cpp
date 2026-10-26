@@ -3,6 +3,7 @@
 
 #include "bo2/engine/cell_group.hpp"
 #include "bo2/engine/collision.hpp"
+#include "bo2/engine/world.hpp"
 #include "bo2/game/player.hpp"
 
 namespace {
@@ -61,6 +62,25 @@ void test_jump_and_land() {
     CHECK(std::fabs(player.state().position.z) < 1.0e-4f);
 }
 
+void test_attack_and_damage() {
+    const bo2::engine::LevelGeometry floor = make_floor();
+    bo2::engine::CollisionWorld collision(floor);
+    bo2::game::PlayerController player(collision, {0.0f, 0.0f, 0.0f});
+    bo2::engine::EntityWorld world;
+    const auto target = world.add({2.0f, 0.0f, 1.0f}, 0.5f, 0);
+    std::vector<std::uint64_t> targets;
+    CHECK(player.attack(targets, world));
+    CHECK(targets.size() == 1);
+    CHECK(world.damage(target, 25.0f));
+    CHECK(world.entities()[0].health == 75.0f);
+    bo2::game::PlayerInput input;
+    input.attack = true;
+    player.step(input, 0.016);
+    CHECK(player.state().attack_cooldown > 0.0f);
+    const std::uint32_t combo = player.state().combo;
+    CHECK(combo == 1);
+}
+
 void test_restore() {
     const bo2::engine::LevelGeometry floor = make_floor();
     bo2::engine::CollisionWorld collision(floor);
@@ -90,6 +110,7 @@ void test_camera_look() {
 int main() {
     test_movement_and_collision();
     test_jump_and_land();
+    test_attack_and_damage();
     test_restore();
     test_camera_look();
     if (failures != 0) {

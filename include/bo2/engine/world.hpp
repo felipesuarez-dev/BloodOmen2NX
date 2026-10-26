@@ -27,6 +27,7 @@ struct Entity {
     EntityId id = 0;
     Vec3 position{0.0f, 0.0f, 0.0f};
     float radius = 0.5f;
+    float health = 100.0f;
     std::uint32_t cell = 0;
 };
 
@@ -36,6 +37,8 @@ public:
     bool remove(EntityId id);
     bool set_position(EntityId id, const Vec3& position);
     bool set_cell(EntityId id, std::uint32_t cell);
+    bool damage(EntityId id, float amount);
+    std::vector<EntityId> in_sphere(const Vec3& center, float radius) const;
     const std::vector<Entity>& entities() const;
     std::vector<EntityId> visible(const Frustum& frustum) const;
     std::vector<EntityId> in_cell(std::uint32_t cell) const;
