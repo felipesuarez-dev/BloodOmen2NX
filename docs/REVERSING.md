@@ -36,6 +36,12 @@ do not paste decompiled functions, original strings or game text.
 7. Auto-analysis, then a function-recovery pass for code the analyzer
    missed (calls, jump tables, thunks).
 
+## REA
+
+REA is not installed in the development container and was not adopted as a
+required step. Ghidra plus the recovery scripts and the string/RTTI
+exports cover the current workflow; REA remains an optional cross-check.
+
 ## Function recovery
 
 Ghidra auto-analysis misses functions reached only through indirect calls,
