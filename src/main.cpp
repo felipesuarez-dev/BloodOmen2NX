@@ -18,6 +18,7 @@
 #include "bo2/engine/navigation.hpp"
 #include "bo2/engine/ogg.hpp"
 #include "bo2/engine/tick.hpp"
+#include "bo2/engine/world.hpp"
 #include "bo2/platform/platform.hpp"
 #include "bo2/platform/headless/software_renderer.hpp"
 #include "bo2/version.hpp"
@@ -429,6 +430,59 @@ void print_scene(const LoadedLevel& level) {
     }
 }
 
+std::uint32_t cell_at(const bo2::engine::LevelGeometry& geometry,
+                      const bo2::engine::Vec3& position) {
+    for (std::size_t index = 0; index < geometry.cell_grid.cells.size(); ++index) {
+        const bo2::engine::LevelCell& cell = geometry.cell_grid.cells[index];
+        if (position.x >= cell.minimum.x && position.x <= cell.maximum.x &&
+            position.y >= cell.minimum.y && position.y <= cell.maximum.y &&
+            position.z >= cell.minimum.z && position.z <= cell.maximum.z) {
+            return static_cast<std::uint32_t>(index);
+        }
+    }
+    return 0;
+}
+
+void print_visibility(const LoadedLevel& level, const bo2::engine::Vec3& eye,
+                      const bo2::engine::Vec3& target, float fov_degrees,
+                      std::uint32_t width, std::uint32_t height) {
+    const bo2::engine::LevelGeometry& geometry = level.geometry;
+    if (geometry.markers.empty() && geometry.lights.empty()) {
+        return;
+    }
+    bo2::engine::EntityWorld world;
+    for (const bo2::engine::LevelMarker& marker : geometry.markers) {
+        world.add(marker.position, 0.5f, cell_at(geometry, marker.position));
+    }
+    for (const bo2::engine::LevelLight& light : geometry.lights) {
+        world.add(light.position, 0.5f, cell_at(geometry, light.position));
+    }
+    std::vector<bo2::engine::CellBounds> bounds;
+    for (std::size_t index = 0; index < geometry.cell_grid.cells.size(); ++index) {
+        const bo2::engine::LevelCell& cell = geometry.cell_grid.cells[index];
+        bounds.push_back({static_cast<std::uint32_t>(index), cell.minimum, cell.maximum});
+    }
+    const bo2::engine::Vec3 extent = geometry.maximum - geometry.minimum;
+    const float size = std::max({extent.x, extent.y, extent.z});
+    bo2::engine::CellStreamer streamer(bounds);
+    streamer.update(eye, std::max(size * 2.0f, 1.0f));
+    bo2::engine::Mat4 view = bo2::engine::Mat4::look_at(eye, target, {0.0f, 0.0f, 1.0f});
+    const float aspect = static_cast<float>(width) / static_cast<float>(height);
+    bo2::engine::Mat4 projection = bo2::engine::Mat4::perspective(
+        fov_degrees * 3.14159265358979323846f / 180.0f, aspect, 0.1f, 10000.0f);
+    const bo2::engine::Frustum frustum =
+        bo2::engine::frustum_from_view_projection(projection * view);
+    std::size_t visible = 0;
+    for (const bo2::engine::Entity& entity : world.entities()) {
+        if (streamer.is_active(entity.cell) &&
+            frustum.intersects_sphere(entity.position, entity.radius)) {
+            ++visible;
+        }
+    }
+    std::cout << "entities: " << world.entities().size() << " (visible " << visible
+              << ", active cells " << streamer.active().size() << "/" << bounds.size() << ")\n";
+}
+
 void default_camera(const LoadedLevel& level, bo2::engine::Vec3& eye,
                     bo2::engine::Vec3& target) {
     const bo2::engine::Vec3 center = (level.geometry.minimum + level.geometry.maximum) * 0.5f;
@@ -448,6 +502,8 @@ int render_level_frame(const Options& options) {
         default_camera(level, frame.camera.eye, frame.camera.target);
     }
     frame.camera.up = {0.0f, 0.0f, 1.0f};
+    print_visibility(level, frame.camera.eye, frame.camera.target, frame.camera.fov_degrees,
+                     frame.width, frame.height);
     const std::uint64_t render_start = bo2::platform::monotonic_nanoseconds();
     const std::vector<std::uint8_t> pixels =
         bo2::platform::headless::render_level(level.geometry, level.textures, frame);
@@ -482,6 +538,8 @@ int run_sdl(const Options& options) {
         default_camera(level, window.camera.eye, window.camera.target);
     }
     print_scene(level);
+    print_visibility(level, window.camera.eye, window.camera.target,
+                     window.camera.fov_degrees, window.width, window.height);
     if (options.stats) {
         print_stats(level, -1.0);
     }

@@ -100,8 +100,10 @@ and assets) is complete.
   to 60 Hz. `EntityWorld` stores entities and filters them through a
   sphere frustum; `CellStreamer` activates cells by camera distance with
   hysteresis; `CellNavigation` builds a cell graph from portals and finds
-  a shortest path. Game updates, entity population, collision semantics
-  and state serialization are still pending.
+  a shortest path. The level viewer populates the world from 23 sanctuary
+  lights/markers and reports frustum-visible entities and active cells.
+  Game-specific entities, collision semantics and state serialization are
+  still pending.
 
 ## What is not done
 
