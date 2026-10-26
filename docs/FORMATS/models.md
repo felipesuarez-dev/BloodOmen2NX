@@ -1,8 +1,9 @@
 # Models and animation
 
 Status: **static cell geometry, base textures, the cell grid/BSP, the
-material layer records and the D3D texture-stage equation are decoded; the
-light map and animation are open**.
+material layer records, the D3D texture-stage equation, the skeleton
+hierarchy/weights/joints and the raw animation payloads are decoded; the
+bind pose and keyframe evaluation are open**.
 
 The static shell of a level lives in the `cellgrup` entry of its `.big`.
 The shared `model` entries (characters, props, particles) use the same

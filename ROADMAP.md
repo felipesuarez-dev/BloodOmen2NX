@@ -11,7 +11,7 @@ comparison.
 | Gate | Phase | Exit criteria | Status |
 |---|---|---|---|
 | M0 | Laboratory and binary truth | Hashes, PE triage, SFXI, `game.erg` and Ghidra inventory | DONE — install materialization moved to M1 and completed there; optional RE follow-ups #6 and #8 remain in the backlog |
-| M1 | Containers and assets (GO/NO-GO) | `.big` and `pc.rkv` validated against the installed tree; one asset extracted; formats documented | DONE — 198/198 installer chunks, 179 `.big`/246,332 entries, 2,666 RKV streams, DDS and model extracted; extraction follow-ups #14-#20 remain tracked |
+| M1 | Containers and assets (GO/NO-GO) | `.big` and `pc.rkv` validated against the installed tree; one asset extracted; formats documented | DONE — 198/198 installer chunks, 179 `.big`/246,332 entries, 2,666 RKV streams, DDS and model extracted; #14-#19 extraction done, #20 repack validation remains |
 | M2 | Host skeleton and first frame | Host backend renders one level with textures and a free camera; frame comparable to the oracle | WIP — headless and SDL2/OpenGL level with DDS textures, cell grid/BSP, cell instances, lights/markers, material layers, input/player marker and a free camera; oracle frame pending |
 | M3 | Playable slice | First level playable start to finish; route replay test and state comparison | TODO |
 | M4 | Complete systems | Enemies, combat, dark gifts, scripting, menus, saves, audio and videos | TODO |
@@ -45,7 +45,7 @@ comparison.
 | Renderer pipeline | done | GLSL 1.20 + VBO/IBO, ordered runs; SDL frame 20-22 ms |
 | Frame comparator | done | Side-by-side, diff, tile/region metrics; oracle frame blocked |
 | Switch renderer (deko3d) | todo | M2+ |
-| Audio | wip | Ogg extraction in `tools/bo2fmt/rkv.py`; mixer/decoder pending #27 |
+| Audio | wip | Ogg/sound extraction done; mixer/decoder pending #27 |
 | Video (Bink) | todo | M4; inventory and transcode plan done in `docs/FORMATS/video.md` |
 
 ## Rules
