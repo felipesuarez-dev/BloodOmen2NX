@@ -42,6 +42,11 @@ for blending; each run sets its texture, light map, material tint and
 shader uniforms. This replaces the D3D8 fixed-function path and is the
 host reference for the Switch deko3d backend.
 
+The engine also owns the M3 foundations: `FixedStep` for the deterministic
+logic tick and `EntityWorld`/`CellStreamer` for entity storage, sphere
+frustum culling and distance-based cell activation. The game layer will
+populate them; the renderer currently draws the static level as one mesh.
+
 The Switch backend (libnx + deko3d) replaces the platform layer once the
 host build renders a level. The game and engine layers do not change when
 the backend changes.

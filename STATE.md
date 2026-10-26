@@ -97,7 +97,10 @@ and assets) is complete.
 
 - The fixed-step loop (`FixedStep`) and `--headless --frames N` are in
   place; the accumulator is clamped to 0.25 s and the tick rate defaults
-  to 60 Hz. Game updates and state serialization are still pending.
+  to 60 Hz. `EntityWorld` stores entities and filters them through a
+  sphere frustum; `CellStreamer` activates cells by camera distance with
+  hysteresis. Game updates, entity population and state serialization are
+  still pending.
 
 ## What is not done
 

@@ -13,7 +13,7 @@ comparison.
 | M0 | Laboratory and binary truth | Hashes, PE triage, SFXI, `game.erg` and Ghidra inventory | DONE — install materialization moved to M1 and completed there; optional RE follow-ups #6 and #8 remain in the backlog |
 | M1 | Containers and assets (GO/NO-GO) | `.big` and `pc.rkv` validated against the installed tree; one asset extracted; formats documented | DONE — 198/198 installer chunks, 179 `.big`/246,332 entries, 2,666 RKV streams, DDS and model extracted; #14-#19 extraction done, #20 repack validation remains |
 | M2 | Host skeleton and first frame | Host backend renders one level with textures and a free camera; frame comparable to the oracle | WIP — headless and SDL2/OpenGL level with DDS textures, cell grid/BSP, cell instances, lights/markers, material layers, input/player marker and a free camera; oracle frame pending |
-| M3 | Playable slice | First level playable start to finish; route replay test and state comparison | WIP — fixed tick and headless loop landed; game systems pending |
+| M3 | Playable slice | First level playable start to finish; route replay test and state comparison | WIP — fixed tick, entity world, frustum culling and cell streaming foundations landed; game systems pending |
 | M4 | Complete systems | Enemies, combat, dark gifts, scripting, menus, saves, audio and videos | TODO |
 | M5 | Complete content | All levels, bosses and unlockables; parity battery green | TODO |
 | M6 | Release | Performance, handheld/docked, packaging, docs, licence decision | TODO |
@@ -39,6 +39,7 @@ comparison.
 | Cell lights and markers | done | `cellight` v3 and `cellmark` v4 parsed; renderer consumer pending |
 | Collision payload | done | `collmodc` raw payload per model, header counts; runtime decode pending |
 | Skeleton and animations | done | 5,168 models parsed, 1,586 skinned; animation payloads extracted raw |
+| M3 loop/world | wip | FixedStep, EntityWorld, frustum culling and CellStreamer with tests |
 | Material layer records | done | `mlyrcolr`/`mlyrctrl`; diagnostic `--material` tints |
 | Light maps (`litedata`) | done | 71 `.slm` entries, per-model ordered match, `--lightmap`; shared-model instances open |
 | Host renderer (OpenGL) | done | SDL2/OpenGL window, free camera and Xvfb capture |
