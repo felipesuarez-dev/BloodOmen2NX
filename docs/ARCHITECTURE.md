@@ -98,6 +98,7 @@ Current concrete modules:
 | `render_pipeline` | GLSL/VBO level pipeline | SDL host renderer |
 | `PlayerController` | provisional movement and camera | Game-layer foundation; constants pending RE |
 | `SaveGame` | canonical save/checkpoint bytes | Round-trip and slot tests |
+| `EntityWorld` combat | health/damage and sphere queries | Attack foundation |
 
 Each interface is implemented by the platform backend. The engine owns
 the data structures; the platform owns the device objects.
