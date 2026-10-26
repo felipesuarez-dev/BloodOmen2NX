@@ -25,6 +25,7 @@ add_library(bo2_engine STATIC
     src/engine/erg.cpp
     src/engine/navigation.cpp
     src/engine/ogg.cpp
+    src/engine/region.cpp
     src/engine/tick.cpp
     src/engine/world.cpp
     third_party/stb_vorbis.c
@@ -95,6 +96,11 @@ if(BUILD_TESTING)
     target_link_libraries(bo2nx_renderer_tests PRIVATE bo2_platform_headless)
     target_compile_options(bo2nx_renderer_tests PRIVATE ${BO2NX_WARNINGS})
     add_test(NAME renderer COMMAND bo2nx_renderer_tests)
+
+    add_executable(bo2nx_region_tests tests/unit/test_region.cpp)
+    target_link_libraries(bo2nx_region_tests PRIVATE bo2_engine)
+    target_compile_options(bo2nx_region_tests PRIVATE ${BO2NX_WARNINGS})
+    add_test(NAME region COMMAND bo2nx_region_tests)
 
     add_executable(bo2nx_player_tests tests/unit/test_player.cpp)
     target_link_libraries(bo2nx_player_tests PRIVATE bo2_game)

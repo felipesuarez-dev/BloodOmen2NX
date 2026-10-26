@@ -18,6 +18,7 @@
 #include "bo2/engine/erg.hpp"
 #include "bo2/engine/navigation.hpp"
 #include "bo2/engine/ogg.hpp"
+#include "bo2/engine/region.hpp"
 #include "bo2/engine/tick.hpp"
 #include "bo2/engine/world.hpp"
 #include "bo2/platform/platform.hpp"
@@ -233,6 +234,7 @@ struct LoadedLevel {
     std::size_t loaded_textures = 0;
     std::size_t loaded_lightmaps = 0;
     std::size_t lightmap_entries = 0;
+    std::vector<bo2::engine::RegionEntity> region_entities;
     std::string name;
     double load_ms = 0.0;
     double archive_ms = 0.0;
@@ -299,6 +301,20 @@ LoadedLevel load_level(const Options& options) {
         }
     }
     level.textures_ms = elapsed_ms(textures_start);
+    for (const bo2::engine::BigEntry& candidate : archive.entries()) {
+        if (!bo2::engine::iequals(candidate.type, "region")) {
+            continue;
+        }
+        try {
+            for (const bo2::engine::RegionEntityTable& table :
+                 bo2::engine::parse_region_entities(archive.extract(candidate))) {
+                level.region_entities.insert(level.region_entities.end(), table.entities.begin(),
+                                             table.entities.end());
+            }
+        } catch (const std::exception&) {
+            level.region_entities.clear();
+        }
+    }
     const std::uint64_t lightmaps_start = bo2::platform::monotonic_nanoseconds();
     const bo2::engine::BigEntry* litedata = nullptr;
     for (const bo2::engine::BigEntry& candidate : archive.entries()) {
@@ -454,11 +470,17 @@ void print_visibility(const LoadedLevel& level, const bo2::engine::Vec3& eye,
         return;
     }
     bo2::engine::EntityWorld world;
-    for (const bo2::engine::LevelMarker& marker : geometry.markers) {
-        world.add(marker.position, 0.5f, cell_at(geometry, marker.position));
-    }
-    for (const bo2::engine::LevelLight& light : geometry.lights) {
-        world.add(light.position, 0.5f, cell_at(geometry, light.position));
+    if (!level.region_entities.empty()) {
+        for (const bo2::engine::RegionEntity& entity : level.region_entities) {
+            world.add(entity.position, 0.5f, cell_at(geometry, entity.position));
+        }
+    } else {
+        for (const bo2::engine::LevelMarker& marker : geometry.markers) {
+            world.add(marker.position, 0.5f, cell_at(geometry, marker.position));
+        }
+        for (const bo2::engine::LevelLight& light : geometry.lights) {
+            world.add(light.position, 0.5f, cell_at(geometry, light.position));
+        }
     }
     std::vector<bo2::engine::CellBounds> bounds;
     for (std::size_t index = 0; index < geometry.cell_grid.cells.size(); ++index) {

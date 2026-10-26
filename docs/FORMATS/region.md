@@ -2,7 +2,9 @@
 
 Status: **entity names, models, positions and properties decoded**. The
 `region` entry of each level `.big` is the placement table for scripted
-entities and fixed props. Implementation: `tools/bo2fmt/region.py`.
+entities and fixed props. Implementations: `tools/bo2fmt/region.py` and
+`src/engine/region.cpp` (the host parses the table and populates its
+entity world).
 
 ## Container
 
@@ -51,6 +53,13 @@ Across the installed tree `region.py` extracted **15,632 entities** with
 places `dagger`, `kainemitter`, `ptorch`, `l_club`, `lsword` and
 `regionkeeper`; the model names are short names resolved through the
 package/resource tables.
+
+## Host
+
+`parse_region_entities` unwraps the nested container and returns the
+entity tables; `bo2nx --level` uses the region entities for its
+visibility/culling diagnostics. This is the first real entity population
+path for M3.
 
 ## Tools
 
