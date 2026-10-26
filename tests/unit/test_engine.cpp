@@ -653,8 +653,9 @@ void test_model_lightmaps() {
     geometry.model_ranges[1].vertex_count = 4;
     geometry.model_ranges[2].present = true;
     geometry.model_ranges[2].vertex_count = 8;
-    geometry.triangles = {{0, 1, 2, 0, 0, 0, -1}, {0, 1, 2, 0, 1, 0, -1},
-                          {0, 1, 2, 0, 2, 1, -1}};
+    geometry.triangles = {{0, 1, 2, 0, 0, 0xFFFFFFFFU, 0, -1},
+                          {0, 1, 2, 0, 1, 0xFFFFFFFFU, 0, -1},
+                          {0, 1, 2, 0, 2, 0xFFFFFFFFU, 1, -1}};
     std::vector<bo2::engine::LevelLightMap> maps(3);
     maps[0].name = "roomA-alpha";
     maps[0].group = "roomA";
@@ -679,6 +680,33 @@ void test_model_lightmaps() {
     CHECK(geometry.triangles[0].lightmap == 0);
     CHECK(geometry.triangles[1].lightmap == 1);
     CHECK(geometry.triangles[2].lightmap == 2);
+}
+
+void test_shared_instance_lightmaps() {
+    bo2::engine::LevelGeometry geometry;
+    geometry.texture_names = {"Alpha"};
+    geometry.model_ranges.resize(1);
+    geometry.model_ranges[0].present = true;
+    geometry.model_ranges[0].vertex_count = 4;
+    geometry.instances.resize(2);
+    geometry.instances[0].model = 0;
+    geometry.instances[1].model = 0;
+    geometry.triangles = {{0, 1, 2, 0, 0, 0, 0, -1}, {0, 1, 2, 0, 0, 1, 0, -1}};
+    std::vector<bo2::engine::LevelLightMap> maps(2);
+    for (int index = 0; index < 2; ++index) {
+        maps[static_cast<std::size_t>(index)].name =
+            std::string(index == 0 ? "coffin01" : "coffin02") + "-alpha";
+        maps[static_cast<std::size_t>(index)].group =
+            index == 0 ? "coffin01" : "coffin02";
+        maps[static_cast<std::size_t>(index)].group_vertex_count = 4;
+        maps[static_cast<std::size_t>(index)].image.width = 1;
+        maps[static_cast<std::size_t>(index)].image.height = 1;
+        maps[static_cast<std::size_t>(index)].image.rgba = {
+            static_cast<std::uint8_t>(index == 0 ? 1 : 2), 0, 0, 255};
+    }
+    bo2::engine::assign_model_lightmaps(geometry, maps);
+    CHECK(geometry.model_lightmaps.size() == 2);
+    CHECK(geometry.triangles[0].lightmap != geometry.triangles[1].lightmap);
 }
 
 void test_collision_chunk() {

@@ -79,12 +79,14 @@ counts match the model vertex counts (for example `cryptexithall` 116,
 153/161, the pilars 206/122).
 
 `assign_model_lightmaps` groups the entries by their prefix and matches a
-model's vertex count to a group. Models are consumed in index order, so
-the Nth model with a given vertex count takes the Nth group with that
-count; the six 48-vertex coffins and the six 153/161-vertex roofbits get
+model's vertex count to a group. Placed instances consume groups in
+instance order, so two instances of one model can take different prop
+groups; a triangle with no instance mapping falls back to its model's
+group. The six 48-vertex coffins and the six 153/161-vertex roofbits get
 different groups instead of sharing the first one. Within the group it
 picks the entry whose name ends with the model's texture name. In
-`sanctuary` this produces 62 model light maps covering 2,769 triangles.
+`sanctuary` this produces 62 model light maps covering 2,769 triangles;
+`cy01` now covers 15,217 triangles and `lc01` 7,116.
 The model reader stores the second UV set in
 `LevelGeometry::lightmap_texcoords`. Shared `model` entries (props not in
 `cellmdls`) still need their own instance mapping.

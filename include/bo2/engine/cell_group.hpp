@@ -16,6 +16,7 @@ struct LevelTriangle {
     std::uint32_t c = 0;
     std::uint32_t material = 0;
     std::uint32_t model = 0;
+    std::uint32_t instance = 0xFFFFFFFFU;
     std::int32_t texture = -1;
     std::int32_t lightmap = -1;
 };

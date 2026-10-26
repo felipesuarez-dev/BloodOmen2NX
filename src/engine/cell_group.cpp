@@ -775,8 +775,8 @@ void parse_prims(const common::Reader& reader, const Chunk& chunk, std::uint32_t
             if (global_material >= geometry.materials.size()) {
                 geometry.materials.resize(static_cast<std::size_t>(global_material) + 1);
             }
-            geometry.triangles.push_back(
-                {vertex_base + a, vertex_base + b, vertex_base + c, global_material, model, texture});
+            geometry.triangles.push_back({vertex_base + a, vertex_base + b, vertex_base + c,
+                                          global_material, model, 0xFFFFFFFFU, texture, -1});
         }
         position += static_cast<std::size_t>(indices) * 2;
         if (position + 2 > end) {
@@ -898,7 +898,9 @@ void place_instances(LevelGeometry& geometry) {
     std::vector<Vec3> normals;
     std::vector<Vec2> texcoords;
     std::vector<LevelTriangle> triangles;
-    for (const LevelInstance& instance : geometry.instances) {
+    for (std::size_t instance_index = 0; instance_index < geometry.instances.size();
+         ++instance_index) {
+        const LevelInstance& instance = geometry.instances[instance_index];
         if (instance.model >= geometry.model_ranges.size()) {
             ++geometry.skipped_instances;
             continue;
@@ -935,6 +937,7 @@ void place_instances(LevelGeometry& geometry) {
             triangle.a = vertex_base + (triangle.a - first);
             triangle.b = vertex_base + (triangle.b - first);
             triangle.c = vertex_base + (triangle.c - first);
+            triangle.instance = static_cast<std::uint32_t>(instance_index);
             triangles.push_back(triangle);
         }
         ++geometry.placed_instances;
@@ -1217,12 +1220,39 @@ void assign_model_lightmaps(LevelGeometry& geometry,
             ++index;
         }
     }
-    std::map<const LevelLightMap*, std::int32_t> image_index;
-    for (LevelTriangle& triangle : geometry.triangles) {
-        if (triangle.model >= model_groups.size()) {
+    std::vector<const Group*> instance_groups(geometry.instances.size(), nullptr);
+    std::map<std::uint32_t, std::size_t> next_instance_group;
+    for (std::size_t index = 0; index < geometry.instances.size(); ++index) {
+        const LevelInstance& instance = geometry.instances[index];
+        if (instance.model >= geometry.model_ranges.size()) {
             continue;
         }
-        const Group* match = model_groups[triangle.model];
+        const ModelRange& range = geometry.model_ranges[instance.model];
+        if (!range.present) {
+            continue;
+        }
+        const auto found = groups_by_count.find(range.vertex_count);
+        if (found == groups_by_count.end()) {
+            continue;
+        }
+        std::size_t& group_index = next_instance_group[range.vertex_count];
+        if (group_index < found->second.size()) {
+            instance_groups[index] = found->second[group_index];
+            ++group_index;
+        }
+    }
+    std::map<const LevelLightMap*, std::int32_t> image_index;
+    for (LevelTriangle& triangle : geometry.triangles) {
+        const Group* match = nullptr;
+        if (triangle.instance < instance_groups.size()) {
+            match = instance_groups[triangle.instance];
+        }
+        if (match == nullptr && triangle.model < model_groups.size()) {
+            match = model_groups[triangle.model];
+        }
+        if (match == nullptr) {
+            continue;
+        }
         if (match == nullptr || triangle.texture < 0 ||
             static_cast<std::size_t>(triangle.texture) >= geometry.texture_names.size()) {
             continue;

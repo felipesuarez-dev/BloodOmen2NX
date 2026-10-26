@@ -51,7 +51,9 @@ and assets) is complete.
 - Cell instances are parsed and applied: the `cellmdls` models are local
   templates and `cellinst` (v3/v4) places them in world space. In
   `sanctuary` 74 of 112 instances are placed (38 sentinel or missing);
-  `cy01` places 429 of 575 and `lc01` 400 of 512.
+  `cy01` places 429 of 575 and `lc01` 400 of 512. Light maps are assigned
+  per placed instance, with a per-model fallback; `cy01` covers 15,217
+  triangles and `lc01` 7,116.
 - Cell lights and markers are parsed: `cellight` version 3 in 114 groups
   and `cellmark` version 4 in 131 groups. `sanctuary` has 13 lights and
   10 markers; the renderer does not consume them yet.

@@ -41,7 +41,7 @@ comparison.
 | Skeleton and animations | done | 5,168 models parsed, 1,586 skinned; animation payloads extracted raw |
 | M3 loop/world | wip | FixedStep, level entity population, frustum culling, CellStreamer, cell navigation and a collision query world with tests |
 | Material layer records | done | `mlyrcolr`/`mlyrctrl`; diagnostic `--material` tints |
-| Light maps (`litedata`) | done | 71 `.slm` entries, per-model ordered match, `--lightmap`; shared-model instances open |
+| Light maps (`litedata`) | done | 71 `.slm` entries, per-instance match with model fallback, `--lightmap`; external shared models open |
 | Host renderer (OpenGL) | done | SDL2/OpenGL window, free camera and Xvfb capture |
 | Renderer pipeline | done | GLSL 1.20 + VBO/IBO, ordered runs; SDL frame 20-22 ms |
 | Frame comparator | done | Side-by-side, diff, tile/region metrics; oracle frame blocked |
