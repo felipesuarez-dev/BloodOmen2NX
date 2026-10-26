@@ -97,6 +97,7 @@ Current concrete modules:
 | `math` | Vec3, Vec4, Mat4 | Used by the headless renderer |
 | `render_pipeline` | GLSL/VBO level pipeline | SDL host renderer |
 | `PlayerController` | provisional movement and camera | Game-layer foundation; constants pending RE |
+| `SaveGame` | canonical save/checkpoint bytes | Round-trip and slot tests |
 
 Each interface is implemented by the platform backend. The engine owns
 the data structures; the platform owns the device objects.

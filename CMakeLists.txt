@@ -36,6 +36,7 @@ target_compile_options(bo2_engine PRIVATE ${BO2NX_WARNINGS})
 add_library(bo2_game STATIC
     src/game/camera.cpp
     src/game/player.cpp
+    src/game/save.cpp
 )
 target_link_libraries(bo2_game PUBLIC bo2_engine)
 target_include_directories(bo2_game PUBLIC include)
@@ -107,6 +108,11 @@ if(BUILD_TESTING)
     target_link_libraries(bo2nx_region_tests PRIVATE bo2_engine)
     target_compile_options(bo2nx_region_tests PRIVATE ${BO2NX_WARNINGS})
     add_test(NAME region COMMAND bo2nx_region_tests)
+
+    add_executable(bo2nx_save_tests tests/unit/test_save.cpp)
+    target_link_libraries(bo2nx_save_tests PRIVATE bo2_game)
+    target_compile_options(bo2nx_save_tests PRIVATE ${BO2NX_WARNINGS})
+    add_test(NAME save COMMAND bo2nx_save_tests)
 
     add_executable(bo2nx_camera_tests tests/unit/test_camera.cpp)
     target_link_libraries(bo2nx_camera_tests PRIVATE bo2_game)

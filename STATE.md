@@ -113,6 +113,9 @@ and assets) is complete.
   decoded (15,632 entities, 533 model names, 0 errors); entity models are
   resolved and appended as geometry (13 in sanctuary, 119 in cy01, 72 in
   lc01), with named light-map selection and a vertex-count fallback.
+  Save states serialize the level name, player transform and tick with a
+  versioned binary format; checkpoint slots and corruption checks are
+  unit-tested. The HUD and full checkpoint flow remain pending.
   The compressed `collmodc` runtime and game-specific entities remain
   pending.
 
