@@ -234,6 +234,12 @@ const bo2::engine::BigEntry* pick_texture(const bo2::engine::BigArchive& archive
     return needle.empty() ? first : nullptr;
 }
 
+struct EntityAsset {
+    bo2::engine::RegionEntity entity;
+    bo2::engine::LevelGeometry geometry;
+    std::uint32_t texture_base = 0;
+};
+
 struct LoadedLevel {
     bo2::engine::LevelGeometry geometry;
     std::vector<bo2::engine::Image> textures;
@@ -242,6 +248,7 @@ struct LoadedLevel {
     std::size_t lightmap_entries = 0;
     std::size_t entity_models = 0;
     std::vector<bo2::engine::RegionEntity> region_entities;
+    std::vector<EntityAsset> entity_assets;
     std::string name;
     double load_ms = 0.0;
     double archive_ms = 0.0;
@@ -293,9 +300,10 @@ const bo2::engine::BigEntry* find_model_entry(const bo2::engine::BigArchive& arc
 
 void append_entity_geometry(bo2::engine::LevelGeometry& target,
                             const bo2::engine::LevelGeometry& source,
-                            const bo2::engine::Vec3& offset) {
+                            const bo2::engine::Vec3& offset, std::uint32_t texture_base) {
     const std::uint32_t vertex_base = static_cast<std::uint32_t>(target.positions.size());
-    const std::uint32_t texture_base = static_cast<std::uint32_t>(target.texture_names.size());
+    const std::uint32_t lightmap_base =
+        static_cast<std::uint32_t>(target.model_lightmaps.size());
     for (const bo2::engine::Vec3& position : source.positions) {
         target.positions.push_back(position + offset);
     }
@@ -314,11 +322,13 @@ void append_entity_geometry(bo2::engine::LevelGeometry& target,
         if (triangle.texture >= 0) {
             triangle.texture += static_cast<std::int32_t>(texture_base);
         }
-        triangle.lightmap = -1;
+        if (triangle.lightmap >= 0) {
+            triangle.lightmap += static_cast<std::int32_t>(lightmap_base);
+        }
         target.triangles.push_back(triangle);
     }
-    target.texture_names.insert(target.texture_names.end(), source.texture_names.begin(),
-                                source.texture_names.end());
+    target.model_lightmaps.insert(target.model_lightmaps.end(), source.model_lightmaps.begin(),
+                                  source.model_lightmaps.end());
 }
 
 LoadedLevel load_level(const Options& options) {
@@ -365,10 +375,18 @@ LoadedLevel load_level(const Options& options) {
             continue;
         }
         try {
-            const bo2::engine::LevelGeometry asset = bo2::engine::parse_model_asset(
+            bo2::engine::LevelGeometry asset = bo2::engine::parse_model_asset(
                 archive.extract(*model_entry), model_entry->symbols, archive.names());
             if (!asset.triangles.empty()) {
-                append_entity_geometry(level.geometry, asset, entity.position);
+                EntityAsset stored;
+                stored.entity = entity;
+                stored.texture_base =
+                    static_cast<std::uint32_t>(level.geometry.texture_names.size());
+                level.geometry.texture_names.insert(level.geometry.texture_names.end(),
+                                                    asset.texture_names.begin(),
+                                                    asset.texture_names.end());
+                stored.geometry = std::move(asset);
+                level.entity_assets.push_back(std::move(stored));
                 ++level.entity_models;
             }
         } catch (const std::exception&) {
@@ -404,6 +422,15 @@ LoadedLevel load_level(const Options& options) {
         level.lightmap_entries = lightmap_entries.size();
     }
     bo2::engine::assign_model_lightmaps(level.geometry, lightmap_entries);
+    for (EntityAsset& asset : level.entity_assets) {
+        bo2::engine::assign_named_model_lightmaps(asset.geometry, lightmap_entries,
+                                                  asset.entity.model);
+        if (asset.geometry.model_lightmaps.empty()) {
+            bo2::engine::assign_model_lightmaps(asset.geometry, lightmap_entries);
+        }
+        append_entity_geometry(level.geometry, asset.geometry, asset.entity.position,
+                               asset.texture_base);
+    }
     level.geometry.lightmaps.reserve(level.geometry.texture_names.size());
     for (const std::string& name : level.geometry.texture_names) {
         const std::string normalized = normalize_texture_name(name);

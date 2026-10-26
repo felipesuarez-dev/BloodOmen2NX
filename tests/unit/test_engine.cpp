@@ -709,6 +709,22 @@ void test_shared_instance_lightmaps() {
     CHECK(geometry.triangles[0].lightmap != geometry.triangles[1].lightmap);
 }
 
+void test_named_model_lightmaps() {
+    bo2::engine::LevelGeometry geometry;
+    geometry.texture_names = {"Alpha"};
+    geometry.triangles = {{0, 1, 2, 0, 0, 0xFFFFFFFFU, 0, -1}};
+    std::vector<bo2::engine::LevelLightMap> maps(2);
+    maps[0].name = "sanctuary-pilara-alpha";
+    maps[0].group = "sanctuary/pilara";
+    maps[0].group_vertex_count = 4;
+    maps[1].name = "other-alpha";
+    maps[1].group = "other";
+    maps[1].group_vertex_count = 4;
+    bo2::engine::assign_named_model_lightmaps(geometry, maps, "pilara");
+    CHECK(geometry.model_lightmaps.size() == 1);
+    CHECK(geometry.triangles[0].lightmap == 0);
+}
+
 void test_collision_chunk() {
     const std::vector<std::uint8_t> data = build_cell_group(false, true);
     const bo2::engine::LevelGeometry geometry = bo2::engine::parse_cell_group(data);

@@ -1319,6 +1319,71 @@ void assign_model_lightmaps(LevelGeometry& geometry,
     }
 }
 
+void assign_named_model_lightmaps(LevelGeometry& geometry,
+                                  const std::vector<LevelLightMap>& lightmaps,
+                                  const std::string& model_name) {
+    if (lightmaps.empty() || geometry.triangles.empty() || model_name.empty()) {
+        return;
+    }
+    const auto normalized = [](const std::string& value) {
+        std::string result;
+        result.reserve(value.size());
+        for (char character : value) {
+            if (character == '\\') {
+                result.push_back('/');
+            } else {
+                result.push_back(static_cast<char>(
+                    std::tolower(static_cast<unsigned char>(character))));
+            }
+        }
+        return result;
+    };
+    const std::string wanted = normalized(model_name);
+    std::vector<const LevelLightMap*> entries;
+    for (const LevelLightMap& map : lightmaps) {
+        const std::string group = normalized(map.group);
+        if (group == wanted || (group.size() > wanted.size() &&
+                                group.compare(group.size() - wanted.size(), wanted.size(),
+                                              wanted) == 0 &&
+                                group[group.size() - wanted.size() - 1] == '/')) {
+            entries.push_back(&map);
+        }
+    }
+    if (entries.empty()) {
+        return;
+    }
+    std::map<const LevelLightMap*, std::int32_t> image_index;
+    for (LevelTriangle& triangle : geometry.triangles) {
+        if (triangle.texture < 0 ||
+            static_cast<std::size_t>(triangle.texture) >= geometry.texture_names.size()) {
+            continue;
+        }
+        const std::string texture = normalized(geometry.texture_names[triangle.texture]);
+        const LevelLightMap* match = nullptr;
+        for (const LevelLightMap* candidate : entries) {
+            const std::string name = normalized(candidate->name);
+            if (name.size() >= texture.size() &&
+                name.compare(name.size() - texture.size(), texture.size(), texture) == 0) {
+                match = candidate;
+                break;
+            }
+        }
+        if (match == nullptr) {
+            continue;
+        }
+        const auto found = image_index.find(match);
+        if (found == image_index.end()) {
+            const std::int32_t index =
+                static_cast<std::int32_t>(geometry.model_lightmaps.size());
+            geometry.model_lightmaps.push_back(match->image);
+            image_index.emplace(match, index);
+            triangle.lightmap = index;
+        } else {
+            triangle.lightmap = found->second;
+        }
+    }
+}
+
 Vec3 material_color(const LevelGeometry& geometry, const LevelTriangle& triangle) {
     static const Vec3 palette[8] = {
         {0.62f, 0.56f, 0.48f}, {0.50f, 0.52f, 0.56f}, {0.58f, 0.47f, 0.38f},
