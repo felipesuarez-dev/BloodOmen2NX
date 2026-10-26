@@ -5,7 +5,7 @@
 | Level | What | When | Assets needed |
 |---|---|---|---|
 | Unit (Python) | LE readers, math, parsers on synthetic fixtures (SFXI, BIG, RKV), installer | Always | No |
-| Unit (C++) | goefile/DDS/cellgrup/ERD readers, cell grid/BSP, cell instances, lights/markers, material layers/tints, `.slm` light maps and model-group matching, texture binding, math and rasterizer | Always | No |
+| Unit (C++) | goefile/DDS/cellgrup/ERD readers, cell grid/BSP, cell instances, lights/markers, collision payloads, material layers/tints, `.slm` light maps and model-group matching, texture binding, math and rasterizer | Always | No |
 | Platform services | FS, log sink, monotonic clock, memory snapshot and input maps on Linux | Always | No |
 | Parity Python/C++ | Same input to the reference parser and the C++ parser -> identical output | Always | No (fixtures) |
 | Integration (asset-gated) | Parsers over the user's real assets -> counts and SHA-256 manifests | `BO2NX_ASSETS_DIR` set | Yes, skips otherwise |

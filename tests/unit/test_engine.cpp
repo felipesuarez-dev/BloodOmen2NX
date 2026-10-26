@@ -250,7 +250,8 @@ void append_cell_bsp(std::vector<std::uint8_t>& out) {
     put16(out, 3);
 }
 
-std::vector<std::uint8_t> build_cell_group(bool with_instances = false) {
+std::vector<std::uint8_t> build_cell_group(bool with_instances = false,
+                                           bool with_collision = false) {
     std::vector<std::uint8_t> positions;
     put32(positions, 4);
     for (const auto& point : std::vector<std::array<float, 3>>{{0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0}}) {
@@ -362,6 +363,9 @@ std::vector<std::uint8_t> build_cell_group(bool with_instances = false) {
 
     std::vector<std::uint8_t> model_chunks;
     append_chunk(model_chunks, "rmd", rmd);
+    if (with_collision) {
+        append_chunk(model_chunks, "collmodc", {1, 2, 3, 4});
+    }
     std::vector<std::uint8_t> model;
     put32(model, 105);
     append(model, "default");
@@ -677,6 +681,15 @@ void test_model_lightmaps() {
     CHECK(geometry.triangles[2].lightmap == 2);
 }
 
+void test_collision_chunk() {
+    const std::vector<std::uint8_t> data = build_cell_group(false, true);
+    const bo2::engine::LevelGeometry geometry = bo2::engine::parse_cell_group(data);
+    CHECK(geometry.collisions.size() == 1);
+    CHECK(geometry.collisions[0].model == 0);
+    CHECK(geometry.collisions[0].data.size() == 4);
+    CHECK(geometry.collisions[0].data[0] == 1);
+}
+
 void test_cell_group() {
     const std::vector<std::uint8_t> data = build_cell_group();
     const bo2::engine::LevelGeometry geometry = bo2::engine::parse_cell_group(data);
@@ -839,6 +852,7 @@ int main() {
     test_dds();
     test_math();
     test_cell_group();
+    test_collision_chunk();
     test_cell_instances();
     test_lightmaps();
     test_model_lightmaps();

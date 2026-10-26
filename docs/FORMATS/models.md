@@ -67,7 +67,7 @@ u32   2
 | `mdlattr` | Named attribute table | Model metadata |
 | `vtxweigh` | `u32 count` + weights | Skinning; static cell models are zero |
 | `jointidx` | `u32 count` + joint indices | Skinning |
-| `collmodc` | Collision model | Not used by the renderer |
+| `collmodc` | Collision model | Raw payload extracted; layout below |
 
 ### `prims`
 
@@ -88,6 +88,29 @@ dumper prints at `0x67d270` (`MaterialIdx`, `NTris`, `NStrips`,
 `strip_lens`, `Tri_Coords`, `NAdcs`). The on-disk layout of the extra is
 observed, not fully decompiled; the triangle list is the render
 geometry.
+
+### `collmodc`
+
+The collision chunk is a sibling of `rmd` in the model block, not a
+subchunk. The payload starts with a NUL-terminated record name
+(`default`), a u32 header size, two header u32 values and a vector of
+8-byte property records. After the header the observed sequence is:
+
+```
+u32  vertex flag (0xFFFFFF01 in the reference models)
+u8   compressed flag
+u32  data size; bytes[data size]       (compressed vertex blob)
+u32  index count
+u32  index bytes; bytes[index bytes]
+u32  edge count; edge[24 bytes]
+u32  face count; face[16 bytes]
+u16, u16, u32, u8, u32 x4              (trailer)
+```
+
+The host stores the raw `collmodc` payload per model
+(`LevelGeometry::collisions`) and reports the model and byte counts.
+The compressed vertex blob, the edge/face semantics and the collision
+runtime are not decoded yet.
 
 ## Textures and materials
 

@@ -37,6 +37,7 @@ comparison.
 | Cell grid and visibility BSP | done | 173 groups with `cells`; 162 with `cellbsp`; leaf count verified |
 | Cell instances and placement | done | `cellinst` v3/v4; local `cellmdls` templates placed in world space |
 | Cell lights and markers | done | `cellight` v3 and `cellmark` v4 parsed; renderer consumer pending |
+| Collision payload | done | `collmodc` raw payload per model, header counts; runtime decode pending |
 | Material layer records | done | `mlyrcolr`/`mlyrctrl`; diagnostic `--material` tints |
 | Light maps (`litedata`) | done | 71 `.slm` entries, per-model ordered match, `--lightmap`; shared-model instances open |
 | Host renderer (OpenGL) | done | SDL2/OpenGL window, free camera and Xvfb capture |

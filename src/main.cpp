@@ -342,6 +342,14 @@ void print_scene(const LoadedLevel& level) {
                   << geometry.cell_bsp.leaf_count << " leaves, depth "
                   << geometry.cell_bsp.depth << ")\n";
     }
+    if (!geometry.collisions.empty()) {
+        std::size_t bytes = 0;
+        for (const bo2::engine::LevelCollision& collision : geometry.collisions) {
+            bytes += collision.data.size();
+        }
+        std::cout << "collision: " << geometry.collisions.size() << " models (" << bytes
+                  << " bytes)\n";
+    }
     if (geometry.has_instances) {
         std::cout << "instances: " << geometry.instances.size() << " (placed "
                   << geometry.placed_instances << ", skipped " << geometry.skipped_instances

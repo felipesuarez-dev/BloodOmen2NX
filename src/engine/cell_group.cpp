@@ -979,6 +979,16 @@ LevelGeometry parse_cell_group(const std::vector<std::uint8_t>& data,
         }
         const std::vector<Chunk> chunks = read_chunks(reader, chunks_start, model_end);
         const Chunk* rmd = find_chunk(chunks, "rmd");
+        const Chunk* collision = find_chunk(chunks, "collmodc");
+        if (collision != nullptr) {
+            LevelCollision entry;
+            entry.model = model;
+            entry.name = name;
+            entry.data.assign(data.begin() + static_cast<std::ptrdiff_t>(collision->data_offset),
+                              data.begin() + static_cast<std::ptrdiff_t>(collision->data_offset +
+                                                                         collision->data_size));
+            geometry.collisions.push_back(std::move(entry));
+        }
         const std::size_t first_vertex = geometry.positions.size();
         const std::size_t first_triangle = geometry.triangles.size();
         if (rmd == nullptr) {

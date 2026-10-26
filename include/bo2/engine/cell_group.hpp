@@ -84,6 +84,12 @@ struct ModelRange {
     bool present = false;
 };
 
+struct LevelCollision {
+    std::uint32_t model = 0;
+    std::string name;
+    std::vector<std::uint8_t> data;
+};
+
 struct LevelLight {
     std::uint32_t version = 0;
     std::uint32_t handle = 0;
@@ -147,6 +153,7 @@ struct LevelGeometry {
     std::vector<MaterialLayer> materials;
     std::vector<CellAttributeTable> level_attributes;
     std::vector<ModelRange> model_ranges;
+    std::vector<LevelCollision> collisions;
     std::vector<LevelInstance> instances;
     std::vector<LevelLight> lights;
     std::vector<LevelMarker> markers;
