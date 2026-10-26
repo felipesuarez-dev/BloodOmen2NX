@@ -32,6 +32,13 @@ add_library(bo2_engine STATIC
 target_link_libraries(bo2_engine PUBLIC bo2_common ${CMAKE_DL_LIBS})
 target_compile_options(bo2_engine PRIVATE ${BO2NX_WARNINGS})
 
+add_library(bo2_game STATIC
+    src/game/player.cpp
+)
+target_link_libraries(bo2_game PUBLIC bo2_engine)
+target_include_directories(bo2_game PUBLIC include)
+target_compile_options(bo2_game PRIVATE ${BO2NX_WARNINGS})
+
 add_library(bo2_platform_core STATIC
     src/platform/input.cpp
     src/platform/linux/platform.cpp
@@ -88,6 +95,11 @@ if(BUILD_TESTING)
     target_link_libraries(bo2nx_renderer_tests PRIVATE bo2_platform_headless)
     target_compile_options(bo2nx_renderer_tests PRIVATE ${BO2NX_WARNINGS})
     add_test(NAME renderer COMMAND bo2nx_renderer_tests)
+
+    add_executable(bo2nx_player_tests tests/unit/test_player.cpp)
+    target_link_libraries(bo2nx_player_tests PRIVATE bo2_game)
+    target_compile_options(bo2nx_player_tests PRIVATE ${BO2NX_WARNINGS})
+    add_test(NAME player COMMAND bo2nx_player_tests)
 
     add_executable(bo2nx_collision_tests tests/unit/test_collision.cpp)
     target_link_libraries(bo2nx_collision_tests PRIVATE bo2_engine)

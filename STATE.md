@@ -104,8 +104,11 @@ and assets) is complete.
   hysteresis; `CellNavigation` builds a cell graph from portals and finds
   a shortest path. The level viewer populates the world from 23 sanctuary
   lights/markers and reports frustum-visible entities and active cells.
-  A triangle-soup `CollisionWorld` provides sphere overlap and ray casts;
-  the compressed `collmodc` runtime and game-specific entities remain
+  A triangle-soup `CollisionWorld` provides sphere overlap and ray casts.
+  A provisional `PlayerController` moves a body with collision, gravity,
+  jumping and a first-person camera; its speeds and input mapping are not
+  yet a faithful translation and require decompilation.
+  The compressed `collmodc` runtime and game-specific entities remain
   pending.
 
 ## What is not done

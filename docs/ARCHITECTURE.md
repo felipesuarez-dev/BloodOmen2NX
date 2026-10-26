@@ -96,6 +96,7 @@ Current concrete modules:
 | `dds` | DDS/BC decoder | DXT1, DXT3, DXT5, A8R8G8B8; top mip |
 | `math` | Vec3, Vec4, Mat4 | Used by the headless renderer |
 | `render_pipeline` | GLSL/VBO level pipeline | SDL host renderer |
+| `PlayerController` | provisional movement and camera | Game-layer foundation; constants pending RE |
 
 Each interface is implemented by the platform backend. The engine owns
 the data structures; the platform owns the device objects.
