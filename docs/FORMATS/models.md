@@ -7,8 +7,9 @@ bind pose and keyframe evaluation are open**.
 
 The static shell of a level lives in the `cellgrup` entry of its `.big`.
 The shared `model` entries (characters, props, particles) use the same
-`rmd` chunk format. The geometry is in world space: the renderer can draw
-a whole level without per-model transforms.
+`rmd` chunk format. Region entities resolve their short model names to
+these entries; the host appends their local geometry at the entity
+position. The cell geometry itself is in world space.
 
 ## Cell group
 
@@ -471,11 +472,12 @@ interior, while the default isometric frame shows the level.
 - `model 74` has no `rmd`; its role is unknown.
 - Skeleton pose evaluation, skinning and animation playback.
 - `animatio`/`animreel` keyframe encoding.
-- The shared `model` entries versus the `cellmdls` inline models.
+- Shared-model light-map selection by model name and the remaining entity
+  properties.
 
 ## Next steps
 
 1. Use the cell grid and BSP for culling and cell visibility.
-2. Bind the shared `model` entries and decode `cellanim`.
+2. Select shared-model light maps and decode `cellanim`.
 3. Match the light-map group to the cell/object and combine it with the material layers.
 4. Decode the `animatio`/`animreel` keyframe streams.

@@ -102,14 +102,17 @@ and assets) is complete.
   to 60 Hz. `EntityWorld` stores entities and filters them through a
   sphere frustum; `CellStreamer` activates cells by camera distance with
   hysteresis; `CellNavigation` builds a cell graph from portals and finds
-  a shortest path. The level viewer populates the world from 23 sanctuary
-  lights/markers and reports frustum-visible entities and active cells.
+  a shortest path. The level viewer populates the world from the 13
+  sanctuary region entities and reports frustum-visible entities and active
+  cells.
   A triangle-soup `CollisionWorld` provides sphere overlap and ray casts.
   A provisional `PlayerController` moves a body with collision, gravity,
   jumping and a first-person camera, and `bo2nx --play` drives it in the
   SDL level viewer. Its speeds and input mapping are not yet a faithful
-  translation and require decompilation. The `region`
-  entity table is decoded: 15,632 entities and 533 model names, 0 errors.
+  translation and require decompilation. The `region` entity table is
+  decoded (15,632 entities, 533 model names, 0 errors); entity models are
+  resolved and appended as geometry (13 in sanctuary, 119 in cy01, 72 in
+  lc01), without shared-model light-map selection yet.
   The compressed `collmodc` runtime and game-specific entities remain
   pending.
 
