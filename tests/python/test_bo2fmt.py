@@ -18,7 +18,7 @@ class Bo2fmtTest(unittest.TestCase):
             big.Entry("model", "a/b", 0, 3, 0, b"abc"),
             big.Entry("texture", "c", 0, 5, 0, b"DDSxx", (7, 8)),
         ]
-        data = big.build(["a/b", "c", "unused"], entries, name_padding=0xFF)
+        data = big.build(["a/b", "c", "unused"], entries, name_padding=b"\xff")
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             source = root / "input.big"
@@ -29,7 +29,7 @@ class Bo2fmtTest(unittest.TestCase):
                 bo2fmt.unpack_big(source, unpacked)
             manifest = json.loads((unpacked / bo2fmt.MANIFEST).read_text())
             self.assertEqual(manifest["format"], "bo2.big")
-            self.assertEqual(manifest["name_padding"], 0xFF)
+            self.assertEqual(manifest["name_padding"], "ff")
             self.assertEqual(len(manifest["entries"]), 2)
             with contextlib.redirect_stdout(io.StringIO()):
                 bo2fmt.repack_big(unpacked, packed)

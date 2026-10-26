@@ -170,18 +170,18 @@ def load(path: Path) -> tuple[list[str], list[Entry]]:
     return parse(path.read_bytes())
 
 
-def name_padding(data: bytes) -> int:
-    """Return the byte used to pad the name table, or 0 when there is none."""
+def name_padding(data: bytes) -> bytes:
+    """Return the exact bytes used between the name table and the entries."""
     if len(data) < 0x24 or data[:8] != MAGIC:
         raise BigError("not a goefile container")
     entries_start = 0x10 + _u32(data, 0x18)
     pos = 0x24
     for _ in range(_u32(data, 0x20)):
         _, pos = _cstr(data, pos, entries_start)
-    return data[pos] if pos < entries_start else 0
+    return data[pos:entries_start]
 
 
-def build(names: list[str], entries: list[Entry], name_padding: int = 0) -> bytes:
+def build(names: list[str], entries: list[Entry], name_padding: bytes = b"") -> bytes:
     """Serialize a goefile container from a name table and entries."""
     names = list(names)
     name_index: dict[str, int] = {}
@@ -200,8 +200,10 @@ def build(names: list[str], entries: list[Entry], name_padding: int = 0) -> byte
         + struct.pack("<I", len(names))
         + names_blob
     )
-    if len(directory) & 1:
-        directory += bytes([name_padding & 0xFF])
+    if name_padding:
+        directory += name_padding
+    elif len(directory) & 1:
+        directory += b"\0"
     directory_length = len(directory)
     directory = directory[:8] + struct.pack("<I", directory_length) + directory[12:]
 

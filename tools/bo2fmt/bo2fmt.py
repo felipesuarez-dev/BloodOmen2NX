@@ -53,7 +53,7 @@ def unpack_big(container: Path, out: Path) -> int:
     manifest = {
         "format": "bo2.big",
         "version": 1,
-        "name_padding": big.name_padding(data),
+        "name_padding": big.name_padding(data).hex(),
         "names": names,
         "entries": [],
     }
@@ -145,7 +145,9 @@ def repack_big(source: Path, out: Path) -> int:
                 bytes.fromhex(record.get("trailer", "")),
             )
         )
-    blob = big.build(manifest["names"], entries, int(manifest.get("name_padding", 0)))
+    blob = big.build(
+        manifest["names"], entries, bytes.fromhex(manifest.get("name_padding", ""))
+    )
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_bytes(blob)
     print(f"repacked {len(entries)} entries to {out}")
