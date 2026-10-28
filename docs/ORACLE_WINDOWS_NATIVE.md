@@ -169,6 +169,9 @@ The tunnel, server, client and watchdog work. Three captures are visible:
   cutscene. In `_2355` the runner tried `Space`; image comparison shows
   `Space` has no effect (MAE 0.12), while `Escape` changes the frame
   (MAE 19.65).
+- The HTTP job API runs `probe` jobs, but a `capture` job currently exits
+  with `ModuleNotFoundError: No module named 'frida'`. The server's Python
+  environment is not the one used for the earlier captures.
 - `present` events in `_2358` run at roughly 200 to 300 fps in menus and
   cutscenes. There is no effective vsync; the logic tick must be measured in
   gameplay.
@@ -225,6 +228,10 @@ action/attack, WASD to move, mouse for the camera and `C` to block.
   wrong; `list` shows what is available.
 - Port `8765` already in use on Ubuntu: start the Windows tunnel on another
   remote port and set `ORACLE_URL=http://127.0.0.1:<port>`.
+- `run capture` exits with `ModuleNotFoundError: No module named 'frida'`:
+  launch the job with the same Python or virtual environment that has Frida
+  installed, or install Frida in the server's Python. `run probe` works
+  because it does not import Frida.
 - Downloads can resume because the server supports `Range`; the client
   currently restarts the file.
 

@@ -101,8 +101,9 @@ and assets) is complete.
   the Windows host, `tools/oracle/oracle_client.py`, a capture validator and
   an input/frame aligner. The first three captures are partial: the runner
   stops at the intro cutscene with `RuntimeError: gameplay not detected` and
-  no gameplay state was captured. The final run will start from a manual
-  save. See `docs/ORACLE_WINDOWS_NATIVE.md`.
+  no gameplay state was captured. The HTTP job API runs probes, but capture
+  jobs currently need Frida in the server Python. The final run will start
+  from a manual save. See `docs/ORACLE_WINDOWS_NATIVE.md`.
 - The fixed-step loop (`FixedStep`) and `--headless --frames N` are in
   place; the accumulator is clamped to 0.25 s and the tick rate defaults
   to 60 Hz. `EntityWorld` stores entities and filters them through a
