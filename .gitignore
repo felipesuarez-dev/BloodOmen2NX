@@ -49,3 +49,7 @@ Thumbs.db
 /tool-output/
 *.log
 /captures/
+
+# Oracle token - never commit
+/tools/oracle/.oracle_token
+*.oracle_token
