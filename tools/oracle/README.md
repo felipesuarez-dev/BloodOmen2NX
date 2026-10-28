@@ -18,10 +18,11 @@ serves captures through an SSH reverse tunnel.
 required artifacts, the `bo2.exe` hash and `SHA256SUMS`. `align.py` maps the
 input events to the captured frames and summarizes the present rate.
 
-The first three captures are partial: the runner stops at the intro cutscene
-with `RuntimeError: gameplay not detected`, and there is no gameplay state
-yet. The final run will start from a manual save at the first level. See
-`docs/ORACLE_WINDOWS_NATIVE.md`.
+The first two gameplay captures stopped at the intro cutscene.
+`capture_20261028_0047` reached the first level, but the camera hook stops
+11.6 s before the spawn phase and the capture has no `state.csv`, manifest,
+notes, hashes or PPM frames. See `docs/ORACLE_WINDOWS.md` for the capture
+facts and `docs/ORACLE_WINDOWS_NATIVE.md` for the harness.
 
 Quick check from this host:
 

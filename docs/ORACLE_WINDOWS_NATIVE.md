@@ -154,9 +154,9 @@ projection matrix is stored in `camera_d3d8.jsonl`. Do not assume 25 Hz or
 
 ## Current status (2026-10-28)
 
-The tunnel, server, client and watchdog work. Three captures are visible:
-`capture_20261027_2107`, `capture_20261027_2355` and
-`capture_20261027_2358`. All are partial:
+The tunnel, server, client and watchdog work. Four captures are visible:
+`capture_20261027_2107`, `capture_20261027_2355`,
+`capture_20261027_2358` and `capture_20261028_0047`. All are partial:
 
 - `_2107` contains installer, menu, calibration and cutscene images plus the
   original `game.erg` and `settings.cfg`. It has no video, inputs or camera.
@@ -164,14 +164,20 @@ The tunnel, server, client and watchdog work. Three captures are visible:
   `game_manifest.json`, `notes.md`, `SHA256SUMS`, `state.csv`,
   `frames_ppm/` or `saves/`. The `has_memory` flag is set but no memory files
   are listed.
-- Both gameplay attempts aborted with
+- The first two gameplay attempts aborted with
   `RuntimeError: gameplay not detected`. The runner never left the intro
   cutscene. In `_2355` the runner tried `Space`; image comparison shows
   `Space` has no effect (MAE 0.12), while `Escape` changes the frame
   (MAE 19.65).
-- The HTTP job API runs `probe` jobs, but a `capture` job currently exits
-  with `ModuleNotFoundError: No module named 'frida'`. The server's Python
-  environment is not the one used for the earlier captures.
+- `_0047` reached gameplay. The key frames show the first-level spawn,
+  movement, the checkpoint, and the pause and save menus; the save header is
+  `slums/sl01.hidden_checkpoint001`. It still has no manifest, notes, hashes,
+  `state.csv` or `frames_ppm/`, and the camera hook stops 11.6 s before the
+  spawn phase, so 67 of 75 inputs are outside the camera coverage. See
+  `docs/ORACLE_WINDOWS.md` for the derived facts.
+- The HTTP job API runs `probe` jobs, but the last `capture` job exited with
+  `ModuleNotFoundError: No module named 'frida'`. The server's Python
+  environment is not the one used for the manual captures.
 - `present` events in `_2358` run at roughly 200 to 300 fps in menus and
   cutscenes. There is no effective vsync; the logic tick must be measured in
   gameplay.

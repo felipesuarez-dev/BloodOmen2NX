@@ -99,11 +99,13 @@ and assets) is complete.
 
 - The native Windows oracle harness is available: a reverse SSH server on
   the Windows host, `tools/oracle/oracle_client.py`, a capture validator and
-  an input/frame aligner. The first three captures are partial: the runner
-  stops at the intro cutscene with `RuntimeError: gameplay not detected` and
-  no gameplay state was captured. The HTTP job API runs probes, but capture
-  jobs currently need Frida in the server Python. The final run will start
-  from a manual save. See `docs/ORACLE_WINDOWS_NATIVE.md`.
+  an input/frame aligner. The first two gameplay captures stopped at the
+  intro cutscene; `capture_20261028_0047` reached the first level and saved
+  at `slums/sl01.hidden_checkpoint001`, but the camera hook stops 11.6 s
+  before the spawn phase and the capture has no `state.csv`, manifest, notes,
+  hashes or PPM frames. The HTTP job API runs probes, but capture jobs still
+  need Frida in the server Python. See `docs/ORACLE_WINDOWS.md` and
+  `docs/ORACLE_WINDOWS_NATIVE.md`.
 - The fixed-step loop (`FixedStep`) and `--headless --frames N` are in
   place; the accumulator is clamped to 0.25 s and the tick rate defaults
   to 60 Hz. `EntityWorld` stores entities and filters them through a
