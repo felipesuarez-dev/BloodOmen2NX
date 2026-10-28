@@ -82,15 +82,20 @@ def load_state(path: Path) -> tuple[list[dict], list[str]]:
 
 
 class FrameIndex:
-    def __init__(self, presents: list[dict]):
+    def __init__(self, presents: list[dict], tolerance_ms: float = 250.0):
         self.presents = sorted(
             (item for item in presents if isinstance(item.get("ts"), (int, float))),
             key=lambda item: item["ts"],
         )
         self.stamps = [item["ts"] for item in self.presents]
+        self.tolerance_ms = tolerance_ms
 
     def nearest(self, stamp):
         if not self.stamps or not isinstance(stamp, (int, float)):
+            return None
+        if stamp < self.stamps[0] - self.tolerance_ms:
+            return None
+        if stamp > self.stamps[-1] + self.tolerance_ms:
             return None
         index = bisect.bisect_left(self.stamps, stamp)
         if index == 0:
@@ -102,6 +107,15 @@ class FrameIndex:
         if stamp - before["ts"] <= after["ts"] - stamp:
             return before
         return after
+
+    def coverage(self) -> dict:
+        if not self.stamps:
+            return {}
+        return {
+            "first_ts": self.stamps[0],
+            "last_ts": self.stamps[-1],
+            "span_ms": self.stamps[-1] - self.stamps[0],
+        }
 
 
 def frame_stats(presents: list[dict]) -> dict:
@@ -167,6 +181,7 @@ def summarize(root: Path) -> dict:
     state_rows, state_fields = load_state(root / "state.csv")
     index = FrameIndex(presents)
     annotated = annotate_inputs(inputs, index)
+    aligned = sum(1 for event in annotated if event.get("frame") is not None)
     state_frames = [
         int(row["frame"])
         for row in state_rows
@@ -175,9 +190,12 @@ def summarize(root: Path) -> dict:
     return {
         "capture": root.name,
         "frames": frame_stats(presents),
+        "camera_coverage": index.coverage(),
         "inputs": {
             "count": len(annotated),
             "invalid": invalid_inputs,
+            "aligned": aligned,
+            "unaligned": len(annotated) - aligned,
             "events": annotated,
         },
         "phases": phase_summary(annotated),
@@ -204,7 +222,10 @@ def print_summary(report: dict) -> None:
             f"{frames['fps_median']} fps median, p95={frames['p95_ms']} ms"
         )
     inputs = report["inputs"]
-    print(f"inputs:  {inputs['count']} events, {inputs['invalid']} invalid")
+    print(
+        f"inputs:  {inputs['count']} events, {inputs['invalid']} invalid, "
+        f"{inputs['aligned']} aligned, {inputs['unaligned']} outside camera"
+    )
     for name, phase in report["phases"].items():
         print(
             f"phase:   {name} at frame {phase['first_frame']} "

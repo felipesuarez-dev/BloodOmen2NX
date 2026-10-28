@@ -141,6 +141,19 @@ class ValidateCaptureTest(unittest.TestCase):
             self.assertFalse(report["ok"])
             self.assertTrue(any("SHA256SUMS mismatch" in error for error in report["errors"]))
 
+    def test_camera_coverage_gap_warns(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "capture_test"
+            root.mkdir()
+            build_capture(root)
+            with (root / "inputs.jsonl").open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps({"epoch_ms": 5000, "event": "phase", "key": "late"}) + "\n")
+            write_sums(root)
+            report = validate_capture.validate_capture(root)
+            self.assertTrue(
+                any("after the last camera present" in warning for warning in report["warnings"])
+            )
+
 
 class AlignTest(unittest.TestCase):
     def test_inputs_map_to_nearest_frames(self):
@@ -157,6 +170,18 @@ class AlignTest(unittest.TestCase):
             self.assertEqual(report["phases"]["menu"]["first_frame"], 1)
             self.assertEqual(report["state"]["rows"], 3)
             self.assertEqual(report["state"]["first_frame"], 1)
+
+    def test_events_after_camera_are_unaligned(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "capture_test"
+            root.mkdir()
+            build_capture(root)
+            with (root / "inputs.jsonl").open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps({"epoch_ms": 5000, "event": "phase", "key": "late"}) + "\n")
+            report = align.summarize(root)
+            self.assertEqual(report["inputs"]["unaligned"], 1)
+            self.assertIsNone(report["inputs"]["events"][-1]["frame"])
+            self.assertEqual(report["camera_coverage"]["last_ts"], 1020)
 
 
 if __name__ == "__main__":

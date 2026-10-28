@@ -374,6 +374,24 @@ def validate_capture(root: Path, partial: bool = False) -> dict:
         if camera["invalid"]:
             warnings.append(f"camera_d3d8.jsonl has {camera['invalid']} invalid line(s)")
     fps = camera_fps(camera)
+    camera_start = min(camera["timestamp"]) if camera["timestamp"] else None
+    camera_end = max(camera["timestamp"]) if camera["timestamp"] else None
+    if (
+        camera_start is not None
+        and inputs["first_epoch_ms"] is not None
+        and inputs["first_epoch_ms"] < camera_start - 1000
+    ):
+        warnings.append("inputs start before the first camera present")
+    if (
+        camera_end is not None
+        and inputs["last_epoch_ms"] is not None
+        and inputs["last_epoch_ms"] > camera_end + 1000
+    ):
+        gap = round((inputs["last_epoch_ms"] - camera_end) / 1000.0, 1)
+        warnings.append(
+            f"inputs continue {gap} s after the last camera present; "
+            "gameplay may not be covered by camera data"
+        )
 
     state = scan_state(root / "state.csv")
     if (root / "state.csv").is_file():
@@ -442,6 +460,11 @@ def validate_capture(root: Path, partial: bool = False) -> dict:
         "state_fields": state["fields"],
         "transform_states": sorted(camera["transform_states"], key=str),
         "fps": fps,
+        "camera_coverage": {
+            "first_ts": camera_start,
+            "last_ts": camera_end,
+            "presents": camera["presents"],
+        },
         "sha256sums": sums,
     }
     return report
