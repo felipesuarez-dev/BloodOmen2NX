@@ -163,9 +163,13 @@ SD card layout will be documented here before the first public build.
 
 ## Oracle
 
-The original game is a 32-bit Windows binary. Running it under Wine is
-optional and time-boxed: it is used to capture screenshots, state and
-audio for comparison, never as a dependency of the build.
+The original game is a 32-bit Windows binary. Running it natively on Windows
+or under Wine is optional and time-boxed: it is used to capture screenshots,
+state and audio for comparison, never as a dependency of the build. The
+native Windows harness is documented in
+[`ORACLE_WINDOWS_NATIVE.md`](ORACLE_WINDOWS_NATIVE.md); it serves captures
+through an SSH reverse tunnel and is validated with
+`tools/oracle/validate_capture.py`.
 
 Rules:
 

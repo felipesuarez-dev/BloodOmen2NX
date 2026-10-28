@@ -86,7 +86,7 @@ Function map: 35513 rows. Levels and platform features are defined in [`tools/ge
 | Installed game tree | 227 files, 1.9 GB; manifest hash in `docs/PROVENANCE.md` |
 | Level renderer, audio, input | Level shell with free-camera input; audio and gameplay pending |
 | Game logic translation | Not started |
-| Original game as oracle | Wine/Xvfb launches the original; frame comparison pending |
+| Original game as oracle | Wine is blocked; a native Windows harness exists and the gameplay capture is pending |
 
 Source of truth: [`STATE.md`](STATE.md) and [`ROADMAP.md`](ROADMAP.md).
 
@@ -167,7 +167,7 @@ The game is not runnable yet. The current binary only reports its version:
 ./build/linux-debug/bo2nx
 ```
 
-The oracle (the original under Wine) is optional and time-boxed: see [`docs/RUNNING.md`](docs/RUNNING.md).
+The oracle (native Windows or Wine) is optional and time-boxed: see [`docs/ORACLE_WINDOWS_NATIVE.md`](docs/ORACLE_WINDOWS_NATIVE.md) and [`docs/RUNNING.md`](docs/RUNNING.md).
 
 ## Controls
 
@@ -191,14 +191,14 @@ flowchart LR
     B --> C[Python reference<br/>tools/bo2fmt]
     C --> D[C++17 port<br/>src/game, src/engine]
     D --> E[Unit and golden tests]
-    D --> F[Oracle comparison<br/>original under Wine]
+    D --> F[Oracle comparison<br/>native Windows or Wine]
     F -->|mismatch| B
 ```
 
 1. **Reverse**: Ghidra over `bo2.exe`; every behaviour claim needs a `FUN_` address and a local decompile under `re/decomp/` (gitignored).
 2. **Reference**: formats and behaviours are first validated with a stdlib Python implementation (`tools/bo2fmt/`).
 3. **Port**: translate faithfully; record each function in [`re/FUNCTION_MAP.csv`](re/FUNCTION_MAP.csv).
-4. **Verify**: unit tests on synthetic fixtures, then the oracle: the original runs under Wine on a private Xvfb, driven by scripted input, and its screenshots, state and saves are compared with the port.
+4. **Verify**: unit tests on synthetic fixtures, then the oracle: the original runs natively on Windows or under Wine, driven by scripted input, and its screenshots, state and saves are compared with the port.
 
 Per-function loop: [`docs/PORTING_GUIDE.md`](docs/PORTING_GUIDE.md). The rule is simple: **decompile before guessing, and never ship a claim without a dump**.
 
@@ -215,7 +215,7 @@ Per-function loop: [`docs/PORTING_GUIDE.md`](docs/PORTING_GUIDE.md). The rule is
 | `tests/` | Unit, integration and golden tests |
 | `tools/bo2fmt/` | Container and asset parsers (Python reference) |
 | `tools/ghidra/` | Headless Ghidra helpers |
-| `tools/oracle/` | Original-under-Wine harness |
+| `tools/oracle/` | Native Windows and Wine oracle harnesses |
 | `tools/gen/` | Progress generator and derived metadata |
 | `scripts/` | CI, asset check and environment helpers |
 | `re/` | Function map and local reversing artifacts (`re/decomp/` is gitignored) |
@@ -240,6 +240,7 @@ Per-function loop: [`docs/PORTING_GUIDE.md`](docs/PORTING_GUIDE.md). The rule is
 | [`docs/PROVENANCE.md`](docs/PROVENANCE.md) | Hashes and chain of custody |
 | [`docs/SETUP.md`](docs/SETUP.md) | One-time environment setup |
 | [`docs/ORACLE_COMPARE.md`](docs/ORACLE_COMPARE.md) | Parity results against the original |
+| [`docs/ORACLE_WINDOWS_NATIVE.md`](docs/ORACLE_WINDOWS_NATIVE.md) | Native Windows capture harness, client and validation |
 
 ## Progress tracking
 

@@ -97,6 +97,12 @@ and assets) is complete.
   fixed-function path. It uses the same engine data as the headless path;
   a 640x480 sanctuary frame is within 0.2% RMSE of the software renderer.
 
+- The native Windows oracle harness is available: a reverse SSH server on
+  the Windows host, `tools/oracle/oracle_client.py`, a capture validator and
+  an input/frame aligner. The first three captures are partial: the runner
+  stops at the intro cutscene with `RuntimeError: gameplay not detected` and
+  no gameplay state was captured. The final run will start from a manual
+  save. See `docs/ORACLE_WINDOWS_NATIVE.md`.
 - The fixed-step loop (`FixedStep`) and `--headless --frames N` are in
   place; the accumulator is clamped to 0.25 s and the tick rate defaults
   to 60 Hz. `EntityWorld` stores entities and filters them through a
@@ -138,8 +144,10 @@ and assets) is complete.
   it. Wiring the `sound`/`strmfile` event table to gameplay is pending.
 - `region`, `planinfo`, `bpackage`, `strtable`, `musicbnk`, `texfont`,
   `liteinfo`.
-- The oracle frame comparison (the original launches under Wine/Xvfb).
-- Audio or gameplay (the SDL viewer has camera input only).
+- The oracle frame comparison: Wine is blocked and the native Windows
+  captures are partial (cutscene detection, no gameplay state).
+- Gameplay parity beyond the provisional `--play` harness: the original
+  player, camera, combat, animation and weapon values are pending.
 - The installer's native RAR decoder is not ported; development
   extraction uses `unrar`. The game does not need the installer decoder.
 
@@ -159,7 +167,8 @@ and assets) is complete.
 
 1. Map the shared-model instances and combine the light map with the material layers.
 2. Bind the shared `model` entries and decode animation/skinning.
-3. Compare the SDL2/OpenGL frame with the original under Wine/Xvfb.
+3. Finish the native Windows gameplay capture and compare frames and state;
+   Wine remains blocked.
 
 ## Rules
 
