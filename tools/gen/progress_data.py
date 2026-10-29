@@ -6,6 +6,8 @@ LEVELS: the 11 campaign chapters in game order, as (name, completable). A
         list, its source in bo2.exe and the region mapping are in
         docs/LEVELS.md; tests/python/test_progress.py keeps both in step.
 
+PHASE: the milestone in progress, for the phase badge of both READMEs.
+
 PLATFORM_FEATURES: (name, state) with state in {"done", "partial", "todo"}.
 
 Function status rule for re/FUNCTION_MAP.csv (only bo2.exe addresses):
@@ -23,6 +25,8 @@ Function status rule for re/FUNCTION_MAP.csv (only bo2.exe addresses):
 Every translated and wip row names the port file first in `notes`
 ("<path>: what is and is not ported"); tests/python/test_progress.py checks it.
 """
+
+PHASE = "M3"  # the milestone in progress (ROADMAP.md); shown in the phase badge
 
 LEVELS = [
     ("Slums", False),

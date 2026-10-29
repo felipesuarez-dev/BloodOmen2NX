@@ -9,6 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools" / "gen"))
 
+import progress  # noqa: E402
 import progress_data  # noqa: E402
 
 
@@ -77,6 +78,35 @@ class FunctionMapTest(unittest.TestCase):
                 self.assertEqual(row["status"], "external", row["address"])
             if inside and row["name"].startswith("FUN_"):
                 self.assertEqual(row["subsystem"], "lib", row["address"])
+
+
+class ReadmeTest(unittest.TestCase):
+    def test_generated_regions_are_current_in_both_languages(self):
+        metrics = progress.measure()
+        for lang, text in progress.TEXT.items():
+            path = ROOT / text["file"]
+            current = path.read_text(encoding="utf-8")
+            self.assertEqual(progress.render(lang, current, metrics), current, path.name)
+
+    def test_each_readme_uses_its_own_language_and_links_to_the_other(self):
+        spanish = (ROOT / "README.md").read_text(encoding="utf-8")
+        english = (ROOT / "README.en.md").read_text(encoding="utf-8")
+        self.assertIn("Progreso global", spanish)
+        self.assertNotIn("Overall progress", spanish)
+        self.assertIn("Overall progress", english)
+        self.assertNotIn("Progreso global", english)
+        self.assertIn("(README.en.md)", spanish)
+        self.assertIn("(README.md)", english)
+
+    def test_spanish_readme_uses_no_voseo(self):
+        spanish = (ROOT / "README.md").read_text(encoding="utf-8")
+        for form in ("podés", "tenés", "ejecutá", "hacé", "usá", "mirá", "dale", "acá", "vos"):
+            self.assertIsNone(re.search(rf"\b{form}\b", spanish.lower()), form)
+
+    def test_badge_urls_escape_dashes_and_spaces(self):
+        self.assertEqual(
+            progress.shield("a-b", "7 / 9", "red"), "https://img.shields.io/badge/a--b-7%20%2F%209-red"
+        )
 
 
 if __name__ == "__main__":

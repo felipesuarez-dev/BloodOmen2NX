@@ -1,120 +1,160 @@
 <div align="center">
 
-# Blood Omen 2 — Native Switch Port
+# Blood Omen 2 — Port nativo para Switch
 
-**A native Nintendo Switch port of *Blood Omen 2* (PC, 2002, Spanish GoldMaster 1.02), built through functional decompilation.**
+**Port nativo homebrew de *Blood Omen 2* para Nintendo Switch (libnx), construido mediante decompilación funcional del lanzamiento original de PC para Windows (2002, GoldMaster 1.02 en español).**
 
-**Work in progress. M1 complete; M2 (host skeleton and first frame) in progress. Nothing is playable yet.**
+English version: [README.en.md](README.en.md)
 
-[![Status][status-badge]](#status)
-[![Overall progress][overall-badge]](#status)
-[![Functions translated][fn-badge]](#status)
-[![Levels][levels-badge]](#status)
-[![C++17][cpp-badge]](#build)
-[![CMake][cmake-badge]](#build)
-[![Platforms][platform-badge]](#build)
-[![License][license-badge]](#license)
+**Trabajo en curso. Los hitos M0-M2 están completos; M3 (porción jugable) está en curso. Todavía no se puede completar ningún capítulo.**
 
-[Status](#status) · [Legal](#legal-notice) · [Architecture](#architecture) · [Build](#build) · [Game data](#game-data) · [Running](#running) · [Controls](#controls) · [Methodology](#methodology) · [Docs](#documentation) · [Contributing](#contributing) · [Credits](#credits)
+[![Estado][status-badge]](#estado)
+[![Progreso global][overall-badge]](#qué-miden-los-porcentajes)
+[![Funciones traducidas][fn-badge]](#qué-miden-los-porcentajes)
+[![Niveles][levels-badge]](#qué-miden-los-porcentajes)
+[![C++17][cpp-badge]](#compilar)
+[![CMake][cmake-badge]](#compilar)
+[![Plataformas][platform-badge]](#compilar)
+[![Licencia][license-badge]](#licencia)
+
+[Estado](#estado) · [Aviso legal](#aviso-legal) · [Arquitectura](#arquitectura) · [Compilar](#compilar) · [Datos del juego](#datos-del-juego) · [Ejecutar](#ejecutar) · [Controles](#controles) · [Metodología](#metodología) · [Documentación](#documentación) · [Contribuir](#contribuir) · [Créditos](#créditos)
 
 </div>
 
-[status-badge]: https://img.shields.io/badge/phase-M2%20in%20progress-orange
-[overall-badge]: https://img.shields.io/badge/overall-8.1%25-yellow
-[fn-badge]: https://img.shields.io/badge/functions-7%20%2F%2016917-lightgrey
-[levels-badge]: https://img.shields.io/badge/levels-0%20%2F%2011-lightgrey
+<!-- badges:start -->
+[status-badge]: https://img.shields.io/badge/fase-M3%20en%20curso-orange
+[overall-badge]: https://img.shields.io/badge/global-8.1%25-yellow
+[fn-badge]: https://img.shields.io/badge/funciones-7%20%2F%2016917-lightgrey
+[levels-badge]: https://img.shields.io/badge/niveles-0%20%2F%2011-lightgrey
+<!-- badges:end -->
 [cpp-badge]: https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white
 [cmake-badge]: https://img.shields.io/badge/build-CMake%20presets-064F8C?logo=cmake&logoColor=white
-[platform-badge]: https://img.shields.io/badge/platform-Linux%20dev%20%7C%20Switch%20target-lightgrey
-[license-badge]: https://img.shields.io/badge/license-TBD-red
+[platform-badge]: https://img.shields.io/badge/plataforma-Linux%20desarrollo%20%7C%20Switch%20destino-lightgrey
+[license-badge]: https://img.shields.io/badge/licencia-pendiente-red
 
 ---
 
-## Legal notice
+## Qué es esto
 
-> **This repository contains no game assets and no original game code or binaries.**
-> Your game files stay on your machine, in a gitignored folder (`external/`); see [`external/README.txt`](external/README.txt) and [`docs/GAME_DATA.md`](docs/GAME_DATA.md).
-> No textures, models, sounds, music, videos, executables or data containers from *Blood Omen 2* are distributed here.
-> **You need your own legitimate copy of the game** to run the port (see [Game data](#game-data)).
+| | |
+|---|---|
+| **Destino** | Un homebrew nativo para Nintendo Switch (`.nro`, libnx + deko3d) que lee tu propia copia del juego desde la tarjeta SD. |
+| **Host de desarrollo** | Linux (SDL2 + OpenGL). El juego se compila, se prueba y se compara con el original ahí antes de llegar a la consola. El backend de Switch todavía no se ha iniciado. |
+| **Original** | El lanzamiento de PC para Windows de *Blood Omen 2*, GoldMaster 1.02 en español: un PE de 32 bits compilado con MSVC 6, con Direct3D 8, DirectInput y Bink Video. |
+| **Idioma** | El port apunta a ese lanzamiento de PC en español: `bo2.exe` fuerza la configuración regional española al arrancar, por lo que el original no tiene opción de idioma dentro del juego y sus menús están en español. Consulta [Idioma del juego](#idioma-del-juego). |
+| **Método** | Decompilación funcional: `bo2.exe` se analiza en Ghidra, el comportamiento se contrasta con el original ejecutándose como oráculo y cada función se traduce a C++17 portable. No es una reconstrucción byte a byte. |
+
+## Aviso legal
+
+> **Este repositorio no contiene recursos del juego ni código ni binarios originales.**
+> Tus archivos del juego permanecen en tu equipo, en una carpeta ignorada por git (`external/`); consulta [`external/README.txt`](external/README.txt) y [`docs/GAME_DATA.md`](docs/GAME_DATA.md).
+> Aquí no se distribuyen texturas, modelos, sonidos, música, videos, ejecutables ni contenedores de datos de *Blood Omen 2*.
+> **Necesitas tu propia copia legítima del juego** para ejecutar el port (consulta [Datos del juego](#datos-del-juego)).
 >
-> This is an independent, non-commercial preservation and interoperability project. It is **not affiliated with, endorsed by, or sponsored by** Crystal Dynamics, Eidos Interactive, Square Enix, or any other publisher or developer involved in the original game. All trademarks and game names belong to their respective owners.
+> Este es un proyecto independiente, sin fines comerciales, de preservación e interoperabilidad. **No está afiliado, respaldado ni patrocinado** por Crystal Dynamics, Eidos Interactive, Square Enix ni ningún otro editor o desarrollador involucrado en el juego original. Todas las marcas y nombres de juegos pertenecen a sus respectivos propietarios.
 
-CI enforces the first rule: [`scripts/check_no_assets.sh`](scripts/check_no_assets.sh) (run by [`scripts/ci.sh`](scripts/ci.sh)) fails if game files are tracked by git.
+La CI hace cumplir la primera regla: [`scripts/check_no_assets.sh`](scripts/check_no_assets.sh) (lo ejecuta [`scripts/ci.sh`](scripts/ci.sh)) falla si git rastrea archivos del juego.
 
-## Problem
+## Problema
 
-The 2002 PC release is a 32-bit Windows game (Direct3D 8, DirectInput, Bink Video) built on the engine lineage of *Mad Dash Racing*. It has no source code, no public symbols and no supported way to run on modern systems. The console releases are tied to PS2, GameCube and Xbox hardware; the PC build is the only practical decompilation target.
+El lanzamiento de PC de 2002 es un juego de Windows de 32 bits construido sobre el linaje de motor de *Mad Dash Racing*. No tiene código fuente, ni símbolos públicos, ni una forma soportada de ejecutarse en sistemas modernos. Las versiones de consola están atadas al hardware de PS2, GameCube y Xbox; la versión de PC es el único objetivo práctico de decompilación.
 
-## Solution
+## Solución
 
-A **functional decompilation**: `bo2.exe` is analysed in Ghidra, formats and behaviours are verified against the original running as an oracle, and each function is translated to portable C++17. The original is used as a reference, not shipped.
+1. **Primero el backend de host**: SDL2 + OpenGL en Linux, para desarrollo y comparación con el oráculo.
+2. **Después el backend de Switch**: libnx + deko3d, publicado como un `.nro` que lee los archivos de datos del propio usuario.
 
-The port is split so the game is testable on a desktop before it reaches the console:
+El original se usa como referencia; no se distribuye.
 
-1. **Host backend first**: SDL2 + OpenGL on Linux, used for development and oracle comparison.
-2. **Switch backend second**: libnx + deko3d, released as a `.nro` that reads the user's own data files.
+## Estado
 
-This is a *functional* port, not a byte-matching decompilation: it does not rebuild the original binary.
-
-## Status
+**Dónde está el proyecto: M0, M1 y M2 están completos y M3 está en curso.** La canalización de datos, el renderizador de niveles y el oráculo funcionan. Kain camina y salta con la afinación de movimiento original, pero el combate, los enemigos y los scripts no están traducidos, así que **no se puede completar ningún capítulo**. Los números de abajo se generan y miden lo que el port traduce, no qué tan jugable se siente (consulta [qué miden los porcentajes](#qué-miden-los-porcentajes)).
 
 <!-- progress:start -->
-**Overall progress: 8.1%**
+**Progreso global: 8.1%**
 
-| Component | Weight | Progress | Score |
+| Componente | Peso | Avance | Puntaje |
 |---|---:|---:|---:|
-| Functions translated / in-scope | 60% | 7 / 16917 | 0.04% |
-| Levels completable | 30% | 0 / 11 | 0.00% |
-| Platform features | 10% | 10 / 13 | 80.77% |
+| Funciones traducidas / en alcance | 60% | 7 / 16917 | 0.04% |
+| Niveles completables (capítulos de la campaña) | 30% | 0 / 11 | 0.00% |
+| Características de plataforma | 10% | 10 / 13 + 1 parcial | 80.77% |
 
-Function map: 35519 rows. Levels and platform features are defined in [`tools/gen/progress_data.py`](tools/gen/progress_data.py).
+Mapa de funciones: 35519 filas: 7 traducidas, 19 en curso, 16891 pendientes, 18602 externas (no son código del juego).
+
+La lista de capítulos está en [`docs/LEVELS.md`](docs/LEVELS.md). Los capítulos completables y las características de plataforma se definen en [`tools/gen/progress_data.py`](tools/gen/progress_data.py).
 <!-- progress:end -->
 
-### What works today
+### Hitos
 
-| Area | State |
+| Hito | Alcance | Estado |
+|---|---|---|
+| M0 | Laboratorio y triaje del binario: hashes, análisis del PE, contenedor del instalador, inventario de Ghidra | Completo |
+| M1 | Contenedores y recursos: `.big`, `pc.rkv`, texturas y modelos validados contra el árbol instalado | Completo |
+| M2 | Esqueleto del host y primer fotograma: un nivel se renderiza con texturas y cámara libre; fotograma comparable con el oráculo | Completo |
+| M3 | Porción jugable: el primer nivel jugable de principio a fin, repetición de ruta y comparación de estado | **En curso** |
+| M4 | Sistemas completos: enemigos, combate, dones oscuros, scripts, menús, guardado, audio, video | Sin iniciar |
+| M5 | Contenido completo: todos los capítulos, jefes y desbloqueables | Sin iniciar |
+| M6 | Lanzamiento: rendimiento, modo portátil y dock, empaquetado, decisión de licencia | Sin iniciar |
+
+Fuente de verdad: [`STATE.md`](STATE.md) y [`ROADMAP.md`](ROADMAP.md) (en inglés).
+
+### Qué funciona hoy
+
+| Área | Estado |
 |---|---|
-| Repository, build presets and host smoke binary | Works |
-| Host backend (headless software) | First frame: real DDS texture, free camera, PPM output |
-| Host backend (SDL2 + OpenGL) | Works: `bo2nx --sdl`; window, free camera and Xvfb capture |
-| C++ engine readers (BIG/DDS) | Validated on the installed tree |
-| Level geometry, textures and cell grid | `sanctuary` cellgrup renders headless and in OpenGL (75 models, 33/34 DDS textures, 3 cells, 33 BSP nodes, 74 placed instances) |
-| Switch backend (libnx + deko3d) | Not started |
-| `game.erg` | Decoded (text configuration) |
-| `.big` and `pc.rkv` | Validated against the installed Spanish build: 179 `.big` (246,332 entries) and 2,666 RKV streams |
-| Installer `data/*.dat` | Decoded; `tools/bo2fmt/installer.py` materializes the 227-file tree |
-| Installed game tree | 227 files, 1.9 GB; manifest hash in `docs/PROVENANCE.md` |
-| Level renderer, audio, input | Level shell with free-camera input; audio and gameplay pending |
-| Game logic translation | Not started |
-| Original game as oracle | Runs locally under Wine/Xvfb (pristine `bo2.exe`, no GPU): scripted `sl01` captures with frames, video, inputs and player/camera state read from memory; a complete native Windows capture is the cross-check |
+| Canalización de recursos | El instalador está decodificado y materializa un árbol de 227 archivos; el parser de `.big` lee los 179 contenedores (246,332 entradas) y `pc.rkv` entrega 2,666 flujos Ogg Vorbis; se leen las texturas DDS y `game.erg` |
+| Renderizado de niveles | Un nivel se renderiza sin ventana (rasterizador por software, salida PPM) y en una ventana SDL2 + OpenGL, con texturas, rejilla de celdas, BSP de visibilidad, instancias colocadas, luces y marcadores analizados. La iluminación está incompleta |
+| Original como oráculo | El `bo2.exe` intacto se ejecuta bajo Wine en un Xvfb privado con entrada guiada por script; los fotogramas, el video, el estado de Kain y la cámara de seguimiento se leen de la memoria del proceso a 50 Hz. Un arnés nativo de Windows sirve de verificación cruzada |
+| Kain en `sl01` | `bo2nx --play` hace caminar y saltar a Kain en el nivel `sl01` con la afinación de movimiento original leída de los datos de `kain` (giro tipo tanque, gravedad de salto en dos fases, impulso al mantener el salto) y con las velocidades de carrera y de retroceso tomadas del movimiento de raíz de las animaciones |
+| Base del motor | Bucle de paso fijo, mundo de entidades con descarte por frustum, carga por celdas, colisión, cámara en tercera persona, guardado en puntos de control y una barra de salud y maná |
+| Audio y entrada | Decodificación Ogg, mezclador y salida por SDL; mapas de teclado, de mando y de botones de Switch |
 
-Source of truth: [`STATE.md`](STATE.md) and [`ROADMAP.md`](ROADMAP.md).
+### Qué no funciona todavía
 
-## Architecture
+| Área | Estado |
+|---|---|
+| Capítulos | Ninguno se puede completar; no hay flujo de niveles, ni menús, ni pantalla de inicio |
+| Sistemas de juego | El combate, los enemigos y la IA, los dones oscuros, las armas y el inventario, y los scripts y disparadores no están traducidos. Faltan el control en el aire, el planeo, la velocidad analógica y el retraso de la cámara |
+| Animación y colisión | El grafo de animación (`animatio`) y el skinning no están decodificados; la colisión comprimida (`collmodc`) solo se extrae |
+| Iluminación y materiales | Los mapas de luz de modelos compartidos y la combinación de materiales con mapas de luz siguen abiertos; `sl01` se ve con materiales incorrectos en algunos modos |
+| Eventos de audio y video | La tabla de eventos `sound` y `strmfile` no está conectada al juego; no hay reproducción de Bink |
+| Switch | El backend libnx y deko3d no se ha iniciado |
 
-Dependencies flow downward only: `game -> engine -> platform`. No SDL, OpenGL, libnx or deko3d include is allowed from `src/game/` or `src/engine/`.
+### Qué miden los porcentajes
+
+| Componente | Peso | Qué cuenta |
+|---|---:|---|
+| Funciones traducidas / en alcance | 60% | Una función cuenta solo cuando el port reproduce todo su contrato y una prueba unitaria lo respalda; el código que solo cita una dirección no cuenta. Las rutinas de desenrollado del compilador y las bibliotecas enlazadas estáticamente (CRT, D3DX8, zlib, libpng) quedan fuera del denominador. La regla está en [`tools/gen/progress_data.py`](tools/gen/progress_data.py) |
+| Niveles completables | 30% | Un nivel es uno de los 11 capítulos de la campaña, recuperados del original en [`docs/LEVELS.md`](docs/LEVELS.md). Cuenta cuando el port lo juega desde su región de entrada hasta el siguiente traspaso |
+| Características de plataforma | 10% | Cada característica cuenta completa cuando está lista y a la mitad cuando es parcial |
+
+La parte de funciones es pequeña a propósito: gran parte del port reimplementa formatos y cálculos de afinación, y una función se marca como traducida solo con cobertura completa y una prueba. Muchas funciones de movimiento y de animación están registradas como en curso.
+
+## Arquitectura
+
+Las dependencias solo fluyen hacia abajo: `game -> engine -> platform`. No se permite ningún include de SDL, OpenGL, libnx ni deko3d desde `src/game/` ni `src/engine/`.
 
 ```mermaid
 flowchart TD
-    subgraph G["src/game - translated game logic (pure)"]
-        GF[Game flow]
-        LV[Levels and streaming]
-        PL[Player, camera, combat]
-        AI[Enemies and AI]
-        UI[HUD, menus, saves]
+    subgraph G["src/game - lógica de juego traducida (pura)"]
+        GF[Flujo del juego]
+        LV[Niveles y streaming]
+        PL[Jugador, cámara, combate]
+        AI[Enemigos e IA]
+        UI[HUD, menús, guardado]
     end
-    subgraph E["src/engine - recovered engine services"]
-        FIL[File and container readers]
-        TEX[Texture and model codecs]
-        SC[Scene graph and camera]
-        SND[Audio buffers and mixer]
-        MATH[Math types]
+    subgraph E["src/engine - servicios del motor recuperados"]
+        FIL[Lectores de archivos y contenedores]
+        TEX[Códecs de texturas y modelos]
+        SC[Grafo de escena y cámara]
+        SND[Búferes de audio y mezclador]
+        MATH[Tipos matemáticos]
     end
-    subgraph P["src/platform - the only layer touching the OS"]
+    subgraph P["src/platform - la única capa que toca el sistema operativo"]
         LX[Linux: SDL2 + OpenGL]
         NX[Switch: libnx + deko3d]
     end
-    C["src/common - fixed-width types, LE readers, logging"]
+    C["src/common - tipos de ancho fijo, lectores LE, registro"]
     GF --> LV & PL & AI & UI
     LV --> FIL & SC
     PL --> SC & MATH
@@ -125,154 +165,172 @@ flowchart TD
     E -.-> C
 ```
 
-The host backend exists first so the game can be built, tested and compared against the original without a console. The Switch backend ports the platform layer, not the game. Details and determinism rules: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+El backend de host existe primero para poder compilar, probar y comparar el juego con el original sin una consola. El backend de Switch porta la capa de plataforma, no el juego. Detalles y reglas de determinismo: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
-## Build
+## Compilar
 
-Requirements: CMake 3.28+, Ninja, a C++17 compiler. The Switch target additionally needs devkitPro (`switch-dev`, libnx, deko3d).
+Requisitos: CMake 3.28+, Ninja y un compilador C++17; SDL2 y OpenGL para la ventana (sin ellos la compilación es solo sin ventana). El destino Switch necesitará además devkitPro (`switch-dev`, libnx, deko3d).
 
 ```sh
-# Host development build
+# Compilación de desarrollo en el host
 cmake --preset linux-debug
 cmake --build --preset linux-debug
 ctest --preset linux-debug --output-on-failure
 
-# Everything, including the asset-leak check
+# Todo, incluida la verificación de fuga de recursos
 ./scripts/ci.sh
 ```
 
-| Preset | Purpose |
+| Preset | Propósito |
 |---|---|
-| `linux-debug` | Development build |
-| `linux-release` | Optimised build |
+| `linux-debug` | Compilación de desarrollo |
+| `linux-release` | Compilación optimizada |
 | `linux-asan` | AddressSanitizer + UBSan |
 
-The Switch preset lands with M2, once the host backend renders a level. There is no Windows build: the original game is Windows, the port is not.
+Todavía no hay un preset de Switch: el backend de Switch no se ha iniciado. No hay compilación para Windows: el juego original es de Windows, el port no.
 
-## Game data
+## Datos del juego
 
-You must supply your own copy. The project targets the **PC 1.02 Spanish GoldMaster**. Hashes of the reference media and the provenance of every external artifact are in [`docs/PROVENANCE.md`](docs/PROVENANCE.md); nothing is downloaded by the build.
+Debes aportar tu propia copia. El proyecto apunta al **PC 1.02 GoldMaster en español**. Los hashes de los medios de referencia y la procedencia de cada artefacto externo están en [`docs/PROVENANCE.md`](docs/PROVENANCE.md); la compilación no descarga nada.
 
-1. Materialize an installed copy of the game so you have a directory with `data/game.erg` and `data/`.
-2. Put it under `external/installed/` (gitignored) or pass `--data-dir <dir>` when the host build supports it.
-3. Game files are never in the repository.
+1. Materializa una copia instalada del juego (`tools/bo2fmt/installer.py` reconstruye el árbol a partir de los medios del instalador) para tener un directorio con `data/game.erg` y `media/gogames/bo2/`.
+2. Colócala en `external/installed/` (ignorado por git).
+3. Los archivos del juego nunca están en el repositorio.
 
-The Switch build reads the same layout from the SD card; the exact path is documented in [`docs/GAME_DATA.md`](docs/GAME_DATA.md) when the backend lands.
+La compilación para Switch leerá la misma estructura desde la tarjeta SD; la ruta exacta se documentará en [`docs/GAME_DATA.md`](docs/GAME_DATA.md) cuando llegue el backend.
 
-## Running
+### Idioma del juego
 
-The game is not runnable yet. The current binary only reports its version:
+- **El original es solo en español.** `bo2.exe` es una compilación Gold Master en español que fuerza la configuración regional `spanish` al arrancar (`FUN_004aae40`, llamada desde `Game::Init`, `FUN_00515920`, antes de que se cargue `code.big`). La pantalla de elección de idioma (`LanguageSetupUI`) existe en el código, pero esta compilación nunca la muestra.
+- **Los datos incluyen seis variantes** de cada entrada localizada. El campo `language` de un `.big` es un índice en la tabla de nombres del contenedor: 0 predeterminado (una copia en inglés), 1 inglés, 2 francés, 3 italiano, 4 alemán, 5 español. Los tipos localizados son `strtable` (15 por idioma), `lipsync` (unas 11,900 por idioma) y 44 texturas de pantallas de carga. Las voces son distintas: `pc.rkv` contiene una sola sección en español.
+- **El port selecciona el español de la misma forma.** Es un trabajo en curso.
+
+## Ejecutar
+
+Inspecciona un contenedor, renderiza un nivel a un archivo o abre la ventana:
 
 ```sh
-./build/linux-debug/bo2nx
+LEVELS=external/installed/media/gogames/bo2/resources/levels
+./build/linux-debug/bo2nx --list-big "$LEVELS/slums/sl01.big"
+./build/linux-debug/bo2nx --level --big "$LEVELS/slums/sl01.big" --out /tmp/sl01.ppm
+./build/linux-debug/bo2nx --sdl --big "$LEVELS/slums/sl01.big"
+./build/linux-debug/bo2nx --play --big "$LEVELS/slums/sl01.big"   # camina con Kain
 ```
 
-The original game runs locally as the oracle under Wine and Xvfb: see [`docs/ORACLE_WINE.md`](docs/ORACLE_WINE.md). The native Windows harness is the cross-check: [`docs/ORACLE_WINDOWS_NATIVE.md`](docs/ORACLE_WINDOWS_NATIVE.md).
+`--play` lee los datos de afinación de `kain` desde `<directorio del nivel>/../kain/kain.big`. Todas las opciones: [`docs/RUNNING.md`](docs/RUNNING.md).
 
-## Controls
+El juego original se ejecuta localmente como oráculo bajo Wine y Xvfb: consulta [`docs/ORACLE_WINE.md`](docs/ORACLE_WINE.md). El arnés nativo de Windows es la verificación cruzada: [`docs/ORACLE_WINDOWS_NATIVE.md`](docs/ORACLE_WINDOWS_NATIVE.md).
 
-The port targets a controller-first layout; the button table will be documented in [`docs/GAMEPLAY.md`](docs/GAMEPLAY.md) once the input layer exists. The original console releases are the reference for button semantics. Keyboard bindings for the host build are development-only.
+## Controles
 
-| Action | Switch | Host development |
+Las teclas son valores de desarrollo hasta que se recuperen los controles originales; la disposición de Switch es una primera asignación (`include/bo2/platform/input.hpp`). El combate, el bloqueo, el agarre y los dones oscuros no están implementados, así que no tienen asignación.
+
+| Acción | Teclado | Switch / mando |
 |---|---|---|
-| Move | Left stick | Arrow keys |
-| Camera | Right stick | Mouse / IJKL |
-| Attack | TBD | TBD |
-| Block | TBD | TBD |
-| Grab | TBD | TBD |
-| Dark gift | TBD | TBD |
-| Menu / pause | `+` | Esc |
+| Avanzar y retroceder | `W` / `S` o flechas | Stick izquierdo o cruceta |
+| Girar en el lugar | `A` / `D` o flechas | Stick izquierdo o cruceta |
+| Correr | `Shift` o `R` | `L` o `R` |
+| Saltar (mantén para el salto más alto) | `Espacio` | `A` |
+| Atacar (solo la base) | `F` | `B` |
+| Usar | `E` | `X` |
+| Menú | `Enter` | `Y` o `Menos` |
+| Pausa / salir | `Escape` | `Más` |
+| Mirar / orbitar la cámara (ayuda de depuración) | Arrastrar con el botón derecho | Stick derecho, `ZL` / `ZR` |
 
-## Methodology
+## Metodología
 
 ```mermaid
 flowchart LR
-    A[Ghidra analysis<br/>bo2.exe] --> B[Local decompile<br/>re/decomp]
-    B --> C[Python reference<br/>tools/bo2fmt]
-    C --> D[C++17 port<br/>src/game, src/engine]
-    D --> E[Unit and golden tests]
-    D --> F[Oracle comparison<br/>native Windows or Wine]
-    F -->|mismatch| B
+    A[Análisis en Ghidra<br/>bo2.exe] --> B[Decompilación local<br/>re/decomp]
+    B --> C[Referencia en Python<br/>tools/bo2fmt]
+    C --> D[Port en C++17<br/>src/game, src/engine]
+    D --> E[Pruebas unitarias y golden]
+    D --> F[Comparación con el oráculo<br/>Windows nativo o Wine]
+    F -->|diferencia| B
 ```
 
-1. **Reverse**: Ghidra over `bo2.exe`; every behaviour claim needs a `FUN_` address and a local decompile under `re/decomp/` (gitignored).
-2. **Reference**: formats and behaviours are first validated with a stdlib Python implementation (`tools/bo2fmt/`).
-3. **Port**: translate faithfully; record each function in [`re/FUNCTION_MAP.csv`](re/FUNCTION_MAP.csv).
-4. **Verify**: unit tests on synthetic fixtures, then the oracle: the original runs natively on Windows or under Wine, driven by scripted input, and its screenshots, state and saves are compared with the port.
+1. **Reversar**: Ghidra sobre `bo2.exe`; toda afirmación de comportamiento necesita una dirección `FUN_` y una decompilación local en `re/decomp/` (ignorado por git).
+2. **Referencia**: los formatos y comportamientos se validan primero con una implementación en Python con solo biblioteca estándar (`tools/bo2fmt/`).
+3. **Portar**: traduce con fidelidad; registra cada función en [`re/FUNCTION_MAP.csv`](re/FUNCTION_MAP.csv).
+4. **Verificar**: pruebas unitarias con datos sintéticos y luego el oráculo: el original se ejecuta de forma nativa en Windows o bajo Wine, con entrada guiada por script, y sus capturas, estado y partidas guardadas se comparan con el port.
 
-Per-function loop: [`docs/PORTING_GUIDE.md`](docs/PORTING_GUIDE.md). The rule is simple: **decompile before guessing, and never ship a claim without a dump**.
+Ciclo por función: [`docs/PORTING_GUIDE.md`](docs/PORTING_GUIDE.md). La regla es simple: **decompila antes de suponer y nunca afirmes algo sin un volcado**.
 
-## Repository layout
+## Estructura del repositorio
 
-| Path | Contents |
+| Ruta | Contenido |
 |---|---|
-| `src/common/` | Shared utilities (types, little-endian readers, logging) |
-| `src/engine/` | Recovered engine services behind stable interfaces |
-| `src/game/` | Translated game logic |
-| `src/platform/sdl/` | SDL2 + OpenGL host backend |
-| `src/platform/switch/` | libnx + deko3d backend |
-| `include/bo2/` | Public headers |
-| `tests/` | Unit, integration and golden tests |
-| `tools/bo2fmt/` | Container and asset parsers (Python reference) and the texture exporter |
-| `tools/ghidra/` | Headless Ghidra helpers |
-| `tools/oracle/` | Wine capture harness, native Windows client, capture validator and aligner |
-| `tools/gen/` | Progress generator and derived metadata |
-| `scripts/` | CI, asset check and environment helpers |
-| `re/` | Function map and local reversing artifacts (`re/decomp/` is gitignored) |
-| `external/` | Your game files and the Ghidra project (gitignored; only `external/README.txt` is tracked) |
-| `docs/` | Technical documentation (Markdown only) |
+| `src/common/` | Utilidades compartidas (tipos, lectores little-endian, registro) |
+| `src/engine/` | Servicios del motor recuperados tras interfaces estables |
+| `src/game/` | Lógica de juego traducida |
+| `src/platform/sdl/` | Backend de host SDL2 + OpenGL |
+| `src/platform/switch/` | Backend libnx + deko3d (aún no creado) |
+| `include/bo2/` | Cabeceras públicas |
+| `tests/` | Pruebas unitarias, de integración y golden |
+| `tools/bo2fmt/` | Parsers de contenedores y recursos (referencia en Python) y el exportador de texturas |
+| `tools/ghidra/` | Utilidades de Ghidra sin interfaz |
+| `tools/oracle/` | Arnés de captura con Wine, cliente nativo de Windows, validador de capturas y alineador |
+| `tools/gen/` | Generador de progreso y metadatos derivados |
+| `scripts/` | CI, verificación de recursos y utilidades de entorno |
+| `re/` | Mapa de funciones y artefactos locales de ingeniería inversa (`re/decomp/` está ignorado por git) |
+| `external/` | Tus archivos del juego y el proyecto de Ghidra (ignorado por git; solo `external/README.txt` se rastrea) |
+| `docs/` | Documentación técnica (solo Markdown, en inglés) |
 
-## Documentation
+## Documentación
 
-| Doc | Read it for |
+La documentación técnica está en inglés.
+
+| Documento | Para qué sirve |
 |---|---|
-| [`STATE.md`](STATE.md) | Current state, known unknowns and next steps (start here) |
-| [`ROADMAP.md`](ROADMAP.md) | Milestones and gates |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Layers, host-first strategy and determinism rules |
-| [`docs/REVERSING.md`](docs/REVERSING.md) | Ghidra workflow, compiler triage and dump policy |
-| [`docs/PORTING_GUIDE.md`](docs/PORTING_GUIDE.md) | The per-function translation loop |
-| [`docs/FORMATS/`](docs/FORMATS/) | Container and asset format specs |
-| [`docs/PRIOR_ART.md`](docs/PRIOR_ART.md) | Public tools, licenses and what we reuse or only use as an oracle |
-| [`docs/LEVELS.md`](docs/LEVELS.md) | The 11 campaign chapters, their source in `bo2.exe` and the region mapping |
-| [`docs/GAMEPLAY.md`](docs/GAMEPLAY.md) | Translated gameplay systems |
-| [`docs/RUNNING.md`](docs/RUNNING.md) | Host build, Switch target and the oracle |
-| [`docs/TESTING.md`](docs/TESTING.md) | Test pyramid and rules |
-| [`docs/GAME_DATA.md`](docs/GAME_DATA.md) | Game files, layout and where they live |
-| [`docs/PROVENANCE.md`](docs/PROVENANCE.md) | Hashes and chain of custody |
-| [`docs/SETUP.md`](docs/SETUP.md) | One-time environment setup |
-| [`docs/ORACLE_COMPARE.md`](docs/ORACLE_COMPARE.md) | Parity results against the original |
-| [`docs/ORACLE_WINE.md`](docs/ORACLE_WINE.md) | Local Wine/Xvfb oracle: setup, scripted capture, game state from memory, parity |
-| [`docs/ORACLE_WINDOWS_NATIVE.md`](docs/ORACLE_WINDOWS_NATIVE.md) | Native Windows capture harness, client and validation |
-| [`docs/ORACLE_WINDOWS.md`](docs/ORACLE_WINDOWS.md) | Native Windows gameplay captures: facts, gaps and next steps |
+| [`STATE.md`](STATE.md) | Estado actual, incógnitas conocidas y próximos pasos (empieza aquí) |
+| [`ROADMAP.md`](ROADMAP.md) | Hitos y criterios de paso |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Capas, estrategia de host primero y reglas de determinismo |
+| [`docs/REVERSING.md`](docs/REVERSING.md) | Flujo de trabajo con Ghidra, triaje del compilador y política de volcados |
+| [`docs/PORTING_GUIDE.md`](docs/PORTING_GUIDE.md) | El ciclo de traducción por función |
+| [`docs/FORMATS/`](docs/FORMATS/) | Especificaciones de formatos de contenedores y recursos |
+| [`docs/PRIOR_ART.md`](docs/PRIOR_ART.md) | Herramientas públicas, licencias y qué reutilizamos o solo usamos como oráculo |
+| [`docs/LEVELS.md`](docs/LEVELS.md) | Los 11 capítulos de la campaña, su fuente en `bo2.exe` y la correspondencia con las regiones |
+| [`docs/GAMEPLAY.md`](docs/GAMEPLAY.md) | Sistemas de juego traducidos |
+| [`docs/RUNNING.md`](docs/RUNNING.md) | Compilación del host, destino Switch y el oráculo |
+| [`docs/TESTING.md`](docs/TESTING.md) | Pirámide de pruebas y reglas |
+| [`docs/GAME_DATA.md`](docs/GAME_DATA.md) | Archivos del juego, estructura y dónde viven |
+| [`docs/PROVENANCE.md`](docs/PROVENANCE.md) | Hashes y cadena de custodia |
+| [`docs/SETUP.md`](docs/SETUP.md) | Configuración única del entorno |
+| [`docs/ORACLE_COMPARE.md`](docs/ORACLE_COMPARE.md) | Resultados de paridad con el original |
+| [`docs/ORACLE_WINE.md`](docs/ORACLE_WINE.md) | Oráculo local con Wine/Xvfb: preparación, captura guiada, estado del juego desde memoria, paridad |
+| [`docs/ORACLE_WINDOWS_NATIVE.md`](docs/ORACLE_WINDOWS_NATIVE.md) | Arnés de captura nativo de Windows, cliente y validación |
+| [`docs/ORACLE_WINDOWS.md`](docs/ORACLE_WINDOWS.md) | Capturas de juego nativas de Windows: hechos, brechas y próximos pasos |
 
-## Progress tracking
+## Seguimiento del progreso
 
-- Function-level status: [`re/FUNCTION_MAP.csv`](re/FUNCTION_MAP.csv). The status block above is generated by `python3 tools/gen/progress.py` and checked by `scripts/ci.sh`; never edit it by hand.
-- Work items are tracked in a private project tracker; the repository is the source of truth for code and docs.
+- Estado por función: [`re/FUNCTION_MAP.csv`](re/FUNCTION_MAP.csv). El bloque de estado de arriba y las insignias se generan con `python3 tools/gen/progress.py` para ambos README y los verifica `scripts/ci.sh`; nunca los edites a mano.
+- Los elementos de trabajo se siguen en un gestor de proyectos privado; el repositorio es la fuente de verdad del código y la documentación.
 
-## Contributing
+## Contribuir
 
-1. Conventional Commits in English (`feat(scope):`, `fix(scope):`, `docs:`, `test(scope):`, `build(scope):`); one logical change per commit, with its tests and docs.
-2. One author per commit. **No** `Co-Authored-By`, `Signed-off-by` or generated-by trailers, and no attribution inside code or docs.
-3. `clang-format` before every commit; no warnings with `-Wall -Wextra -Wshadow -Wconversion`.
-4. **Never commit** anything under `external/` or `re/decomp/`, or files like `.iso .exe .dll .dat .erg .rkv .big .bik .ogg .wav`. `scripts/ci.sh` checks it.
-5. Fidelity first in `src/game/`: translate, do not redesign, and update `re/FUNCTION_MAP.csv`.
-6. Every behaviour or format claim needs a `FUN_` address and a local decompile. If it is not proven, it does not go in.
+1. Conventional Commits en inglés (`feat(scope):`, `fix(scope):`, `docs:`, `test(scope):`, `build(scope):`); un cambio lógico por commit, con sus pruebas y documentación.
+2. Un solo autor por commit. **Nada** de `Co-Authored-By`, `Signed-off-by` ni trailers de generación, y ninguna atribución dentro del código o la documentación.
+3. Ejecuta `clang-format` antes de cada commit; sin advertencias con `-Wall -Wextra -Wshadow -Wconversion`.
+4. **Nunca subas** nada de `external/` o `re/decomp/`, ni archivos como `.iso .exe .dll .dat .erg .rkv .big .bik .ogg .wav`. `scripts/ci.sh` lo verifica.
+5. Primero la fidelidad en `src/game/`: traduce, no rediseñes, y actualiza `re/FUNCTION_MAP.csv`.
+6. Toda afirmación de comportamiento o de formato necesita una dirección `FUN_` y una decompilación local. Si no está demostrada, no entra.
+7. Mantén `README.md` (español) y `README.en.md` (inglés) sincronizados; el código, los comentarios, los commits y el resto de la documentación siguen en inglés.
 
-## Credits
+## Créditos
 
-| Component | Use | License |
+| Componente | Uso | Licencia |
 |---|---|---|
-| [SDL2](https://libsdl.org) | Host window and input | zlib (system package, not vendored) |
-| [deko3d](https://github.com/devkitPro/deko3d) | Switch renderer | zlib |
-| [libnx](https://github.com/switchbrew/libnx) | Switch platform | ISC |
-| [Ghidra](https://ghidra-sre.org) | Reverse engineering | Apache-2.0 |
-| [Wine](https://www.winehq.org) | Oracle environment | LGPL |
+| [SDL2](https://libsdl.org) | Ventana y entrada del host | zlib (paquete del sistema, no incluido) |
+| [stb_vorbis](https://github.com/nothings/stb) | Decodificador Ogg Vorbis de respaldo | Dominio público / MIT (incluido en `third_party/`) |
+| [deko3d](https://github.com/devkitPro/deko3d) | Renderizador de Switch | zlib |
+| [libnx](https://github.com/switchbrew/libnx) | Plataforma Switch | ISC |
+| [Ghidra](https://ghidra-sre.org) | Ingeniería inversa | Apache-2.0 |
+| [Wine](https://www.winehq.org) | Entorno del oráculo | LGPL |
 
-Original game by Crystal Dynamics, published by Eidos Interactive. Not affiliated.
+Juego original de Crystal Dynamics, publicado por Eidos Interactive. Sin afiliación.
 
-## License
+## Licencia
 
-**No license has been chosen yet.** The `LICENSE` file is a placeholder; no rights are granted until it is replaced. The decision is scheduled for milestone M6. The recommended option is MIT for the original code in this repository.
+**Todavía no se ha elegido una licencia.** El archivo `LICENSE` es un marcador de posición; no se concede ningún derecho hasta que se reemplace. La decisión está programada para el hito M6. La opción recomendada es MIT para el código original de este repositorio.
 
-This license does not grant any rights to the game code, data, assets or trademarks of Crystal Dynamics, Eidos Interactive or Square Enix.
+Esta licencia no concede ningún derecho sobre el código, los datos, los recursos ni las marcas del juego de Crystal Dynamics, Eidos Interactive o Square Enix.

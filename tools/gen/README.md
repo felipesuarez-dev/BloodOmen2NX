@@ -4,15 +4,15 @@ Derived data and generators.
 
 | File | Purpose |
 |---|---|
-| `progress.py` | Rewrite the README status block from `re/FUNCTION_MAP.csv` and `progress_data.py` |
-| `progress_data.py` | Level list and platform feature states |
+| `progress.py` | Rewrite the status block and the badge definitions of `README.md` (Spanish) and `README.en.md` (English) from `re/FUNCTION_MAP.csv` and `progress_data.py`: one data source, one template per language |
+| `progress_data.py` | Phase, chapter list, platform feature states and the function status rule |
 
 ```sh
 python3 tools/gen/progress.py
 python3 tools/gen/progress.py --check
 ```
 
-`--check` exits non-zero when the README block is stale. CI runs it.
+The generated regions sit between `<!-- progress:start -->`/`<!-- progress:end -->` and `<!-- badges:start -->`/`<!-- badges:end -->` in both files; never edit them by hand. `--check` exits non-zero when either file is stale. CI runs it.
 
 ## Function map rules
 
