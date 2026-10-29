@@ -22,7 +22,7 @@
 [status-badge]: https://img.shields.io/badge/phase-M2%20in%20progress-orange
 [overall-badge]: https://img.shields.io/badge/overall-6.2%25-yellow
 [fn-badge]: https://img.shields.io/badge/functions-0%20%2F%2018097-lightgrey
-[levels-badge]: https://img.shields.io/badge/levels-0%20%2F%20TBD-lightgrey
+[levels-badge]: https://img.shields.io/badge/levels-0%20%2F%2011-lightgrey
 [cpp-badge]: https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white
 [cmake-badge]: https://img.shields.io/badge/build-CMake%20presets-064F8C?logo=cmake&logoColor=white
 [platform-badge]: https://img.shields.io/badge/platform-Linux%20dev%20%7C%20Switch%20target-lightgrey
@@ -64,7 +64,7 @@ This is a *functional* port, not a byte-matching decompilation: it does not rebu
 | Component | Weight | Progress | Score |
 |---|---:|---:|---:|
 | Functions translated / in-scope | 60% | 0 / 18097 | 0.00% |
-| Levels completable | 30% | 0 / TBD | 0.00% |
+| Levels completable | 30% | 0 / 11 | 0.00% |
 | Platform features | 10% | 8 / 13 | 61.54% |
 
 Function map: 35513 rows. Levels and platform features are defined in [`tools/gen/progress_data.py`](tools/gen/progress_data.py).
@@ -233,6 +233,7 @@ Per-function loop: [`docs/PORTING_GUIDE.md`](docs/PORTING_GUIDE.md). The rule is
 | [`docs/PORTING_GUIDE.md`](docs/PORTING_GUIDE.md) | The per-function translation loop |
 | [`docs/FORMATS/`](docs/FORMATS/) | Container and asset format specs |
 | [`docs/PRIOR_ART.md`](docs/PRIOR_ART.md) | Public tools, licenses and what we reuse or only use as an oracle |
+| [`docs/LEVELS.md`](docs/LEVELS.md) | The 11 campaign chapters, their source in `bo2.exe` and the region mapping |
 | [`docs/GAMEPLAY.md`](docs/GAMEPLAY.md) | Translated gameplay systems |
 | [`docs/RUNNING.md`](docs/RUNNING.md) | Host build, Switch target and the oracle |
 | [`docs/TESTING.md`](docs/TESTING.md) | Test pyramid and rules |
