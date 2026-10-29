@@ -97,6 +97,14 @@ and assets) is complete.
   fixed-function path. It uses the same engine data as the headless path;
   a 640x480 sanctuary frame is within 0.2% RMSE of the software renderer.
 
+- The original game runs locally as the oracle: the pristine `bo2.exe`
+  reaches the menu and `sl01` gameplay under Wine 9.0 on a private Xvfb
+  with wined3d/llvmpipe. `scripts/oracle/wine_setup.sh` prepares the
+  prefix (HKLM `InstallPath`/`MoviePath` read by `FUN_00578b80`, a valid
+  video mode, the flat `data/` layout) and `tools/oracle/wine_capture.py`
+  replays a route and records frames, video and inputs. The Wine spawn
+  frame is within 4.9/255 mean error of the Windows frame. See
+  `docs/ORACLE_WINE.md`.
 - The native Windows oracle harness is available: a reverse SSH server on
   the Windows host, `tools/oracle/oracle_client.py`, a capture validator and
   an input/frame aligner. `capture_20261028_0150` is the first complete
@@ -147,8 +155,12 @@ and assets) is complete.
   it. Wiring the `sound`/`strmfile` event table to gameplay is pending.
 - `region`, `planinfo`, `bpackage`, `strtable`, `musicbnk`, `texfont`,
   `liteinfo`.
-- The oracle state comparison: the native Windows capture has frames but
-  no camera pose or player state (`VIEW` is the identity); Wine is blocked.
+- The oracle state comparison: both oracles produce frames but no camera
+  pose or player state (`VIEW` is the identity under D3D8). Under Wine the
+  state can be read from `/proc/<pid>/mem` once the offsets are decompiled.
+- The `sl01` port frame: a `pyramid/purple` helper volume tints it magenta
+  (the original never draws `pyramid/*` volumes) and the material/light
+  modes render near-black (BO2NX-68).
 - Gameplay parity beyond the provisional `--play` harness: the original
   player, camera, combat, animation and weapon values are pending.
 - The installer's native RAR decoder is not ported; development
@@ -161,17 +173,20 @@ and assets) is complete.
 | 0 | Shared-model instance light maps and material combination | Map shared `model` instances and combine the light map with `mlyrcolr`/`mlyrctrl` | `docs/FORMATS/litedata.md` |
 | 1 | Shared `model` entries and entity semantics | Bind the shared models and decode the consumers | `docs/FORMATS/models.md` |
 | 2 | `game.erg` boot-time keys | Decompile the key lookup in `bo2.exe` | `docs/FORMATS/erg.md` |
-| 3 | Original logic tick | Measure from the oracle once it runs, or from the main loop | `docs/ARCHITECTURE.md` |
+| 3 | Original logic tick | Decompile the main loop and confirm it under the Wine oracle | `docs/ARCHITECTURE.md` |
 | 4 | Level list and streaming model | Derive it from the installer script and `list.txt` | `docs/GAMEPLAY.md` |
-| 5 | Oracle frame comparison | Run the original under Wine/Xvfb and compare frames | `docs/ORACLE_COMPARE.md` |
+| 5 | Oracle state comparison | Decompile the player and camera structures and read them from the Wine process memory | `docs/ORACLE_WINE.md` |
 | 6 | `animatio` and `animreel` layout | Decompile the animation loader | `docs/FORMATS/models.md` |
 
 ## Next steps
 
 1. Map the shared-model instances and combine the light map with the material layers.
 2. Bind the shared `model` entries and decode animation/skinning.
-3. Compare the port's `sl01` spawn frame with `capture_20261028_0150`
-   (BO2NX-68) and read the camera/player state from engine memory.
+3. Decompile how `bo2.exe` skips `pyramid/*` helper volumes and fix the
+   `sl01` materials, then gate the port spawn frame against the Wine
+   oracle (BO2NX-68).
+4. Read the camera and player state from the Wine process memory (verified
+   offsets only) to compare state, not only frames (BO2NX-69).
 
 ## Rules
 
