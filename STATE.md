@@ -99,12 +99,12 @@ and assets) is complete.
 
 - The native Windows oracle harness is available: a reverse SSH server on
   the Windows host, `tools/oracle/oracle_client.py`, a capture validator and
-  an input/frame aligner. The first two gameplay captures stopped at the
-  intro cutscene; `capture_20261028_0047` reached the first level and saved
-  at `slums/sl01.hidden_checkpoint001`, but the camera hook stops 11.6 s
-  before the spawn phase and the capture has no `state.csv`, manifest, notes,
-  hashes or PPM frames. The HTTP job API runs probes, but capture jobs still
-  need Frida in the server Python. See `docs/ORACLE_WINDOWS.md` and
+  an input/frame aligner. `capture_20261028_0150` is the first complete
+  capture: it loads the `sl01` checkpoint save, records walk, run and jump,
+  and passes `validate_capture.py` (hashes, manifest, 10,233 `state.csv`
+  rows, 7 PPM key frames). `VIEW` is the identity in gameplay, so the camera
+  pose and the player state are not captured; attack and camera rotation
+  are not confirmed. See `docs/ORACLE_WINDOWS.md` and
   `docs/ORACLE_WINDOWS_NATIVE.md`.
 - The fixed-step loop (`FixedStep`) and `--headless --frames N` are in
   place; the accumulator is clamped to 0.25 s and the tick rate defaults
@@ -147,8 +147,8 @@ and assets) is complete.
   it. Wiring the `sound`/`strmfile` event table to gameplay is pending.
 - `region`, `planinfo`, `bpackage`, `strtable`, `musicbnk`, `texfont`,
   `liteinfo`.
-- The oracle frame comparison: Wine is blocked and the native Windows
-  captures are partial (cutscene detection, no gameplay state).
+- The oracle state comparison: the native Windows capture has frames but
+  no camera pose or player state (`VIEW` is the identity); Wine is blocked.
 - Gameplay parity beyond the provisional `--play` harness: the original
   player, camera, combat, animation and weapon values are pending.
 - The installer's native RAR decoder is not ported; development
@@ -170,8 +170,8 @@ and assets) is complete.
 
 1. Map the shared-model instances and combine the light map with the material layers.
 2. Bind the shared `model` entries and decode animation/skinning.
-3. Finish the native Windows gameplay capture and compare frames and state;
-   Wine remains blocked.
+3. Compare the port's `sl01` spawn frame with `capture_20261028_0150`
+   (BO2NX-68) and read the camera/player state from engine memory.
 
 ## Rules
 

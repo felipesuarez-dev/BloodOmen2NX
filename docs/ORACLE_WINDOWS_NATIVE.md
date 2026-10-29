@@ -154,9 +154,10 @@ projection matrix is stored in `camera_d3d8.jsonl`. Do not assume 25 Hz or
 
 ## Current status (2026-10-28)
 
-The tunnel, server, client and watchdog work. Four captures are visible:
-`capture_20261027_2107`, `capture_20261027_2355`,
-`capture_20261027_2358` and `capture_20261028_0047`. All are partial:
+The tunnel, server, client and watchdog work. `capture_20261028_0150` is
+the first complete capture: it passes `validate_capture.py` in final mode.
+See `docs/ORACLE_WINDOWS.md` for its facts and limits. The earlier captures
+are partial:
 
 - `_2107` contains installer, menu, calibration and cutscene images plus the
   original `game.erg` and `settings.cfg`. It has no video, inputs or camera.

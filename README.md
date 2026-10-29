@@ -86,7 +86,7 @@ Function map: 35513 rows. Levels and platform features are defined in [`tools/ge
 | Installed game tree | 227 files, 1.9 GB; manifest hash in `docs/PROVENANCE.md` |
 | Level renderer, audio, input | Level shell with free-camera input; audio and gameplay pending |
 | Game logic translation | Not started |
-| Original game as oracle | Wine is blocked; a native Windows capture reached gameplay, camera/state coverage pending |
+| Original game as oracle | Native Windows capture of the first level is complete (frames, video, saves); camera/player state pending; Wine is blocked |
 
 Source of truth: [`STATE.md`](STATE.md) and [`ROADMAP.md`](ROADMAP.md).
 
@@ -241,7 +241,7 @@ Per-function loop: [`docs/PORTING_GUIDE.md`](docs/PORTING_GUIDE.md). The rule is
 | [`docs/SETUP.md`](docs/SETUP.md) | One-time environment setup |
 | [`docs/ORACLE_COMPARE.md`](docs/ORACLE_COMPARE.md) | Parity results against the original |
 | [`docs/ORACLE_WINDOWS_NATIVE.md`](docs/ORACLE_WINDOWS_NATIVE.md) | Native Windows capture harness, client and validation |
-| [`docs/ORACLE_WINDOWS.md`](docs/ORACLE_WINDOWS.md) | First gameplay capture: facts, gaps and next steps |
+| [`docs/ORACLE_WINDOWS.md`](docs/ORACLE_WINDOWS.md) | Native Windows gameplay captures: facts, gaps and next steps |
 
 ## Progress tracking
 

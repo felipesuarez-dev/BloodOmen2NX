@@ -12,7 +12,7 @@ comparison.
 |---|---|---|---|
 | M0 | Laboratory and binary truth | Hashes, PE triage, SFXI, `game.erg` and Ghidra inventory | DONE — install materialization moved to M1 and completed there; function recovery scripts and an optional REA evaluation are recorded, with manual classification remaining for the recovered set |
 | M1 | Containers and assets (GO/NO-GO) | `.big` and `pc.rkv` validated against the installed tree; one asset extracted; formats documented | DONE — 198/198 installer chunks, 179 `.big`/246,332 entries, 2,666 RKV streams, DDS and model extracted; #14-#19 extraction done, #20 repack validation remains |
-| M2 | Host skeleton and first frame | Host backend renders one level with textures and a free camera; frame comparable to the oracle | WIP — headless and SDL2/OpenGL level with DDS textures, cell grid/BSP, cell instances, lights/markers, material layers, input/player marker and a free camera; native Windows gameplay capture reached, camera/state coverage pending |
+| M2 | Host skeleton and first frame | Host backend renders one level with textures and a free camera; frame comparable to the oracle | WIP — headless and SDL2/OpenGL level with DDS textures, cell grid/BSP, cell instances, lights/markers, material layers, input/player marker and a free camera; complete native Windows `sl01` capture, camera/state from memory pending |
 | M3 | Playable slice | First level playable start to finish; route replay test and state comparison | WIP — fixed tick, entity world, frustum culling and cell streaming foundations landed; game systems pending |
 | M4 | Complete systems | Enemies, combat, dark gifts, scripting, menus, saves, audio and videos | TODO |
 | M5 | Complete content | All levels, bosses and unlockables; parity battery green | TODO |
@@ -44,8 +44,8 @@ comparison.
 | Light maps (`litedata`) | done | 71 `.slm` entries, per-instance match with model fallback, `--lightmap`; external shared models open |
 | Host renderer (OpenGL) | done | SDL2/OpenGL window, free camera and Xvfb capture |
 | Renderer pipeline | done | GLSL 1.20 + VBO/IBO, ordered runs; SDL frame 20-22 ms |
-| Frame comparator | done | Side-by-side, diff, tile/region metrics; native Windows gameplay capture reached, camera/state coverage pending |
-| Native Windows oracle | wip | Reverse SSH harness, client, capture validator and input/frame aligner; gameplay reachable, state coverage pending |
+| Frame comparator | done | Side-by-side, diff, tile/region metrics; complete native Windows `sl01` capture, camera/state from memory pending |
+| Native Windows oracle | wip | Reverse SSH harness, client, capture validator and input/frame aligner; complete `sl01` capture, camera/player state pending |
 | Switch renderer (deko3d) | todo | M2+ |
 | Audio | done | Ogg extraction, floor-0/1 decoder, stereo mixer, SDL output and event demo |
 | Video (Bink) | todo | M4; inventory and transcode plan done in `docs/FORMATS/video.md` |

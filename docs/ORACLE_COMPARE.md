@@ -107,11 +107,10 @@ A native Windows harness is available as a complement to the Wine oracle.
 It runs `bo2.exe` on the Windows host (no Wine) in an 800x600 window and
 serves captures through an SSH reverse tunnel.
 
-The first two gameplay captures stopped at the intro cutscene with
-`RuntimeError: gameplay not detected`. `capture_20261028_0047` reached the
-first level and produced gameplay screenshots, inputs and a save, but the
-camera hook stops 11.6 s before the spawn phase and the capture has no
-manifest, notes, hashes, `state.csv` or `frames_ppm/`. See
+`capture_20261028_0150` is complete: it loads the `sl01` checkpoint
+save, records walk, run and jump with video, `state.csv` and PPM key frames,
+and passes `validate_capture.py`. `VIEW` is the identity in gameplay, so it
+has no camera pose or player state. See
 `docs/ORACLE_WINDOWS_NATIVE.md` for the harness,
 `docs/ORACLE_WINDOWS.md` for the capture facts, and
 `tools/oracle/oracle_client.py`, `tools/oracle/validate_capture.py` and
