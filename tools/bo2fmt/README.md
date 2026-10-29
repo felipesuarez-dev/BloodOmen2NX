@@ -28,6 +28,18 @@ python3 tools/bo2fmt/animreel.py info <extracted animreel entry>
 python3 tools/bo2fmt/animreel.py root <container.big> [--match text]
 ```
 
+String tables (`strtable`, see `docs/FORMATS/strtable.md`). The entry is picked by
+locale like the engine does (Spanish by default, the `default` copy as fallback):
+
+```sh
+python3 tools/bo2fmt/strtable.py dump <container.big> --entry ui/UI [--locale spanish] [--raw]
+```
+
+The output is `key<TAB>text`, in UTF-8. `--raw` prints the stored text, where
+upper-case letters stand for accented glyphs; without it the Spanish accent
+mapping (inferred, see the format doc) is applied. The output contains the
+original game text: keep it out of the repository.
+
 `unpack` writes `manifest.json` with the BIG entry metadata (type, name,
 language, symbols and padding). `repack` rebuilds the container from that
 manifest and is byte-identical when the extracted data is unchanged.
@@ -79,13 +91,14 @@ Requirements:
 | `sfxi.py` | Installer SFXI container | Verified against the reference installer |
 | `installer.py` | Installer `data/*.dat` chunks | Verified: 198/198 chunks, 227-file tree |
 | `bo2cipher.c` | Block cipher accelerator | Verified against the Python reference |
-| `big.py` | `.big` (`goefile`) content container | Verified: 179 files, 246,332 entries |
+| `big.py` | `.big` (`goefile`) content container, locale-aware lookup (`find_localized`) | Verified: 179 files, 246,332 entries |
 | `rkv.py` | `pc.rkv` audio archive | Verified: 2,666 Ogg streams |
 | `bo2fmt.py` | Umbrella list/unpack/repack CLI | BIG and RKV list/unpack; BIG repack verified byte-identical |
 | `audio.py` | `sound` metadata and `strmfile` extraction | Verified on the installed tree; field semantics open |
 | `model.py` | model, skeleton and raw animation extraction | Verified: 5,168 models, 1,586 skinned |
 | `region.py` | entity table extraction | Verified: 15,632 entities, 533 models, 0 errors |
 | `textures.py` | `texture` entries to PNG (Pillow) with `index.json` | Verified on `slums/sl01`: 239/239 |
+| `strtable.py` | `strtable` reader: `dump <container.big> --entry <name> [--locale spanish] [--raw]` | Verified: 92/92 tables parse, 1 irregular record (Italian `ui/UI`); accent mapping inferred |
 | `animreel.py` | `animreel` clip reader: `info <entry>`, `root <container.big> [--match text]` | Verified: 134/134 Kain clips parse; root speed of `kain/run` is 200 u/s |
 | `compare_frames.py` | Frame side-by-side, diff and metrics | Synthetic tests; used against the Windows and Wine oracle frames |
 
