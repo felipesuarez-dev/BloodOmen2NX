@@ -7,6 +7,21 @@ LEVELS: the 11 campaign chapters in game order, as (name, completable). A
         docs/LEVELS.md; tests/python/test_progress.py keeps both in step.
 
 PLATFORM_FEATURES: (name, state) with state in {"done", "partial", "todo"}.
+
+Function status rule for re/FUNCTION_MAP.csv (only bo2.exe addresses):
+  translated  the port reproduces the contract of that exact function for every
+              input its callers can give (a divergence on malformed data is
+              allowed and written in the note), a unit test pins the behaviour
+              and a local dump exists. A FUN_ address in a comment does not
+              count.
+  wip         the port has code for it, but only part of the contract (one
+              branch, one derived value), or the whole contract without a test
+              that pins it, or without an audit against the dump.
+  todo        no port code.
+  external    not game code: compiler unwind funclets and statically linked
+              libraries (see tools/gen/README.md).
+Every translated and wip row names the port file first in `notes`
+("<path>: what is and is not ported"); tests/python/test_progress.py checks it.
 """
 
 LEVELS = [

@@ -604,7 +604,7 @@ address,name,subsystem,status,notes
 0041e9c0,FUN_0041e9c0,unknown,todo,ghidra
 0041ea50,FUN_0041ea50,unknown,todo,ghidra
 0041ec50,FUN_0041ec50,unknown,todo,ghidra
-0041ecf0,FUN_0041ecf0,unknown,todo,ghidra
+0041ecf0,FUN_0041ecf0,player,wip,src/game/player.cpp: analog turn (deadzone gate; scale capped at 4; direction); the digital branch (param_4 != 0) is not ported
 0041ee60,FUN_0041ee60,unknown,todo,ghidra
 0041f220,FUN_0041f220,unknown,todo,ghidra
 0041f250,FUN_0041f250,unknown,todo,ghidra
@@ -820,7 +820,7 @@ address,name,subsystem,status,notes
 00428720,FUN_00428720,unknown,todo,ghidra
 00428780,FUN_00428780,unknown,todo,ghidra
 00428f80,FUN_00428f80,unknown,todo,ghidra
-00428fe0,FUN_00428fe0,unknown,todo,ghidra
+00428fe0,FUN_00428fe0,player,wip,src/game/kain_tuning.cpp: reads the turn rates the run clip rate and the jump block from the tunedata; the other copied fields are not ported
 0042a150,FUN_0042a150,unknown,todo,ghidra
 0042acf0,FUN_0042acf0,unknown,todo,ghidra
 0042af40,FUN_0042af40,unknown,todo,ghidra
@@ -892,7 +892,7 @@ address,name,subsystem,status,notes
 00431a00,FUN_00431a00,unknown,todo,ghidra
 00431a30,FUN_00431a30,unknown,todo,ghidra
 00431df0,FUN_00431df0,unknown,todo,ghidra
-00432030,FUN_00432030,unknown,todo,ghidra
+00432030,FUN_00432030,player,wip,src/game/player.cpp: vertical pos += (v + a*dt/2)*dt and v += a*dt only; ground projection and the rest of the integrator are not ported
 00432290,FUN_00432290,unknown,todo,ghidra
 00432a60,FUN_00432a60,unknown,todo,ghidra
 00432d40,FUN_00432d40,unknown,todo,ghidra
@@ -1176,7 +1176,7 @@ address,name,subsystem,status,notes
 00441d40,FUN_00441d40,unknown,todo,ghidra
 00441da0,FUN_00441da0,unknown,todo,ghidra
 00441dc0,FUN_00441dc0,unknown,todo,ghidra
-00441f20,FUN_00441f20,unknown,todo,ghidra
+00441f20,FUN_00441f20,player,wip,src/game/player.cpp: fall speed cap only; lateral air control is not ported
 00442240,FUN_00442240,unknown,todo,ghidra
 004423b0,FUN_004423b0,unknown,todo,ghidra
 00442650,FUN_00442650,unknown,todo,ghidra
@@ -1185,6 +1185,7 @@ address,name,subsystem,status,notes
 004427d0,FUN_004427d0,unknown,todo,ghidra
 004429a0,FUN_004429a0,unknown,todo,ghidra
 00442aa0,FUN_00442aa0,unknown,todo,ghidra
+00442ae0,FUN_00442ae0,player,wip,src/game/player.cpp: gravity picked by the sign of vz (g_up or g_down) only; state selection glide and animation are not ported
 00443020,FUN_00443020,unknown,todo,ghidra
 004430c0,FUN_004430c0,unknown,todo,ghidra
 004430f0,FUN_004430f0,unknown,todo,ghidra
@@ -1193,6 +1194,7 @@ address,name,subsystem,status,notes
 00443620,FUN_00443620,unknown,todo,ghidra
 00443650,FUN_00443650,unknown,todo,ghidra
 004436e0,FUN_004436e0,unknown,todo,ghidra
+00443a50,FUN_00443a50,player,wip,src/game/player.cpp: hold boost window and the release rule only; timers states and animation are not ported
 00443c60,FUN_00443c60,unknown,todo,ghidra
 00443d20,FUN_00443d20,unknown,todo,ghidra
 00443d50,FUN_00443d50,unknown,todo,ghidra
@@ -1220,7 +1222,7 @@ address,name,subsystem,status,notes
 00445800,FUN_00445800,unknown,todo,ghidra
 004458a0,FUN_004458a0,unknown,todo,ghidra
 004458d0,FUN_004458d0,unknown,todo,ghidra
-00445ba0,FUN_00445ba0,unknown,todo,ghidra
+00445ba0,FUN_00445ba0,player,wip,src/game/player.cpp: run clip rate at full stick (slot 0) only; the partial-stick blend of slot 1 is not ported
 00445d10,FUN_00445d10,unknown,todo,ghidra
 00445db0,FUN_00445db0,unknown,todo,ghidra
 00445e00,FUN_00445e00,unknown,todo,ghidra
@@ -1398,7 +1400,7 @@ address,name,subsystem,status,notes
 00451830,FUN_00451830,unknown,todo,ghidra
 00451a80,FUN_00451a80,unknown,todo,ghidra
 00451c60,FUN_00451c60,unknown,todo,ghidra
-00451d00,FUN_00451d00,unknown,todo,ghidra
+00451d00,FUN_00451d00,player,wip,src/game/kain_tuning.cpp: derive_jump main branch; the early-return branch and the travel times [0xc]-[0xe] are not ported
 00452030,FUN_00452030,unknown,todo,ghidra
 004521c0,FUN_004521c0,unknown,todo,ghidra
 00452290,FUN_00452290,unknown,todo,ghidra
@@ -10544,7 +10546,7 @@ address,name,subsystem,status,notes
 006681f0,FUN_006681f0,unknown,todo,ghidra
 00668390,FUN_00668390,unknown,todo,ghidra
 00668530,FUN_00668530,unknown,todo,ghidra
-00668700,FUN_00668700,unknown,todo,ghidra
+00668700,FUN_00668700,animation,wip,src/engine/anim_reel.cpp: v6 header blob and descriptors are read; the event {symbol frame} pairs are skipped
 00668950,FUN_00668950,unknown,todo,ghidra
 006689a0,FUN_006689a0,unknown,todo,ghidra
 00668f10,FUN_00668f10,unknown,todo,ghidra
@@ -10570,7 +10572,7 @@ address,name,subsystem,status,notes
 0066a220,FUN_0066a220,unknown,todo,ghidra
 0066a450,FUN_0066a450,unknown,todo,ghidra
 0066a680,FUN_0066a680,unknown,todo,ghidra
-0066a6d0,FUN_0066a6d0,unknown,todo,ghidra
+0066a6d0,FUN_0066a6d0,animation,translated,src/engine/anim_reel.cpp: codec dispatch 0/8/12/16; an unknown codec is rejected instead of ignored; tests/unit/test_anim_reel.cpp
 0066a7b0,FUN_0066a7b0,unknown,todo,ghidra
 0066a7d0,FUN_0066a7d0,unknown,todo,ghidra
 0066a850,FUN_0066a850,unknown,todo,ghidra
@@ -10583,7 +10585,7 @@ address,name,subsystem,status,notes
 0066afa0,FUN_0066afa0,unknown,todo,ghidra
 0066afd0,FUN_0066afd0,unknown,todo,ghidra
 0066b030,FUN_0066b030,unknown,todo,ghidra
-0066b070,FUN_0066b070,unknown,todo,ghidra
+0066b070,FUN_0066b070,level,wip,src/engine/cell_group.cpp: read_cell_bsp reads the header and the tree; the calls after the tree read (FUN_0068b570 and a virtual call) are not ported
 0066b1e0,FUN_0066b1e0,unknown,todo,ghidra
 0066b220,FUN_0066b220,unknown,todo,ghidra
 0066b270,FUN_0066b270,unknown,todo,ghidra
@@ -10703,7 +10705,7 @@ address,name,subsystem,status,notes
 00670ea0,FUN_00670ea0,unknown,todo,ghidra
 00671030,FUN_00671030,unknown,todo,ghidra
 006710c0,FUN_006710c0,unknown,todo,ghidra
-006712c0,FUN_006712c0,unknown,todo,ghidra
+006712c0,FUN_006712c0,animation,wip,src/engine/anim_reel.cpp: stream channel size (4 bytes) is consumed; the u32 payload is dropped
 00672cb0,FUN_00672cb0,unknown,todo,ghidra
 00672d00,FUN_00672d00,unknown,todo,ghidra
 00672d20,FUN_00672d20,unknown,todo,ghidra
@@ -10886,9 +10888,10 @@ address,name,subsystem,status,notes
 0067a9f0,FUN_0067a9f0,unknown,todo,ghidra
 0067aa10,FUN_0067aa10,unknown,todo,ghidra
 0067aa40,FUN_0067aa40,unknown,todo,ghidra
+0067aaf0,FUN_0067aaf0,animation,wip,src/engine/anim_reel.cpp: UC evaluated at whole frames only; fractional time is not ported
 0067aca0,FUN_0067aca0,unknown,todo,ghidra
 0067acb0,FUN_0067acb0,unknown,todo,ghidra
-0067ad20,FUN_0067ad20,unknown,todo,ghidra
+0067ad20,FUN_0067ad20,animation,translated,src/engine/anim_reel.cpp: UC channel layout and size (frames*4); the runtime object is replaced by decoded samples; tests/unit/test_anim_reel.cpp
 0067b1f0,FUN_0067b1f0,unknown,todo,ghidra
 0067b270,FUN_0067b270,unknown,todo,ghidra
 0067b2d0,FUN_0067b2d0,unknown,todo,ghidra
@@ -11074,7 +11077,7 @@ address,name,subsystem,status,notes
 00687900,FUN_00687900,unknown,todo,ghidra
 00687920,FUN_00687920,unknown,todo,ghidra
 00687990,FUN_00687990,unknown,todo,ghidra
-00687ae0,FUN_00687ae0,unknown,todo,ghidra
+00687ae0,FUN_00687ae0,level,wip,src/engine/cell_group.cpp: read_cell (version 2); the dbgmodel sub-chunk is skipped
 00687d80,FUN_00687d80,unknown,todo,ghidra
 00687eb0,FUN_00687eb0,unknown,todo,ghidra
 00688030,FUN_00688030,unknown,todo,ghidra
@@ -11090,14 +11093,14 @@ address,name,subsystem,status,notes
 006889a0,FUN_006889a0,unknown,todo,ghidra
 00688b80,FUN_00688b80,unknown,todo,ghidra
 00688c00,FUN_00688c00,unknown,todo,ghidra
-00688c90,FUN_00688c90,unknown,todo,ghidra
+00688c90,FUN_00688c90,level,wip,src/engine/cell_group.cpp: read_markers (version 4); the symbols are kept raw and the marker kind is open
 00688d30,FUN_00688d30,unknown,todo,ghidra
 00688ea0,FUN_00688ea0,unknown,todo,ghidra
 00688f20,FUN_00688f20,unknown,todo,ghidra
 00688fb0,FUN_00688fb0,unknown,todo,ghidra
 00689050,FUN_00689050,unknown,todo,ghidra
 00689110,FUN_00689110,unknown,todo,ghidra
-00689300,FUN_00689300,unknown,todo,ghidra
+00689300,FUN_00689300,level,wip,src/engine/cell_group.cpp: read_lights (version 3); the flags and the type-specific vectors are skipped
 00689690,FUN_00689690,unknown,todo,ghidra
 00689810,FUN_00689810,unknown,todo,ghidra
 006899f0,FUN_006899f0,unknown,todo,ghidra
@@ -11117,14 +11120,17 @@ address,name,subsystem,status,notes
 0068a900,FUN_0068a900,unknown,todo,ghidra
 0068a970,FUN_0068a970,unknown,todo,ghidra
 0068a9a0,FUN_0068a9a0,unknown,todo,ghidra
-0068aa90,FUN_0068aa90,unknown,todo,ghidra
+0068a9b0,FUN_0068a9b0,animation,translated,include/bo2/engine/anim_reel.hpp: reel duration (frames - 1) / 30 (LC getter); test_header_and_duration in tests/unit/test_anim_reel.cpp
+0068aa90,FUN_0068aa90,animation,wip,src/engine/anim_reel.cpp: LC evaluated at whole frames only; fractional time is not ported
 0068ac40,FUN_0068ac40,unknown,todo,ghidra
-0068aca0,FUN_0068aca0,unknown,todo,ghidra
+0068aca0,FUN_0068aca0,animation,translated,src/engine/anim_reel.cpp: LC channel layout and size align4(frames+8); the runtime object is replaced by decoded samples; tests/unit/test_anim_reel.cpp
 0068ad60,FUN_0068ad60,unknown,todo,ghidra
 0068ad90,FUN_0068ad90,unknown,todo,ghidra
+0068ada0,FUN_0068ada0,animation,translated,include/bo2/engine/anim_reel.hpp: reel duration (frames - 1) / 30 (LSC getter); test_header_and_duration in tests/unit/test_anim_reel.cpp
+0068aed0,FUN_0068aed0,animation,wip,src/engine/anim_reel.cpp: LSC evaluated at whole frames only; fractional time is not ported
 0068b180,FUN_0068b180,unknown,todo,ghidra
-0068b1f0,FUN_0068b1f0,unknown,todo,ghidra
-0068b270,FUN_0068b270,unknown,todo,ghidra
+0068b1f0,FUN_0068b1f0,animation,translated,src/engine/anim_reel.cpp: LSC channel layout and size align4(K*2+2)+12; the runtime object is replaced by decoded samples; tests/unit/test_anim_reel.cpp
+0068b270,FUN_0068b270,level,translated,src/engine/cell_group.cpp: read_bsp_node; tests/unit/test_engine.cpp covers a tree an invalid node type and a leaf count mismatch; the leaf count matches the header in the 162 real groups (docs/FORMATS/models.md)
 0068b400,FUN_0068b400,unknown,todo,ghidra
 0068b430,FUN_0068b430,unknown,todo,ghidra
 0068b470,FUN_0068b470,unknown,todo,ghidra
@@ -11157,8 +11163,8 @@ address,name,subsystem,status,notes
 0068d840,FUN_0068d840,unknown,todo,ghidra
 0068d8a0,FUN_0068d8a0,unknown,todo,ghidra
 0068d8b0,FUN_0068d8b0,unknown,todo,ghidra
-0068d8e0,FUN_0068d8e0,unknown,todo,ghidra
-0068dba0,FUN_0068dba0,unknown,todo,ghidra
+0068d8e0,FUN_0068d8e0,level,wip,src/engine/cell_group.cpp: read_portal (version 1); the use of the plane is unconfirmed
+0068dba0,FUN_0068dba0,level,wip,src/engine/cell_group.cpp: read_portal (version 2); the use of the plane is unconfirmed
 0068dd30,FUN_0068dd30,unknown,todo,ghidra
 0068de10,FUN_0068de10,unknown,todo,ghidra
 0068de50,FUN_0068de50,unknown,todo,ghidra
