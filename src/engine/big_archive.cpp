@@ -191,4 +191,27 @@ const BigEntry* BigArchive::find(const std::string& type, const std::string& nam
     return nullptr;
 }
 
+std::string BigArchive::language_name(const BigEntry& entry) const {
+    return entry.language < names_.size() ? names_[entry.language] : std::string();
+}
+
+const BigEntry* BigArchive::find(const std::string& type, const std::string& name,
+                                 const std::string& locale) const {
+    const BigEntry* fallback = nullptr;
+    for (const BigEntry& entry : entries_) {
+        if (!iequals(entry.type, type) || !iequals(entry.name, name)) {
+            continue;
+        }
+        const std::string language = language_name(entry);
+        if (entry.language == 0 || iequals(language, kDefaultLanguage)) {
+            if (fallback == nullptr) {
+                fallback = &entry;
+            }
+        } else if (iequals(language, locale)) {
+            return &entry;
+        }
+    }
+    return fallback;
+}
+
 }  // namespace bo2::engine

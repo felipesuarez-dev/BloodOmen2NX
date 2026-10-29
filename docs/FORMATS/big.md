@@ -38,7 +38,7 @@ char[8] type
 u32     entry length, including this header and the data padding
 u32     0
 u16     name index
-u16     language index
+u16     language index (see "Language")
 char[8] "symlist\0"
 u32     symbols size
 u32     0
@@ -120,13 +120,71 @@ The full model layout is open.
 The name table can hold more than 3,000 names (the sanctuary file has
 3,332, covering four languages plus `default`). The `name index` resolves
 the entry name. The `n` u16 values are resource symbol references: the
-`cellgrup` uses them to resolve its texture names, and `BigEntry.symbols`
-exposes them. The `language index` is stored but not interpreted.
+`cellgrup` uses them to resolve its texture names and the `strtable` uses
+them for its keys and text; `BigEntry.symbols` exposes them.
+
+## Language
+
+The `language index` is an index into the container's own name table, and
+all 179 installed containers start that table with the same six names:
+
+| Index | Name | Meaning |
+|---:|---|---|
+| 0 | `default` | Copy used by every locale; for English it is the only copy |
+| 1 | `english` | |
+| 2 | `french` | |
+| 3 | `italian` | |
+| 4 | `german` | |
+| 5 | `spanish` | The language the Spanish build runs in |
+
+Only three types carry a language other than 0 (measured on all 179
+files):
+
+| Type | Languages present |
+|---|---|
+| `strtable` | 92 entries: 17 with language 0, 15 for each of 1 to 5 |
+| `lipsync` | one entry per voice clip and language, about 11.9k each; language 0 matched the English entry byte for byte on the one container compared |
+| `texture` | 44 load screens (11 levels x 4) for languages 2 to 5, plus language 0; there is no language-1 texture |
+
+Every resource that has a non-zero language also has a language 0 copy
+(checked on all containers). The copies are not stored in precedence
+order: `code.big` lists `ui/UI` as languages 1, 2, 3, 4, 5 and then 0.
+
+**Engine rule.** The chunk reader FUN_006c8fb0 reads the entry name, then the
+language, and keeps the entry only when the language is 0, the `default`
+symbol (initialised by FUN_006c81d0) or the current locale
+(`GetCurrent()`, FUN_00697dd0); any other entry is skipped with FUN_006a03c0.
+So the engine loads the entry of the current locale and the `default` copy
+of the same resource. Which one a lookup returns is decided where the
+resource is registered and is not decompiled; the oracle shows the locale
+entry winning, so the port prefers the locale entry and falls back to
+`default`.
+
+**Port rule.** `BigArchive::find(type, name, locale)` returns the entry whose
+language name equals `locale`, else the `default` copy, else nothing (an
+entry that only exists in other languages is skipped, as in the engine).
+`find(type, name)` is unchanged and returns the first match of any
+language, which is what the non-localized types need. The Python
+reference is `big.find_localized`.
+
+**Locale.** The locale is a name (a symbol in the engine), not a number.
+The Spanish build forces `spanish`: Game::Init FUN_00515920 reads the
+`LocaleSet` list of `game.erg` into a locale list (FUN_00697d80 adds one,
+the constructor FUN_006962e0 puts `default` first), and the GameSpecific
+step FUN_004aae40, called after `PreCode.big` and before `code.big` is
+loaded, calls Select (FUN_00697d90) with `spanish` and stores
+`Locale=spanish` in the config. The language chooser the same function can
+open (the `LanguageSetupUI` class) is never shown because `Locale` is
+already set, and there is no in-game language option and no OS locale
+detection. The port mirrors this with `kDefaultLocale = "spanish"`
+(`big.DEFAULT_LOCALE` in Python).
 
 ## Open questions
 
-- The meaning of the language index and of the `n` u16 values, beyond
-  the `cellgrup` symbol list.
+- The meaning of the `n` u16 values beyond the `cellgrup` and `strtable`
+  symbol lists.
+- Which duplicate the engine returns when an entry and its `default` copy
+  collide (FUN_006c8fb0 only filters).
 - `planinfo`, `animatio`, `animreel`, `strtable`, `musicbnk`, `texfont`,
   `liteinfo`; `region` is decoded in `docs/FORMATS/region.md`.
 - The `region`, `planinfo` and shared `model` records (the `cellgrup` tail is decoded in `docs/FORMATS/models.md`).

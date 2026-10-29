@@ -172,6 +172,16 @@ if(BUILD_TESTING)
     target_compile_options(bo2nx_audio_tests PRIVATE ${BO2NX_WARNINGS})
     add_test(NAME audio COMMAND bo2nx_audio_tests)
 
+    add_executable(bo2nx_locale_tests tests/unit/test_locale.cpp)
+    target_link_libraries(bo2nx_locale_tests PRIVATE bo2_engine)
+    target_compile_options(bo2nx_locale_tests PRIVATE ${BO2NX_WARNINGS})
+    add_test(NAME locale COMMAND bo2nx_locale_tests)
+
+    add_executable(bo2nx_locale_asset_tests tests/unit/test_locale_asset.cpp)
+    target_link_libraries(bo2nx_locale_asset_tests PRIVATE bo2_engine)
+    target_compile_options(bo2nx_locale_asset_tests PRIVATE ${BO2NX_WARNINGS})
+    add_test(NAME locale_asset COMMAND bo2nx_locale_asset_tests)
+
     add_executable(bo2nx_platform_tests tests/unit/test_platform.cpp)
     target_link_libraries(bo2nx_platform_tests PRIVATE bo2_platform_core)
     target_compile_options(bo2nx_platform_tests PRIVATE ${BO2NX_WARNINGS})

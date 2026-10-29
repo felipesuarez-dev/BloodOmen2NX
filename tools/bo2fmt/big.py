@@ -170,6 +170,38 @@ def load(path: Path) -> tuple[list[str], list[Entry]]:
     return parse(path.read_bytes())
 
 
+DEFAULT_LOCALE = "spanish"
+DEFAULT_LANGUAGE = "default"
+
+
+def language_name(names: list[str], entry: Entry) -> str:
+    """Name of the entry language: names[entry.language], or "" when out of range."""
+    return names[entry.language] if entry.language < len(names) else ""
+
+
+def find_localized(
+    names: list[str], entries: list[Entry], type_name: str, name: str, locale: str = DEFAULT_LOCALE
+) -> Entry | None:
+    """Pick the entry the original engine would load for `locale`.
+
+    FUN_006c8fb0 keeps an entry when its language is `default` or the current
+    locale. Of those, the entry of the locale wins and the `default` copy is
+    the fallback; a resource that only exists in other languages is not found.
+    Matching is case-insensitive, like the C++ reader.
+    """
+    fallback = None
+    for entry in entries:
+        if entry.type.lower() != type_name.lower() or entry.name.lower() != name.lower():
+            continue
+        language = language_name(names, entry)
+        if entry.language == 0 or language.lower() == DEFAULT_LANGUAGE:
+            if fallback is None:
+                fallback = entry
+        elif language.lower() == locale.lower():
+            return entry
+    return fallback
+
+
 def name_padding(data: bytes) -> bytes:
     """Return the exact bytes used between the name table and the entries."""
     if len(data) < 0x24 or data[:8] != MAGIC:

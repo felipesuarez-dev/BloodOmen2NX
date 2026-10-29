@@ -413,7 +413,8 @@ LoadedLevel load_level(const Options& options) {
     const std::uint64_t textures_start = bo2::platform::monotonic_nanoseconds();
     level.textures.reserve(level.geometry.texture_names.size());
     for (const std::string& name : level.geometry.texture_names) {
-        const bo2::engine::BigEntry* texture_entry = archive.find("texture", name);
+        const bo2::engine::BigEntry* texture_entry =
+            archive.find("texture", name, bo2::engine::kDefaultLocale);
         if (texture_entry == nullptr) {
             level.textures.emplace_back();
             continue;
