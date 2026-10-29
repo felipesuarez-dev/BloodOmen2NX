@@ -433,6 +433,69 @@ Measured on the 135 level containers:
 (17 leaves, depth 8). `canyons/cy01.big`: 8 cells, 32 portals, 674
 terrain ids, 167 BSP nodes (84 leaves, depth 10).
 
+## Helper objects
+
+**Answer:** the original does not draw an entity whose entity template
+(`.etp`) carries `flag helperobj`. The `pyramid/*` boxes are the models of
+such entities (kain emitter, SFX anchors, region and level keepers, camera
+and signal markers). The port applies the same flag; it does not filter by
+texture name.
+
+The `pyramid/purple|green|red|blue` textures never appear in `cellgrup`;
+they belong to shared `model` entries (`kainemitter`, `sfxobj`,
+`regionkeeper`, `detector`, `cinematic`, ...) that region entities place
+(`docs/FORMATS/region.md`).
+
+| Step | Function | Behavior |
+|---|---|---|
+| Parse the template | `FUN_00785c8d` | Reads the `.etp` text line by line (`\n` or `\r`). `flag <name>` lower-cases the name (`FUN_0068f430`) and compares it with `FUN_0068ec30` (`strcmp`). `helperobj` sets byte `+0x66` of the template. Other flag bytes: `notplaceable` `+0x60`, `waittouseanims` `+0x61`, `static` `+0x62`, `staticcollision` `+0x63`, `collisionresponse_stop` `+0x64`, `nevercull` `+0x65`, `alwayslit` `+0x67`, `neverlit` `+0x68`, `tokenchallenge` `+0x69`, `keeprendermodeldata` `+0x6a`, `training` `+0x6b`. |
+| `include <path>` | `FUN_00785c8d` | Looks the path up and splices the included text in front of the remaining lines, so its flags apply first. `apinclude` is ignored unless `DAT_00a6ad40` is set. |
+| Create the entity | `FUN_0070d0d5` | Copies template `+0x66` to bit 9 (`0x200`) of the entity flags at `+0xf0`, `+0x62` to bit 6 and `+0x63` to bit 7; clears the hidden byte at `+0x139`. |
+| Draw the entity | `FUN_0070f100` | Returns without drawing when `+0x139` is set or `flags & 0x200`. |
+
+Template files are `strmfile` entries named
+`assets/etypes/<path>.etp` in the level container. The entity type is the
+file name without directory or extension (`sfxobj.etp` is type `sfxobj`),
+and `include` paths are relative to `assets/etypes/` without extension
+(`camera.etp` is `include camera/ExportedCamera`, which carries the flag).
+Reference examples from `slums/sl01`:
+
+```
+sfxobj.etp        model sfxobj\sfxobj / goscript AmbSoundScriptV2 / flag helperobj / flag static
+kainemitter.etp   model kainemitter / behavior kainemitter / flag static / flag helperobj
+detector.etp      model detector / goscript detectorscript / behavior detector / flag static
+```
+
+Over the 177 level containers, region entities whose type name matches a
+model with a `pyramid/*` texture split as follows (entity counts):
+
+| Carries `helperobj` (not drawn) | Entities | Does not carry it | Entities |
+|---|---:|---|---:|
+| `sfxobj` | 1,380 | `detector` | 758 |
+| `mediumsignalface` | 587 | `planhelperline` | 514 |
+| `kainemitter` | 140 | `bo2cinematic` | 268 |
+| `smallsignalface` | 128 | `planhelper` | 179 |
+| `regionkeeper` | 115 | `conversation` | 80 |
+| `firebox` | 83 | `animdetector`, `cinematic`, `sla_platformdetector` | 13 |
+| `musicobj`, `invissfxobj`, `regionloader` | 26 | | |
+
+`hint_proximity`, `camera`, `checkpoint`, `hidden_checkpoint`,
+`levelkeeper` and `bo2creature_helperstatic` also carry the flag and use
+other helper models.
+
+The port (`src/engine/entity_template.cpp`) parses `model`, `include` and
+`flag helperobj`, resolves the entity type against the container's
+`.etp` files and skips the entity model when the flag is set. In `sl01`
+47 of the 104 region entities are helper objects, including the
+`kainemitter` (`player`) whose purple box enclosed the spawn camera.
+
+Open: the types in the right-hand column have no `helperobj` flag, yet the
+original shows no pyramid for them. `FUN_0070dfa0` (`SetHidden`, hidden
+byte `+0x139`) is the other path that stops the draw; its callers for
+`detector`, `planhelper*`, `conversation` and `cinematic` are not traced,
+and neither is a reader of the `show helpers` debug option (group 12,
+index 6 of `FUN_004a3c55`). The port still draws those six types.
+
 ## Animation
 
 `vtxweigh`, `jointidx`, `animatio` and `animreel` are present in the

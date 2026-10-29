@@ -15,6 +15,7 @@
 #include "bo2/engine/cell_group.hpp"
 #include "bo2/engine/collision.hpp"
 #include "bo2/engine/dds.hpp"
+#include "bo2/engine/entity_template.hpp"
 #include "bo2/engine/erg.hpp"
 #include "bo2/engine/navigation.hpp"
 #include "bo2/engine/ogg.hpp"
@@ -255,6 +256,7 @@ struct LoadedLevel {
     std::size_t loaded_lightmaps = 0;
     std::size_t lightmap_entries = 0;
     std::size_t entity_models = 0;
+    std::size_t helper_entities = 0;
     std::vector<bo2::engine::RegionEntity> region_entities;
     std::vector<EntityAsset> entity_assets;
     std::string name;
@@ -377,7 +379,14 @@ LoadedLevel load_level(const Options& options) {
             level.region_entities.clear();
         }
     }
+    const bo2::engine::EntityTemplateLibrary templates(archive);
     for (const bo2::engine::RegionEntity& entity : level.region_entities) {
+        bo2::engine::EntityTemplate entity_template;
+        if (templates.find_type(entity.model, entity_template) &&
+            !bo2::engine::entity_template_is_drawn(entity_template)) {
+            ++level.helper_entities;
+            continue;
+        }
         const bo2::engine::BigEntry* model_entry = find_model_entry(archive, entity.model);
         if (model_entry == nullptr) {
             continue;
@@ -516,7 +525,8 @@ void print_scene(const LoadedLevel& level) {
     const bo2::engine::CollisionWorld collision_world(geometry);
     std::cout << "collision mesh: " << collision_world.triangles() << " triangles\n";
     if (level.entity_models != 0) {
-        std::cout << "entity models: " << level.entity_models << "\n";
+        std::cout << "entity models: " << level.entity_models << " (helper objects not drawn "
+                  << level.helper_entities << ")\n";
     }
     if (!geometry.collisions.empty()) {
         std::size_t bytes = 0;

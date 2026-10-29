@@ -23,6 +23,7 @@ add_library(bo2_engine STATIC
     src/engine/cell_group.cpp
     src/engine/collision.cpp
     src/engine/dds.cpp
+    src/engine/entity_template.cpp
     src/engine/erg.cpp
     src/engine/navigation.cpp
     src/engine/ogg.cpp
@@ -105,6 +106,11 @@ if(BUILD_TESTING)
     target_link_libraries(bo2nx_model_asset_tests PRIVATE bo2_engine)
     target_compile_options(bo2nx_model_asset_tests PRIVATE ${BO2NX_WARNINGS})
     add_test(NAME model_asset COMMAND bo2nx_model_asset_tests)
+
+    add_executable(bo2nx_entity_template_tests tests/unit/test_entity_template.cpp)
+    target_link_libraries(bo2nx_entity_template_tests PRIVATE bo2_engine)
+    target_compile_options(bo2nx_entity_template_tests PRIVATE ${BO2NX_WARNINGS})
+    add_test(NAME entity_template COMMAND bo2nx_entity_template_tests)
 
     add_executable(bo2nx_region_tests tests/unit/test_region.cpp)
     target_link_libraries(bo2nx_region_tests PRIVATE bo2_engine)

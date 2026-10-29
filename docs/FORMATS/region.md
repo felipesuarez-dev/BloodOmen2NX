@@ -59,7 +59,10 @@ package/resource tables.
 `parse_region_entities` unwraps the nested container and returns the
 entity tables; `bo2nx --level` uses the region entities for its
 visibility/culling diagnostics. This is the first real entity population
-path for M3.
+path for M3. The entity type (the `model` field above) names an entity
+template, `assets/etypes/**/<type>.etp`, in the same container; types whose
+template has `flag helperobj` are not drawn (see "Helper objects" in
+[`models.md`](models.md)).
 
 ## Tools
 

@@ -58,7 +58,7 @@ been run on the Wine and Windows spawn frames (`ORACLE_WINE.md`).
 
 | Area | Divergence | Evidence | Next action |
 |---|---|---|---|
-| `sl01` spawn frame | Magenta tint over the whole view | A `pyramid/purple` box (flat `255,0,255,128`) encloses the camera; replacing the texture with green turns the tint green (`docs/FORMATS/textures.md`) | Decompile how `bo2.exe` excludes `pyramid/*` helper volumes from rendering (BO2NX-68) |
+| `sl01` spawn frame | Helper boxes drawn; a `pyramid/purple` box (flat `255,0,255,128`) enclosed the camera and tinted the view magenta | The original skips entities whose template has `flag helperobj`: `FUN_00785c8d` parses it, `FUN_0070d0d5` copies it to entity flag `0x200`, `FUN_0070f100` returns without drawing (`docs/FORMATS/models.md`). The port applies the flag; the magenta box is gone | Trace why `detector`, `planhelper*`, `conversation` and `bo2cinematic` models, which carry no `helperobj`, are not drawn either (the green `bo2cinematic001` diamond remains at the oracle pose) |
 | `sl01` materials | `--material diffuse` and `layers` render near-black | Port render at the spawn | Decompile the material/light-map combination for level models (BO2NX-68) |
 
 ## Rules

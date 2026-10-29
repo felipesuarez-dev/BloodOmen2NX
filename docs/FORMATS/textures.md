@@ -36,13 +36,13 @@ python3 tools/bo2fmt/textures.py export \
 `pyramid/purple`, `pyramid/green`, `pyramid/red` and `pyramid/blue` are
 8x8 DXT5 textures of one flat colour at alpha 128 (`pyramid/purple` is
 `255,0,255,128`). `pyramid/purple` appears in 151 of the 177 level
-containers, and at least one `pyramid/*` texture in 159. In `slums/sl01`
-the port draws a `pyramid/purple` box around the spawn, which tints the
-whole frame magenta; replacing the texture with green in a scratch copy
-of the container turns the tint green. The original does not show these
-volumes, so they are helper or trigger geometry. How `bo2.exe` excludes
-them from rendering is not decompiled yet (BO2NX-68); the port must not
-filter them by texture name without that evidence.
+containers, and at least one `pyramid/*` texture in 159. They texture the
+models of helper entities (kain emitter, SFX anchors, region keepers), not
+cell geometry. In `slums/sl01` the `kainemitter` entity's `pyramid/purple`
+box enclosed the spawn camera and tinted the whole frame magenta. The
+original does not draw an entity whose template carries `flag helperobj`;
+see "Helper objects" in [`models.md`](models.md). The texture name plays no
+part in that decision.
 
 ## Open questions
 
