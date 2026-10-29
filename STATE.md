@@ -125,10 +125,17 @@ and assets) is complete.
   sanctuary region entities and reports frustum-visible entities and active
   cells.
   A triangle-soup `CollisionWorld` provides sphere overlap and ray casts.
-  A provisional `PlayerController` moves a body with collision, gravity,
-  jumping and a collision-clamped third-person follow camera, and
-  `bo2nx --play` drives it in the SDL level viewer. Its speeds and input mapping are not yet a faithful
-  translation and require decompilation. The `region` entity table is
+  `PlayerController` moves Kain with the original tuning read from the
+  `kain` tunedata (`resources/levels/kain/kain.big`): tank turning at
+  2.5 rad/s over the 0.1 stick deadzone (`FUN_0041ecf0`), the integrator of
+  `FUN_00432030`, two-phase jump gravity (-2500 rising, -700 falling,
+  `FUN_00442ae0`) and the held-jump boost derived by `FUN_00451d00`.
+  Ground speed is animation root motion in the original; until `animatio`
+  is decoded it uses the speeds measured in the Wine oracle (100 then
+  230 u/s forward, 106.25 back). The follow camera uses the offsets
+  measured in the oracle. `bo2nx --play` drives it in the SDL level viewer;
+  air control, glide and the collision size are still provisional (see
+  `docs/GAMEPLAY.md`). The `region` entity table is
   decoded (15,632 entities, 533 model names, 0 errors); entity models are
   resolved and appended as geometry (13 in sanctuary, 119 in cy01, 72 in
   lc01), with named light-map selection and a vertex-count fallback.
@@ -162,8 +169,9 @@ and assets) is complete.
 - The `sl01` port frame: a `pyramid/purple` helper volume tints it magenta
   (the original never draws `pyramid/*` volumes) and the material/light
   modes render near-black (BO2NX-68).
-- Gameplay parity beyond the provisional `--play` harness: the original
-  player, camera, combat, animation and weapon values are pending.
+- Gameplay parity beyond turning and jumping: ground root motion, air
+  control, glide, the camera setup logic, combat, animation and weapon
+  values are pending.
 - The installer's native RAR decoder is not ported; development
   extraction uses `unrar`. The game does not need the installer decoder.
 
@@ -186,9 +194,10 @@ and assets) is complete.
 3. Decompile how `bo2.exe` skips `pyramid/*` helper volumes and fix the
    `sl01` materials, then gate the port spawn frame against the Wine
    oracle (BO2NX-68).
-4. Replace the provisional `--play` movement and camera constants with
-   values traced in the Wine `state.csv` and confirmed in the decompilation
-   (BO2NX-34).
+4. Decode the `animatio` root motion to replace the measured ground
+   speeds, then port air control (`FUN_00441f20`, `FUN_004423b0`) and
+   compare the port against a Wine `state.csv` route tick by tick
+   (BO2NX-34, BO2NX-37).
 
 ## Rules
 
