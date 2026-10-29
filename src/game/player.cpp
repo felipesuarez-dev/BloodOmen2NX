@@ -8,17 +8,26 @@ namespace bo2::game {
 
 namespace {
 
-// Ground speeds are animation driven in the original (root motion x clip
-// rate). The `animatio` root motion is not decoded yet, so these are speeds
-// measured in the Wine oracle (external/captures/wine_20261029_0052/state.csv,
-// world-frame |vel_xy|). They replace root motion until it is decoded. None is
-// derived from the run clip rate (B+0xB14): 230 = 200 * 1.15 is a coincidence.
-constexpr float kRunSpeed = 230.0f;        // measured, W after kRunStartTime
-constexpr float kRunStartSpeed = 100.0f;   // measured, W for the first kRunStartTime
+// Ground speed is animation root motion in the original (FUN_0041f7d0 adds
+// the root delta of FUN_0041fb00 to the position). Two speeds are derived from
+// the clips (docs/FORMATS/animreel.md, docs/GAMEPLAY.md):
+//   W at full stick: kain/run root speed (200 u/s) * the run clip rate
+//     A+0x40 (1.15), FUN_00445ba0 slot 0. Confirmed by the Wine oracle.
+//   S: kain/walk_backwards root speed (62.5 u/s) * the clip node speed 1.7 of
+//     the `animatio` graph. The graph is not decoded; the node is located by
+//     its fields (in 0, out 1.5667 = the clip duration, speed 1.7, reel 3) at
+//     offset 0x5504 of the `kain` entry, and the oracle confirms 106.25.
+//     See docs/GAMEPLAY.md.
+// Partial stick (slot 1 of FUN_00445ba0 is an unidentified clip) is not ported.
+constexpr float kWalkBackClipSpeed = 1.7f;  // animatio clip node, "speed=%f" in FUN_005e1c20
+// The rest are measured in the Wine oracle
+// (external/captures/wine_20261029_0052/state.csv, world-frame |vel_xy|) and
+// not explained by a decompiled function yet.
+constexpr float kRunStartSpeed = 100.0f;   // measured, W for the first kRunStartTime (= 200 * 0.5, unexplained)
 constexpr float kRunStartTime = 0.18f;     // measured
-constexpr float kBackSpeed = 106.25f;      // measured, S
 // Measured but unverified: Kain was probably blocked for part of that capture
-// (docs/ORACLE_WINE.md), so this is not a confirmed top speed.
+// (docs/ORACLE_WINE.md), so this is not a confirmed top speed. 200 = 200 * 1.0
+// is unexplained.
 constexpr float kShiftSpeed = 200.0f;      // measured, Shift+W
 
 constexpr float kMaxTurnScale = 4.0f;  // FUN_0041ecf0 caps |ax| / (1 - deadzone) at 4
@@ -54,6 +63,13 @@ PlayerController::PlayerController(bo2::engine::CollisionWorld& collision,
         !(tuning.jump.terminal_fall > 0.0f)) {
         throw std::invalid_argument("kain tuning has an invalid deadzone or fall speed cap");
     }
+    const auto positive = [](float value) { return std::isfinite(value) && value > 0.0f; };
+    if (!positive(tuning.run_clip_rate) || !positive(tuning.run_root_speed) ||
+        !positive(tuning.walk_back_root_speed)) {
+        throw std::invalid_argument("kain tuning has an invalid run rate or root speed");
+    }
+    run_speed_ = tuning.run_root_speed * tuning.run_clip_rate;
+    back_speed_ = tuning.walk_back_root_speed * kWalkBackClipSpeed;
     state_.position = start;
 }
 
@@ -97,13 +113,13 @@ void PlayerController::step(const PlayerInput& input, double seconds) {
         } else if (forward_time_ < kRunStartTime) {
             speed = kRunStartSpeed;
         } else {
-            speed = kRunSpeed;
+            speed = run_speed_;
         }
         forward_time_ += dt;
     } else {
         forward_time_ = 0.0f;
         if (back_held) {
-            speed = -kBackSpeed;
+            speed = -back_speed_;
         }
     }
     // Released input stops at once. The measured trace shows a short slide

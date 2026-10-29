@@ -96,7 +96,7 @@ Current concrete modules:
 | `dds` | DDS/BC decoder | DXT1, DXT3, DXT5, A8R8G8B8; top mip |
 | `math` | Vec3, Vec4, Mat4 | Used by the headless renderer |
 | `render_pipeline` | GLSL/VBO level pipeline | SDL host renderer |
-| `PlayerController` | Kain movement and follow camera | Tunedata constants and oracle-measured speeds; air control, glide and root motion pending |
+| `PlayerController` | Kain movement and follow camera | Tunedata constants, run and walk-back speeds from `animreel` root motion, oracle-measured start phase and Shift speeds; air control and glide pending |
 | `SaveGame` | canonical save/checkpoint bytes | Round-trip and slot tests |
 | `EntityWorld` combat | health/damage and sphere queries | Attack foundation |
 

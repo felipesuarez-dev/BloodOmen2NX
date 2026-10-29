@@ -126,8 +126,9 @@ place, `Shift` (or `R`) holds the 200 u/s gait, `Space` jumps (hold it for
 the higher jump), `F` attacks, `F5`/`F9` save/load the checkpoint slot and
 `Escape` quits. The right mouse button looks around as a debug aid. The
 follow camera sits 190.9 behind and 96.1 above Kain and is pulled in by the
-level collision mesh; two bars show health and mana. Speeds are measured in
-the Wine oracle until the animation root motion is decoded; see
+level collision mesh; two bars show health and mana. Run and walk-back speeds
+come from the animation root motion; the start phase and Shift speeds are
+measured in the Wine oracle; see
 [`GAMEPLAY.md`](GAMEPLAY.md#kain-movement) for every value and what is still
 pending. The body size and eye height are still provisional.
 

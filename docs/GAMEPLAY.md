@@ -41,9 +41,11 @@ a number:
   copies it into the runtime tune object A (`behavior+0x164`) and the
   consumer reads A.
 - **FUN_**: the value is derived by that function's math.
+- **animreel**: the root motion of a clip in kain.big, decoded in
+  [`FORMATS/animreel.md`](FORMATS/animreel.md).
 - **measured, oracle**: read from the Wine capture
   `external/captures/wine_20261029_0052/state.csv`. These stand in for
-  decoded animation data.
+  data that is not decoded yet.
 
 ### Ground
 
@@ -54,11 +56,13 @@ a number:
 | Yaw rate | `rate * min(abs(ax) / (1 - deadzone), 4)`; A/D give 2.7778 rad/s | FUN_0041ecf0; measured, oracle: +158.1 and -160.1 deg/s |
 | Turn direction | `ax > 0` lowers the yaw, `ax < 0` raises it, so A is a negative `ax` and D a positive one. The port's `move_x` has the same sign: D is +1, A is -1 | FUN_0041ecf0; measured, oracle: A raises the yaw |
 | Turning | In place, no strafe | measured, oracle |
-| Run clip rate | 1.15; parsed only. No speed is derived from it (230 = 200 * 1.15 is a coincidence) | B+0xB14 -> A+0x40 (FUN_00428fe0); read by FUN_00445ba0 |
-| W, first 0.18 s | 100 u/s | measured, oracle |
-| W, after 0.18 s | 230 u/s | measured, oracle |
-| Shift+W | 200 u/s, no start ramp. Unverified: Kain was probably blocked for part of that phase | measured, oracle (`docs/ORACLE_WINE.md`) |
-| S | 106.25 u/s backward, yaw unchanged | measured, oracle |
+| Run clip rate | 1.15, the playback rate of the run clip at full stick | B+0xB14 -> A+0x40 (FUN_00428fe0); read by FUN_00445ba0 (slot 0 gets rate `(0.5 s + 0.5) * A+0x40` at stick `s`, so `A+0x40` at `s = 1`) |
+| Run root speed | 200 u/s | `kain/run` animreel, node 0 translation x: 0 to 160 over 24 frames (0.8 s) |
+| W, first 0.18 s | 100 u/s (= 200 * 0.5; the start phase is unexplained) | measured, oracle |
+| W, after 0.18 s | 230 u/s = run root speed 200 * run clip rate 1.15 | FUN_00445ba0; oracle-confirmed: 230 measured. Periodic peaks in `external/captures/wine_20261029_0110/state.csv` (W down at mono_ms 41388469): world \|vel_xy\| reads 300 at about +191, +892 and +1572 ms, spaced by the run cycle 0.8 / 1.15 = 0.696 s. That slot 0 is the run clip is inferred from this match |
+| Shift+W | 200 u/s (= 200 * 1.0, unexplained), no start ramp. Unverified: Kain was probably blocked for part of that phase | measured, oracle (`docs/ORACLE_WINE.md`) |
+| Walk-back root speed | 62.5 u/s backward | `kain/walk_backwards` animreel, node 0 translation x: -2.0833 to -100 over 47 frames (1.5667 s) |
+| S | 106.25 u/s = walk-back root speed 62.5 * clip node speed 1.7, yaw unchanged | The 1.7 is the `speed` of the walk_backwards clip node in the `animatio` graph. The graph is not decoded, so the node is located by its fields (layout from the debug printer FUN_005e1c20, "animation=%s in=%f out=%f speed=%f" at +0, +4, +8, reel reference at +0xC, resolved by the fixup FUN_005e1b60): in the `kain` animatio entry the node at offset 0x5504 reads in 0.0, out 1.5667, speed 1.7, reel 3 (= index 1 << 1 \| 1), and 1.5667 is the walk_backwards duration (47 / 30). The neighbours read out 1.5333, speed 1.5, index 0 (walk) and out 0.8, speed 1.5, index 2 (run), matching the entry's dependency order walk, walk_backwards, run. The oracle confirms it: 62.5 * 1.7 = 106.25 u/s. The port keeps 1.7 as a constant |
 | Release | Stops at once | measured, oracle shows a short slide that is not modeled |
 
 ### Air
@@ -110,7 +114,9 @@ These have no original source. They are development aids or placeholders.
 
 | Item | State |
 |---|---|
-| Root motion | The `animatio` root motion is not decoded. Ground speeds above replace it |
+| Root motion | Decoded for the `kain/run` and `kain/walk_backwards` clips and used for the W and S speeds above. The `animatio` graph (clip nodes, blending) is not decoded, so the walk-back clip node speed 1.7 is a constant |
+| Partial stick | At stick `s < 1` FUN_00445ba0 blends slot 0 (weight `s`) with slot 1 (weight `1 - s`, rate `(s + 1) * A+0x40`). Slot 1's clip is not identified, so analog speed scaling is not ported |
+| Start phase, Shift+W | The 100 u/s start phase (0.18 s) and the 200 u/s of Shift+W are measured constants with no decompiled source yet |
 | Air control | Not implemented: in the air Kain keeps the ground speed of the held input. The launch speeds 146.8, 97.9 and 110.1 and the air acceleration are likely from FUN_00452030 and FUN_004423b0, not verified |
 | Glide | Not implemented. `g_glide` (-128) and `termGlide` (160) are parsed only |
 | Ledge fall | Not implemented. Walking off an edge only applies gravity |

@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <vector>
 
+#include "bo2/engine/big_archive.hpp"
+
 namespace bo2::game {
 
 // Movement fields of the `kain` tunedata entry (resources/levels/kain/kain.big).
@@ -31,7 +33,12 @@ struct KainTuning {
     float turn_rate_ready = 0.0f;      // B+0xAC8 -> A+0x18, rad/s (FUN_0041ecf0 gets it as an argument)
     float turn_rate_run = 0.0f;        // B+0xACC -> A+0x1C
     float turn_rate_walk_back = 0.0f;  // B+0xAD0 -> A+0x20
-    float run_clip_rate = 0.0f;        // B+0xB14 -> A+0x40 (read by FUN_00445ba0); parsed only
+    float run_clip_rate = 0.0f;        // B+0xB14 -> A+0x40, run playback rate (FUN_00445ba0)
+    // Root motion speeds in u/s, filled by apply_kain_clip_speeds from the
+    // animreel entries of kain.big (docs/FORMATS/animreel.md). Both are
+    // magnitudes of the clip's forward (local x) root speed.
+    float run_root_speed = 0.0f;        // kain/run: 200
+    float walk_back_root_speed = 0.0f;  // kain/walk_backwards: 62.5
 };
 
 // Values FUN_00451d00 derives from the jump block.
@@ -47,6 +54,11 @@ struct JumpDerived {
 // blob. Throws common::ParseError when the entry is truncated or the size
 // field does not cover the movement fields.
 KainTuning parse_kain_tuning(const std::vector<std::uint8_t>& bytes);
+
+// Reads the root speeds from the `kain/run` and `kain/walk_backwards`
+// animreel entries of `archive` (the same kain.big as the tunedata). Throws
+// common::ParseError when an entry is missing or has no root motion.
+void apply_kain_clip_speeds(KainTuning& tuning, const bo2::engine::BigArchive& archive);
 
 // Throws std::invalid_argument when the gravities are not negative or the tap
 // height is not positive.

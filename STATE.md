@@ -130,9 +130,12 @@ and assets) is complete.
   2.5 rad/s over the 0.1 stick deadzone (`FUN_0041ecf0`), the integrator of
   `FUN_00432030`, two-phase jump gravity (-2500 rising, -700 falling,
   `FUN_00442ae0`) and the held-jump boost derived by `FUN_00451d00`.
-  Ground speed is animation root motion in the original; until `animatio`
-  is decoded it uses the speeds measured in the Wine oracle (100 then
-  230 u/s forward, 106.25 back). The follow camera uses the offsets
+  Ground speed is animation root motion in the original: forward is the
+  `kain/run` root speed (200 u/s) x the run clip rate (1.15) = 230 u/s and
+  back is the `kain/walk_backwards` root speed (62.5) x the clip node speed
+  1.7 = 106.25 u/s, decoded from the `animreel` entries
+  (`docs/FORMATS/animreel.md`). The 100 u/s start phase and Shift+W speed are
+  still measured in the Wine oracle. The follow camera uses the offsets
   measured in the oracle. `bo2nx --play` drives it in the SDL level viewer;
   air control, glide and the collision size are still provisional (see
   `docs/GAMEPLAY.md`). The `region` entity table is
@@ -154,7 +157,8 @@ and assets) is complete.
   material/light-map combination and the vertex diffuse equation.
 - Skeleton pose evaluation and skinning: the hierarchy, weights and joint
   indices are extracted, but the bind-pose and animation keyframe
-  evaluation are open. `animatio`/`animreel` payloads are extracted raw.
+  evaluation are open. `animreel` clips are decoded
+  (`docs/FORMATS/animreel.md`); the `animatio` graph is extracted raw.
 - Collision semantics: the raw `collmodc` payload is extracted for every
   model, but the compressed vertices, edges/faces and the collision
   runtime are not decoded. Entity/player logic is also open.
@@ -169,7 +173,8 @@ and assets) is complete.
 - The `sl01` port frame: a `pyramid/purple` helper volume tints it magenta
   (the original never draws `pyramid/*` volumes) and the material/light
   modes render near-black (BO2NX-68).
-- Gameplay parity beyond turning and jumping: ground root motion, air
+- Gameplay parity beyond turning, jumping and the run and walk-back
+  speeds: the start phase and Shift speed, analog (partial stick) speed, air
   control, glide, the camera setup logic, combat, animation and weapon
   values are pending.
 - The installer's native RAR decoder is not ported; development
@@ -185,7 +190,7 @@ and assets) is complete.
 | 3 | Original logic tick | Decompile the main loop and confirm it under the Wine oracle | `docs/ARCHITECTURE.md` |
 | 4 | Level list and streaming model | Derive it from the installer script and `list.txt` | `docs/GAMEPLAY.md` |
 | 5 | Logic tick and animation state in the oracle | Locate them in the decompilation and add them to `state.csv` | `docs/ORACLE_WINE.md` |
-| 6 | `animatio` and `animreel` layout | Decompile the animation loader | `docs/FORMATS/models.md` |
+| 6 | `animatio` layout | Decompile the graph loader (`animreel` is decoded) | `docs/FORMATS/models.md` |
 
 ## Next steps
 
@@ -194,9 +199,9 @@ and assets) is complete.
 3. Decompile how `bo2.exe` skips `pyramid/*` helper volumes and fix the
    `sl01` materials, then gate the port spawn frame against the Wine
    oracle (BO2NX-68).
-4. Decode the `animatio` root motion to replace the measured ground
-   speeds, then port air control (`FUN_00441f20`, `FUN_004423b0`) and
-   compare the port against a Wine `state.csv` route tick by tick
+4. Decode the `animatio` graph (clip nodes, blending) to replace the
+   remaining measured ground speeds, then port air control
+   (`FUN_00441f20`, `FUN_004423b0`) and compare the port against a Wine `state.csv` route tick by tick
    (BO2NX-34, BO2NX-37).
 
 ## Rules

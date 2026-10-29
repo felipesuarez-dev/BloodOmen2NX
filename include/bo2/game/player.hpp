@@ -31,7 +31,8 @@ struct PlayerState {
 
 class PlayerController {
 public:
-    // Throws std::invalid_argument when the tuning cannot drive a jump.
+    // Throws std::invalid_argument when the tuning cannot drive a jump or has a
+    // non-positive run rate or root speed.
     PlayerController(bo2::engine::CollisionWorld& collision, const bo2::engine::Vec3& start,
                      const KainTuning& tuning);
 
@@ -47,6 +48,8 @@ private:
     bo2::engine::CollisionWorld& collision_;
     KainTuning tuning_;
     JumpDerived jump_;
+    float run_speed_ = 0.0f;   // run root speed * run clip rate (FUN_00445ba0)
+    float back_speed_ = 0.0f;  // walk-back root speed * clip node speed
     PlayerState state_;
     float forward_time_ = 0.0f;  // seconds forward has been held (ground speed ramp)
     float air_time_ = 0.0f;      // seconds since takeoff

@@ -656,7 +656,8 @@ int render_level_frame(const Options& options) {
 }
 
 #ifdef BO2NX_HAVE_SDL
-// The Kain movement constants live in the `kain` tunedata entry of kain.big.
+// The Kain movement constants live in the `kain` tunedata entry of kain.big;
+// the ground speeds come from its `kain/run` and `kain/walk_backwards` clips.
 bo2::game::KainTuning load_kain_tuning(const Options& options) {
     std::string path = options.kain;
     if (path.empty()) {
@@ -673,7 +674,9 @@ bo2::game::KainTuning load_kain_tuning(const Options& options) {
     if (entry == nullptr) {
         throw std::runtime_error("no tunedata entry named kain in " + path);
     }
-    return bo2::game::parse_kain_tuning(archive.extract(*entry));
+    bo2::game::KainTuning tuning = bo2::game::parse_kain_tuning(archive.extract(*entry));
+    bo2::game::apply_kain_clip_speeds(tuning, archive);
+    return tuning;
 }
 #endif
 

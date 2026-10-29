@@ -40,7 +40,7 @@ shipped `kain` entry holds. Units are game units (about 1 cm) and seconds.
 | 0xAC8 | Turn rate, Ready | 2.5 rad/s | copied to A+0x18 by FUN_00428fe0; FUN_00445e70 passes it to FUN_0041ecf0 |
 | 0xACC | Turn rate, Run | 2.5 rad/s | copied to A+0x1C; FUN_00445930 passes it to FUN_0041ecf0 |
 | 0xAD0 | Turn rate, WalkBack | 2.5 rad/s | copied to A+0x20; FUN_00446270 passes it to FUN_0041ecf0 |
-| 0xB14 | Run clip rate | 1.15 | copied to A+0x40 by FUN_00428fe0; read by FUN_00445ba0 |
+| 0xB14 | Run clip rate | 1.15 | copied to A+0x40 by FUN_00428fe0; FUN_00445ba0 uses it as the playback rate of the run clip at full stick. The port multiplies the `kain/run` root speed (200 u/s) by it to get 230 u/s (`docs/FORMATS/animreel.md`) |
 
 The chain is B -> A -> consumer. FUN_00428fe0 copies fields of the tunedata
 into the runtime tune object A (`behavior+0x164`, for example B+0xAC8 is

@@ -38,8 +38,8 @@ comparison.
 | Cell instances and placement | done | `cellinst` v3/v4; local `cellmdls` templates placed in world space |
 | Cell lights and markers | done | `cellight` v3 and `cellmark` v4 parsed; renderer consumer pending |
 | Collision payload | done | `collmodc` raw payload per model, header counts; runtime decode pending |
-| Skeleton and animations | done | 5,168 models parsed, 1,586 skinned; animation payloads extracted raw |
-| M3 loop/world | wip | FixedStep, region entities, shared models, culling, streaming, navigation, collision, third-person `--play` with the original Kain tuning (turning, jump, gravity; ground speeds measured until root motion is decoded), save/checkpoint flow and attack foundation |
+| Skeleton and animations | done | 5,168 models parsed, 1,586 skinned; `animreel` clips decoded (root motion), `animatio` extracted raw |
+| M3 loop/world | wip | FixedStep, region entities, shared models, culling, streaming, navigation, collision, third-person `--play` with the original Kain tuning (turning, jump, gravity; run and walk-back speeds from `animreel` root motion, start phase and Shift measured), save/checkpoint flow and attack foundation |
 | Material layer records | done | `mlyrcolr`/`mlyrctrl`; diagnostic `--material` tints |
 | Light maps (`litedata`) | done | 71 `.slm` entries, per-instance match with model fallback, `--lightmap`; external shared models open |
 | Host renderer (OpenGL) | done | SDL2/OpenGL window, free camera and Xvfb capture |

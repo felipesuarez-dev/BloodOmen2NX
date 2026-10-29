@@ -3,8 +3,10 @@
 #include <cmath>
 #include <cstring>
 #include <stdexcept>
+#include <string>
 
 #include "bo2/common/reader.hpp"
+#include "bo2/engine/anim_reel.hpp"
 
 namespace bo2::game {
 
@@ -26,6 +28,19 @@ float read_float(const common::Reader& reader, std::size_t blob_offset) {
     float value = 0.0f;
     std::memcpy(&value, &bits, sizeof value);
     return value;
+}
+
+// |forward root speed| of the named animreel entry, in u/s.
+float clip_root_speed(const bo2::engine::BigArchive& archive, const char* name) {
+    const bo2::engine::BigEntry* entry = archive.find("animreel", name);
+    if (entry == nullptr) {
+        throw common::ParseError(std::string("no animreel entry named ") + name);
+    }
+    const bo2::engine::AnimReel reel = bo2::engine::parse_anim_reel(archive.extract(*entry));
+    if (!(reel.duration > 0.0f)) {
+        throw common::ParseError(std::string("animreel ") + name + " has no duration");
+    }
+    return std::fabs(bo2::engine::root_displacement(reel).x) / reel.duration;
 }
 
 }  // namespace
@@ -58,6 +73,11 @@ KainTuning parse_kain_tuning(const std::vector<std::uint8_t>& bytes) {
         throw common::ParseError("kain tunedata stick deadzone is outside [0, 1)");
     }
     return tuning;
+}
+
+void apply_kain_clip_speeds(KainTuning& tuning, const bo2::engine::BigArchive& archive) {
+    tuning.run_root_speed = clip_root_speed(archive, "kain/run");
+    tuning.walk_back_root_speed = clip_root_speed(archive, "kain/walk_backwards");
 }
 
 // Port of FUN_00451d00. The original runs in x87 single precision; this runs

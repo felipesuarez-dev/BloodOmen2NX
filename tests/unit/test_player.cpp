@@ -49,6 +49,10 @@ void add_wall(bo2::engine::LevelGeometry& geometry, float wall_x) {
 constexpr float kTurnReady = 2.0f;
 constexpr float kTurnRun = 2.6f;
 constexpr float kTurnWalkBack = 3.1f;
+// Root speeds of kain/run and kain/walk_backwards (docs/FORMATS/animreel.md).
+constexpr float kRunRootSpeed = 200.0f;
+constexpr float kWalkBackRootSpeed = 62.5f;
+constexpr float kWalkBackClipSpeed = 1.7f;  // animatio clip node speed
 
 bo2::game::KainTuning kain_tuning() {
     bo2::game::KainTuning tuning;
@@ -58,6 +62,8 @@ bo2::game::KainTuning kain_tuning() {
     tuning.turn_rate_run = kTurnRun;
     tuning.turn_rate_walk_back = kTurnWalkBack;
     tuning.run_clip_rate = 1.15f;
+    tuning.run_root_speed = kRunRootSpeed;
+    tuning.walk_back_root_speed = kWalkBackRootSpeed;
     return tuning;
 }
 
@@ -166,8 +172,11 @@ void test_forward_speed() {
     bo2::game::PlayerInput input;
     input.move_y = 1.0f;
     run(player, input, 60);
-    // 100 u/s for 0.18 s, then 230 u/s (measured in the Wine oracle).
-    const float expected = 0.18f * 100.0f + 0.82f * 230.0f;
+    // 100 u/s for 0.18 s (measured), then run root speed * run clip rate
+    // (FUN_00445ba0), which is 230 u/s.
+    const float run_speed = kRunRootSpeed * 1.15f;
+    CHECK(std::fabs(run_speed - 230.0f) < 1.0e-3f);
+    const float expected = 0.18f * 100.0f + 0.82f * run_speed;
     CHECK(std::fabs(player.state().position.x - expected) < 2.5f);
     CHECK(std::fabs(player.state().position.y) < 1.0e-3f);
     CHECK(std::fabs(player.state().position.z) < 1.0e-4f);
@@ -197,8 +206,32 @@ void test_backward_speed() {
     bo2::game::PlayerInput input;
     input.move_y = -1.0f;
     run(player, input, 60);
-    CHECK(std::fabs(player.state().position.x + 106.25f) < 0.5f);
+    const float back_speed = kWalkBackRootSpeed * kWalkBackClipSpeed;
+    CHECK(std::fabs(back_speed - 106.25f) < 1.0e-3f);
+    CHECK(std::fabs(player.state().position.x + back_speed) < 0.5f);
     CHECK(player.state().yaw == 0.0f);
+}
+
+void test_speeds_follow_the_tuning() {
+    // Non-default root speeds and clip rate: a hard-coded 230 / 106.25 fails.
+    bo2::game::KainTuning tuning = kain_tuning();
+    tuning.run_root_speed = 150.0f;
+    tuning.run_clip_rate = 2.0f;
+    tuning.walk_back_root_speed = 40.0f;
+    const bo2::engine::LevelGeometry floor = make_floor();
+    bo2::engine::CollisionWorld collision(floor);
+    bo2::game::PlayerController player(collision, {0.0f, 0.0f, 0.0f}, tuning);
+    bo2::game::PlayerInput input;
+    input.move_y = 1.0f;
+    run(player, input, 30);  // past the 0.18 s start phase
+    const float before = player.state().position.x;
+    run(player, input, 60);
+    CHECK(std::fabs(player.state().position.x - before - 300.0f) < 0.5f);
+
+    bo2::game::PlayerController back(collision, {0.0f, 0.0f, 0.0f}, tuning);
+    input.move_y = -1.0f;
+    run(back, input, 60);
+    CHECK(std::fabs(back.state().position.x + 40.0f * kWalkBackClipSpeed) < 0.5f);
 }
 
 void test_wall_blocks_the_walk() {
@@ -352,6 +385,23 @@ void test_invalid_tuning_is_rejected() {
         threw = true;
     }
     CHECK(threw);
+
+    // Root speeds must be positive and finite.
+    const float bad_speeds[] = {0.0f, -1.0f, std::numeric_limits<float>::infinity(),
+                                std::numeric_limits<float>::quiet_NaN()};
+    for (const float bad : bad_speeds) {
+        for (int which = 0; which < 2; ++which) {
+            bo2::game::KainTuning tuning = kain_tuning();
+            (which == 0 ? tuning.run_root_speed : tuning.walk_back_root_speed) = bad;
+            threw = false;
+            try {
+                bo2::game::PlayerController player(collision, {0.0f, 0.0f, 0.0f}, tuning);
+            } catch (const std::invalid_argument&) {
+                threw = true;
+            }
+            CHECK(threw);
+        }
+    }
 }
 
 void test_attack_and_damage() {
@@ -407,6 +457,7 @@ int main() {
     test_forward_speed();
     test_shift_speed();
     test_backward_speed();
+    test_speeds_follow_the_tuning();
     test_wall_blocks_the_walk();
     test_tap_jump();
     test_held_jump();
