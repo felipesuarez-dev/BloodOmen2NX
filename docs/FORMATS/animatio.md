@@ -9,7 +9,8 @@ the tables they point at. Kain's graph is the `kain` entry of
 Status: **decoded** (container, clip nodes, states, transitions and actions).
 Verified on all 4,081 `animatio` entries of the installed game: every one
 parses and consumes its payload exactly (2,156 graphs with 86,920 clip nodes,
-1,925 version 1 aliases). Reader: `tools/bo2fmt/animatio.py`.
+1,925 version 1 aliases). Reader: `tools/bo2fmt/animatio.py`; C++ port:
+`src/engine/anim_graph.cpp` (clip nodes and reel references).
 
 Sources are `bo2.exe` functions; dumps are in `re/decomp/animatio_graph/`
 (local, not committed). Facts not read from the code are marked *inferred*.
@@ -221,6 +222,50 @@ What this says about the rates FUN_00445ba0 writes:
 | Root motion is read from one layer, `AnimInst+0x130` (*inferred*: the nine floats are the root delta) | FUN_005e3ea0 copies the nine-float output of layer `param_1[0x4c]` for FUN_0041fb00; FUN_00613480 sets the index |
 | `st_rdy2run` sets that layer to 2 | its action 6 with callback id 3, value 2 |
 
+## Claw combo
+
+A claw attack is one reel played as two clip nodes cut at the reel's `contact`
+marker, both at node speed 2.2. State index and name come from the symbol map
+(`attack1` is 28 = 0x1C, `groundattack` is 40 = 0x28); each state plays one
+sequence:
+
+| State | Sequence | Segment 1 | Segment 2 | Reel |
+|---|---|---|---|---|
+| `st_attack1` | `sq_attack1` | `cl_attack1` 0 to 0.5333 | `cl_attack1b` 0.5333 to 1.2333 | `kain/claw_combo_1` |
+| `st_attack2` | `sq_attack2` | `cl_attack2` 0.0333 to 0.5333 | `cl_attack2b` 0.5333 to 1.2333 | `kain/claw_combo_2` |
+| `st_attack3` | `sq_attack3` | `cl_attack3` 0 to 0.4333 | `cl_attack3b` 0.4333 to 2.1333 | `kain/claw_combo_4` |
+| `st_attack4` | `sq_attack4` | `cl_attack4` 0 to 2.1333, speed 1.0 | | `kain/claw_combo_4` |
+| `st_groundattack` | `sq_groundattack` | `cl_groundattack` | | `kain/dog_kick` |
+
+The cut times are the reel's `contact` events (frame 16, or 13 for the third
+swing). Each of the first three states has two transitions that play the same
+sequence and differ only in the blend: when the state being left is
+`st_attack_block` (condition 6, FUN_00613700 compares its name with a string)
+the blend is 0.3333 s, otherwise 0.001 s (`st_attack1`) or 0.02 s
+(`st_attack2`).
+
+The clip events (event list, `(time, flag, function id, operand)`) carry the
+reel's markers into the graph. The function id indexes the 69 game event
+functions at 0x8F2790 (FUN_00516cb0, which subtracts the engine event count
+DAT_00a6ad48; read as 0, which matches the numbering in the combat notes). The
+times equal the reel events exactly (`tl_swoosh`, `tl_contact`, `tl_endattack`
+of the same reels; the clip-start events sit at the node `in` time):
+
+| When | Id | Function | Effect (read from the function) |
+|---|---:|---|---|
+| clip start | 26 | FUN_004A6780 | builds and posts `AttackStartingMsg` (vtable 0x840734) |
+| clip start | 52 | FUN_004A7F20 | posts `BlurControlMsg` (operand 1 = on, 0 = off) |
+| swoosh | 0 | FUN_00751AC0 | engine function; the operand is a sound symbol (`gn_swish_swipe`) |
+| contact | 29 | FUN_004A6A90 | posts `NotifyEnemyWhichAttackHitMsg` (vtable 0x85FCBC) |
+| contact, third swing | 9 | FUN_007525F0 | engine function, operand type 3 |
+| endattack, swings 1 and 2 | 31 | FUN_004A6C50 | posts `AttackComboTestMsg` (vtable 0x85FCEC) |
+| endattack, third swing | 32 | FUN_004A6D30 | not decompiled |
+
+Which message the combo behavior's handler turns into the next state is outside
+the graph; the graph itself has no message table (the `end` symbol maps to -1).
+The shipped `src/etemplates/*.h` tune headers describe tunedata only, none
+describes `animatio` structures.
+
 ## Class tables
 
 The ids in the stream (conditions, callbacks, factories, object classes) go
@@ -243,8 +288,13 @@ tag. Callback 2 (FUN_00613450) stores a value in the instance; callback 3
 ## Port
 
 `tools/bo2fmt/animatio.py` reads the whole stream and keeps unknown fields raw.
-Port-only limits: an element count that cannot fit in the remaining bytes is
-rejected, and counts above 4M are rejected.
+The C++ reader (`include/bo2/engine/anim_graph.hpp`) walks the states,
+sequences and chain only to reach the clip nodes and the reel table, and stops
+there; `anim_clip_reel_name` resolves a node's reel through the entry symbols.
+Port-only limits in both: an element count that cannot fit in the remaining
+bytes is rejected, and counts above 4M are rejected. The asset-gated test
+`tests/unit/test_anim_graph.cpp` checks that the `kain/walk_backwards` node has
+speed 1.7 (`BO2NX_ASSETS_DIR` set; skipped otherwise).
 
 ## Open questions
 
@@ -264,8 +314,9 @@ rejected, and counts above 4M are rejected.
   the masks (+0x74): layouts known, meaning not (*inferred*: masks select
   bones).
 - Condition ids above 7 and the operands of ids 4 and 6.
-- The event lists: `(time, kind, function id, tag)`. Kain's `cl_run` has 14
-  events, seven at 0.0667 s and seven at 0.5 s, while the `kain/run` reel
-  carries its own events at frames 5 and 17; how the two relate is not
-  decoded.
+- The event lists: the flag (0 at clip start and swoosh, 1 at contact and
+  endattack) and the functions other than the combat ones above. Kain's
+  `cl_run` has 14 events, seven at 0.0667 s and seven at 0.5 s (function 60,
+  not decompiled), while the `kain/run` reel carries its own events at frames
+  5 and 17; how the two relate is not decoded.
 - Version 1 aliases: which resource the game loads when it follows one.
