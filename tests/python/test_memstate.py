@@ -80,6 +80,7 @@ def fill_kain(mem: FakeMemory, instance: int, behavior: int, x: float = -8.75) -
     mem.f32s_at(instance + memstate.YAW, 1.0)
     mem.f32s_at(behavior + memstate.VELOCITY, 1.5, -2.5, 3.5)
     mem.u32s(behavior + memstate.ON_PLATFORM, 1)
+    mem.u32s(behavior + memstate.ANIMATION, 78)
     mem.u32s(behavior + memstate.STATS, STATS)
     mem.u32s(instance + memstate.BEHAVIOR, behavior)
 
@@ -234,7 +235,7 @@ class ReadStateTest(unittest.TestCase):
         self.assertEqual(
             state,
             {"pos": (-8.75, 57.125, 208.0), "yaw": 1.0, "vel": (1.5, -2.5, 3.5), "on_platform": 1,
-             "health": 75.0, "health_max": 100.0, "lore": 12.5},
+             "anim": 78, "health": 75.0, "health_max": 100.0, "lore": 12.5},
         )
 
     def test_broken_pointer_raises_oserror(self):
@@ -293,7 +294,7 @@ class StateCsvTest(unittest.TestCase):
             "player_x": "-8.750000", "player_y": "57.125000", "player_z": "208.000000",
             "vel_x": "1.500000", "vel_y": "-2.500000", "vel_z": "3.500000",
             "health": "75.000000", "health_max": "100.000000", "lore": "12.500000",
-            "on_platform": "1", "player_yaw_deg": "57.295780",
+            "on_platform": "1", "player_yaw_deg": "57.295780", "anim": "78",
         }
         for column, value in values.items():
             self.assertEqual(value, expected.get(column, ""), column)

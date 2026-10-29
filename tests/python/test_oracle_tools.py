@@ -328,6 +328,11 @@ class RouteParserTest(unittest.TestCase):
             ],
         )
 
+    def test_hold_keys_may_carry_a_press_delay(self):
+        (step,) = wine_capture.parse_route("hold w+x@1000 2500")
+        self.assertEqual(step.args, (("w", "x@1000"), 2500))
+        self.assertEqual([wine_capture._key_delay(key) for key in step.args[0]], [("w", 0), ("x", 1000)])
+
     def test_rejects_bad_steps_with_line_number(self):
         for text in (
             "jump 1",
@@ -336,6 +341,10 @@ class RouteParserTest(unittest.TestCase):
             "wait -5",
             "hold w",
             "hold +w 100",
+            "hold w+x@3000 2500",
+            "hold w@500+x 1000",
+            "hold w+x@ 1000",
+            "hold w+x@soon 1000",
             "click 4",
             "shot ../escape",
         ):

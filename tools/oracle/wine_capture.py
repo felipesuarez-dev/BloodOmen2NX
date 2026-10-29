@@ -96,7 +96,11 @@ def _parse_args(verb: str, rest: list[str]) -> tuple:
         keys = tuple(rest[0].split("+"))
         if not all(keys):
             raise ValueError(f"bad key combination '{rest[0]}'")
-        return (keys, _millis(rest[1]))
+        duration = _millis(rest[1])
+        delays = [_key_delay(key)[1] for key in keys]
+        if delays != sorted(delays) or delays[-1] > duration:
+            raise ValueError(f"key delays in '{rest[0]}' must not decrease and must fit in {duration} ms")
+        return (keys, duration)
     if verb == "click":
         return (_button(rest[0]),)
     if verb == "mousehold":
@@ -104,6 +108,14 @@ def _parse_args(verb: str, rest: list[str]) -> tuple:
     if not NAME_RE.match(rest[0]):
         raise ValueError(f"bad name '{rest[0]}'")
     return (rest[0],)
+
+
+def _key_delay(token: str) -> tuple[str, int]:
+    """Split `key@ms` into the key and the delay after the start of the hold (0 without `@`)."""
+    key, separator, delay = token.partition("@")
+    if not key or (separator and not delay.isdigit()):
+        raise ValueError(f"bad key '{token}'")
+    return key, int(delay) if separator else 0
 
 
 def _millis(value: str) -> int:
@@ -167,6 +179,7 @@ def state_row(frame: int, epoch_ms: int, mono_ms: int, phase: str, state: dict,
     row = {"frame": frame, "epoch_ms": epoch_ms, "mono_ms": mono_ms, "phase": phase,
            "health": number(state["health"]), "health_max": number(state["health_max"]),
            "lore": number(state["lore"]), "on_platform": state["on_platform"],
+           "anim": state["anim"],
            "player_yaw_deg": number(math.degrees(state["yaw"]))}
     for axis, value in zip("xyz", state["pos"]):
         row[f"player_{axis}"] = number(value)
@@ -503,13 +516,23 @@ class Capture:
             time.sleep(min(0.25, remaining))
 
     def press(self, keys: tuple[str, ...], ms: int) -> None:
+        """Hold the keys for `ms`, pressing them in order and releasing them in reverse.
+
+        A key written `name@delay` goes down `delay` ms after the first one, so
+        `w+x@1000` presses x while w has been held for a second.
+        """
         started: dict[str, int] = {}
-        for key in keys:
+        begin = time.monotonic()
+        names = []
+        for token in keys:
+            key, delay = _key_delay(token)
+            names.append(key)
+            self.sleep(max(0, delay - int((time.monotonic() - begin) * 1000)))
             self.xdo("keydown", key)
             started[key] = mono_ms()
             self.record("down", key=_key_name(key))
-        self.sleep(ms)
-        for key in reversed(keys):
+        self.sleep(max(0, ms - int((time.monotonic() - begin) * 1000)))
+        for key in reversed(names):
             self.xdo("keyup", key)
             self.record("up", key=_key_name(key), duration_ms=mono_ms() - started[key])
 

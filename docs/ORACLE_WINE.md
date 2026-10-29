@@ -68,7 +68,7 @@ One step per line. `#` starts a comment. Times are milliseconds.
 |---|---|
 | `wait <ms>` | Sleep. Fails early if the game exits |
 | `key <keysym>` | Tap an xdotool keysym (80 ms down), e.g. `key Return` |
-| `hold <keysym>[+<keysym>...] <ms>` | Hold keys; `shift+w` presses in order and releases in reverse |
+| `hold <keysym>[+<keysym>...] <ms>` | Hold keys; `shift+w` presses in order and releases in reverse. A key written `name@delay` goes down that many ms after the first one (delays must not decrease and must fit in `<ms>`), so `w+x@800 2300` runs for 0.8 s and then jumps with W still down |
 | `click <button>` | Tap a mouse button (1 left, 2 middle, 3 right) |
 | `mousehold <button> <ms>` | Hold a mouse button |
 | `shot <name>` | Save `screenshots/<name>.png` and `frames_ppm/<name>.ppm` |
@@ -185,6 +185,7 @@ Each value comes from the decompilation. "HUD" is the Kain debug HUD
 | `player_yaw_deg` | f32 at `instance+0xC8` (radians), in degrees. Only the yaw is read | The rotation triple at `instance+0xC0` is applied as X, Y, Z rotations by `FUN_005c1790` (called from `FUN_007535d0` with `inst+0xb4`, `inst+0xc0`); the HUD reads `+0xC8` as yaw (its debug arc drawing uses `instance+200`) |
 | `vel_x/y/z` | f32 x3 at `behavior+0x19C`, world frame | HUD |
 | `on_platform` | u32 at `behavior+0x4E0` | HUD |
+| `anim` | u32 at `behavior+0x128+0x458` (KainState+0x458), the animation index | FUN_00442800 and FUN_004436e0 store it right before the animation play call; the jump runs 76, 78, 79, 86 and the run 1 |
 | Stats | `u32(behavior+0x128+0x594)` | The HUD passes ECX=`behavior+0x128` to `FUN_00425fb0` |
 | `h` | `u32(stats+0x11C)` | `FUN_00425fb0` is the getter returning `u32(u32(this+0x594)+0x11C)` |
 | `health` | f32 at `h+0xC` | Read in `FUN_004d9850` (`GetPlayerHitPoints`) |
@@ -200,7 +201,7 @@ Each value comes from the decompilation. "HUD" is the Kain debug HUD
 
 | Filled | Empty (not sampled, never invented) |
 |---|---|
-| `frame` (sample index), `epoch_ms`, `mono_ms` (sample time), `phase` (route phase), `cam_*`, `player_*`, `vel_*`, `health`, `player_yaw_deg`, `health_max`, `lore`, `on_platform` | `fps_inst`, `grounded`, `mana`, `weapon`, `anim`, `tick`, `view_*`, `proj_*` |
+| `frame` (sample index), `epoch_ms`, `mono_ms` (sample time), `phase` (route phase), `cam_*`, `player_*`, `vel_*`, `health`, `player_yaw_deg`, `health_max`, `lore`, `on_platform`, `anim` | `fps_inst`, `grounded`, `mana`, `weapon`, `tick`, `view_*`, `proj_*` |
 
 Floats have six decimals. `player_yaw_deg` is the raw Euler value, not
 unwrapped. `game_manifest.json` gets a `state` entry: rows, target and mean
@@ -272,4 +273,4 @@ reaches; the run phase was probably blocked, so it is not a clean top speed.
 Use `state.csv` to derive the movement and camera constants for the port
 (`--play`): walk and turn rates, the jump curve, and the follow distance,
 height and pitch, each confirmed in the decompilation before it is used.
-Add the logic tick and the animation state when they are located.
+Add the logic tick when it is located.

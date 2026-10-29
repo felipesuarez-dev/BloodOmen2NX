@@ -29,6 +29,9 @@ BEHAVIOR = 0x124  # u32; FUN_004d9850 (GetPlayerHitPoints)
 # Kain behavior (kain::KainTopLevelBehavior).
 VELOCITY = 0x19C  # f32 x3, world frame; HUD
 ON_PLATFORM = 0x4E0  # u32; HUD
+# KainState (behavior+0x128) +0x458: the animation index passed to the animation play call
+# right after it is stored (FUN_00442800, FUN_004436e0).
+ANIMATION = 0x128 + 0x458  # u32
 STATS = 0x128 + 0x594  # u32 pointer; the HUD passes ECX=behavior+0x128 to FUN_00425fb0
 # Stats.
 HEALTH = 0x11C  # u32 pointer; FUN_00425fb0
@@ -154,6 +157,7 @@ def read_state(mem: Memory, kain: Kain) -> dict:
         "yaw": mem.f32s(kain.instance + YAW)[0],
         "vel": mem.f32s(kain.behavior + VELOCITY, 3),
         "on_platform": mem.u32(kain.behavior + ON_PLATFORM),
+        "anim": mem.u32(kain.behavior + ANIMATION),
         "health": mem.f32s(health + HEALTH_CURRENT)[0],
         "health_max": mem.f32s(health + HEALTH_MAX)[0],
         "lore": mem.f32s(lore + LORE_CURRENT)[0],
