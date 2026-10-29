@@ -238,6 +238,7 @@ std::set<InputKey> pressed_keys(const Uint8* keys) {
         {SDL_SCANCODE_LEFT, InputKey::Left}, {SDL_SCANCODE_RIGHT, InputKey::Right},
         {SDL_SCANCODE_SPACE, InputKey::Space}, {SDL_SCANCODE_RETURN, InputKey::Enter},
         {SDL_SCANCODE_ESCAPE, InputKey::Escape}, {SDL_SCANCODE_TAB, InputKey::Tab},
+        {SDL_SCANCODE_LSHIFT, InputKey::Shift}, {SDL_SCANCODE_RSHIFT, InputKey::Shift},
     };
     std::set<InputKey> pressed;
     for (const Binding& binding : bindings) {
@@ -350,18 +351,22 @@ void draw_hud(std::uint32_t width, std::uint32_t height, const game::HudState& h
     glEnable(GL_TEXTURE_2D);
 }
 
+// Debug marker at Kain's position. Its size only has to be visible at the
+// follow distance (about 190 units); it is not Kain's real height.
 void draw_player(const engine::Vec3& position) {
+    constexpr float kMarkerHeight = 180.0f;
+    constexpr float kMarkerArm = 30.0f;
     glDisable(GL_TEXTURE_2D);
     glDisable(GL_DEPTH_TEST);
     glLineWidth(2.0f);
     glBegin(GL_LINES);
     glColor3f(0.95f, 0.85f, 0.2f);
     glVertex3f(position.x, position.y, position.z);
-    glVertex3f(position.x, position.y, position.z + 1.8f);
-    glVertex3f(position.x - 0.3f, position.y, position.z);
-    glVertex3f(position.x + 0.3f, position.y, position.z);
-    glVertex3f(position.x, position.y - 0.3f, position.z);
-    glVertex3f(position.x, position.y + 0.3f, position.z);
+    glVertex3f(position.x, position.y, position.z + kMarkerHeight);
+    glVertex3f(position.x - kMarkerArm, position.y, position.z);
+    glVertex3f(position.x + kMarkerArm, position.y, position.z);
+    glVertex3f(position.x, position.y - kMarkerArm, position.z);
+    glVertex3f(position.x, position.y + kMarkerArm, position.z);
     glEnd();
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_TEXTURE_2D);
@@ -434,8 +439,8 @@ int run_level(const engine::LevelGeometry& geometry,
         collision = std::make_unique<engine::CollisionWorld>(geometry);
         engine::Vec3 start = options.camera.target;
         start.z += 1.0f;
-        player = std::make_unique<game::PlayerController>(*collision, start);
-        follow = std::make_unique<game::FollowCamera>(4.0f);
+        player = std::make_unique<game::PlayerController>(*collision, start, options.kain);
+        follow = std::make_unique<game::FollowCamera>();
         follow->update(player->state(), *collision);
     }
     const auto active_camera = [&]() {

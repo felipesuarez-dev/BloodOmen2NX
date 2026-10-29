@@ -109,20 +109,36 @@ exits; without it the window stays open. The orbit viewer uses `W`/`S` or
 the arrow keys to move the target, `A`/`D` to strafe, the right mouse
 button to orbit, the wheel to zoom and `Escape` to quit.
 
-`--play` opens the provisional third-person player instead: `WASD` moves,
-the right mouse button looks, `Shift`/`R` runs, `Space` jumps, `F5`/`F9`
-save/load the checkpoint slot and `Escape` quits. The follow camera is
-clamped by the level collision mesh; two bars show health and mana. The movement constants are placeholders until the
-original player/camera functions are decompiled; this mode is a
-development harness, not a faithful Kain controller.
+`--play` opens the Kain third-person player instead. It needs the level
+`--big` and the `kain` tunedata, which it reads from `--kain <kain.big>`
+or, when that is omitted, from `<level dir>/../kain/kain.big`. It stops with
+an error if neither exists.
+
+```sh
+LEVELS=external/installed/media/gogames/bo2/resources/levels
+./build/linux-debug/bo2nx --play --big "$LEVELS/sanctuary/sanctuary.big"
+./build/linux-debug/bo2nx --play --big "$LEVELS/sanctuary/sanctuary.big" \
+  --kain "$LEVELS/kain/kain.big"
+```
+
+Controls are tank style: `W`/`S` walk forward and back, `A`/`D` turn in
+place, `Shift` (or `R`) holds the 200 u/s gait, `Space` jumps (hold it for
+the higher jump), `F` attacks, `F5`/`F9` save/load the checkpoint slot and
+`Escape` quits. The right mouse button looks around as a debug aid. The
+follow camera sits 190.9 behind and 96.1 above Kain and is pulled in by the
+level collision mesh; two bars show health and mana. Speeds are measured in
+the Wine oracle until the animation root motion is decoded; see
+[`GAMEPLAY.md`](GAMEPLAY.md#kain-movement) for every value and what is still
+pending. The body size and eye height are still provisional.
 
 Controls are defined in `include/bo2/platform/input.hpp`; the mapping is
 provisional until the original controls are recovered from `bo2.exe`.
 
 | Action | Keyboard | Switch / controller |
 |---|---|---|
-| Move | `WASD` or arrows | Left stick or D-pad |
-| Run | `R` | `L` or `R` |
+| Move (`--sdl` orbit viewer) | `WASD` or arrows | Left stick or D-pad |
+| Move (`--play`): forward/back, turn | `W`/`S`, `A`/`D` or arrows | Left stick or D-pad |
+| Run (200 u/s gait in `--play`) | `Shift` or `R` | `L` or `R` |
 | Jump | `Space` | `A` |
 | Attack | `F` | `B` |
 | Use | `E` | `X` |
@@ -138,6 +154,8 @@ provisional until the original controls are recovered from `bo2.exe`.
 | `--frame --big <file>` | Render a textured preview frame |
 | `--level --big <level.big>` | Render the static `cellgrup` level shell |
 | `--sdl [--big <file>]` | SDL2 + OpenGL window; no `--big` draws a triangle |
+| `--play --big <level.big>` | Kain third-person player in the SDL window |
+| `--kain <kain.big>` | `kain` tunedata for `--play` (default `<level dir>/../kain/kain.big`) |
 | `--entry <substring>` | Texture entry to use (default: first texture) |
 | `--out <file.ppm>` | Frame output |
 | `--eye x,y,z`, `--target x,y,z` | Free camera |

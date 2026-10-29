@@ -10,21 +10,21 @@ FollowCamera::FollowCamera(float distance, float height)
 
 void FollowCamera::update(const PlayerState& player,
                           const bo2::engine::CollisionWorld& collision) {
-    const float cosine_pitch = std::cos(player.pitch);
-    const bo2::engine::Vec3 forward{cosine_pitch * std::cos(player.yaw),
-                                    cosine_pitch * std::sin(player.yaw),
-                                    std::sin(player.pitch)};
-    target_ = player.position + bo2::engine::Vec3{0.0f, 0.0f, height_};
-    eye_ = target_ - forward * distance_;
-    const bo2::engine::Vec3 ray = eye_ - target_;
-    if (bo2::engine::length(ray) < 1.0e-5f) {
-        return;
-    }
-    const bo2::engine::Vec3 direction = bo2::engine::normalize(ray);
-    const auto hit = collision.raycast(target_, direction, distance_);
+    const bo2::engine::Vec3 heading{std::cos(player.yaw), std::sin(player.yaw), 0.0f};
+    const bo2::engine::Vec3 back = heading * -1.0f;
+    // Eye = position - heading * distance + up * height.
+    const bo2::engine::Vec3 pivot = player.position + bo2::engine::Vec3{0.0f, 0.0f, height_};
+    float reach = distance_;
+    const auto hit = collision.raycast(pivot, back, distance_);
     if (hit.has_value()) {
-        eye_ = target_ + direction * std::max(0.05f, hit->distance - 0.2f);
+        reach = std::max(0.05f, hit->distance - 0.2f);
     }
+    eye_ = pivot + back * reach;
+
+    const float pitch = kFollowPitch + player.pitch;
+    const bo2::engine::Vec3 view{std::cos(pitch) * heading.x, std::cos(pitch) * heading.y,
+                                 std::sin(pitch)};
+    target_ = eye_ + view * distance_;
 }
 
 const bo2::engine::Vec3& FollowCamera::eye() const {

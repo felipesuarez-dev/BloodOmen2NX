@@ -13,7 +13,7 @@
 | Render golden | Offscreen render of a scene or texture -> PNG hash | `BO2NX_ASSETS_DIR` set | Yes, goldens local |
 | Frame comparator | Side-by-side, diff, tile/region metrics on two PPMs | Manual and Python unit test | No (synthetic PPM) |
 | Headless loop | `FixedStep` unit tests and `bo2nx --headless --frames N` | Always | No |
-| World foundation | Entity filtering, frustum planes, cell streaming, navigation, collision, follow camera, save round-trip, region entities and shared model parsing | Always / asset-gated | No for synthetic; assets for model_asset |
+| World foundation | Entity filtering, frustum planes, cell streaming, navigation, collision, Kain tunedata parsing and jump derivation, Kain movement, follow camera, save round-trip, region entities and shared model parsing | Always / asset-gated | No for synthetic; assets for model_asset |
 | Headless regression | `bo2nx --headless --frames N --dump-state` -> canonical hash | Pending | Mixed |
 | Oracle | Port vs original under Wine (screenshots, state, saves, audio) | Milestones | See `docs/RUNNING.md` |
 | SDL smoke | SDL2/OpenGL triangle under Xvfb -> PPM | When SDL2 and Xvfb are present | No |
@@ -26,7 +26,9 @@
   the documented layout, not that the layout is correct for this build.
   Real-data validation is a separate gate.
 - Asset-dependent tests skip cleanly when `BO2NX_ASSETS_DIR` is unset;
-  they never fail for lack of assets.
+  they never fail for lack of assets. Use an absolute path: ctest runs from
+  the build directory, so a relative one (`external/installed`) makes the
+  tests print "not found" and skip without checking anything.
 - Committed goldens contain only derived facts (hashes, counts,
   dimensions). Raw asset content and copyrighted strings are never
   committed.

@@ -58,6 +58,7 @@ InputMap default_keyboard_map() {
     map.bind(InputKey::D, InputAction::MoveRight);
     map.bind(InputKey::Right, InputAction::MoveRight);
     map.bind(InputKey::R, InputAction::Run);
+    map.bind(InputKey::Shift, InputAction::Run);
     map.bind(InputKey::Space, InputAction::Jump);
     map.bind(InputKey::F, InputAction::Attack);
     map.bind(InputKey::E, InputAction::Use);

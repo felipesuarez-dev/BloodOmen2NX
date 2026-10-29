@@ -21,6 +21,7 @@
 #include "bo2/engine/region.hpp"
 #include "bo2/engine/tick.hpp"
 #include "bo2/engine/world.hpp"
+#include "bo2/game/kain_tuning.hpp"
 #include "bo2/platform/platform.hpp"
 #include "bo2/platform/headless/software_renderer.hpp"
 #include "bo2/version.hpp"
@@ -45,6 +46,7 @@ struct Options {
     bool eye_set = false;
     bool target_set = false;
     std::string big;
+    std::string kain;
     std::string entry;
     std::string out;
     std::string event_ogg;
@@ -124,7 +126,7 @@ Options parse_options(int argc, char** argv) {
                 << "  bo2nx --frame --big <file.big> --out <frame.ppm> [options]\n"
                 << "  bo2nx --level --big <file.big> --out <frame.ppm> [options]\n"
                 << "  bo2nx --sdl [--big <file.big>] [--out <screenshot.ppm>] [options]\n"
-                << "  bo2nx --play --big <file.big> [options]\n"
+                << "  bo2nx --play --big <level.big> [--kain <kain.big>] [options]\n"
                 << "  bo2nx --event-ogg <event.ogg> [--music-ogg <music.ogg>] [--audio-seconds n]\n"
                 << "  bo2nx --headless --frames <n> [--tick-rate <hz>]\n\n"
                 << "Frame options:\n"
@@ -140,7 +142,8 @@ Options parse_options(int argc, char** argv) {
                 << "  --event-ogg <file>     play one Ogg event\n"
                 << "  --music-ogg <file>     loop an Ogg music track\n"
                 << "  --audio-seconds <n>    audio demo duration (default 5)\n"
-                << "  --play                 player-controlled first-person viewer\n"
+                << "  --play                 Kain third-person player (needs --big)\n"
+                << "  --kain <file.big>      kain tunedata for --play (default: <level dir>/../kain/kain.big)\n"
                 << "  --headless             run the fixed-step loop without a window\n"
                 << "  --frames <n>           fixed-step iterations for --headless\n"
                 << "  --tick-rate <hz>       logic ticks per second (default 60)\n";
@@ -170,6 +173,8 @@ Options parse_options(int argc, char** argv) {
             }
         } else if (argument == "--big") {
             options.big = next_argument(index, argc, argv);
+        } else if (argument == "--kain") {
+            options.kain = next_argument(index, argc, argv);
         } else if (argument == "--entry") {
             options.entry = next_argument(index, argc, argv);
         } else if (argument == "--out") {
@@ -206,6 +211,9 @@ Options parse_options(int argc, char** argv) {
         } else {
             usage_error("unknown argument: " + argument);
         }
+    }
+    if (!options.kain.empty() && !options.play) {
+        usage_error("--kain requires --play");
     }
     const bool audio = !options.event_ogg.empty() || !options.music_ogg.empty();
     const int modes = (!options.list_big.empty() ? 1 : 0) + (!options.erg.empty() ? 1 : 0) +
@@ -647,6 +655,28 @@ int render_level_frame(const Options& options) {
     return 0;
 }
 
+#ifdef BO2NX_HAVE_SDL
+// The Kain movement constants live in the `kain` tunedata entry of kain.big.
+bo2::game::KainTuning load_kain_tuning(const Options& options) {
+    std::string path = options.kain;
+    if (path.empty()) {
+        const std::string level_dir = bo2::platform::FileSystem::parent(options.big);
+        path = bo2::platform::FileSystem::join(
+            bo2::platform::FileSystem::join(level_dir, ".."), "kain/kain.big");
+    }
+    if (!bo2::platform::FileSystem::exists(path)) {
+        throw std::runtime_error("kain tunedata not found: " + path +
+                                 "\nPass --kain <kain.big> (resources/levels/kain/kain.big).");
+    }
+    const bo2::engine::BigArchive archive = bo2::engine::BigArchive::load(path);
+    const bo2::engine::BigEntry* entry = archive.find("tunedata", "kain");
+    if (entry == nullptr) {
+        throw std::runtime_error("no tunedata entry named kain in " + path);
+    }
+    return bo2::game::parse_kain_tuning(archive.extract(*entry));
+}
+#endif
+
 int run_sdl(const Options& options) {
 #ifdef BO2NX_HAVE_SDL
     bo2::platform::sdl::WindowOptions window;
@@ -663,6 +693,9 @@ int run_sdl(const Options& options) {
     window.play = options.play;
     if (options.big.empty()) {
         return bo2::platform::sdl::run_triangle(window);
+    }
+    if (options.play) {
+        window.kain = load_kain_tuning(options);
     }
     const LoadedLevel level = load_level(options);
     if (!options.eye_set || !options.target_set) {

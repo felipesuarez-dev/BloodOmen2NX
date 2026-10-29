@@ -11,6 +11,7 @@ by a parser or the original game; **observed** = seen but not decoded;
 | `game.erg` | verified: parser and round-trip fixture | [`erg.md`](erg.md) |
 | `.big` container (`goefile`) | verified: 179 files, 246,332 entries | [`big.md`](big.md) |
 | `pc.rkv` audio archive | verified: 2,666 Ogg streams | [`rkv.md`](rkv.md) |
+| `tunedata` (`kain`) | partially verified: container and movement fields | [`tunedata.md`](tunedata.md) |
 | Models | payload extracted; layout unknown | [`models.md`](models.md) |
 | Textures | verified: DDS payloads | [`textures.md`](textures.md) |
 | Light maps (`litedata/*.slm`) | partially verified: 71 entries, palette + 4-bit indices | [`litedata.md`](litedata.md) |

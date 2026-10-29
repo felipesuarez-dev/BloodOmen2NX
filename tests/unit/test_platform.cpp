@@ -78,6 +78,10 @@ void test_keyboard_input() {
     CHECK(state.action(bo2::platform::InputAction::Jump));
     CHECK(!state.action(bo2::platform::InputAction::MoveForward));
 
+    state = map.update({bo2::platform::InputKey::Shift, bo2::platform::InputKey::W}, {});
+    CHECK(state.action(bo2::platform::InputAction::Run));
+    CHECK(state.action(bo2::platform::InputAction::MoveForward));
+
     state = map.update({bo2::platform::InputKey::F, bo2::platform::InputKey::E,
                         bo2::platform::InputKey::Enter, bo2::platform::InputKey::Escape},
                        {});

@@ -6,6 +6,7 @@
 
 #include "bo2/engine/cell_group.hpp"
 #include "bo2/engine/image.hpp"
+#include "bo2/game/kain_tuning.hpp"
 #include "bo2/engine/math.hpp"
 
 namespace bo2::platform::sdl {
@@ -27,6 +28,7 @@ struct WindowOptions {
     bool lightmap = false;
     bool stats = false;
     bool play = false;
+    game::KainTuning kain;  // required by play
     Camera camera;
 };
 

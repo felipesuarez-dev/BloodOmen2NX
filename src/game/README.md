@@ -12,4 +12,6 @@ Rules:
 - Every behaviour claim needs a local decompile under `re/decomp/`.
 - Keep the code testable without assets; asset-dependent paths are gated.
 
-Status: empty until M1/M2.
+Status: Kain movement is in (`kain_tuning`, `player`, `camera`). Ground
+speeds are measured in the Wine oracle until the `animatio` root motion is
+decoded; see `docs/GAMEPLAY.md`.

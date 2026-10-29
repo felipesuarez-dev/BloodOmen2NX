@@ -43,6 +43,7 @@ enum class InputKey {
     Enter,
     Escape,
     Tab,
+    Shift,
     Count
 };
 
