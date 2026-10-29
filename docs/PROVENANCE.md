@@ -14,7 +14,9 @@ are recorded here.
 
 The embedded build path in `bo2.exe` is
 `P:\gogames\bo2\build\bo2___Win32_Spanish_GoldMaster\bo2.pdb`, which
-identifies the GOG-derived Spanish GoldMaster build.
+identifies the GOG-derived Spanish GoldMaster build. The version comes from
+`data/version.raw`, the in-game version overlay (a 128-byte `!WAR` header and
+a 50x30 RGBA bitmap), which reads "1.02". `readme.rtf` still says 1.00.
 
 ## Reference media
 

@@ -13,7 +13,7 @@ is the reference capture for the first level.
 | Field | Value |
 |---|---|
 | Host | Windows 11 25H2, AMD RX Vega 11, native `bo2.exe`, no Wine |
-| `bo2.exe` SHA-256 | `91758398a17de9c9f974a8a102762a534fb523d40fa6868a5e5a4f0483b2753c` (matches the reference; patch 1.02 not applied) |
+| `bo2.exe` SHA-256 | `91758398a17de9c9f974a8a102762a534fb523d40fa6868a5e5a4f0483b2753c` (matches the reference build, version 1.02 per `docs/PROVENANCE.md`) |
 | Start | Frida spawn, then load of the manual save `slums/sl01.hidden_checkpoint001` (`saves/Save 01/game.bo2`) |
 | Video | 800x600, `video.mkv` (32,155,856 bytes), ffmpeg gdigrab |
 | Inputs | 72 events; 53 aligned to a present, 19 outside the camera coverage |

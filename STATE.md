@@ -1,7 +1,7 @@
 # State
 
-Current milestone: **M2 — host skeleton and first frame**. M1 (containers
-and assets) is complete.
+Current milestone: **M3 — playable slice**. M0 (binary truth), M1
+(containers and assets) and M2 (host skeleton and first frame) are complete.
 
 ## What is done
 

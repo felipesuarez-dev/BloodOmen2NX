@@ -1,8 +1,9 @@
 # Roadmap (living document)
 
 Current state and next steps: `STATE.md`. The Status cell of each row MUST
-start with `DONE`, `WIP` or `TODO`; `tools/gen/progress.py` reads the
-platform table separately.
+start with `DONE`, `WIP` or `TODO`. The README progress block is generated
+by `tools/gen/progress.py` from `tools/gen/progress_data.py`, not from this
+file; keep both in step.
 
 Target: native Nintendo Switch port of Blood Omen 2 (PC 1.02 Spanish
 GoldMaster), with a Linux host backend for development and oracle
@@ -12,7 +13,7 @@ comparison.
 |---|---|---|---|
 | M0 | Laboratory and binary truth | Hashes, PE triage, SFXI, `game.erg` and Ghidra inventory | DONE — install materialization moved to M1 and completed there; function recovery scripts and an optional REA evaluation are recorded, with manual classification remaining for the recovered set |
 | M1 | Containers and assets (GO/NO-GO) | `.big` and `pc.rkv` validated against the installed tree; one asset extracted; formats documented | DONE — 198/198 installer chunks, 179 `.big`/246,332 entries, 2,666 RKV streams, DDS and model extracted; #14-#19 extraction done, #20 repack validation remains |
-| M2 | Host skeleton and first frame | Host backend renders one level with textures and a free camera; frame comparable to the oracle | WIP — headless and SDL2/OpenGL level with DDS textures, cell grid/BSP, cell instances, lights/markers, material layers, input/player marker and a free camera; local Wine oracle (frames and state from memory) and native Windows `sl01` captures |
+| M2 | Host skeleton and first frame | Host backend renders one level with textures and a free camera; frame comparable to the oracle | DONE — headless and SDL2/OpenGL level with DDS textures, cell grid/BSP, cell instances, lights/markers, material layers, input/player marker and a free camera; local Wine oracle (frames and state from memory) and native Windows `sl01` captures. Spawn-frame parity with the oracle is not met yet and is tracked in BO2NX-68 |
 | M3 | Playable slice | First level playable start to finish; route replay test and state comparison | WIP — fixed tick, entity world, frustum culling and cell streaming foundations landed; game systems pending |
 | M4 | Complete systems | Enemies, combat, dark gifts, scripting, menus, saves, audio and videos | TODO |
 | M5 | Complete content | All levels, bosses and unlockables; parity battery green | TODO |
@@ -49,13 +50,14 @@ comparison.
 | Native Windows oracle | done | Reverse SSH harness, client, capture validator and input/frame aligner; complete `sl01` capture used as cross-check |
 | Oracle state (camera, player) | done | Kain position, yaw, velocity, health, lore and the follow camera pose sampled from memory at 50 Hz; tick and animation pending |
 | Switch renderer (deko3d) | todo | M2+ |
-| Audio | done | Ogg extraction, floor-0/1 decoder, stereo mixer, SDL output and event demo |
+| Audio | partial | Ogg extraction, floor-0/1 decoder, stereo mixer, SDL output and event demo. The Ogg decoder has no unit test, floor 0 `dlopen`s the host `libvorbisfile` (absent on Switch), and the sound events are not wired to gameplay |
 | Video (Bink) | todo | M4; inventory and transcode plan done in `docs/FORMATS/video.md` |
 
 ## Rules
 
 - One milestone at a time. Do not start the next until the exit criteria
   of the current one holds.
-- The M1 gate passed on 2026-10-25; M2 is the current milestone.
+- The M1 gate passed on 2026-10-25 and M2 closed on 2026-10-29; M3 is the
+  current milestone.
 - Every claim needs a `FUN_` address and a local decompile.
 - Every new gap becomes a tracked work item, not a note in a doc.
