@@ -18,6 +18,7 @@ Status: initial modules.
 | Module | Responsibility | State |
 |---|---|---|
 | `big_archive` | `goefile` container reader | Validated on the installed tree |
+| `anim_reel` | `animreel` clip channels and root motion | Validated on the 134 Kain clips |
 | `cell_group` | `cellgrup` static level geometry and textures | Validated on `sanctuary` |
 | `dds` | DDS/BC texture decoder | DXT1, DXT3, DXT5, A8R8G8B8; top mip |
 | `math` | Vec3/Vec4/Mat4 | Used by the headless renderer |

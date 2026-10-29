@@ -21,6 +21,13 @@ python3 tools/bo2fmt/textures.py list <level.big> [--match text]
 python3 tools/bo2fmt/textures.py export <level.big> --out external/extracted/<level> [--match text]
 ```
 
+Animation clips (`animreel`, see `docs/FORMATS/animreel.md`):
+
+```sh
+python3 tools/bo2fmt/animreel.py info <extracted animreel entry>
+python3 tools/bo2fmt/animreel.py root <container.big> [--match text]
+```
+
 `unpack` writes `manifest.json` with the BIG entry metadata (type, name,
 language, symbols and padding). `repack` rebuilds the container from that
 manifest and is byte-identical when the extracted data is unchanged.
@@ -79,6 +86,7 @@ Requirements:
 | `model.py` | model, skeleton and raw animation extraction | Verified: 5,168 models, 1,586 skinned |
 | `region.py` | entity table extraction | Verified: 15,632 entities, 533 models, 0 errors |
 | `textures.py` | `texture` entries to PNG (Pillow) with `index.json` | Verified on `slums/sl01`: 239/239 |
+| `animreel.py` | `animreel` clip reader: `info <entry>`, `root <container.big> [--match text]` | Verified: 134/134 Kain clips parse; root speed of `kain/run` is 200 u/s |
 | `compare_frames.py` | Frame side-by-side, diff and metrics | Synthetic tests; used against the Windows and Wine oracle frames |
 
 The numbered `data/*.dat` pipeline is documented in

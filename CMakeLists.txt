@@ -17,6 +17,7 @@ target_compile_options(bo2_common PRIVATE ${BO2NX_WARNINGS})
 set_source_files_properties(third_party/stb_vorbis.c PROPERTIES COMPILE_OPTIONS "-w")
 
 add_library(bo2_engine STATIC
+    src/engine/anim_reel.cpp
     src/engine/audio.cpp
     src/engine/big_archive.cpp
     src/engine/cell_group.cpp
@@ -119,6 +120,11 @@ if(BUILD_TESTING)
     target_link_libraries(bo2nx_camera_tests PRIVATE bo2_game)
     target_compile_options(bo2nx_camera_tests PRIVATE ${BO2NX_WARNINGS})
     add_test(NAME camera COMMAND bo2nx_camera_tests)
+
+    add_executable(bo2nx_anim_reel_tests tests/unit/test_anim_reel.cpp)
+    target_link_libraries(bo2nx_anim_reel_tests PRIVATE bo2_engine)
+    target_compile_options(bo2nx_anim_reel_tests PRIVATE ${BO2NX_WARNINGS})
+    add_test(NAME anim_reel COMMAND bo2nx_anim_reel_tests)
 
     add_executable(bo2nx_kain_tuning_tests tests/unit/test_kain_tuning.cpp)
     target_link_libraries(bo2nx_kain_tuning_tests PRIVATE bo2_game)

@@ -13,6 +13,7 @@ by a parser or the original game; **observed** = seen but not decoded;
 | `pc.rkv` audio archive | verified: 2,666 Ogg streams | [`rkv.md`](rkv.md) |
 | `tunedata` (`kain`) | partially verified: container and movement fields | [`tunedata.md`](tunedata.md) |
 | Models | payload extracted; layout unknown | [`models.md`](models.md) |
+| `animreel` clips | decoded for inner version 6; root motion of the Kain clips verified against the oracle | [`animreel.md`](animreel.md) |
 | Textures | verified: DDS payloads | [`textures.md`](textures.md) |
 | Light maps (`litedata/*.slm`) | partially verified: 71 entries, palette + 4-bit indices | [`litedata.md`](litedata.md) |
 | Audio | verified: Ogg Vorbis in `pc.rkv` | [`audio.md`](audio.md) |
