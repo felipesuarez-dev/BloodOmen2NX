@@ -166,8 +166,17 @@ How to read it:
   lit archway of the Wine frame is still dark in the port. Adding the
   `.slm` vertex colours brings the MAE to 35.58 and the mean RGB to 0.239.
   The Wine frame darkens with distance (near floor bright, far wall dark)
-  while the port does not, which points at the fog next (levelkeeper
-  fogdata, not decoded). The light-map shading of the host is still not the original
+  while the port does not. It is not fog: the `sl01` `levelkeeper001`
+  entity sets `fogEnable` 0 (fog start 240, end 2500, white; background
+  0.25, 0.20, 0.18; far clip 4100). The render-state cache
+  (`0x565b50`) sets `FOGENABLE`, `FOGCOLOR`, blending, culling and the
+  stage-0 U/V addressing, and leaves stage 0 at its default `MODULATE` of
+  texture and diffuse; it sets no `TEXTUREFACTOR` and no `MODULATE2X/4X`.
+  A single gain of about 0.41 still explains most of the error
+  (gain-fit MAE 9.0). That is close to 4 x the grey `c1` of the material
+  layers (0.098, 0.118), but no code ties the two, so the factor stays
+  open. Next candidates: the material layer passes (`mlyrctrl`) and the
+  dynamic lights. The light-map shading of the host is still not the original
   equation. Stage 1 runs `COLOROP MODULATE` with the light map
   (`0x565bf3`). The `.slm` palette holds only the high byte
   (`0xLL000000`), so the texture format the original builds from it
