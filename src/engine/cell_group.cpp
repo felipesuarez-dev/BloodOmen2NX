@@ -124,7 +124,7 @@ std::vector<Vec2> read_uvs(const common::Reader& reader, const Chunk& chunk) {
     return values;
 }
 
-std::string resolve_texture_name(std::uint32_t relative,
+std::string resolve_symbol_name(std::uint32_t relative,
                                  const std::vector<std::uint16_t>& symbols,
                                  const std::vector<std::string>& names) {
     if (relative >= symbols.size()) {
@@ -572,8 +572,8 @@ std::vector<LevelInstance> read_instances(const common::Reader& reader, const Ch
         }
         LevelInstance instance;
         instance.version = version;
-        instance.material_a = reader.u16(position + 4);
-        instance.material_b = reader.u16(position + 6);
+        instance.name_symbol = reader.u16(position + 4);
+        instance.external_symbol = reader.u16(position + 6);
         instance.model = reader.u32(position + 8);
         instance.position = read_vec3(reader, position + 12);
         if (version == 4) {
@@ -632,6 +632,10 @@ void read_cell_tail(const common::Reader& reader, std::size_t start, std::size_t
             geometry.has_level_attributes = true;
         } else if (chunk.name == "cellinst") {
             geometry.instances = read_instances(reader, chunk);
+            for (LevelInstance& instance : geometry.instances) {
+                instance.name = resolve_symbol_name(instance.name_symbol, symbols, names);
+                instance.external = resolve_symbol_name(instance.external_symbol, symbols, names);
+            }
             geometry.has_instances = true;
         } else if (chunk.name == "cellight") {
             geometry.lights = read_lights(reader, chunk);
@@ -668,7 +672,7 @@ std::vector<std::int32_t> read_material_textures(
         const std::uint32_t relative =
             (record_size >= 6) ? reader.u16(record + 4) : reader.u32(record);
         result[static_cast<std::size_t>(start) + index] =
-            add_texture_name(geometry, resolve_texture_name(relative, symbols, names));
+            add_texture_name(geometry, resolve_symbol_name(relative, symbols, names));
     }
     return result;
 }
@@ -1257,9 +1261,36 @@ void assign_model_lightmaps(LevelGeometry& geometry,
             ++index;
         }
     }
+    // A placed instance is a Terrain named after the instance (FUN_00682c50);
+    // the Terrain looks its lighting group up by the lower-cased name
+    // (FUN_005cf670, FUN_0060b460). A repeated name is renamed "name|N"
+    // first (FUN_006827f0) and no .slm group carries a '|', so only the first
+    // instance of a name is lit. Without a symbol table the instances have no
+    // names, and the vertex-count match below stands in.
     std::vector<const Group*> instance_groups(geometry.instances.size(), nullptr);
-    std::map<std::uint32_t, std::size_t> next_instance_group;
+    std::set<std::string> taken_names;
+    bool named = false;
     for (std::size_t index = 0; index < geometry.instances.size(); ++index) {
+        const LevelInstance& instance = geometry.instances[index];
+        if (instance.name.empty()) {
+            continue;
+        }
+        named = true;
+        std::string key;
+        key.reserve(instance.name.size());
+        for (const char character : instance.name) {
+            key.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(character))));
+        }
+        if (!taken_names.insert(key).second) {
+            continue;  // renamed "name|N" by the original: no group
+        }
+        const auto found = group_index.find(key);
+        if (found != group_index.end()) {
+            instance_groups[index] = &groups[found->second];
+        }
+    }
+    std::map<std::uint32_t, std::size_t> next_instance_group;
+    for (std::size_t index = 0; index < geometry.instances.size() && !named; ++index) {
         const LevelInstance& instance = geometry.instances[index];
         if (instance.model >= geometry.model_ranges.size()) {
             continue;
@@ -1272,19 +1303,22 @@ void assign_model_lightmaps(LevelGeometry& geometry,
         if (found == groups_by_count.end()) {
             continue;
         }
-        std::size_t& group_index = next_instance_group[range.vertex_count];
-        if (group_index < found->second.size()) {
-            instance_groups[index] = found->second[group_index];
-            ++group_index;
+        std::size_t& next = next_instance_group[range.vertex_count];
+        if (next < found->second.size()) {
+            instance_groups[index] = found->second[next];
+            ++next;
         }
     }
     std::map<const LevelLightMap*, std::int32_t> image_index;
     for (LevelTriangle& triangle : geometry.triangles) {
         const Group* match = nullptr;
-        if (triangle.instance < instance_groups.size()) {
+        const bool placed = triangle.instance < instance_groups.size();
+        if (placed) {
             match = instance_groups[triangle.instance];
         }
-        if (match == nullptr && triangle.model < model_groups.size()) {
+        // A named instance without a group is unlit in the original; only
+        // unplaced or unnamed geometry falls back to the vertex-count match.
+        if (match == nullptr && !(placed && named) && triangle.model < model_groups.size()) {
             match = model_groups[triangle.model];
         }
         if (match == nullptr) {

@@ -82,6 +82,26 @@ scanner treats every valid entry signature in the file as a candidate,
 so it collects 71 unique entries from sanctuary; the first matching
 entry per texture wins.
 
+## Binding to the level geometry
+
+The original keys every lighting group by its object name. The
+`litedata` resource is loaded by `goe::RMDManager` (vtable `0x86f414`,
+version 1 only: FUN_0060b670). A `goe::RMDLoadContext` (`0x86f404`,
+FUN_0060a9c0) reads a group count and parses each group with FUN_0060b040.
+That parser reads the object name symbol and the lighting data
+(FUN_00636bd0) and inserts both into a map keyed by the symbol, with the
+errors "Read lighting for an object with no name.  File is probably
+bad." and "ERROR: there are multiple objects named '%s'".
+
+Each `cellinst` record becomes a `goe::Terrain` named after the instance
+(FUN_00682c50, FUN_006827f0). The Terrain constructor (FUN_005cf670)
+lower-cases its name and looks it up in that map (FUN_0060b460). A
+repeated instance name is renamed `name|N` first. No `.slm` group in the
+installed game contains a `|` (38,663 entries scanned), so only the first
+instance of a repeated name is lit; 81 of the 47,650 instances of all
+levels repeat a name. In `sl01` all 286 groups match an instance name
+exactly (650 instances).
+
 ## Host
 
 `parse_lightmaps` in `src/engine/cell_group.cpp` scans the whole file for
@@ -92,12 +112,13 @@ counts match the model vertex counts (for example `cryptexithall` 116,
 `crypt` 2,298, `coffin01..05` 48, `cryptentrancehall` 652, the roofbits
 153/161, the pilars 206/122).
 
-`assign_model_lightmaps` groups the entries by their prefix and matches a
-model's vertex count to a group. Placed instances consume groups in
-instance order, so two instances of one model can take different prop
-groups; a triangle with no instance mapping falls back to its model's
-group. The six 48-vertex coffins and the six 153/161-vertex roofbits get
-different groups instead of sharing the first one. Within the group it
+`assign_model_lightmaps` groups the entries by their prefix. A placed
+instance takes the group named after it (lower-cased), as above, and a
+repeated name takes none. Only without a symbol table, when the instances
+have no names, does it fall back to the old heuristic: match a model's
+vertex count to a group and let placed instances consume the groups in
+instance order. A triangle with no instance falls back to its model's
+group. Within the group it
 picks the entry whose name ends with the model's texture name. In
 `sanctuary` this produces 62 model light maps covering 2,769 triangles;
 `cy01` now covers 15,217 triangles and `lc01` 7,116. Entity models use
@@ -123,5 +144,4 @@ against the no-lightmap + five-entry version.
 - How the per-vertex colours (below) combine with the light map in the
   original; a spike of `texture × vertex colour × light map` ended farther
   from the Wine frame than the unlit preview (`models.md`, BO2NX-68).
-- The group name to model binding (the host binds by vertex count).
 - Whether the second UV set is always the light-map set.

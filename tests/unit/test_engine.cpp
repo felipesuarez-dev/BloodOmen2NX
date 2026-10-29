@@ -725,6 +725,42 @@ void test_named_model_lightmaps() {
     CHECK(geometry.triangles[0].lightmap == 0);
 }
 
+void test_instance_lightmaps_by_name() {
+    // FUN_005cf670 looks a Terrain's lighting up by its lower-cased instance
+    // name; a repeated name is renamed "name|N" (FUN_006827f0) and gets none.
+    bo2::engine::LevelGeometry geometry;
+    geometry.texture_names = {"Alpha"};
+    geometry.model_ranges.resize(1);
+    geometry.model_ranges[0].present = true;
+    geometry.model_ranges[0].vertex_count = 4;
+    geometry.instances.resize(3);
+    geometry.instances[0].name = "Box02";
+    geometry.instances[1].name = "box01";
+    geometry.instances[2].name = "BOX01";
+    geometry.triangles = {{0, 1, 2, 0, 0, 0, 0, -1}, {0, 1, 2, 0, 0, 1, 0, -1},
+                          {0, 1, 2, 0, 0, 2, 0, -1}};
+    // Same vertex count as the model: a vertex-count match would light all three.
+    std::vector<bo2::engine::LevelLightMap> maps(2);
+    for (int index = 0; index < 2; ++index) {
+        bo2::engine::LevelLightMap& map = maps[static_cast<std::size_t>(index)];
+        map.group = index == 0 ? "box01" : "box02";
+        map.name = map.group + "-alpha";
+        map.group_vertex_count = 4;
+        map.image.width = 1;
+        map.image.height = 1;
+        map.image.rgba = {static_cast<std::uint8_t>(index + 1), 0, 0, 255};
+    }
+    bo2::engine::assign_model_lightmaps(geometry, maps);
+    CHECK(geometry.model_lightmaps.size() == 2);
+    const auto red = [&](std::size_t triangle) {
+        const std::int32_t index = geometry.triangles[triangle].lightmap;
+        return index < 0 ? -1 : geometry.model_lightmaps[static_cast<std::size_t>(index)].rgba[0];
+    };
+    CHECK(red(0) == 2);   // Box02 -> box02
+    CHECK(red(1) == 1);   // box01 -> box01
+    CHECK(red(2) == -1);  // repeated name: unlit
+}
+
 void test_collision_chunk() {
     const std::vector<std::uint8_t> data = build_cell_group(false, true);
     const bo2::engine::LevelGeometry geometry = bo2::engine::parse_cell_group(data);
@@ -900,6 +936,9 @@ int main() {
     test_cell_instances();
     test_lightmaps();
     test_model_lightmaps();
+    test_shared_instance_lightmaps();
+    test_named_model_lightmaps();
+    test_instance_lightmaps_by_name();
     test_erg();
     if (failures != 0) {
         std::cerr << failures << " check(s) failed\n";

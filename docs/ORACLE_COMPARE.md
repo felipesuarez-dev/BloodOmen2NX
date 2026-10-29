@@ -108,6 +108,7 @@ box numbers below come from `tools/compare_frames.py`.
 | helper rule, `--material off` | 35.06 | 39.30 | 0.240 |
 | `develop`, `--material off --lightmap` | 54.90 | 60.41 | 0.314 |
 | helper rule, `--material off --lightmap` | 54.79 | 60.06 | 0.314 |
+| light maps bound by instance name, `--material off --lightmap` | 55.10 | n/a | 0.322 |
 | `develop`, `--material diffuse` | 23.47 | 26.27 | 0.016 |
 | helper rule, `--material diffuse` | 23.39 | 26.19 | 0.016 |
 | helper rule, `--material layers` | 23.38 | 26.18 | 0.016 |
@@ -153,6 +154,15 @@ How to read it:
   measured on luma only), which says the missing piece is the level of
   illumination and not geometry, but the correlation stays at 0.13: the lit
   and shadowed areas of the original are not reproduced.
+- Binding the light maps by instance name, as the original does
+  (`litedata.md`), raises the luma correlation of the `--lightmap` frame
+  from 0.10 to 0.15, the best of the frames above, while its MAE stays
+  about 55. The light-map shading of the host is still not the original
+  equation. Stage 1 runs `COLOROP MODULATE` with the light map
+  (`0x565bf3`). The `.slm` palette holds only the high byte
+  (`0xLL000000`), so the texture format the original builds from it
+  decides the colour, and that format is not traced. The `.slm` vertex
+  colours and the fog are not applied either.
 - Still different from the original: lighting, fog, the green
   `bo2cinematic001` diamond (no `helperobj` flag, see `models.md`), Kain
   and the HUD.

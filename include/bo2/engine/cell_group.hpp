@@ -126,8 +126,14 @@ struct LevelMarker {
 struct LevelInstance {
     std::uint32_t version = 0;
     std::uint32_t model = 0;
-    std::uint16_t material_a = 0;
-    std::uint16_t material_b = 0;
+    // The instance's object name and its external model reference, symbols of
+    // the cell group's list. FUN_00682c50 reads them as the EditTerrain name
+    // and its external reference; the Terrain built from it (FUN_005cf670)
+    // looks its lighting up in the level `.slm` by the lower-cased name.
+    std::uint16_t name_symbol = 0;
+    std::uint16_t external_symbol = 0;
+    std::string name;      // resolved name; empty without a symbol table
+    std::string external;  // resolved external reference; empty for a local model
     Vec3 position{0.0f, 0.0f, 0.0f};
     Vec3 scale{1.0f, 1.0f, 1.0f};
     Vec3 rotation{0.0f, 0.0f, 0.0f};

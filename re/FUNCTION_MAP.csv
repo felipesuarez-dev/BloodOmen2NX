@@ -7808,7 +7808,7 @@ address,name,subsystem,status,notes
 005cf430,FUN_005cf430,unknown,todo,ghidra
 005cf520,FUN_005cf520,unknown,todo,ghidra
 005cf560,FUN_005cf560,unknown,todo,ghidra
-005cf670,FUN_005cf670,unknown,todo,ghidra
+005cf670,FUN_005cf670,level,wip,src/engine/cell_group.cpp: assign_model_lightmaps looks the lighting group up by the lower-cased instance name; the rest of the Terrain set-up is not ported
 005cfa20,FUN_005cfa20,unknown,todo,ghidra
 005cfa40,FUN_005cfa40,unknown,todo,ghidra
 005cfa50,FUN_005cfa50,unknown,todo,ghidra
@@ -10964,9 +10964,9 @@ address,name,subsystem,status,notes
 00682320,FUN_00682320,unknown,todo,ghidra
 00682440,FUN_00682440,unknown,todo,ghidra
 00682630,FUN_00682630,unknown,todo,ghidra
-006827f0,FUN_006827f0,unknown,todo,ghidra
+006827f0,FUN_006827f0,level,wip,src/engine/cell_group.cpp: a repeated instance name takes no lighting group (the original renames it name|N); the Terrain container is not ported
 00682be0,FUN_00682be0,unknown,todo,ghidra
-00682c50,FUN_00682c50,unknown,todo,ghidra
+00682c50,FUN_00682c50,level,wip,src/engine/cell_group.cpp: read_instances reads the name and external reference symbols; external references and the transform set-up are not ported
 00682fb0,FUN_00682fb0,unknown,todo,ghidra
 00683160,FUN_00683160,unknown,todo,ghidra
 00683330,FUN_00683330,unknown,todo,ghidra

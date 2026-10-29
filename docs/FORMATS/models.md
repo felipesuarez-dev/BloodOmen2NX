@@ -267,16 +267,16 @@ places copies of those models in world space:
 u32 instance count
 per instance, version 3 (40 bytes):
   u32  version = 3
-  u16  material A
-  u16  material B
+  u16  name (symbol)
+  u16  external reference (symbol)
   u32  model index
   Vec3 position
   Vec3 rotation
   u32  flags
 version 4 (52 bytes):
   u32  version = 4
-  u16  material A
-  u16  material B
+  u16  name (symbol)
+  u16  external reference (symbol)
   u32  model index
   Vec3 position
   Vec3 scale
@@ -286,8 +286,15 @@ version 4 (52 bytes):
 
 `model` indexes the `cellmdls` model block, including blocks without an
 `rmd`. `0xFFFFFFFF` is a sentinel: the instance has no model and is
-skipped. `material A` and `material B` are symbols in the cellgrup list;
-they often resolve to textures, but their override semantics are open.
+skipped. The two symbols are the instance's object name and an external
+model reference (FUN_00682c50 reads them as the `EditTerrain` name and its
+external reference, "EditTerrain %s has unresolved external reference %s").
+In `sl01` the names are `SlumsTest19`, `Line06`, `box01`, ...; the external
+reference resolves to the empty name in 648 of 650 records and to
+`slums/fire` in 2. Each placed instance becomes a `goe::Terrain` named
+after it (FUN_006827f0, which renames a repeated name to `name|N`), and the
+Terrain looks its lighting up by that name (FUN_005cf670, see
+[`litedata.md`](litedata.md)).
 `flags` is stored and not interpreted. Version 3 has no scale (implicit
 1.0). Version 3 occurs in `hubworld`; the level containers use version 4.
 
@@ -606,7 +613,7 @@ interior, while the default isometric frame shows the level.
 - The 40/42-byte `prims` extra record.
 - `cells` flags, `cellattr`/`attrs` value semantics, the `portal2`
   plane/index and the BSP traversal.
-- `cellinst` material A/B overrides, flags and the Euler order.
+- `cellinst` external references, flags and the Euler order.
 - `cellight` type-specific parameters and the marker symbol semantics.
 - `cellanim`.
 - `model 74` has no `rmd`; its role is unknown.
