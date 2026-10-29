@@ -28,6 +28,7 @@ add_library(bo2_engine STATIC
     src/engine/navigation.cpp
     src/engine/ogg.cpp
     src/engine/region.cpp
+    src/engine/string_table.cpp
     src/engine/tick.cpp
     src/engine/world.cpp
     third_party/stb_vorbis.c

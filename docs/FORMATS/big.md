@@ -121,7 +121,8 @@ The name table can hold more than 3,000 names (the sanctuary file has
 3,332, covering four languages plus `default`). The `name index` resolves
 the entry name. The `n` u16 values are resource symbol references: the
 `cellgrup` uses them to resolve its texture names and the `strtable` uses
-them for its keys and text; `BigEntry.symbols` exposes them.
+them for its keys and text (`docs/FORMATS/strtable.md`); `BigEntry.symbols`
+exposes them.
 
 ## Language
 

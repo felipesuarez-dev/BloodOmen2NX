@@ -1,9 +1,12 @@
 #include <cstdint>
 #include <iostream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
+#include "bo2/common/reader.hpp"
 #include "bo2/engine/big_archive.hpp"
+#include "bo2/engine/string_table.hpp"
 
 namespace {
 
@@ -209,6 +212,157 @@ void test_plain_lookup_is_unchanged() {
     CHECK(localized != nullptr && localized->language == 5);
 }
 
+template <typename Function>
+bool throws_parse_error(Function&& function) {
+    try {
+        function();
+    } catch (const bo2::common::ParseError&) {
+        return true;
+    }
+    return false;
+}
+
+// strtable payload: "default\0", payload size, 1, 2, then the u16 words.
+std::vector<std::uint8_t> strtable_payload(const std::vector<std::uint16_t>& words) {
+    std::vector<std::uint8_t> out;
+    append(out, "default");
+    out.push_back(0);
+    put32(out, static_cast<std::uint32_t>(20 + words.size() * 2));
+    put32(out, 1);
+    put32(out, 2);
+    for (std::uint16_t word : words) {
+        put16(out, word);
+    }
+    return out;
+}
+
+constexpr std::uint16_t kEnd = 0xFFFF;
+
+// Names 6.. of the synthetic table container.
+std::vector<std::string> strtable_names() {
+    return names_with({"ui/ui", "key_one", "uno", "key_two", "TCUVWXY", "one"});
+}
+
+bo2::engine::StringTable parse_table(const std::vector<std::uint16_t>& words,
+                                     const std::vector<std::uint16_t>& symbols) {
+    const auto archive = bo2::engine::BigArchive::parse(
+        build_big(strtable_names(), {{"strtable", 6, 5, strtable_payload(words), symbols}}));
+    return bo2::engine::StringTable::parse(archive, archive.entries()[0]);
+}
+
+void test_string_table_records() {
+    // symbols: ref0 key_one, ref1 uno, ref2 key_two, ref3 TCUVWXY.
+    const bo2::engine::StringTable table =
+        parse_table({7, 0, 1, kEnd, 7, 2, 3, kEnd}, {7, 8, 9, 10});
+    CHECK(table.records().size() == 2);
+    CHECK(table.irregular().empty());
+    CHECK(table.records()[0].key == "key_one");
+    CHECK(table.records()[0].value == "uno");
+    CHECK(table.records()[1].key == "key_two");
+    const std::string* value = table.find("KEY_ONE");
+    CHECK(value != nullptr && *value == "uno");
+    CHECK(table.find("missing") == nullptr);
+    // Different keys may share a value symbol.
+    const bo2::engine::StringTable shared =
+        parse_table({7, 0, 1, kEnd, 7, 2, 1, kEnd}, {7, 8, 9, 10});
+    CHECK(shared.records().size() == 2);
+    CHECK(shared.records()[1].value == "uno");
+}
+
+void test_string_table_irregular_record() {
+    // The shape seen once in the Italian ui/UI: a record that is not
+    // [7, key, value] up to its terminator. It is kept raw, skipped by
+    // find(), and the records around it keep their alignment.
+    const bo2::engine::StringTable table = parse_table(
+        {7, 0, 1, kEnd, 0x0107, 2, 3, 0, 1, 3, 7, 0, 3, kEnd, 7, 2, 3, kEnd}, {7, 8, 9, 10});
+    CHECK(table.records().size() == 2);
+    CHECK(table.records()[0].key == "key_one");
+    CHECK(table.records()[1].key == "key_two");
+    CHECK(table.records()[1].value == "TCUVWXY");
+    CHECK(table.irregular().size() == 1);
+    CHECK(table.irregular()[0] ==
+          std::vector<std::uint16_t>({0x0107, 2, 3, 0, 1, 3, 7, 0, 3}));
+    // A lone terminator is an empty irregular record.
+    const bo2::engine::StringTable empty = parse_table({kEnd, 7, 0, 1, kEnd}, {7, 8});
+    CHECK(empty.records().size() == 1);
+    CHECK(empty.irregular().size() == 1 && empty.irregular()[0].empty());
+}
+
+void test_string_table_rejects_bad_payloads() {
+    const std::vector<std::uint16_t> symbols = {7, 8};
+    // A reference outside the symbol list, a symbol outside the name table.
+    CHECK(throws_parse_error([&] { parse_table({7, 0, 2, kEnd}, symbols); }));
+    CHECK(throws_parse_error([&] { parse_table({7, 0, 1, kEnd}, {7, 500}); }));
+    // No terminator on the last record.
+    CHECK(throws_parse_error([&] { parse_table({7, 0, 1}, symbols); }));
+
+    const auto archive = bo2::engine::BigArchive::parse(build_big(
+        strtable_names(), {{"strtable", 6, 5, strtable_payload({7, 0, 1, kEnd}), symbols}}));
+    const bo2::engine::BigEntry good = archive.entries()[0];
+    CHECK(bo2::engine::StringTable::parse(archive, good).records().size() == 1);
+
+    // Size field, magic and odd payload length are checked.
+    auto corrupt = [&](std::size_t offset, std::uint8_t value) {
+        std::vector<std::uint8_t> bytes = archive.bytes();
+        bytes[good.offset + offset] = value;
+        const auto changed = bo2::engine::BigArchive::parse(bytes);
+        return throws_parse_error(
+            [&] { bo2::engine::StringTable::parse(changed, changed.entries()[0]); });
+    };
+    CHECK(corrupt(0, 'x'));
+    CHECK(corrupt(8, 0x7F));
+    // An odd payload length whose size field is consistent.
+    std::vector<std::uint8_t> odd_payload = strtable_payload({7, 0, 1, kEnd});
+    odd_payload.push_back(0);
+    patch32(odd_payload, 8, static_cast<std::uint32_t>(odd_payload.size()));
+    const auto odd = bo2::engine::BigArchive::parse(
+        build_big(strtable_names(), {{"strtable", 6, 5, odd_payload, symbols}}));
+    CHECK(throws_parse_error([&] { bo2::engine::StringTable::parse(odd, odd.entries()[0]); }));
+    // Shorter than the header.
+    bo2::engine::BigEntry tiny = good;
+    tiny.size = 12;
+    CHECK(throws_parse_error([&] { bo2::engine::StringTable::parse(archive, tiny); }));
+}
+
+void test_string_table_by_locale() {
+    // Spanish and default copies of the same table, as in code.big.
+    const auto archive = bo2::engine::BigArchive::parse(build_big(
+        strtable_names(),
+        {
+            {"strtable", 6, 5, strtable_payload({7, 0, 1, kEnd}), {7, 8}},
+            {"strtable", 6, 0, strtable_payload({7, 0, 1, kEnd}), {7, 11}},
+        }));
+    const bo2::engine::BigEntry* spanish =
+        archive.find("strtable", "ui/ui", bo2::engine::kDefaultLocale);
+    CHECK(spanish != nullptr);
+    if (spanish != nullptr) {
+        const bo2::engine::StringTable table = bo2::engine::StringTable::parse(archive, *spanish);
+        const std::string* value = table.find("key_one");
+        CHECK(value != nullptr && *value == "uno");
+    }
+    const bo2::engine::BigEntry* german = archive.find("strtable", "ui/ui", "german");
+    CHECK(german != nullptr);
+    if (german != nullptr) {
+        const bo2::engine::StringTable table = bo2::engine::StringTable::parse(archive, *german);
+        const std::string* value = table.find("key_one");
+        CHECK(value != nullptr && *value == "one");
+    }
+}
+
+void test_display_text() {
+    // Inferred mapping: T C U V W X Y -> a e i o u n-tilde inverted-question (UTF-8).
+    CHECK(bo2::engine::display_text("TCUVWXY", "spanish") ==
+          "\xC3\xA1\xC3\xA9\xC3\xAD\xC3\xB3\xC3\xBA\xC3\xB1\xC2\xBF");
+    CHECK(bo2::engine::display_text("TCUVWXY", "SPANISH") ==
+          bo2::engine::display_text("TCUVWXY", "spanish"));
+    // Lower case, digits, punctuation and the lower-case control codes are untouched.
+    CHECK(bo2::engine::display_text("@c\\x %d: a-z (1).?", "spanish") == "@c\\x %d: a-z (1).?");
+    CHECK(bo2::engine::display_text("", "spanish").empty());
+    // Locales without a mapping return the stored text.
+    CHECK(bo2::engine::display_text("TCUVWXY", "english") == "TCUVWXY");
+    CHECK(bo2::engine::display_text("TCUVWXY", "default") == "TCUVWXY");
+}
+
 }  // namespace
 
 int main() {
@@ -218,6 +372,11 @@ int main() {
         test_default_is_the_fallback();
         test_other_languages_are_skipped();
         test_plain_lookup_is_unchanged();
+        test_string_table_records();
+        test_string_table_irregular_record();
+        test_string_table_rejects_bad_payloads();
+        test_string_table_by_locale();
+        test_display_text();
     } catch (const std::exception& error) {
         std::cerr << "unexpected exception: " << error.what() << '\n';
         return 1;

@@ -10,6 +10,7 @@ by a parser or the original game; **observed** = seen but not decoded;
 | `.dat` installer chunk | verified: decoded and validated | [`dat.md`](dat.md) |
 | `game.erg` | verified: parser and round-trip fixture | [`erg.md`](erg.md) |
 | `.big` container (`goefile`) | verified: 179 files, 246,332 entries | [`big.md`](big.md) |
+| `strtable` string tables and locale | verified: layout on 92 entries, accent mapping inferred | [`strtable.md`](strtable.md) |
 | `pc.rkv` audio archive | verified: 2,666 Ogg streams | [`rkv.md`](rkv.md) |
 | `tunedata` (`kain`) | partially verified: container and movement fields | [`tunedata.md`](tunedata.md) |
 | Models | payload extracted; layout unknown | [`models.md`](models.md) |

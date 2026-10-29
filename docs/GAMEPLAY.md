@@ -5,7 +5,7 @@ translated and verified.
 
 | System | Status | Notes |
 |---|---|---|
-| Boot and front-end | todo | Logos, menus, options, language |
+| Boot and front-end | partial | Language: the port starts in the `spanish` locale like the Spanish build (FUN_004aae40 forces it, FUN_006c8fb0 filters BIG entries) and reads the localized string tables, see [`FORMATS/big.md`](FORMATS/big.md#language) and [`FORMATS/strtable.md`](FORMATS/strtable.md). Logos, menus and options todo |
 | Level loading and streaming | todo | Container readers, level table |
 | Camera | partial | Follow pose, yaw catch-up and the jump height lag ported; range smoothing, combat and scripted cameras todo. See [Camera](#camera) |
 | Player movement | partial | Ground turn, ground speeds, jump, air control and fall cap; glide, climb and swim todo. See [Kain movement](#kain-movement) |
