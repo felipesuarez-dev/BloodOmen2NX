@@ -31,7 +31,7 @@ from pathlib import Path
 from typing import NamedTuple
 
 from memstate import (Kain, Memory, ProcessMemory, find_follow_camera, find_kain, is_follow_camera,
-                      is_kain, read_camera, read_state)
+                      is_kain, read_camera, read_instances, read_state)
 from validate_capture import REFERENCE_BO2_SHA256, sha256_file
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -205,10 +205,12 @@ class StateSampler(threading.Thread):
     sampled before that are kept.
     """
 
-    def __init__(self, mem: Memory, phase):
+    def __init__(self, mem: Memory, phase, dump_phase: str | None = None):
         super().__init__(daemon=True)
         self.mem = mem
         self.phase = phase  # callable returning the current route phase
+        self.dump_phase = dump_phase  # route phase whose first sample dumps every instance
+        self.instances: list[dict] | None = None
         self.stopping = threading.Event()
         self.rows: list[dict] = []
         self.kain: Kain | None = None  # current Kain, None while searching
@@ -255,6 +257,8 @@ class StateSampler(threading.Thread):
 
     def sample(self, epoch: int, mono: int) -> None:
         """Append one row if Kain exists. Raises OSError when a pointer cannot be read."""
+        if self.dump_phase and self.instances is None and self.phase() == self.dump_phase:
+            self.instances = read_instances(self.mem)
         if self.kain is not None and not is_kain(self.mem, self.kain):
             self.kain = None  # freed or replaced, for example by a reload
         if self.kain is None:
@@ -300,12 +304,13 @@ class StateSampler(threading.Thread):
 
 class Capture:
     def __init__(self, out: Path, prefix: Path, route_name: str, bo2_sha256: str,
-                 sample_state: bool = True):
+                 sample_state: bool = True, dump_phase: str | None = None):
         self.out = out
         self.prefix = prefix
         self.route_name = route_name
         self.bo2_sha256 = bo2_sha256
         self.sample_state = sample_state
+        self.dump_phase = dump_phase
         self.display = 0
         self.env: dict[str, str] = {}
         self.xvfb: subprocess.Popen | None = None
@@ -441,7 +446,7 @@ class Capture:
         except OSError as error:
             log(f"warning: cannot open the game's memory ({error}); no state.csv")
             return
-        self.sampler = StateSampler(mem, lambda: self.phase)
+        self.sampler = StateSampler(mem, lambda: self.phase, self.dump_phase)
         self.sampler.start()
 
     def stop(self) -> None:
@@ -608,6 +613,9 @@ class Capture:
         sampler = self.sampler
         if sampler is None:
             return  # sampling disabled, or the memory could not be opened
+        if sampler.instances is not None:
+            (self.out / "instances.json").write_text(json.dumps(sampler.instances, indent=1), encoding="utf-8")
+            manifest["instances"] = {"phase": sampler.dump_phase, "count": len(sampler.instances)}
         rows = sampler.rows
         if not rows:
             if sampler.error is None:
@@ -694,8 +702,14 @@ def main(argv: list[str] | None = None) -> int:
                         help="wait this long for the main menu instead of checking for the menu")
     parser.add_argument("--no-state", action="store_true",
                         help="do not sample the game's memory into state.csv")
+    parser.add_argument("--dump-instances", metavar="PHASE",
+                        help="write instances.json: every game instance with its draw fields, "
+                             "read once when the route enters PHASE")
     args = parser.parse_args(argv)
 
+    if args.dump_instances and args.no_state:
+        print("wine_capture: --dump-instances needs the state sampler; drop --no-state", file=sys.stderr)
+        return 2
     route_path = Path(args.route)
     try:
         steps = parse_route(route_path.read_text(encoding="utf-8"))
@@ -722,7 +736,8 @@ def main(argv: list[str] | None = None) -> int:
 
     for number in (signal.SIGTERM, signal.SIGHUP):
         signal.signal(number, lambda received, _frame: sys.exit(128 + received))
-    capture = Capture(out, prefix, route_path.name, digest, sample_state=not args.no_state)
+    capture = Capture(out, prefix, route_path.name, digest, sample_state=not args.no_state,
+                      dump_phase=args.dump_instances)
     status = 0
     try:
         capture.start(args.boot_wait)

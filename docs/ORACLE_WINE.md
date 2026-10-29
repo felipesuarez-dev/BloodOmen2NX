@@ -48,6 +48,7 @@ scripts. `WINEDEBUG=+seh` shows the game's `OutputDebugString` log in
 |---|---|
 | `game_manifest.json` | `source: "wine"`, exe hash, Wine version, renderer, video mode, route name, `state` summary |
 | `state.csv` | Kain's state sampled every 20 ms; see [Game state](#game-state). Absent with `--no-state`, if the memory cannot be read, or if Kain never appears. If sampling stops mid-run, the rows taken so far are kept |
+| `instances.json` | Only with `--dump-instances PHASE`: every game instance with its draw fields; see [Instance dump](#instance-dump) |
 | `inputs.jsonl` | Same schema as Windows: `epoch_ms`, `mono_ms`, `event`, `key`, `duration_ms`, `name` |
 | `screenshots/`, `frames_ppm/` | One PNG and one 800x600 PPM per `shot` step |
 | `video.mkv`, `video_start.json` | x11grab 800x600, 30 fps; start time is the ffmpeg spawn time (about 0.3 s uncertainty) |
@@ -259,6 +260,20 @@ The first airborne sample is at z 215.3, not at the takeoff, so 554 u/s is a
 lower bound on the takeoff impulse (the ascent fit extrapolates to 537 u/s at
 that sample). The 200 u/s peak of `run` is below the 230 u/s that plain `w`
 reaches; the run phase was probably blocked, so it is not a clean top speed.
+
+### Instance dump
+
+`--dump-instances PHASE` reads every instance of the list at `0x00A836A8`
+once, when the route enters `PHASE`, and writes `instances.json` next to
+`state.csv` (`read_instances` in `tools/oracle/memstate.py`). Each row has
+the instance address, its position (`+0xB4`), the entity flags (`+0xF0`;
+`0x200` is the template's `helperobj`, `FUN_0070d0d5`), the hidden byte
+(`+0x139`, `FUN_0070dfa0`), the render LOD and LOD table of its
+`goe::AnimModelInst` (`+0x9C`, `+0xA0`; `FUN_005dcbf0`) and its behavior's
+vtable. Match the rows to the region entities by position to learn how the
+original treats each entity type; `docs/FORMATS/models.md` ("Helper
+objects") uses it at the `sl01` spawn. It needs the state sampler, so it
+cannot be combined with `--no-state`.
 
 ## Input bindings
 

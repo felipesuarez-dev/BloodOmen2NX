@@ -26,6 +26,12 @@ MAX_NODES = 100_000  # guards against a corrupt list
 POSITION = 0xB4  # f32 x3; HUD
 YAW = 0xC8  # f32 radians, the third of the rotation triple at +0xC0; HUD
 BEHAVIOR = 0x124  # u32; FUN_004d9850 (GetPlayerHitPoints)
+# What decides whether an instance's model is drawn (docs/FORMATS/models.md, "Helper objects").
+FLAGS = 0xF0  # u32; FUN_0070d0d5 maps the template's helperobj to 0x200, FUN_0070f100 skips it
+HIDDEN = 0x139  # u8; set by FUN_0070dfa0 (SetHidden), FUN_0070f100 skips the draw
+MODEL_INST = 0x90  # goe::AnimModelInst (vtable 0x86eb98), drawn by FUN_005dcbf0
+RENDER_LOD = MODEL_INST + 0xC  # u32; 0 sends FUN_005dcbf0 to FUN_005d8be0
+LOD_TABLE = MODEL_INST + 0x10  # u32
 # Kain behavior (kain::KainTopLevelBehavior).
 VELOCITY = 0x19C  # f32 x3, world frame; HUD
 ON_PLATFORM = 0x4E0  # u32; HUD
@@ -136,6 +142,35 @@ def find_kain(mem: Memory) -> Kain | None:
             pass  # not a readable instance; try the next one
         node = mem.u32(node)
     return None
+
+
+def read_instances(mem: Memory) -> list[dict]:
+    """Every instance of the list with the fields that decide whether its model is drawn.
+
+    An instance that cannot be read keeps its address and an `error`. Raises
+    OSError if the list itself cannot be read.
+    """
+    head = mem.u32(OBJECT_LIST)
+    node = mem.u32(head) if head else 0
+    rows = []
+    for _ in range(MAX_NODES):
+        if not node or node == head:
+            break
+        instance = mem.u32(node + 8)
+        row: dict = {"instance": instance}
+        try:
+            row["position"] = list(mem.f32s(instance + POSITION, 3))
+            row["flags"] = mem.u32(instance + FLAGS)
+            row["hidden"] = mem.read(instance + HIDDEN, 1)[0]
+            row["render_lod"] = mem.u32(instance + RENDER_LOD)
+            row["lod_table"] = mem.u32(instance + LOD_TABLE)
+            behavior = mem.u32(instance + BEHAVIOR)
+            row["behavior_vtable"] = mem.u32(behavior) if behavior else 0
+        except OSError as error:
+            row["error"] = str(error)
+        rows.append(row)
+        node = mem.u32(node)
+    return rows
 
 
 def is_kain(mem: Memory, kain: Kain) -> bool:

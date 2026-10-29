@@ -542,11 +542,33 @@ collision from render geometry is a simplification of the original's
 `collmodc` models (above); it must not bring helper volumes back.
 
 Open: the types in the right-hand column have no `helperobj` flag, yet the
-original shows no pyramid for them. `FUN_0070dfa0` (`SetHidden`, hidden
-byte `+0x139`) is the other path that stops the draw; its callers for
-`detector`, `planhelper*`, `conversation` and `cinematic` are not traced,
-and neither is a reader of the `show helpers` debug option (group 12,
-index 6 of `FUN_004a3c55`). The port still draws those types.
+original shows no pyramid for them. What is ruled out and what is known:
+
+- They are not hidden. A memory dump of the Wine oracle at the `sl01`
+  spawn (`wine_capture.py --dump-instances`, see `docs/ORACLE_WINE.md`,
+  matched to the region entities by position) shows the hidden byte
+  `+0x139` at 0 and flag `0x200` clear on all 16 `detector`, `planhelper*`,
+  `conversation` and `bo2cinematic` instances. They are the same entity
+  class as the drawn ones (vtable `0x87721c`).
+- The `show helpers` debug option (case 6 of `FUN_004a36f0`) sets debug
+  flag group 5, index `0x16` (`FUN_00690260`). Its readers draw debug
+  probes and lines (for example `FUN_00711f30`); it does not gate entity
+  models.
+- Entity flag `0x10`, set by `PlanHelperBehavior` (`FUN_00757dc0`), only
+  marks the entity for processing in one game mode (`FUN_00718490`).
+- The entity model is drawn by the `goe::AnimModelInst` at `+0x90`
+  (vtable `0x86eb98`) through `FUN_005c9b50` and `FUN_005dcbf0`. With a
+  render LOD set (`+0x9c`), it draws that LOD. Without one it falls back to
+  `FUN_005d8be0`, which draws only when the model instance (`+0x98`) has
+  render data. In the dump every drawn mesh entity (`animated`,
+  `animgate`, `leverf`, `psnt*`, `rat`, `umahvf`) has the LOD fields `+0x9c`
+  and `+0xa0` set, and every one of these helpers has both at 0, like the
+  `cl_*` particle emitters. Why their model instances carry no render data,
+  although the `model` entries hold `rmd` geometry, is not traced. Static
+  props that are drawn are absent from `sl01`, so the dump cannot separate
+  "static" from "helper".
+
+The port still draws those types, since no rule is proven yet.
 
 ## Animation
 

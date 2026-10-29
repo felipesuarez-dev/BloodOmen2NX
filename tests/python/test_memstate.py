@@ -300,9 +300,47 @@ class StateCsvTest(unittest.TestCase):
             self.assertEqual(value, expected.get(column, ""), column)
 
 
+class ReadInstancesTest(unittest.TestCase):
+    def test_reads_the_draw_fields_of_every_instance(self):
+        mem = build_world()
+        first = INSTANCES[0]
+        mem.f32s_at(first + memstate.POSITION, 1.0, 2.0, 3.0)
+        mem.u32s(first + memstate.FLAGS, 0x42E1)
+        mem.put(first + memstate.HIDDEN, b"\x01")
+        mem.u32s(first + memstate.RENDER_LOD, 0, 0)  # RENDER_LOD and LOD_TABLE are adjacent
+        mem.u32s(first + memstate.BEHAVIOR, 0)
+        rows = memstate.read_instances(mem)
+        self.assertEqual([row["instance"] for row in rows], list(INSTANCES))
+        self.assertEqual(rows[0]["position"], [1.0, 2.0, 3.0])
+        self.assertEqual(rows[0]["flags"], 0x42E1)
+        self.assertEqual(rows[0]["hidden"], 1)
+        self.assertEqual((rows[0]["render_lod"], rows[0]["lod_table"], rows[0]["behavior_vtable"]), (0, 0, 0))
+        # An instance whose fields are not mapped keeps its address and an error.
+        self.assertIn("error", rows[2])
+        self.assertEqual(rows[2]["instance"], INSTANCES[2])
+
+    def test_empty_before_the_list_exists(self):
+        mem = FakeMemory()
+        mem.u32s(memstate.OBJECT_LIST, 0)
+        self.assertEqual(memstate.read_instances(mem), [])
+
+
 class StateSamplerTest(QuietTestCase):
     def sampler(self, mem: FakeMemory) -> "wine_capture.StateSampler":
         return wine_capture.StateSampler(mem, lambda: "run")
+
+    def test_dumps_the_instances_once_in_the_dump_phase(self):
+        mem = build_world()
+        phase = ["spawn_idle"]
+        sampler = wine_capture.StateSampler(mem, lambda: phase[0], "dump")
+        sampler.sample(1, 1)
+        self.assertIsNone(sampler.instances)
+        phase[0] = "dump"
+        sampler.sample(2, 2)
+        self.assertEqual(len(sampler.instances), len(INSTANCES))
+        first = sampler.instances
+        sampler.sample(3, 3)
+        self.assertIs(sampler.instances, first)
 
     def test_waits_for_kain_then_samples(self):
         mem = build_world(kain=False)
