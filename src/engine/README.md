@@ -19,6 +19,7 @@ Status: initial modules.
 |---|---|---|
 | `big_archive` | `goefile` container reader | Validated on the installed tree |
 | `anim_reel` | `animreel` clip channels and root motion | Validated on the 134 Kain clips |
+| `anim_graph` | `animatio` graph clip nodes and reel table | Validated on the `kain` graph: the walk-back clip node speed (1.7) feeds the Kain tuning |
 | `cell_group` | `cellgrup` static level geometry and textures | Validated on `sanctuary` |
 | `dds` | DDS/BC texture decoder | DXT1, DXT3, DXT5, A8R8G8B8; top mip |
 | `string_table` | `strtable` records and the Spanish accent mapping | Validated on `code.big` `ui/UI` |

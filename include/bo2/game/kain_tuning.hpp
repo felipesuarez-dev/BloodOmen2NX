@@ -60,6 +60,10 @@ struct KainTuning {
     // magnitudes of the clip's forward (local x) root speed.
     float run_root_speed = 0.0f;        // kain/run: 200
     float walk_back_root_speed = 0.0f;  // kain/walk_backwards: 62.5
+    // Speed of the kain/walk_backwards clip node of the `kain` animatio graph
+    // (docs/FORMATS/animatio.md): 1.7. Nothing overrides it while walking back,
+    // unlike the run rate that FUN_00445ba0 writes every frame.
+    float walk_back_clip_speed = 0.0f;
 };
 
 // Values FUN_00451d00 derives from the jump block.
@@ -87,8 +91,10 @@ struct AirSteerDerived {
 KainTuning parse_kain_tuning(const std::vector<std::uint8_t>& bytes);
 
 // Reads the root speeds from the `kain/run` and `kain/walk_backwards`
-// animreel entries of `archive` (the same kain.big as the tunedata). Throws
-// common::ParseError when an entry is missing or has no root motion.
+// animreel entries of `archive` (the same kain.big as the tunedata) and the
+// walk-back clip node speed from its `kain` animatio graph. Throws
+// common::ParseError when an entry is missing, has no root motion, or the
+// graph does not have exactly one clip node on kain/walk_backwards.
 void apply_kain_clip_speeds(KainTuning& tuning, const bo2::engine::BigArchive& archive);
 
 // Throws std::invalid_argument when the gravities are not negative or the tap

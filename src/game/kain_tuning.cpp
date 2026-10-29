@@ -6,6 +6,7 @@
 #include <string>
 
 #include "bo2/common/reader.hpp"
+#include "bo2/engine/anim_graph.hpp"
 #include "bo2/engine/anim_reel.hpp"
 
 namespace bo2::game {
@@ -73,6 +74,28 @@ float clip_root_speed(const bo2::engine::BigArchive& archive, const char* name) 
     return std::fabs(bo2::engine::root_displacement(reel).x) / reel.duration;
 }
 
+// Speed of the only clip node of the `kain` animatio graph that plays `reel`.
+float clip_node_speed(const bo2::engine::BigArchive& archive, const char* reel) {
+    const bo2::engine::BigEntry* entry = archive.find("animatio", "kain");
+    if (entry == nullptr) {
+        throw common::ParseError("no animatio entry named kain");
+    }
+    const bo2::engine::AnimGraph graph = bo2::engine::parse_anim_graph(archive.extract(*entry));
+    const bo2::engine::AnimClipNode* found = nullptr;
+    for (const bo2::engine::AnimClipNode& clip : graph.clips) {
+        if (bo2::engine::anim_clip_reel_name(graph, clip, archive, *entry) == reel) {
+            if (found != nullptr) {
+                throw common::ParseError(std::string("more than one clip node plays ") + reel);
+            }
+            found = &clip;
+        }
+    }
+    if (found == nullptr) {
+        throw common::ParseError(std::string("no clip node plays ") + reel);
+    }
+    return found->speed;
+}
+
 }  // namespace
 
 KainTuning parse_kain_tuning(const std::vector<std::uint8_t>& bytes) {
@@ -105,6 +128,7 @@ KainTuning parse_kain_tuning(const std::vector<std::uint8_t>& bytes) {
 void apply_kain_clip_speeds(KainTuning& tuning, const bo2::engine::BigArchive& archive) {
     tuning.run_root_speed = clip_root_speed(archive, "kain/run");
     tuning.walk_back_root_speed = clip_root_speed(archive, "kain/walk_backwards");
+    tuning.walk_back_clip_speed = clip_node_speed(archive, "kain/walk_backwards");
 }
 
 // Port of FUN_00451d00. The original runs in x87 single precision; this runs

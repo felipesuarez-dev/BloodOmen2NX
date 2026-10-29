@@ -44,6 +44,8 @@ a number:
 - **FUN_**: the value is derived by that function's math.
 - **animreel**: the root motion of a clip in kain.big, decoded in
   [`FORMATS/animreel.md`](FORMATS/animreel.md).
+- **animatio**: the `kain` animation graph (states, sequences, clip nodes),
+  decoded in [`FORMATS/animatio.md`](FORMATS/animatio.md).
 - **measured, oracle**: read from the Wine capture
   `external/captures/wine_20261029_0052/state.csv`. These stand in for
   data that is not decoded yet.
@@ -63,7 +65,7 @@ a number:
 | W, after 0.18 s | 230 u/s = run root speed 200 * run clip rate 1.15 | FUN_00445ba0; oracle-confirmed: 230 measured. Periodic peaks in `external/captures/wine_20261029_0110/state.csv` (W down at mono_ms 41388469): world \|vel_xy\| reads 300 at about +191, +892 and +1572 ms, spaced by the run cycle 0.8 / 1.15 = 0.696 s. That slot 0 is the run clip is inferred from this match |
 | Shift+W | 200 u/s (= 200 * 1.0, unexplained), no start ramp. Unverified: Kain was probably blocked for part of that phase | measured, oracle (`docs/ORACLE_WINE.md`) |
 | Walk-back root speed | 62.5 u/s backward | `kain/walk_backwards` animreel, node 0 translation x: -2.0833 to -100 over 47 frames (1.5667 s) |
-| S | 106.25 u/s = walk-back root speed 62.5 * clip node speed 1.7, yaw unchanged | The 1.7 is the `speed` of the walk_backwards clip node in the `animatio` graph. The graph is not decoded, so the node is located by its fields (layout from the debug printer FUN_005e1c20, "animation=%s in=%f out=%f speed=%f" at +0, +4, +8, reel reference at +0xC, resolved by the fixup FUN_005e1b60): in the `kain` animatio entry the node at offset 0x5504 reads in 0.0, out 1.5667, speed 1.7, reel 3 (= index 1 << 1 \| 1), and 1.5667 is the walk_backwards duration (47 / 30). The neighbours read out 1.5333, speed 1.5, index 0 (walk) and out 0.8, speed 1.5, index 2 (run), matching the entry's dependency order walk, walk_backwards, run. The oracle confirms it: 62.5 * 1.7 = 106.25 u/s. The port keeps 1.7 as a constant |
+| S | 106.25 u/s = walk-back root speed 62.5 * clip node speed 1.7, yaw unchanged | The 1.7 is the `speed` of the only clip node on `kain/walk_backwards` in the `kain` animatio graph (docs/FORMATS/animatio.md; read by `apply_kain_clip_speeds`). Unlike the run, nothing overrides it: FUN_00723620 rewrites the rate of the run layers only. The oracle confirms 62.5 * 1.7 = 106.25 u/s |
 | Release | Stops at once | measured, oracle shows a short slide that is not modeled |
 
 ### Air
@@ -196,8 +198,8 @@ These have no original source. They are development aids or placeholders.
 
 | Item | State |
 |---|---|
-| Root motion | Decoded for the `kain/run` and `kain/walk_backwards` clips and used for the W and S speeds above. The `animatio` graph (clip nodes, blending) is not decoded, so the walk-back clip node speed 1.7 is a constant |
-| Partial stick | At stick `s < 1` FUN_00445ba0 blends slot 0 (weight `s`) with slot 1 (weight `1 - s`, rate `(s + 1) * A+0x40`). Slot 1's clip is not identified, so analog speed scaling is not ported |
+| Root motion | Decoded for the `kain/run` and `kain/walk_backwards` clips and used for the W and S speeds above; the walk-back clip node speed is read from the `kain` animatio graph. Clip blending, events and the landing clips are not ported |
+| Partial stick | At stick `s < 1` FUN_00445ba0 blends layer 0 (`cl_run`, weight `s`) with layer 1 (`cl_walk`, weight `1 - s`, rate `(s + 1) * A+0x40`) through the cross blend of `st_moveblend` (docs/FORMATS/animatio.md). Not ported yet |
 | Start phase, Shift+W | The 100 u/s start phase (0.18 s) and the 200 u/s of Shift+W are measured constants with no decompiled source yet |
 | Air control extras | The run flag (a running jump with an off-axis stick counts as forward), the 0.25 stick scale, the platform velocity at takeoff and the blocked forward and back flags are not ported. The sideways rise (69.0 in the oracle against 64.0) is unexplained |
 | Air step rate | The original applies the air damping (0.96 per call) and the 1 degree turn rule once per frame, and so does the port; the port steps once per rendered frame, so the air feel follows the frame rate until the fixed logic tick lands (BO2NX-37) |

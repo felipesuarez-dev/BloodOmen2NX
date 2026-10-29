@@ -52,7 +52,7 @@ constexpr float kTurnWalkBack = 3.1f;
 // Root speeds of kain/run and kain/walk_backwards (docs/FORMATS/animreel.md).
 constexpr float kRunRootSpeed = 200.0f;
 constexpr float kWalkBackRootSpeed = 62.5f;
-constexpr float kWalkBackClipSpeed = 1.7f;  // animatio clip node speed
+constexpr float kWalkBackClipSpeed = 1.7f;  // kain animatio graph, walk_backwards clip node
 
 bo2::game::KainTuning kain_tuning() {
     bo2::game::KainTuning tuning;
@@ -70,6 +70,7 @@ bo2::game::KainTuning kain_tuning() {
     tuning.run_clip_rate = 1.15f;
     tuning.run_root_speed = kRunRootSpeed;
     tuning.walk_back_root_speed = kWalkBackRootSpeed;
+    tuning.walk_back_clip_speed = kWalkBackClipSpeed;
     return tuning;
 }
 
@@ -224,6 +225,7 @@ void test_speeds_follow_the_tuning() {
     tuning.run_root_speed = 150.0f;
     tuning.run_clip_rate = 2.0f;
     tuning.walk_back_root_speed = 40.0f;
+    tuning.walk_back_clip_speed = 2.5f;
     const bo2::engine::LevelGeometry floor = make_floor();
     bo2::engine::CollisionWorld collision(floor);
     bo2::game::PlayerController player(collision, {0.0f, 0.0f, 0.0f}, tuning);
@@ -237,7 +239,7 @@ void test_speeds_follow_the_tuning() {
     bo2::game::PlayerController back(collision, {0.0f, 0.0f, 0.0f}, tuning);
     input.move_y = -1.0f;
     run(back, input, 60);
-    CHECK(std::fabs(back.state().position.x + 40.0f * kWalkBackClipSpeed) < 0.5f);
+    CHECK(std::fabs(back.state().position.x + 40.0f * 2.5f) < 0.5f);
 }
 
 void test_wall_blocks_the_walk() {
@@ -701,9 +703,11 @@ void test_invalid_tuning_is_rejected() {
     const float bad_speeds[] = {0.0f, -1.0f, std::numeric_limits<float>::infinity(),
                                 std::numeric_limits<float>::quiet_NaN()};
     for (const float bad : bad_speeds) {
-        for (int which = 0; which < 2; ++which) {
+        for (int which = 0; which < 3; ++which) {
             bo2::game::KainTuning tuning = kain_tuning();
-            (which == 0 ? tuning.run_root_speed : tuning.walk_back_root_speed) = bad;
+            float* const field[] = {&tuning.run_root_speed, &tuning.walk_back_root_speed,
+                                    &tuning.walk_back_clip_speed};
+            *field[which] = bad;
             threw = false;
             try {
                 bo2::game::PlayerController player(collision, {0.0f, 0.0f, 0.0f}, tuning);

@@ -56,9 +56,11 @@ int main() {
             bo2::game::apply_kain_clip_speeds(tuning, archive);
             CHECK(std::fabs(tuning.run_root_speed - 200.0f) < 1.0e-3f);
             CHECK(std::fabs(tuning.walk_back_root_speed - 62.5f) < 1.0e-3f);
-            // FUN_00445ba0 at full stick and the walk_backwards clip node (speed 1.7).
+            // The walk_backwards clip node of the kain animatio graph.
+            CHECK(std::fabs(tuning.walk_back_clip_speed - 1.7f) < 1.0e-6f);
+            // FUN_00445ba0 at full stick, and the walk-back clip at its node speed.
             CHECK(std::fabs(tuning.run_root_speed * tuning.run_clip_rate - 230.0f) < 1.0e-2f);
-            CHECK(std::fabs(tuning.walk_back_root_speed * 1.7f - 106.25f) < 1.0e-2f);
+            CHECK(std::fabs(tuning.walk_back_root_speed * tuning.walk_back_clip_speed - 106.25f) < 1.0e-2f);
             const bo2::game::JumpDerived derived = bo2::game::derive_jump(tuning);
             CHECK(std::fabs(derived.launch_speed - 565.685f) < 1.0e-2f);
             CHECK(std::fabs(derived.boost_accel - 1998.94f) < 1.0e-2f);

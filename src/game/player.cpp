@@ -13,13 +13,11 @@ namespace {
 // the clips (docs/FORMATS/animreel.md, docs/GAMEPLAY.md):
 //   W at full stick: kain/run root speed (200 u/s) * the run clip rate
 //     A+0x40 (1.15), FUN_00445ba0 slot 0. Confirmed by the Wine oracle.
-//   S: kain/walk_backwards root speed (62.5 u/s) * the clip node speed 1.7 of
-//     the `animatio` graph. The graph is not decoded; the node is located by
-//     its fields (in 0, out 1.5667 = the clip duration, speed 1.7, reel 3) at
-//     offset 0x5504 of the `kain` entry, and the oracle confirms 106.25.
-//     See docs/GAMEPLAY.md.
-// Partial stick (slot 1 of FUN_00445ba0 is an unidentified clip) is not ported.
-constexpr float kWalkBackClipSpeed = 1.7f;  // animatio clip node, "speed=%f" in FUN_005e1c20
+//   S: kain/walk_backwards root speed (62.5 u/s) * the speed of its clip node
+//     in the `kain` animatio graph (1.7, docs/FORMATS/animatio.md). Confirmed
+//     by the Wine oracle (106.25).
+// Partial stick (FUN_00445ba0 blends cl_run on layer 0 with cl_walk on
+// layer 1) is not ported.
 // The rest are measured in the Wine oracle
 // (external/captures/wine_20261029_0052/state.csv, world-frame |vel_xy|) and
 // not explained by a decompiled function yet.
@@ -140,11 +138,11 @@ PlayerController::PlayerController(bo2::engine::CollisionWorld& collision,
     }
     const auto positive = [](float value) { return std::isfinite(value) && value > 0.0f; };
     if (!positive(tuning.run_clip_rate) || !positive(tuning.run_root_speed) ||
-        !positive(tuning.walk_back_root_speed)) {
+        !positive(tuning.walk_back_root_speed) || !positive(tuning.walk_back_clip_speed)) {
         throw std::invalid_argument("kain tuning has an invalid run rate or root speed");
     }
     run_speed_ = tuning.run_root_speed * tuning.run_clip_rate;
-    back_speed_ = tuning.walk_back_root_speed * kWalkBackClipSpeed;
+    back_speed_ = tuning.walk_back_root_speed * tuning.walk_back_clip_speed;
     state_.position = start;
 }
 
