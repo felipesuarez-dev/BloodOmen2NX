@@ -68,6 +68,16 @@ class FunctionMapTest(unittest.TestCase):
             if row["status"] in {"wip", "translated", "verified"}:
                 self.assertIn(row["name"], sources, f"{row['name']} is not cited anywhere in the repo")
 
+    def test_library_rows_stay_inside_the_audited_range(self):
+        low, high = 0x7A30CC, 0x7F3C4F  # tools/gen/README.md, "Library code"
+        for row in self.rows:
+            inside = low <= int(row["address"], 16) <= high
+            if row["subsystem"] == "lib":
+                self.assertTrue(inside, row["address"])
+                self.assertEqual(row["status"], "external", row["address"])
+            if inside and row["name"].startswith("FUN_"):
+                self.assertEqual(row["subsystem"], "lib", row["address"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -21,7 +21,7 @@
 
 [status-badge]: https://img.shields.io/badge/phase-M2%20in%20progress-orange
 [overall-badge]: https://img.shields.io/badge/overall-8.1%25-yellow
-[fn-badge]: https://img.shields.io/badge/functions-7%20%2F%2018103-lightgrey
+[fn-badge]: https://img.shields.io/badge/functions-7%20%2F%2016917-lightgrey
 [levels-badge]: https://img.shields.io/badge/levels-0%20%2F%2011-lightgrey
 [cpp-badge]: https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white
 [cmake-badge]: https://img.shields.io/badge/build-CMake%20presets-064F8C?logo=cmake&logoColor=white
@@ -63,7 +63,7 @@ This is a *functional* port, not a byte-matching decompilation: it does not rebu
 
 | Component | Weight | Progress | Score |
 |---|---:|---:|---:|
-| Functions translated / in-scope | 60% | 7 / 18103 | 0.04% |
+| Functions translated / in-scope | 60% | 7 / 16917 | 0.04% |
 | Levels completable | 30% | 0 / 11 | 0.00% |
 | Platform features | 10% | 10 / 13 | 80.77% |
 
