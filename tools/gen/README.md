@@ -33,3 +33,8 @@ To re-check: list the string cross-references with `ListStrings.java`
 (`re/decomp/bo2_strings/strings.tsv`, local) and confirm that none inside the
 range is a game string. Library code outside that range (STL or MFC inlined
 into game objects, other CRT pieces) is still counted as `todo`.
+
+`seed_function_map.py` rebuilds the map from a Ghidra export and drops rows
+that the export does not have. Functions recovered by hand (for example
+`0x00442ae0`, `0x00443a50`, `0x0068aed0`) are such rows, so merge a re-seed by
+hand instead of replacing the file.

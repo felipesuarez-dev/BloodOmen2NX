@@ -39,9 +39,11 @@ guessing. Guessing a format or a branch is how a session gets lost.
 
 ## Definition of done
 
-A function is `verified` when:
+A function is `translated` when the port reproduces its whole contract, a unit
+test pins it and a local dump exists (the rule in `tools/gen/progress_data.py`).
+It is `verified` when, on top of that:
 
-- it has a unit test or an oracle comparison that proves the behaviour;
+- an oracle comparison proves the behaviour in the running game;
 - its inputs and outputs match the original at the tested boundary;
 - the function map and the affected docs are updated;
 - the build and the full test suite pass.

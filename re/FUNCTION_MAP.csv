@@ -138,14 +138,15 @@ address,name,subsystem,status,notes
 00407940,FUN_00407940,unknown,todo,ghidra
 004079c0,FUN_004079c0,unknown,todo,ghidra
 00407c00,FUN_00407c00,unknown,todo,ghidra
-00407c70,FUN_00407c70,unknown,todo,ghidra
-00407ec0,FUN_00407ec0,unknown,todo,ghidra
+00407c70,FUN_00407c70,camera,wip,src/game/camera.cpp: jump height lag; the 0.1 s hold is an approximation of the setup swap
+00407ec0,FUN_00407ec0,camera,wip,src/game/camera.cpp: yaw catch-up with the Hermite step; the x5 factor for input device type 2 is fitted not read
 00407fb0,FUN_00407fb0,unknown,todo,ghidra
 004082c0,FUN_004082c0,unknown,todo,ghidra
 004082e0,FUN_004082e0,unknown,todo,ghidra
 00408300,FUN_00408300,unknown,todo,ghidra
 00408480,FUN_00408480,unknown,todo,ghidra
 004088c0,FUN_004088c0,unknown,todo,ghidra
+00408b10,FUN_00408b10,camera,wip,src/game/camera.cpp: the follow pose only; range smoothing (FUN_004088c0) is not ported
 00409340,FUN_00409340,unknown,todo,ghidra
 00409360,FUN_00409360,unknown,todo,ghidra
 00409400,FUN_00409400,unknown,todo,ghidra
@@ -730,7 +731,7 @@ address,name,subsystem,status,notes
 004253d0,FUN_004253d0,unknown,todo,ghidra
 004254f0,FUN_004254f0,unknown,todo,ghidra
 00425520,FUN_00425520,unknown,todo,ghidra
-00425580,FUN_00425580,unknown,todo,ghidra
+00425580,FUN_00425580,player,wip,src/game/player.cpp: stick_class (thresholds and deadzone edge as the dump); pinned only through PlayerController tests
 00425670,FUN_00425670,unknown,todo,ghidra
 004256c0,FUN_004256c0,unknown,todo,ghidra
 00425820,FUN_00425820,unknown,todo,ghidra
@@ -1175,10 +1176,10 @@ address,name,subsystem,status,notes
 00441c20,FUN_00441c20,unknown,todo,ghidra
 00441d40,FUN_00441d40,unknown,todo,ghidra
 00441da0,FUN_00441da0,unknown,todo,ghidra
-00441dc0,FUN_00441dc0,unknown,todo,ghidra
-00441f20,FUN_00441f20,player,wip,src/game/player.cpp: fall speed cap only; lateral air control is not ported
-00442240,FUN_00442240,unknown,todo,ghidra
-004423b0,FUN_004423b0,unknown,todo,ghidra
+00441dc0,FUN_00441dc0,player,wip,src/game/player.cpp: the maxima it picks only
+00441f20,FUN_00441f20,player,wip,src/game/player.cpp: steer_in_air air turn and the 1 degree rule plus the fall speed cap; the behavior+0x33 early return and the blocked flags are not ported
+00442240,FUN_00442240,player,wip,src/game/player.cpp: approach_targets acceleration and damping per axis; pinned only through PlayerController tests
+004423b0,FUN_004423b0,player,wip,src/game/player.cpp: approach_targets target selection; pinned only through PlayerController tests
 00442650,FUN_00442650,unknown,todo,ghidra
 00442670,FUN_00442670,unknown,todo,ghidra
 00442730,FUN_00442730,unknown,todo,ghidra
@@ -1193,7 +1194,7 @@ address,name,subsystem,status,notes
 00443560,FUN_00443560,unknown,todo,ghidra
 00443620,FUN_00443620,unknown,todo,ghidra
 00443650,FUN_00443650,unknown,todo,ghidra
-004436e0,FUN_004436e0,unknown,todo,ghidra
+004436e0,FUN_004436e0,player,wip,src/game/player.cpp: install_air_kind launch per direction; the run flag the 0.25 stick scale and the platform velocity are not ported
 00443a50,FUN_00443a50,player,wip,src/game/player.cpp: hold boost window and the release rule only; timers states and animation are not ported
 00443c60,FUN_00443c60,unknown,todo,ghidra
 00443d20,FUN_00443d20,unknown,todo,ghidra
@@ -1400,8 +1401,8 @@ address,name,subsystem,status,notes
 00451830,FUN_00451830,unknown,todo,ghidra
 00451a80,FUN_00451a80,unknown,todo,ghidra
 00451c60,FUN_00451c60,unknown,todo,ghidra
-00451d00,FUN_00451d00,player,wip,src/game/kain_tuning.cpp: derive_jump main branch; the early-return branch and the travel times [0xc]-[0xe] are not ported
-00452030,FUN_00452030,unknown,todo,ghidra
+00451d00,FUN_00451d00,player,wip,src/game/kain_tuning.cpp: derive_jump main branch with the apex time and the min and max airtimes; the early-return branch and the travel times [0xd]-[0xe] are not ported
+00452030,FUN_00452030,player,wip,src/game/kain_tuning.cpp: derive_air_steer launch accel peak damping and lateral speed; the glide entry (block[11]) is not derived; tests/unit/test_kain_tuning.cpp
 004521c0,FUN_004521c0,unknown,todo,ghidra
 00452290,FUN_00452290,unknown,todo,ghidra
 004522a0,FUN_004522a0,unknown,todo,ghidra
@@ -2772,7 +2773,7 @@ address,name,subsystem,status,notes
 004aabe0,FUN_004aabe0,unknown,todo,ghidra
 004aac10,FUN_004aac10,unknown,todo,ghidra
 004aad30,FUN_004aad30,unknown,todo,ghidra
-004aae40,FUN_004aae40,unknown,todo,ghidra
+004aae40,FUN_004aae40,locale,wip,include/bo2/engine/big_archive.hpp: kDefaultLocale = spanish (the forced Select); the cfg Locale write is not ported
 004ab410,FUN_004ab410,unknown,todo,ghidra
 004ab420,FUN_004ab420,unknown,todo,ghidra
 004ab4f0,FUN_004ab4f0,unknown,todo,ghidra
@@ -8313,15 +8314,15 @@ address,name,subsystem,status,notes
 005e8590,FUN_005e8590,unknown,todo,ghidra
 005e8970,FUN_005e8970,unknown,todo,ghidra
 005e8ab0,FUN_005e8ab0,unknown,todo,ghidra
-005e8e00,FUN_005e8e00,unknown,todo,ghidra
-005e8ee0,FUN_005e8ee0,unknown,todo,ghidra
+005e8e00,FUN_005e8e00,animation,wip,src/engine/anim_graph.cpp: state actions are walked and not kept
+005e8ee0,FUN_005e8ee0,animation,wip,src/engine/anim_graph.cpp: reads up to the reel table; the later sections are not read (tools/bo2fmt/animatio.py reads them all)
 005e9170,FUN_005e9170,unknown,todo,ghidra
-005e9180,FUN_005e9180,unknown,todo,ghidra
+005e9180,FUN_005e9180,animation,wip,src/engine/anim_graph.cpp: the second reel table is walked and not resolved
 005e9460,FUN_005e9460,unknown,todo,ghidra
 005e95d0,FUN_005e95d0,unknown,todo,ghidra
 005e9820,FUN_005e9820,unknown,todo,ghidra
-005e9840,FUN_005e9840,unknown,todo,ghidra
-005e9ae0,FUN_005e9ae0,unknown,todo,ghidra
+005e9840,FUN_005e9840,animation,translated,src/engine/anim_graph.cpp: AnimReelRef (two u16 symbol indexes); tests/unit/test_anim_graph.cpp
+005e9ae0,FUN_005e9ae0,animation,wip,src/engine/anim_graph.cpp: version 0 graphs only; a version 1 alias list is rejected
 005e9d20,FUN_005e9d20,unknown,todo,ghidra
 005e9ee0,FUN_005e9ee0,unknown,todo,ghidra
 005e9f10,FUN_005e9f10,unknown,todo,ghidra
@@ -8356,27 +8357,27 @@ address,name,subsystem,status,notes
 005ea6b0,FUN_005ea6b0,unknown,todo,ghidra
 005ea700,FUN_005ea700,unknown,todo,ghidra
 005ea730,FUN_005ea730,unknown,todo,ghidra
-005ea770,FUN_005ea770,unknown,todo,ghidra
+005ea770,FUN_005ea770,animation,wip,src/engine/anim_graph.cpp: state transitions are walked and not kept
 005ea940,FUN_005ea940,unknown,todo,ghidra
 005eaa00,FUN_005eaa00,unknown,todo,ghidra
 005eaa20,FUN_005eaa20,unknown,todo,ghidra
-005eab00,FUN_005eab00,unknown,todo,ghidra
+005eab00,FUN_005eab00,animation,wip,src/engine/anim_graph.cpp: states are walked to reach the clip nodes and not kept
 005eacc0,FUN_005eacc0,unknown,todo,ghidra
 005eadf0,FUN_005eadf0,unknown,todo,ghidra
-005eaea0,FUN_005eaea0,unknown,todo,ghidra
+005eaea0,FUN_005eaea0,animation,wip,src/engine/anim_graph.cpp: bindings are walked and not kept
 005eaf80,FUN_005eaf80,unknown,todo,ghidra
 005eafc0,FUN_005eafc0,unknown,todo,ghidra
-005eb000,FUN_005eb000,unknown,todo,ghidra
+005eb000,FUN_005eb000,animation,wip,src/engine/anim_graph.cpp: sequences are walked and not kept
 005eb100,FUN_005eb100,unknown,todo,ghidra
 005eb140,FUN_005eb140,unknown,todo,ghidra
-005eb180,FUN_005eb180,unknown,todo,ghidra
+005eb180,FUN_005eb180,animation,wip,src/engine/anim_graph.cpp: the chain is walked and not kept
 005eb260,FUN_005eb260,unknown,todo,ghidra
 005eb2a0,FUN_005eb2a0,unknown,todo,ghidra
-005eb2e0,FUN_005eb2e0,unknown,todo,ghidra
+005eb2e0,FUN_005eb2e0,animation,wip,src/engine/anim_graph.cpp: clip node in out speed and reel tag are kept; name events offset and blend tags are not
 005eb470,FUN_005eb470,unknown,todo,ghidra
 005eb4b0,FUN_005eb4b0,unknown,todo,ghidra
 005eb4f0,FUN_005eb4f0,unknown,todo,ghidra
-005eb5d0,FUN_005eb5d0,unknown,todo,ghidra
+005eb5d0,FUN_005eb5d0,animation,translated,src/engine/anim_graph.cpp: the reel table; tests/unit/test_anim_graph.cpp
 005eb6e0,FUN_005eb6e0,unknown,todo,ghidra
 005eb700,FUN_005eb700,unknown,todo,ghidra
 005eb880,FUN_005eb880,unknown,todo,ghidra
@@ -11130,7 +11131,7 @@ address,name,subsystem,status,notes
 0068aed0,FUN_0068aed0,animation,wip,src/engine/anim_reel.cpp: LSC evaluated at whole frames only; fractional time is not ported
 0068b180,FUN_0068b180,unknown,todo,ghidra
 0068b1f0,FUN_0068b1f0,animation,translated,src/engine/anim_reel.cpp: LSC channel layout and size align4(K*2+2)+12; the runtime object is replaced by decoded samples; tests/unit/test_anim_reel.cpp
-0068b270,FUN_0068b270,level,translated,src/engine/cell_group.cpp: read_bsp_node; tests/unit/test_engine.cpp covers a tree an invalid node type and a leaf count mismatch; the leaf count matches the header in the 162 real groups (docs/FORMATS/models.md)
+0068b270,FUN_0068b270,level,wip,src/engine/cell_group.cpp: read_bsp_node; tests/unit/test_engine.cpp covers a tree and an invalid node type but not the depth limit or a truncated chunk
 0068b400,FUN_0068b400,unknown,todo,ghidra
 0068b430,FUN_0068b430,unknown,todo,ghidra
 0068b470,FUN_0068b470,unknown,todo,ghidra
@@ -11329,7 +11330,7 @@ address,name,subsystem,status,notes
 00694890,FUN_00694890,unknown,todo,ghidra
 00694900,FUN_00694900,unknown,todo,ghidra
 00694940,FUN_00694940,unknown,todo,ghidra
-00694970,FUN_00694970,unknown,todo,ghidra
+00694970,FUN_00694970,player,wip,src/game/player.cpp: counter-clockwise rotation of the air velocity; pinned only through PlayerController tests
 006949a0,FUN_006949a0,unknown,todo,ghidra
 00694b40,FUN_00694b40,unknown,todo,ghidra
 00694ca0,FUN_00694ca0,unknown,todo,ghidra
@@ -12496,7 +12497,7 @@ address,name,subsystem,status,notes
 006c8bf0,FUN_006c8bf0,unknown,todo,ghidra
 006c8c70,FUN_006c8c70,unknown,todo,ghidra
 006c8ce0,FUN_006c8ce0,unknown,todo,ghidra
-006c8fb0,FUN_006c8fb0,unknown,todo,ghidra
+006c8fb0,FUN_006c8fb0,locale,translated,src/engine/big_archive.cpp: BigArchive::find(type name locale) accepts language 0 the default name or the locale and prefers the locale entry (the collision order follows the oracle); tests/unit/test_locale.cpp
 006c9270,FUN_006c9270,unknown,todo,ghidra
 006c9400,FUN_006c9400,unknown,todo,ghidra
 006c9450,FUN_006c9450,unknown,todo,ghidra
@@ -13531,6 +13532,7 @@ address,name,subsystem,status,notes
 0070cff0,FUN_0070cff0,unknown,todo,ghidra
 0070d050,FUN_0070d050,unknown,todo,ghidra
 0070d0c0,FUN_0070d0c0,unknown,todo,ghidra
+0070d0d5,FUN_0070d0d5,entity,wip,src/main.cpp: only template +0x66 (helperobj) to entity flag 0x200; the rest of the constructor is not ported
 0070d890,FUN_0070d890,unknown,todo,ghidra
 0070d910,FUN_0070d910,unknown,todo,ghidra
 0070d930,FUN_0070d930,unknown,todo,ghidra
@@ -13556,7 +13558,7 @@ address,name,subsystem,status,notes
 0070f000,FUN_0070f000,unknown,todo,ghidra
 0070f030,FUN_0070f030,unknown,todo,ghidra
 0070f040,FUN_0070f040,unknown,todo,ghidra
-0070f100,FUN_0070f100,unknown,todo,ghidra
+0070f100,FUN_0070f100,entity,wip,src/main.cpp: only the early return for a helper object (flag 0x200); +0x139 hidden and the draw itself are not ported
 0070f5d0,FUN_0070f5d0,unknown,todo,ghidra
 0070f600,FUN_0070f600,unknown,todo,ghidra
 0070f613,FUN_0070f613,unknown,todo,ghidra
@@ -13655,11 +13657,11 @@ address,name,subsystem,status,notes
 00712f70,FUN_00712f70,unknown,todo,ghidra
 00713060,FUN_00713060,unknown,todo,ghidra
 00713240,FUN_00713240,unknown,todo,ghidra
-00713360,FUN_00713360,unknown,todo,ghidra
-007133a0,FUN_007133a0,unknown,todo,ghidra
-00713450,FUN_00713450,unknown,todo,ghidra
-00713810,FUN_00713810,unknown,todo,ghidra
-00713870,FUN_00713870,unknown,todo,ghidra
+00713360,FUN_00713360,camera,wip,src/game/camera.cpp: Hermite set-up; pinned only through FollowCamera tests
+007133a0,FUN_007133a0,camera,wip,src/game/camera.cpp: Hermite set-up with velocities; pinned only through FollowCamera tests
+00713450,FUN_00713450,camera,wip,src/game/camera.cpp: hermite_duration quadratic roots; pinned only through FollowCamera tests
+00713810,FUN_00713810,camera,wip,src/game/camera.cpp: Hermite position evaluator; pinned only through FollowCamera tests
+00713870,FUN_00713870,camera,wip,src/game/camera.cpp: Hermite velocity evaluator; pinned only through FollowCamera tests
 00713b80,FUN_00713b80,unknown,todo,ghidra
 00713bd0,FUN_00713bd0,unknown,todo,ghidra
 00713ca0,FUN_00713ca0,unknown,todo,ghidra
@@ -16129,6 +16131,7 @@ address,name,subsystem,status,notes
 00785c00,FUN_00785c00,unknown,todo,ghidra
 00785c20,FUN_00785c20,unknown,todo,ghidra
 00785c70,FUN_00785c70,unknown,todo,ghidra
+00785c8d,FUN_00785c8d,entity,wip,src/engine/entity_template.cpp: flag helperobj include and model only; the other ETP keywords are ignored
 007868d0,FUN_007868d0,unknown,todo,ghidra
 00786a30,FUN_00786a30,unknown,todo,ghidra
 00786b40,FUN_00786b40,unknown,todo,ghidra

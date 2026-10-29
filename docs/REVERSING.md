@@ -79,7 +79,7 @@ with `MAXMEM=3G`. Inventory exported with
 
 | Class | Count | Treatment |
 |---|---:|---|
-| Unnamed game candidates (`FUN_*`) | 18,097 | `todo` in the function map |
+| Unnamed game candidates (`FUN_*`) | 18,097 at export | `todo` in the function map at export; the current counts per status (translated, wip, todo, and the library range moved to `external`) are in the README progress block and `tools/gen/README.md` |
 | Named CRT/Win32/STL functions | 17,416 | `external`, excluded from progress |
 | Thunks (`thunk_*`) | 170 | excluded |
 | Exception artifacts (`Catch@*`) | 84 | excluded |

@@ -24,7 +24,7 @@ Lee esto en español: [README.md](README.md)
 <!-- badges:start -->
 [status-badge]: https://img.shields.io/badge/phase-M3%20in%20progress-orange
 [overall-badge]: https://img.shields.io/badge/overall-8.1%25-yellow
-[fn-badge]: https://img.shields.io/badge/functions-7%20%2F%2016917-lightgrey
+[fn-badge]: https://img.shields.io/badge/functions-9%20%2F%2016920-lightgrey
 [levels-badge]: https://img.shields.io/badge/levels-0%20%2F%2011-lightgrey
 <!-- badges:end -->
 [cpp-badge]: https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white
@@ -57,7 +57,7 @@ CI enforces the first rule: [`scripts/check_no_assets.sh`](scripts/check_no_asse
 
 ## Problem
 
-The 2002 PC release is a 32-bit Windows game built on the engine lineage of *Mad Dash Racing*. It has no source code, no public symbols and no supported way to run on modern systems. The console releases are tied to PS2, GameCube and Xbox hardware; the PC build is the only practical decompilation target.
+The 2002 PC release is a 32-bit Windows game built on the same engine family as *Mad Dash Racing*. It has no source code, no public symbols and no official way to run on modern systems. The console releases are tied to PS2, GameCube and Xbox hardware; the PC build is the only practical decompilation target.
 
 ## Solution
 
@@ -68,18 +68,18 @@ The original is used as a reference, not shipped.
 
 ## Status
 
-**Where the project stands: M0, M1 and M2 are done and M3 is in progress.** The data pipeline, the level renderer and the oracle work. Kain walks and jumps with the original movement tuning, but combat, enemies and scripting are not translated, so **no chapter can be completed**. The numbers below are generated and measure what the port translates, not how playable it feels (see [what the percentages measure](#what-the-percentages-measure)).
+**Where the project stands: M0, M1 and M2 are done and M3 is in progress.** The data pipeline, the level renderer and the oracle work. Kain walks, runs and jumps (with air control) with the original movement tuning and the port picks Spanish like the original, but combat, enemies and scripting are not translated, so **no chapter can be completed**. The numbers below are generated and measure what the port translates, not how playable it feels (see [what the percentages measure](#what-the-percentages-measure)).
 
 <!-- progress:start -->
 **Overall progress: 8.1%**
 
 | Component | Weight | Progress | Score |
 |---|---:|---:|---:|
-| Functions translated / in scope | 60% | 7 / 16917 | 0.04% |
+| Functions translated / in scope | 60% | 9 / 16,920 | 0.05% |
 | Levels completable (campaign chapters) | 30% | 0 / 11 | 0.00% |
 | Platform features | 10% | 10 / 13 + 1 partial | 80.77% |
 
-Function map: 35519 rows: 7 translated, 19 in progress, 16891 to do, 18602 external (not game code).
+Function map: 35,522 rows: 9 translated, 49 in progress, 16,862 to do, 18,602 external (not game code).
 
 The chapter list is in [`docs/LEVELS.md`](docs/LEVELS.md). Chapter flags and platform features are in [`tools/gen/progress_data.py`](tools/gen/progress_data.py).
 <!-- progress:end -->
@@ -103,9 +103,9 @@ Source of truth: [`STATE.md`](STATE.md) and [`ROADMAP.md`](ROADMAP.md).
 | Area | State |
 |---|---|
 | Asset pipeline | The installer is decoded and materialises a 227-file tree; the `.big` parser reads all 179 containers (246,332 entries) and `pc.rkv` yields 2,666 Ogg Vorbis streams; DDS textures and `game.erg` are read |
-| Level rendering | A level renders headless (software rasterizer, PPM output) and in an SDL2 + OpenGL window with textures, cell grid, visibility BSP, placed instances, lights and markers parsed. Lighting is incomplete |
-| Original as oracle | The pristine `bo2.exe` runs under Wine on a private Xvfb with scripted input; frames, video and Kain's state and the follow camera are read from process memory at 50 Hz. A native Windows harness is the cross-check |
-| Kain in `sl01` | `bo2nx --play` walks and jumps Kain in the `sl01` level with the original movement tuning read from the `kain` data (tank turning, two-phase jump gravity, hold boost) and the run and walk-back speeds taken from the animation root motion |
+| Level rendering | A level renders headless (software rasterizer, PPM output) and in an SDL2 + OpenGL window with textures, cell grid, visibility BSP, placed instances, lights and markers parsed. Helper objects (`flag helperobj` in their `.etp` template) are hidden like the original. Lighting is incomplete |
+| Original as oracle | The pristine `bo2.exe` runs under Wine on a private Xvfb with scripted input. Frames and video are grabbed from the Xvfb (x11grab at 30 fps); Kain's state, his animation and the follow camera are read from process memory every 20 ms. A native Windows harness is the cross-check |
+| Kain in `sl01` | `bo2nx --play` walks, runs and jumps Kain in the `sl01` level with the original movement tuning read from the `kain` data (tank turning, two-phase jump gravity, hold boost, air control) and the run and walk-back speeds taken from the animation root motion and the animation graph. The camera follows the turn with a limited acceleration and lags in height on a jump, like the original |
 | Engine foundations | Fixed-step loop, entity world with frustum culling, cell streaming, collision, third-person camera, checkpoint saves and a health and mana bar |
 | Audio and input | Ogg decoding, mixer and SDL output; keyboard, controller and Switch button maps |
 
@@ -114,9 +114,9 @@ Source of truth: [`STATE.md`](STATE.md) and [`ROADMAP.md`](ROADMAP.md).
 | Area | State |
 |---|---|
 | Chapters | None is completable; there is no level flow, no menus and no front end |
-| Gameplay systems | Combat, enemies and AI, dark gifts, weapons and inventory, scripting and triggers are not translated. Air control, glide, analog speed and camera lag are pending |
-| Animation and collision | The animation graph (`animatio`) and skinning are not decoded; the compressed collision (`collmodc`) is only extracted |
-| Lighting and materials | Shared-model light maps and the material and light-map combination are open; `sl01` renders with wrong materials in some modes |
+| Gameplay systems | Combat, enemies and AI, dark gifts, weapons and inventory, scripting and triggers are not translated. Glide, ledge falls, analog speed and the run start phase are pending |
+| Animation and collision | The animation graph (`animatio`) is decoded, but skeleton evaluation, skinning and clip blending are not ported; the compressed collision (`collmodc`) is only extracted |
+| Lighting and materials | Shared-model light maps and the material and light-map combination are open; at the `sl01` spawn the frame still differs from the oracle (MAE 35/255): fog, ambient and dynamic lights are missing |
 | Audio events and video | The `sound` and `strmfile` event table is not wired to gameplay; there is no Bink playback |
 | Switch | The libnx and deko3d backend has not started |
 
@@ -124,7 +124,7 @@ Source of truth: [`STATE.md`](STATE.md) and [`ROADMAP.md`](ROADMAP.md).
 
 | Component | Weight | What counts |
 |---|---:|---|
-| Functions translated / in scope | 60% | A function counts only when the port reproduces its whole contract and a unit test pins it; code that cites an address does not count. Compiler unwind funclets and statically linked libraries (CRT, D3DX8, zlib, libpng) are excluded from the denominator. The rule is in [`tools/gen/progress_data.py`](tools/gen/progress_data.py) |
+| Functions translated / in scope | 60% | A function counts only when the port reproduces its whole contract and a unit test pins it; code that cites an address does not count. Compiler stack-unwind funclets and the statically linked libraries identified so far (CRT, D3DX8, zlib, libpng) are excluded from the denominator. The rule is in [`tools/gen/progress_data.py`](tools/gen/progress_data.py) |
 | Levels completable | 30% | One level is one of the 11 campaign chapters, recovered from the original in [`docs/LEVELS.md`](docs/LEVELS.md). It counts when the port plays it from its entry region to the next hand-off |
 | Platform features | 10% | Each feature counts fully when done and half when partial |
 
@@ -177,7 +177,7 @@ cmake --preset linux-debug
 cmake --build --preset linux-debug
 ctest --preset linux-debug --output-on-failure
 
-# Everything, including the asset-leak check
+# Everything, including the check that no game files are tracked
 ./scripts/ci.sh
 ```
 
@@ -191,7 +191,7 @@ There is no Switch preset yet: the Switch backend has not started. There is no W
 
 ## Game data
 
-You must supply your own copy. The project targets the **PC 1.02 Spanish GoldMaster**. Hashes of the reference media and the provenance of every external artifact are in [`docs/PROVENANCE.md`](docs/PROVENANCE.md); nothing is downloaded by the build.
+You must supply your own copy. The project targets the **PC 1.02 Spanish GoldMaster** (the version comes from `data/version.raw`; see [`docs/PROVENANCE.md`](docs/PROVENANCE.md)). Hashes of the reference media and the provenance of every external artifact are in [`docs/PROVENANCE.md`](docs/PROVENANCE.md); nothing is downloaded by the build.
 
 1. Materialize an installed copy of the game (`tools/bo2fmt/installer.py` rebuilds the tree from the installer media) so you have a directory with `data/game.erg` and `media/gogames/bo2/`.
 2. Put it under `external/installed/` (gitignored).
@@ -202,8 +202,8 @@ The Switch build will read the same layout from the SD card; the exact path is d
 ### Game language
 
 - **The original is Spanish only.** `bo2.exe` is a Spanish Gold Master build that forces the locale `spanish` at boot (`FUN_004aae40`, called from `Game::Init`, `FUN_00515920`, before `code.big` loads). The language-choice screen (`LanguageSetupUI`) exists in the code, but this build never shows it.
-- **The data ships six variants** of each localized entry. The `.big` `language` field indexes the container's name table: 0 default (an English copy), 1 English, 2 French, 3 Italian, 4 German, 5 Spanish. The localized types are `strtable` (15 per language), `lipsync` (about 11,900 per language) and 44 load-screen textures. Voices are different: `pc.rkv` holds a single Spanish section.
-- **The port selects Spanish the same way.** This is work in progress.
+- **The data ships up to six variants** of each localized entry. The `.big` `language` field indexes the container's name table: 0 default (an English copy), 1 English, 2 French, 3 Italian, 4 German, 5 Spanish. The localized types are `strtable` (15 per language), `lipsync` (about 11,900 per language) and 44 load-screen textures (French, Italian, German and Spanish only, plus the default copy). Voices are different: `pc.rkv` holds a single Spanish section.
+- **The port selects Spanish the same way:** a localized lookup takes the `spanish` entry and falls back to the default copy (`FUN_006c8fb0`). The string tables are read; the menu and HUD do not use them yet.
 
 ## Running
 
@@ -217,7 +217,7 @@ LEVELS=external/installed/media/gogames/bo2/resources/levels
 ./build/linux-debug/bo2nx --play --big "$LEVELS/slums/sl01.big"   # walk Kain
 ```
 
-`--play` reads the `kain` tunedata from `<levels>/kain/kain.big`. All options: [`docs/RUNNING.md`](docs/RUNNING.md).
+`--play` reads the `kain` tunedata from `<level dir>/../kain/kain.big` (for `sl01`, `resources/levels/kain/kain.big`). All options: [`docs/RUNNING.md`](docs/RUNNING.md).
 
 The original game runs locally as the oracle under Wine and Xvfb: see [`docs/ORACLE_WINE.md`](docs/ORACLE_WINE.md). The native Windows harness is the cross-check: [`docs/ORACLE_WINDOWS_NATIVE.md`](docs/ORACLE_WINDOWS_NATIVE.md).
 
@@ -231,9 +231,10 @@ Keyboard bindings are development defaults until the original controls are recov
 | Turn in place | `A` / `D` or arrows | Left stick or D-pad |
 | Run | `Shift` or `R` | `L` or `R` |
 | Jump (hold for the higher jump) | `Space` | `A` |
-| Attack (foundation only) | `F` | `B` |
-| Use | `E` | `X` |
-| Menu | `Enter` | `Y` or `Minus` |
+| Attack (test marker; combat is not ported) | `F` | `B` |
+| Use (bound, not used yet) | `E` | `X` |
+| Menu (bound, not used yet) | `Enter` | `Y` or `Minus` |
+| Save / load the checkpoint | `F5` / `F9` | — |
 | Pause / quit | `Escape` | `Plus` |
 | Look / orbit camera (debug aid) | Right mouse drag | Right stick, `ZL` / `ZR` |
 
@@ -249,7 +250,7 @@ flowchart LR
     F -->|mismatch| B
 ```
 
-1. **Reverse**: Ghidra over `bo2.exe`; every behaviour claim needs a `FUN_` address and a local decompile under `re/decomp/` (gitignored).
+1. **Reverse engineer**: Ghidra over `bo2.exe`; every behaviour claim needs a `FUN_` address and a local decompile under `re/decomp/` (gitignored).
 2. **Reference**: formats and behaviours are first validated with a stdlib Python implementation (`tools/bo2fmt/`).
 3. **Port**: translate faithfully; record each function in [`re/FUNCTION_MAP.csv`](re/FUNCTION_MAP.csv).
 4. **Verify**: unit tests on synthetic fixtures, then the oracle: the original runs natively on Windows or under Wine, driven by scripted input, and its screenshots, state and saves are compared with the port.

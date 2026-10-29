@@ -105,6 +105,22 @@ def pct(score: float) -> str:
     return f"{score * 100:.2f}%"
 
 
+def number(lang: str, value: int) -> str:
+    """A count for prose and tables: English groups thousands with commas;
+    Spanish groups numbers of five digits or more with a space, so a group is
+    never read as decimals."""
+    if lang == "en":
+        return f"{value:,}"
+    text = str(value)
+    if len(text) < 5:
+        return text
+    groups = []
+    while text:
+        groups.insert(0, text[-3:])
+        text = text[:-3]
+    return " ".join(groups)
+
+
 def shield(label: str, message: str, color: str) -> str:
     """A shields.io static badge URL: '-' and '_' are doubled, the rest percent-encoded."""
 
@@ -167,16 +183,17 @@ def build_progress(lang: str, m: dict) -> str:
             "",
             f"| {columns[0]} | {columns[1]} | {columns[2]} | {columns[3]} |",
             "|---|---:|---:|---:|",
-            f"| {t['functions']} | 60% | {m['done']} / {m['in_scope']} | {pct(m['fn_score'])} |",
+            f"| {t['functions']} | 60% | {number(lang, m['done'])} / {number(lang, m['in_scope'])} "
+            f"| {pct(m['fn_score'])} |",
             f"| {t['levels']} | 30% | {level_text} | {pct(m['level_score'])} |",
             f"| {t['platform']} | 10% | {feature_text} | {pct(m['feature_score'])} |",
             "",
             t["map"].format(
-                rows=sum(counts.values()),
-                translated=counts["translated"] + counts["verified"],
-                wip=counts["wip"],
-                todo=counts["todo"],
-                external=counts["external"],
+                rows=number(lang, sum(counts.values())),
+                translated=number(lang, counts["translated"] + counts["verified"]),
+                wip=number(lang, counts["wip"]),
+                todo=number(lang, counts["todo"]),
+                external=number(lang, counts["external"]),
             ),
             "",
             t["defs"],
@@ -187,13 +204,18 @@ def build_progress(lang: str, m: dict) -> str:
 
 def build_badges(lang: str, m: dict) -> str:
     t = TEXT[lang]
+    # Plain strings first: nested same-quote f-strings need Python 3.12.
+    phase = m["phase"] + " " + t["phase_state"]
+    overall = "{:.1f}%".format(m["overall"] * 100)
+    functions = "{} / {}".format(m["done"], m["in_scope"])
+    levels = "{} / {}".format(m["done_levels"], m["total_levels"])
     return "\n".join(
         [
             BADGES[0],
-            f"[status-badge]: {shield(t['phase'], m['phase'] + ' ' + t['phase_state'], 'orange')}",
-            f"[overall-badge]: {shield(t['badge_overall'], f'{m['overall'] * 100:.1f}%', 'yellow')}",
-            f"[fn-badge]: {shield(t['badge_functions'], f'{m['done']} / {m['in_scope']}', 'lightgrey')}",
-            f"[levels-badge]: {shield(t['badge_levels'], f'{m['done_levels']} / {m['total_levels']}', 'lightgrey')}",
+            "[status-badge]: " + shield(t["phase"], phase, "orange"),
+            "[overall-badge]: " + shield(t["badge_overall"], overall, "yellow"),
+            "[fn-badge]: " + shield(t["badge_functions"], functions, "lightgrey"),
+            "[levels-badge]: " + shield(t["badge_levels"], levels, "lightgrey"),
             BADGES[1],
         ]
     )

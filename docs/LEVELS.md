@@ -76,8 +76,13 @@ numbers):
 
 `canyons/cydv` names three regions and `device/dv10` names `cydv` and `dv01`;
 which of those links the story uses is not established. The chapter order is
-the table order. The links above are consistent with it at every step and none
-contradicts it.
+the table order, and the links above follow it at every step. The "Hands off
+to" column is tentative where a chapter has a boss arena or a hub: several
+Upper City regions (`uc03a`, `uc03a2`, `uc03b`, `uc04b`, `uc06a`) and
+`cvarena` also name `keep/sk01` while `uc07` and `uc07b` do not, and the
+Smugglers Den link to `lc01` comes from `jvarena01`, which is not a table
+entry (the table lists `jvarena`). The byte search shows adjacency, not which
+script triggers the load.
 
 ## Files that are not chapters
 
@@ -95,8 +100,8 @@ The installed tree has 177 level `.big` files. 133 are table entries; the other
 | Cinematics | `after_iq`, `kainmeetsvorador`, `kaintakesumahtosanctuary` |
 | Other | `hubworld`, `sanctuary`, `device/devicesanctuary`, `device/dv10`, `hyldencity/hc_04f`, `eternal prison/ep_fakeisle`, `bossrooms/jumpvampirearena/jvarena01` |
 
-`sanctuary` is the level the host viewer renders (`bo2nx --level`); it is not in
-the table and is not counted as a chapter.
+`sanctuary` was the first level the host viewer rendered (`bo2nx --level`
+takes any `.big`); it is not in the table and is not counted as a chapter.
 
 ## What counts for the progress bar
 

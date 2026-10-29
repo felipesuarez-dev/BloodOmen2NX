@@ -103,6 +103,24 @@ class ReadmeTest(unittest.TestCase):
         for form in ("podés", "tenés", "ejecutá", "hacé", "usá", "mirá", "dale", "acá", "vos"):
             self.assertIsNone(re.search(rf"\b{form}\b", spanish.lower()), form)
 
+    def test_both_readmes_have_the_same_structure(self):
+        spanish = (ROOT / "README.md").read_text(encoding="utf-8").splitlines()
+        english = (ROOT / "README.en.md").read_text(encoding="utf-8").splitlines()
+        for prefix in ("#", "|", "```"):
+            self.assertEqual(
+                sum(line.startswith(prefix) for line in spanish),
+                sum(line.startswith(prefix) for line in english),
+                prefix,
+            )
+
+    def test_counts_are_grouped_per_language(self):
+        self.assertEqual(progress.number("en", 16920), "16,920")
+        self.assertEqual(progress.number("en", 9), "9")
+        self.assertEqual(progress.number("es", 16920), "16 920")
+        self.assertEqual(progress.number("es", 35522), "35 522")
+        self.assertEqual(progress.number("es", 2666), "2666")
+        self.assertEqual(progress.number("es", 246332), "246 332")
+
     def test_badge_urls_escape_dashes_and_spaces(self):
         self.assertEqual(
             progress.shield("a-b", "7 / 9", "red"), "https://img.shields.io/badge/a--b-7%20%2F%209-red"
