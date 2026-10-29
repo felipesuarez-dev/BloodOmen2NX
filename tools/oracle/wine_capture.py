@@ -179,7 +179,7 @@ def state_row(frame: int, epoch_ms: int, mono_ms: int, phase: str, state: dict,
     row = {"frame": frame, "epoch_ms": epoch_ms, "mono_ms": mono_ms, "phase": phase,
            "health": number(state["health"]), "health_max": number(state["health_max"]),
            "lore": number(state["lore"]), "on_platform": state["on_platform"],
-           "anim": state["anim"],
+           "anim": state.get("anim", ""),
            "player_yaw_deg": number(math.degrees(state["yaw"]))}
     for axis, value in zip("xyz", state["pos"]):
         row[f"player_{axis}"] = number(value)
