@@ -184,10 +184,16 @@ void PlayerController::step(const PlayerInput& input, double seconds) {
     state_.pitch = std::clamp(state_.pitch, -1.2f, 1.2f);
 
     // Ground speed. A jump has its own horizontal velocity (steer_in_air); a
-    // plain fall keeps the ground speed of the held input.
+    // plain fall keeps the ground speed of the held input. A jump leaves
+    // forward_time_ as it was, so a running jump lands at the run speed while
+    // a standing one goes through the start phase: the `kain` animatio graph
+    // enters st_run without st_rdy2run when the previous state is a run
+    // landing, and Wine capture wine_air_1 (jump_w_hold) reads 230 u/s right
+    // after the landing clip. Inferred from those two; the landing clip's own
+    // root motion is not modeled.
     float speed = 0.0f;
     if (air_jump_) {
-        forward_time_ = 0.0f;
+        // Horizontal motion comes from steer_in_air.
     } else if (forward_held) {
         if (input.run) {
             speed = kShiftSpeed;

@@ -576,10 +576,29 @@ void test_landing_ends_the_jump_velocity() {
     }
     CHECK(player.state().grounded);
     CHECK(player.air_velocity().x == 0.0f && player.air_velocity().y == 0.0f);
-    // The ground speed is back: the 100 u/s start phase of W.
+    // A standing jump lands into the 100 u/s start phase of W.
     const float before = player.state().position.x;
     player.step(input, kTick);
     CHECK(std::fabs(player.state().position.x - before - 100.0f / 60.0f) < 1.0e-3f);
+}
+
+void test_running_jump_lands_at_run_speed() {
+    const bo2::engine::LevelGeometry floor = make_floor();
+    bo2::engine::CollisionWorld collision(floor);
+    bo2::game::PlayerController player(collision, {0.0f, 0.0f, 0.0f}, kain_tuning());
+    bo2::game::PlayerInput input;
+    input.move_y = 1.0f;
+    run(player, input, 30);  // past the 0.18 s start phase
+    input.jump = true;
+    for (int tick = 0; tick < 300 && !(tick > 2 && player.state().grounded); ++tick) {
+        player.step(input, kTick);
+        input.jump = false;
+    }
+    CHECK(player.state().grounded);
+    // No start phase after a run landing: straight back to 200 * 1.15 u/s.
+    const float before = player.state().position.x;
+    player.step(input, kTick);
+    CHECK(std::fabs(player.state().position.x - before - 230.0f / 60.0f) < 1.0e-3f);
 }
 
 void test_wall_stops_a_jump() {
@@ -765,6 +784,7 @@ int main() {
     test_air_turn_is_skipped_by_a_long_tick();
     test_standing_jump_takes_a_direction_in_the_air();
     test_landing_ends_the_jump_velocity();
+    test_running_jump_lands_at_run_speed();
     test_wall_stops_a_jump();
     test_a_fall_keeps_the_ground_speed();
     test_restore_clears_the_jump();
