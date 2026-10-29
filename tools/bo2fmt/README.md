@@ -40,6 +40,14 @@ upper-case letters stand for accented glyphs; without it the Spanish accent
 mapping (inferred, see the format doc) is applied. The output contains the
 original game text: keep it out of the repository.
 
+Animation graphs (`animatio`, see `docs/FORMATS/animatio.md`):
+
+```sh
+python3 tools/bo2fmt/animatio.py nodes --big <container.big> --entry <name> [--match text]
+python3 tools/bo2fmt/animatio.py states --big <container.big> --entry <name> [--match text]
+python3 tools/bo2fmt/animatio.py nodes <extracted animatio entry>
+```
+
 `unpack` writes `manifest.json` with the BIG entry metadata (type, name,
 language, symbols and padding). `repack` rebuilds the container from that
 manifest and is byte-identical when the extracted data is unchanged.

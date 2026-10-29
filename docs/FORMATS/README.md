@@ -15,6 +15,7 @@ by a parser or the original game; **observed** = seen but not decoded;
 | `tunedata` (`kain`) | partially verified: container and movement fields | [`tunedata.md`](tunedata.md) |
 | Models | payload extracted; layout unknown | [`models.md`](models.md) |
 | `animreel` clips | decoded for inner version 6; root motion of the Kain clips verified against the oracle | [`animreel.md`](animreel.md) |
+| `animatio` graphs | decoded: all 4,081 installed entries parse to the last byte; clip nodes and states read | [`animatio.md`](animatio.md) |
 | Textures | verified: DDS payloads | [`textures.md`](textures.md) |
 | Light maps (`litedata/*.slm`) | partially verified: 71 entries, palette + 4-bit indices | [`litedata.md`](litedata.md) |
 | Audio | verified: Ogg Vorbis in `pc.rkv` | [`audio.md`](audio.md) |

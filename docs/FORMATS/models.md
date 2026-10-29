@@ -553,8 +553,9 @@ index 6 of `FUN_004a3c55`). The port still draws those types.
 `vtxweigh`, `jointidx`, `animatio` and `animreel` are present in the
 containers. Static cell models carry zero weights; character models use
 the animation chunks. The `animreel` clip encoding is decoded
-([`animreel.md`](animreel.md)); the node hierarchy, skeleton evaluation,
-skinning and the `animatio` graph are still open.
+([`animreel.md`](animreel.md)) and so is the `animatio` graph
+([`animatio.md`](animatio.md)); the node hierarchy, skeleton evaluation and
+skinning are still open.
 
 ## Model coverage
 
@@ -588,7 +589,7 @@ interior, while the default isometric frame shows the level.
 - `cellanim`.
 - `model 74` has no `rmd`; its role is unknown.
 - Skeleton pose evaluation, skinning and animation playback.
-- The `animatio` graph (clip nodes, blending) and the remaining `animreel` channel types ([`animreel.md`](animreel.md)).
+- Blending of the `animatio` layers on the skeleton ([`animatio.md`](animatio.md)) and the remaining `animreel` channel types ([`animreel.md`](animreel.md)).
 - Shared-model light-map selection by model name and the remaining entity
   properties.
 
@@ -597,4 +598,4 @@ interior, while the default isometric frame shows the level.
 1. Use the cell grid and BSP for culling and cell visibility.
 2. Select shared-model light maps and decode `cellanim`.
 3. Match the light-map group to the cell/object and combine it with the material layers.
-4. Decode the `animatio` graph and evaluate `animreel` channels on the skeleton.
+4. Evaluate `animreel` channels on the skeleton and blend them as the `animatio` layers describe.

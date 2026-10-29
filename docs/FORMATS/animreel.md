@@ -104,8 +104,9 @@ treated as the root. No Kain clip has a flagged root translation.
 How the game turns these into ground speed is in
 [`../GAMEPLAY.md`](../GAMEPLAY.md): run speed is the root speed times the run
 clip rate (FUN_00445ba0), walk-backwards is the root speed times the clip
-node speed from the `animatio` graph (see GAMEPLAY.md for how that node was
-located).
+node speed from the `animatio` graph ([`animatio.md`](animatio.md): the node
+is `cl_back`, speed 1.7; the run state overwrites the node speed instead of
+multiplying it).
 
 ## Open questions
 
@@ -121,5 +122,6 @@ located).
 - Inner versions other than 6 and chunk versions other than 4.
 - Linear interpolation at fractional frames is read from the evaluators but
   only integer frames are ported.
-- The `animatio` graph that references the reels is not decoded; see
-  [`models.md`](models.md).
+- The `animatio` graph that references the reels is decoded; see
+  [`animatio.md`](animatio.md). How the engine blends the clips on the
+  skeleton is not.
