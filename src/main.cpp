@@ -139,7 +139,7 @@ Options parse_options(int argc, char** argv) {
                 << "  --fov <degrees>       vertical field of view (default 55)\n"
                 << "  --material <mode>     diagnostic tint by the material layer colours (not the\n"
                 << "                        original lighting): off, diffuse, layers, layers2x\n"
-                << "  --lightmap            sample the .slm light maps on textured surfaces\n"
+                << "  --lightmap            light textured surfaces with the .slm (light maps, vertex colours)\n"
                 << "  --stats               print load, parse, render and memory numbers\n"
                 << "  --event-ogg <file>     play one Ogg event\n"
                 << "  --music-ogg <file>     loop an Ogg music track\n"
@@ -324,6 +324,10 @@ void append_entity_geometry(bo2::engine::LevelGeometry& target,
     target.lightmap_texcoords.insert(target.lightmap_texcoords.end(),
                                      source.lightmap_texcoords.begin(),
                                      source.lightmap_texcoords.end());
+    if (!target.vertex_colors.empty()) {
+        // Entity models carry no .slm vertex colours: keep the array aligned, white.
+        target.vertex_colors.resize(target.positions.size(), bo2::engine::Vec3{1.0f, 1.0f, 1.0f});
+    }
     for (bo2::engine::LevelTriangle triangle : source.triangles) {
         triangle.a += vertex_base;
         triangle.b += vertex_base;

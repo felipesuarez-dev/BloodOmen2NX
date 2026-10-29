@@ -9,6 +9,7 @@
 #include <cstring>
 #include <limits>
 #include <map>
+#include <memory>
 #include <set>
 #include <string>
 #include <utility>
@@ -903,6 +904,8 @@ void place_instances(LevelGeometry& geometry) {
     std::vector<Vec2> texcoords;
     std::vector<Vec2> lightmap_texcoords;
     std::vector<LevelTriangle> triangles;
+    geometry.instance_vertex_base.assign(geometry.instances.size(),
+                                         std::numeric_limits<std::uint32_t>::max());
     for (std::size_t instance_index = 0; instance_index < geometry.instances.size();
          ++instance_index) {
         const LevelInstance& instance = geometry.instances[instance_index];
@@ -916,6 +919,7 @@ void place_instances(LevelGeometry& geometry) {
             continue;
         }
         const std::uint32_t vertex_base = static_cast<std::uint32_t>(positions.size());
+        geometry.instance_vertex_base[instance_index] = vertex_base;
         for (std::uint32_t index = 0; index < range.vertex_count; ++index) {
             const std::size_t source = static_cast<std::size_t>(range.first_vertex) + index;
             const Vec3 scaled{geometry.positions[source].x * instance.scale.x,
@@ -1201,14 +1205,37 @@ std::vector<LevelLightMap> parse_lightmaps(const std::vector<std::uint8_t>& data
         }
         ++position;
     }
+    // After a group's last entry: u32 vertex count, then one RGBA colour of
+    // four f32 per vertex. FUN_006368c0 rejects a count above 0x8000.
+    constexpr std::uint32_t kMaxGroupVertices = 0x8000;
+    std::map<std::string, std::shared_ptr<const std::vector<Vec3>>> group_colors;
     for (LevelLightMap& map : maps) {
         const auto found = group_ends.find(map.group);
-        if (found != group_ends.end() && found->second + 4 <= data.size()) {
-            const std::uint32_t count = reader.u32(found->second);
-            if (count <= 1000000) {
-                map.group_vertex_count = count;
+        if (found == group_ends.end() || found->second + 4 > data.size()) {
+            continue;
+        }
+        const std::uint32_t count = reader.u32(found->second);
+        if (count <= 1000000) {
+            map.group_vertex_count = count;
+        }
+        const auto cached = group_colors.find(map.group);
+        if (cached != group_colors.end()) {
+            map.group_colors = cached->second;
+            continue;
+        }
+        std::shared_ptr<std::vector<Vec3>> colors;
+        const std::size_t first = found->second + 4;
+        if (count > 0 && count <= kMaxGroupVertices &&
+            first + static_cast<std::size_t>(count) * 16 <= data.size()) {
+            colors = std::make_shared<std::vector<Vec3>>();
+            colors->reserve(count);
+            for (std::uint32_t index = 0; index < count; ++index) {
+                const std::size_t at = first + static_cast<std::size_t>(index) * 16;
+                colors->push_back({read_float(reader, at), read_float(reader, at + 4), read_float(reader, at + 8)});
             }
         }
+        group_colors.emplace(map.group, colors);
+        map.group_colors = colors;
     }
     return maps;
 }
@@ -1319,6 +1346,31 @@ void assign_model_lightmaps(LevelGeometry& geometry,
             instance_groups[index] = found->second[next];
             ++next;
         }
+    }
+    // Per-vertex colours of each lit instance: the group's array, one colour
+    // per model vertex in model order (the same order place_instances uses).
+    for (std::size_t index = 0; index < geometry.instances.size(); ++index) {
+        const Group* group = instance_groups[index];
+        if (group == nullptr || index >= geometry.instance_vertex_base.size()) {
+            continue;
+        }
+        const std::uint32_t base = geometry.instance_vertex_base[index];
+        const LevelInstance& instance = geometry.instances[index];
+        if (base == std::numeric_limits<std::uint32_t>::max() ||
+            instance.model >= geometry.model_ranges.size()) {
+            continue;
+        }
+        const std::shared_ptr<const std::vector<Vec3>>& colors = group->entries.front()->group_colors;
+        const std::uint32_t count = geometry.model_ranges[instance.model].vertex_count;
+        if (colors == nullptr || colors->size() != count ||
+            static_cast<std::size_t>(base) + count > geometry.positions.size()) {
+            continue;
+        }
+        if (geometry.vertex_colors.size() != geometry.positions.size()) {
+            geometry.vertex_colors.assign(geometry.positions.size(), Vec3{1.0f, 1.0f, 1.0f});
+        }
+        std::copy(colors->begin(), colors->end(),
+                  geometry.vertex_colors.begin() + static_cast<std::ptrdiff_t>(base));
     }
     std::map<const LevelLightMap*, std::int32_t> image_index;
     for (LevelTriangle& triangle : geometry.triangles) {

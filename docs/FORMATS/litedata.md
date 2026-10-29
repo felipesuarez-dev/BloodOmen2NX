@@ -62,7 +62,9 @@ groups' entries is 135/255 (range 12 to 194). Level geometry has no vertex
 colour of its own in `prims`, and the original device runs with D3D
 lighting off, so these arrays are the only per-vertex colour source for
 lit cell models (`models.md`, "Why `--material diffuse|layers` render
-near-black"). The host does not read them yet.
+near-black"). The host reads them (at most 0x8000 per group, the limit of
+FUN_006368c0) and copies each lit instance's array onto its placed
+vertices.
 
 ## Measured entries
 
@@ -160,7 +162,12 @@ The model reader stores the second UV set in
 `cellmdls`) still need their own instance mapping.
 
 `bo2nx --level --lightmap` samples the light map with those UVs and uses
-its luminance as the light factor (`texture × tint × light map`). The
+its luminance as the light factor. When the level has `.slm` vertex
+colours it draws the original equation, `texture × vertex colour × light
+map` (stage 0 modulates the texture with the vertex diffuse because D3D
+lighting is off; stage 1 modulates with the light map). Unlit vertices are
+white; what the original does for a Terrain without a lighting group is
+not traced. Without vertex colours it keeps `texture × tint × light map`. The
 `--material` tint can be combined with it. In `sanctuary` 16 of 34
 textures resolve to a light map; the frame changes by about 0.0098 RMSE
 against the no-lightmap + five-entry version.

@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -43,6 +44,11 @@ struct LevelLightMap {
     std::string group;
     std::uint32_t group_vertex_count = 0;
     Image image;
+    // The group's per-vertex colours (RGB of the RGBA f32 array after its
+    // last entry), shared by every entry of the group; null when the file
+    // has none. Stage 0 of the original modulates the texture with them
+    // (D3D lighting is off).
+    std::shared_ptr<const std::vector<Vec3>> group_colors;
 };
 
 struct CellAttributeTable {
@@ -161,6 +167,9 @@ struct LevelGeometry {
     std::vector<Vec3> normals;
     std::vector<Vec2> texcoords;
     std::vector<Vec2> lightmap_texcoords;
+    // Per-vertex colours from the level .slm (assign_model_lightmaps); empty
+    // when no instance has a lit group. Unlit vertices are white.
+    std::vector<Vec3> vertex_colors;
     std::vector<std::string> texture_names;
     std::vector<Image> lightmaps;
     std::vector<Image> model_lightmaps;
@@ -171,6 +180,9 @@ struct LevelGeometry {
     std::vector<LevelCollision> collisions;
     std::vector<ModelSkeleton> skeletons;
     std::vector<LevelInstance> instances;
+    // First placed vertex of each instance (place_instances); UINT32_MAX for
+    // an instance that was skipped.
+    std::vector<std::uint32_t> instance_vertex_base;
     std::vector<LevelLight> lights;
     std::vector<LevelMarker> markers;
     CellGrid cell_grid;

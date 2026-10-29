@@ -110,6 +110,7 @@ box numbers below come from `tools/compare_frames.py`.
 | helper rule, `--material off --lightmap` | 54.79 | 60.06 | 0.314 |
 | light maps bound by instance name, `--material off --lightmap` | 55.10 | n/a | 0.322 |
 | and light-map UVs placed with the instances | 40.79 | n/a | 0.261 |
+| and the `.slm` vertex colours (`texture × vertex colour × light map`) | 35.58 | n/a | 0.239 |
 | `develop`, `--material diffuse` | 23.47 | 26.27 | 0.016 |
 | helper rule, `--material diffuse` | 23.39 | 26.19 | 0.016 |
 | helper rule, `--material layers` | 23.38 | 26.18 | 0.016 |
@@ -162,7 +163,11 @@ How to read it:
   triangle sampled another vertex's UV. Placing them with the instances
   (`place_instances`) removes the smears on the walls and brings the MAE
   to 40.79 and the mean RGB to 0.261. The correlation drops to -0.05: the
-  lit archway of the Wine frame is still dark in the port. The light-map shading of the host is still not the original
+  lit archway of the Wine frame is still dark in the port. Adding the
+  `.slm` vertex colours brings the MAE to 35.58 and the mean RGB to 0.239.
+  The Wine frame darkens with distance (near floor bright, far wall dark)
+  while the port does not, which points at the fog next (levelkeeper
+  fogdata, not decoded). The light-map shading of the host is still not the original
   equation. Stage 1 runs `COLOROP MODULATE` with the light map
   (`0x565bf3`). The `.slm` palette holds only the high byte
   (`0xLL000000`), so the texture format the original builds from it

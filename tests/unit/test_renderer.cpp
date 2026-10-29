@@ -157,6 +157,21 @@ int main() {
     CHECK(light_frame[center + 0] > 0);
     CHECK(light_frame[center + 0] < textured_frame[center + 0] * 0.8);
 
+    // With .slm vertex colours the level equation is texture x vertex colour
+    // x light map: a white texture, a half-red vertex colour and a mid-grey
+    // light map give about 255 * 0.5 * 0.5 in red and 255 * 0.5 in green.
+    bo2::engine::LevelGeometry vertex_lit = level_quad();
+    vertex_lit.texcoords = {{0.0f, 0.0f}, {1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f}};
+    for (bo2::engine::LevelTriangle& triangle : vertex_lit.triangles) {
+        triangle.texture = 0;
+    }
+    vertex_lit.lightmaps = {lightmap};
+    vertex_lit.vertex_colors.assign(vertex_lit.positions.size(), bo2::engine::Vec3{0.5f, 1.0f, 1.0f});
+    const std::vector<std::uint8_t> vertex_frame =
+        bo2::platform::headless::render_level(vertex_lit, white_texture, light_options);
+    CHECK(vertex_frame[center + 0] > 55 && vertex_frame[center + 0] < 75);
+    CHECK(vertex_frame[center + 1] > 118 && vertex_frame[center + 1] < 138);
+
     if (failures != 0) {
         std::cerr << failures << " check(s) failed\n";
         return 1;

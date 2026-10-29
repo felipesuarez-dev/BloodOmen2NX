@@ -32,6 +32,10 @@ struct ScreenVertex {
     float u2_over_w = 0.0f;
     float v2_over_w = 0.0f;
     float shade = 1.0f;
+    // Vertex colour over w (the .slm diffuse of the original's stage 0).
+    float r_over_w = 0.0f;
+    float g_over_w = 0.0f;
+    float b_over_w = 0.0f;
 };
 
 float edge(float ax, float ay, float bx, float by, float cx, float cy) {
@@ -102,6 +106,9 @@ bool project(const engine::Mat4& view_projection, const engine::Vec3& position, 
     out.u_over_w = u * inverse_w;
     out.v_over_w = v * inverse_w;
     out.shade = shade;
+    out.r_over_w = inverse_w;
+    out.g_over_w = inverse_w;
+    out.b_over_w = inverse_w;
     return true;
 }
 
@@ -112,6 +119,7 @@ struct ClipVertex {
     float u2 = 0.0f;
     float v2 = 0.0f;
     float shade = 1.0f;
+    engine::Vec3 color{1.0f, 1.0f, 1.0f};
 };
 
 std::vector<ClipVertex> clip_near(const ClipVertex triangle[3], float near_plane) {
@@ -138,6 +146,7 @@ std::vector<ClipVertex> clip_near(const ClipVertex triangle[3], float near_plane
             clipped.u2 = current.u2 + t * (next.u2 - current.u2);
             clipped.v2 = current.v2 + t * (next.v2 - current.v2);
             clipped.shade = current.shade + t * (next.shade - current.shade);
+            clipped.color = current.color + (next.color - current.color) * t;
             output.push_back(clipped);
         }
     }
@@ -159,6 +168,9 @@ bool project_clip(const ClipVertex& vertex, std::uint32_t width, std::uint32_t h
     out.u2_over_w = vertex.u2 * inverse_w;
     out.v2_over_w = vertex.v2 * inverse_w;
     out.shade = vertex.shade;
+    out.r_over_w = vertex.color.x * inverse_w;
+    out.g_over_w = vertex.color.y * inverse_w;
+    out.b_over_w = vertex.color.z * inverse_w;
     return true;
 }
 
@@ -166,7 +178,7 @@ void rasterize(const ScreenVertex& v0, const ScreenVertex& v1, const ScreenVerte
                const engine::Image& texture, std::uint32_t width, std::uint32_t height,
                std::vector<std::uint8_t>& color, std::vector<float>& depth,
                const engine::Vec3& tint = {1.0f, 1.0f, 1.0f},
-               const engine::Image* lightmap = nullptr) {
+               const engine::Image* lightmap = nullptr, bool vertex_lit = false) {
     const float area = edge(v0.x, v0.y, v1.x, v1.y, v2.x, v2.y);
     if (std::fabs(area) < 1.0e-6f) {
         return;
@@ -208,7 +220,15 @@ void rasterize(const ScreenVertex& v0, const ScreenVertex& v1, const ScreenVerte
             const float v =
                 (w0 * v0.v_over_w + w1 * v1.v_over_w + w2 * v2.v_over_w) / inverse_w;
             const float shade = std::clamp(w0 * v0.shade + w1 * v1.shade + w2 * v2.shade, 0.0f, 1.0f);
-            float light = shade;
+            // The original's level equation (litedata.md): stage 0 texture x
+            // vertex colour, stage 1 x light map. Otherwise the debug shade.
+            float light = vertex_lit ? 1.0f : shade;
+            engine::Vec3 diffuse{1.0f, 1.0f, 1.0f};
+            if (vertex_lit) {
+                diffuse = {(w0 * v0.r_over_w + w1 * v1.r_over_w + w2 * v2.r_over_w) / inverse_w,
+                           (w0 * v0.g_over_w + w1 * v1.g_over_w + w2 * v2.g_over_w) / inverse_w,
+                           (w0 * v0.b_over_w + w1 * v1.b_over_w + w2 * v2.b_over_w) / inverse_w};
+            }
             if (lightmap != nullptr) {
                 const float light_u =
                     (w0 * v0.u2_over_w + w1 * v1.u2_over_w + w2 * v2.u2_over_w) / inverse_w;
@@ -222,7 +242,9 @@ void rasterize(const ScreenVertex& v0, const ScreenVertex& v1, const ScreenVerte
             for (std::size_t channel = 0; channel < 3; ++channel) {
                 const float source = static_cast<float>(
                     channel == 0 ? texel.r : (channel == 1 ? texel.g : texel.b));
-                const float channel_tint = channel == 0 ? tint.x : (channel == 1 ? tint.y : tint.z);
+                const float channel_tint = (channel == 0 ? tint.x : (channel == 1 ? tint.y : tint.z)) *
+                                           (channel == 0 ? diffuse.x
+                                                         : (channel == 1 ? diffuse.y : diffuse.z));
                 const float destination = static_cast<float>(color[out + channel]);
                 const float blended =
                     source * light * channel_tint * alpha + destination * (1.0f - alpha);
@@ -471,6 +493,9 @@ std::vector<std::uint8_t> render_level(const engine::LevelGeometry& geometry,
                 lightmap = &geometry.lightmaps[static_cast<std::size_t>(triangle.texture)];
             }
         }
+        const std::uint32_t corner_index[3] = {triangle.a, triangle.b, triangle.c};
+        const bool vertex_lit = options.lightmap && textured &&
+                                geometry.vertex_colors.size() == geometry.positions.size();
         ClipVertex clipped_input[3];
         for (int corner = 0; corner < 3; ++corner) {
             clipped_input[corner].clip = view_projection * engine::Vec4{
@@ -480,6 +505,9 @@ std::vector<std::uint8_t> render_level(const engine::LevelGeometry& geometry,
             clipped_input[corner].u2 = light_uv[corner].x;
             clipped_input[corner].v2 = light_uv[corner].y;
             clipped_input[corner].shade = shade_of(normals[corner]);
+            if (vertex_lit) {
+                clipped_input[corner].color = geometry.vertex_colors[corner_index[corner]];
+            }
         }
         const std::vector<ClipVertex> polygon = clip_near(clipped_input, near_plane);
         if (polygon.size() < 3) {
@@ -509,7 +537,7 @@ std::vector<std::uint8_t> render_level(const engine::LevelGeometry& geometry,
                 continue;
             }
             rasterize(screen[0], screen[1], screen[2], image, options.width, options.height, color,
-                      depth, textured ? tint : engine::Vec3{1.0f, 1.0f, 1.0f}, lightmap);
+                      depth, textured ? tint : engine::Vec3{1.0f, 1.0f, 1.0f}, lightmap, vertex_lit);
         }
     }
     return color;

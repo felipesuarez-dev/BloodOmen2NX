@@ -162,7 +162,7 @@ provisional until the original controls are recovered from `bo2.exe`.
 | `--eye x,y,z`, `--target x,y,z` | Free camera |
 | `--width`, `--height`, `--fov` | Frame size and field of view |
 | `--material <mode>` | Diagnostic material tint: `off`, `diffuse`, `layers`, `layers2x` |
-| `--lightmap` | Sample the `.slm` light maps with the second UV set |
+| `--lightmap` | Light the level with its `.slm`: light maps on the second UV set and, when present, the per-vertex colours (`texture × vertex colour × light map`) |
 | `--stats` | Print load breakdown, render time, RSS and peak memory |
 | `--headless` | Run the fixed-step loop without a window |
 | `--frames <n>` | Fixed-step iterations for `--headless` |

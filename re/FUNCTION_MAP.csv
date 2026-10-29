@@ -9745,7 +9745,7 @@ address,name,subsystem,status,notes
 00636200,FUN_00636200,unknown,todo,ghidra
 00636380,FUN_00636380,unknown,todo,ghidra
 00636510,FUN_00636510,unknown,todo,ghidra
-006368c0,FUN_006368c0,unknown,todo,ghidra
+006368c0,FUN_006368c0,level,wip,src/engine/cell_group.cpp: parse_lightmaps reads each group's per-vertex colours (count capped at 0x8000) and finds the entries by a signature scan; the header flags are not parsed
 00636bd0,FUN_00636bd0,unknown,todo,ghidra
 00636e70,FUN_00636e70,unknown,todo,ghidra
 00636f60,FUN_00636f60,unknown,todo,ghidra

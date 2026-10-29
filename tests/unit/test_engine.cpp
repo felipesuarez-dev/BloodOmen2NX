@@ -618,10 +618,19 @@ void test_lightmaps() {
     }
     data.push_back(0x01);
     data.push_back(0x23);
+    // The group's per-vertex colours: u32 count, then RGBA f32 per vertex.
+    put32(data, 2);
+    for (const float value : {0.25f, 0.5f, 0.75f, 1.0f, 1.0f, 0.0f, 0.5f, 1.0f}) {
+        put_float(data, value);
+    }
     const std::vector<bo2::engine::LevelLightMap> maps =
         bo2::engine::parse_lightmaps(data);
     CHECK(maps.size() == 1);
     CHECK(maps[0].name == "test-tex");
+    CHECK(maps[0].group_vertex_count == 2);
+    CHECK(maps[0].group_colors != nullptr && maps[0].group_colors->size() == 2);
+    CHECK(maps[0].group_colors != nullptr && (*maps[0].group_colors)[0].y == 0.5f &&
+          (*maps[0].group_colors)[1].z == 0.5f);
     CHECK(maps[0].image.width == 2 && maps[0].image.height == 2);
     CHECK(maps[0].image.rgba[0] == 0);
     CHECK(maps[0].image.rgba[4] == 0x10);
@@ -765,6 +774,21 @@ void test_instance_lightmaps_by_name() {
     CHECK(red(0) == 2);   // Box02 -> box02
     CHECK(red(1) == 1);   // box01 -> box01
     CHECK(red(2) == -1);  // repeated name: unlit
+
+    // The group's vertex colours land on the instance's placed vertices.
+    geometry.positions.assign(12, bo2::engine::Vec3{});
+    geometry.instance_vertex_base = {0, 4, 8};
+    geometry.model_lightmaps.clear();
+    const auto box01 = std::make_shared<std::vector<bo2::engine::Vec3>>(
+        4, bo2::engine::Vec3{0.5f, 0.25f, 0.125f});
+    maps[0].group_colors = box01;
+    bo2::engine::assign_model_lightmaps(geometry, maps);
+    CHECK(geometry.vertex_colors.size() == 12);
+    CHECK(geometry.vertex_colors.size() == 12 && geometry.vertex_colors[4].x == 0.5f &&
+          geometry.vertex_colors[7].z == 0.125f);
+    // box02 has no colours and the repeated name is unlit: both stay white.
+    CHECK(geometry.vertex_colors.size() == 12 && geometry.vertex_colors[0].x == 1.0f &&
+          geometry.vertex_colors[8].y == 1.0f);
 }
 
 void test_collision_chunk() {
