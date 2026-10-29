@@ -59,7 +59,103 @@ been run on the Wine and Windows spawn frames (`ORACLE_WINE.md`).
 | Area | Divergence | Evidence | Next action |
 |---|---|---|---|
 | `sl01` spawn frame | Helper boxes drawn; a `pyramid/purple` box (flat `255,0,255,128`) enclosed the camera and tinted the view magenta | The original skips entities whose template has `flag helperobj`: `FUN_00785c8d` parses it, `FUN_0070d0d5` copies it to entity flag `0x200`, `FUN_0070f100` returns without drawing (`docs/FORMATS/models.md`). The port applies the flag; the magenta box is gone | Trace why `detector`, `planhelper*`, `conversation` and `bo2cinematic` models, which carry no `helperobj`, are not drawn either (the green `bo2cinematic001` diamond remains at the oracle pose) |
-| `sl01` materials | `--material diffuse` and `layers` render near-black | Port render at the spawn | Decompile the material/light-map combination for level models (BO2NX-68) |
+| `sl01` materials | `--material diffuse` and `layers` render near-black (mean RGB 0.016 against 0.108 in the Wine frame) | The layer colours are exporter fallbacks, not albedo: 1,015 of 1,075 used materials have a grey `c1` of 0.098 or 0.118, characters have all-zero layers, and the device runs with `D3DRS_LIGHTING = FALSE` (`docs/FORMATS/models.md`) | Decode the baked lighting: the group-to-model binding of the `.slm` vertex colours and light maps, fog and the per-level ambient values |
+| `sl01` spawn frame | Whole-frame error 35.5/255 against the Wine frame, luma correlation 0.13 | Gate below | Lighting (above), the Kain model, the HUD and the types that hide through other paths |
+
+## `sl01` spawn gate (BO2NX-68)
+
+**Status: not met.** The helper-object rule removes the pyramid boxes, but
+the frame is still far from the Wine frame; the lighting is not decoded.
+
+Reference: `wine_20261029_0110`, `screenshots/01_spawn` (`frames_ppm/01_spawn.ppm`,
+800x600). Camera: the `state.csv` row sampled at the screenshot
+(`cam` = -199.751, 57.129, 304.069; yaw 0 looks along +X; pitch -6 degrees;
+Kain at -8.803, 57.129, 208.0, so the camera is 190.9 behind and 96.1 above
+him). The vertical field of view is not sampled; the port default of 55
+degrees reproduces Kain's screen position (feet at y = 515 of 600 gives
+55.6) and the layout of the level geometry.
+
+```sh
+bo2nx --level --big external/installed/media/gogames/bo2/resources/levels/slums/sl01.big \
+  --material off --width 800 --height 600 \
+  --eye "-199.751,57.129,304.069" --target "-198.7565,57.129,303.9645" --out port.ppm
+python3 tools/compare_frames.py port.ppm wine_20261029_0110/frames_ppm/01_spawn.ppm \
+  --out /tmp/gate --tiles 4 --region ui:0,0,290,175 --region kain:350,290,110,240
+```
+
+Definitions, all on 8-bit RGB frames of 800x600:
+
+- **World** is every pixel except the HUD box (`x 0..289, y 0..174`) and a
+  box around Kain (`x 350..459, y 290..529`), which the port does not draw:
+  402,850 pixels.
+- **World MAE** and **RMSE** are the mean absolute and root-mean-square
+  difference between the port and Wine frames over the three channels of
+  the world pixels, in 8-bit units.
+- **Mean RGB** is the mean of the three channels over the world pixels,
+  divided by 255. It is not photometric luminance.
+- **Correlation** is Pearson's r over the world pixels of the Rec. 601 luma
+  (`0.299 R + 0.587 G + 0.114 B`) of the port and Wine frames.
+- **Gain fit** scales the port frame by `k = sum(Lp * Lw) / sum(Lp^2)`
+  (luma of port and Wine) and reports the world MAE of `clamp(k * port)`
+  against Wine.
+
+These were computed with a throwaway numpy script; the whole-frame, tile and
+box numbers below come from `tools/compare_frames.py`.
+
+| Port frame | World MAE | World RMSE | Mean RGB (Wine 0.108) |
+|---|---:|---:|---:|
+| `develop` (25e537a), `--material off` | 35.40 | 40.06 | 0.241 |
+| helper rule, `--material off` | 35.06 | 39.30 | 0.240 |
+| `develop`, `--material off --lightmap` | 54.90 | 60.41 | 0.314 |
+| helper rule, `--material off --lightmap` | 54.79 | 60.06 | 0.314 |
+| `develop`, `--material diffuse` | 23.47 | 26.27 | 0.016 |
+| helper rule, `--material diffuse` | 23.39 | 26.19 | 0.016 |
+| helper rule, `--material layers` | 23.38 | 26.18 | 0.016 |
+
+Whole frame (`compare_frames.py`): MAE 35.50, RMSE 41.15 before and
+MAE 35.55, RMSE 40.26 after. Tile MAE, 4x4 (rows top to bottom), before:
+
+```
+34.1 37.1 29.7 36.4
+27.6 31.4 29.0 34.1
+28.1 29.9 42.3 36.7
+45.4 44.2 41.9 40.0
+```
+
+after:
+
+```
+33.8 37.3 29.9 33.4
+28.9 31.6 29.0 34.3
+27.2 31.9 38.6 36.5
+45.9 47.5 42.9 40.0
+```
+
+How to read it:
+
+- The helper rule changes the oracle-pose error by 0.34, because the boxes
+  cover little of that view: the `kainemitter` and `hidden_checkpoint`
+  columns beside Kain, a blue `regionkeeper` funnel and a purple `sfxobj`
+  cube. The tile that held the columns improves from 42.3 to 38.6. The
+  Kain region got worse (34.4 to 40.2): the lit floor now visible behind
+  the removed column is brighter than the Wine frame, as is the whole port
+  frame.
+- With the camera inside the `kainemitter` box
+  (`--eye -17.3,45.6,222.2 --target -7.27,45.6,219`, `--material off`,
+  800x600, `sl01`) the tint is gone: whole-frame mean RGB 0.469, 0.100,
+  0.457 (R/G 4.67) becomes 0.254, 0.255, 0.225 (R/G 1.00). The Wine frame
+  has 0.118, 0.106, 0.104 (R/G 1.12) from another pose, so this only shows
+  the tint, not parity.
+- `--material diffuse` scores a lower MAE only because it is almost black;
+  its correlation with the Wine frame is 0.015 (`off`: 0.13). Do not read
+  it as closer.
+- A single gain of 0.41 on the `off` frame brings the world MAE to 8.5 (8.4
+  measured on luma only), which says the missing piece is the level of
+  illumination and not geometry, but the correlation stays at 0.13: the lit
+  and shadowed areas of the original are not reproduced.
+- Still different from the original: lighting, fog, the green
+  `bo2cinematic001` diamond (no `helperobj` flag, see `models.md`), Kain
+  and the HUD.
 
 ## Rules
 

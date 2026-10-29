@@ -167,19 +167,43 @@ The D3D8 trace of the reference build (captured from the loading/UI path)
 sets texture stage 0 to `D3DTOP_MODULATE` (4) or `D3DTOP_MODULATE2X` (5),
 with `COLORARG1 = TEXTURE`, `COLORARG2 = DIFFUSE`, and the same alpha
 operations. Stages 1 and 2 are `SELECTARG1` pass-through. The final color
-is therefore `texture × vertex diffuse` (doubled for `MODULATE2X`); the
-material colors feed the vertex diffuse, not a separate texture-stage
-constant.
+of that path is therefore `texture × vertex diffuse` (doubled for
+`MODULATE2X`). Which value feeds the vertex diffuse of level geometry is
+settled by the next section: it is not the material layers.
+
+### Why `--material diffuse|layers` render near-black (BO2NX-68)
 
 The host exposes the raw layers and a diagnostic tint:
-`--material off|diffuse|layers|layers2x`. The static lighting itself comes
-from the `.slm` light maps (`docs/FORMATS/litedata.md`), sampled with the
-model's second UV set and enabled with `--lightmap`. `off` keeps the current preview,
-`diffuse` uses layer 1, `layers` sums the three and `layers2x` doubles the
-sum. Applying the direct tint to `sanctuary` darkens the frame from mean
-0.107 to 0.086 and clips the maximum from 0.667 to 0.118. That negative
-result shows the material colors cannot be the albedo multiplier on their
-own: the static light map is missing.
+`--material off|diffuse|layers|layers2x`. `off` keeps the preview shade,
+`diffuse` multiplies the texture by layer 1, `layers` by the sum of the
+three and `layers2x` by twice the sum. The near-black result is the
+premise, not an arithmetic slip: the material layer colors are not an
+albedo multiplier.
+
+| Evidence | Source |
+|---|---|
+| In `sl01`, of the 1,075 materials that triangles use, 1,015 have a grey `c1` of 0.098 or 0.118 (25/255, 30/255) and 960 have `c0 = c2 = (0,0,0)`. The second control weight is 1.0 for the bulk; some control records overlap ASCII text (`0x74786574`, `text`), so the record layout is not fixed-size there (open) | `mlyrcolr`/`mlyrctrl`, host dump of the used materials |
+| Textured shared models have all-zero layers: `psntanm`, `psntcnf`, `rat`, `nm_head` (`c0 = c1 = c2 = 0`). Multiplying by them would draw characters black, and the oracle frame shows them lit | host dump of the `sl01` `model` entries |
+| Helper models carry editor colours, for example `c1 = (0.176, 0.063, 0.063)` on every `pyramid/red` model | same dump |
+| The device is initialised with `D3DRS_LIGHTING = FALSE` (`SetRenderState(0x89, 0)` at `0x55fe04`), so material diffuse is never combined with D3D lights for this geometry | disassembly of the device state setup around `0x55fdc4` |
+| The render-state cache binds a second texture to stage 1 with `COLOROP = MODULATE`, `ALPHAOP = SELECTARG2` (`0x565bf3`..`0x565c10`) and disables stage 1 when none is bound | disassembly of the state cache near `0x565b73` |
+| Measured on the oracle pose: `--material diffuse` has mean 0.016 against 0.108 in the Wine frame, and a luminance correlation of 0.01 (`off`: 0.12) | `docs/ORACLE_COMPARE.md` gate |
+
+So the layers are the exporter's fallback colours (they colour the
+untextured preview surfaces) and play no part in the lighting of textured
+surfaces; the modes stay as a diagnostic and are not a path to parity.
+
+The static lighting is baked. Each `.slm` group stores, after its light-map
+entries, one RGBA `f32` colour per vertex of the lit model
+(`docs/FORMATS/litedata.md`); the stage-1 `MODULATE` above is the
+light map. The equation the evidence supports is
+`texture × vertex colour × light map luminance`. A spike of exactly that
+equation (vertex colours bound with the existing vertex-count group match)
+raised the masked world error against the Wine frame from 35.4 to 48.2 of
+255 and the mean luminance from 0.241 to 0.288 (Wine: 0.108), so it was
+not kept: the original is much darker than any combination available
+here, and the group-to-instance binding is itself a heuristic. Fog, the
+per-level ambient values and the dynamic lights are not implemented.
 
 `sanctuary.big` carries `litedata/sanctuary.slm` (388,673 bytes). Its
 header is `version = 1`, `header size = 112`, `group name length = 13`
@@ -188,8 +212,8 @@ light count. The file contains 71 light-map entries across the
 cell/object groups. The host applies them with `--lightmap`, sampled with
 the model's second UV set; 16 of the 34 sanctuary textures resolve. The
 loader also matches models to light-map groups by vertex count and model
-order (62 model light maps, 2,769 triangles in sanctuary). The exact combination with the material layers is
-open; the `--material` modes stay diagnostic.
+order (62 model light maps, 2,769 triangles in sanctuary). The layers take
+no part in that combination (see above).
 
 The observed `mtlctrl` record is `{0, 0x004c0000, 0x00000100}` per
 material. The observed `mlyrctrl` record is `{0x000a0000|1|6, 1.0, 0, 0}`;
@@ -526,8 +550,8 @@ interior, while the default isometric frame shows the level.
 
 ## Open questions
 
-- Per-cell/object light-map selection, the vertex diffuse equation and
-  the `mtlctrl` values.
+- Per-cell/object light-map selection (the group name to model binding),
+  fog, the per-level ambient values and the `mtlctrl` values.
 - The 40/42-byte `prims` extra record.
 - `cells` flags, `cellattr`/`attrs` value semantics, the `portal2`
   plane/index and the BSP traversal.

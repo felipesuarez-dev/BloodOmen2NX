@@ -50,6 +50,20 @@ The name is the group prefix plus the normalized texture name:
 Indices are packed high nibble first. The palette is 16 colors with the
 luminance in the high byte of each `u32`.
 
+## Per-vertex colours
+
+The `u32 count` that follows a group's entries is its vertex count, and
+the `count × 16` bytes after it are one RGBA colour of four little-endian
+`f32` per vertex. Measured on `slums/sl01.slm` (2,032,896 bytes): all 286
+groups carry the array, 38,849 vertices in total, alpha is always 1.0, the
+channels range from 0.157 to 1.0 and average (0.855, 0.825, 0.910), a
+slightly blue white. The mean light-map palette luminance over the 286
+groups' entries is 135/255 (range 12 to 194). Level geometry has no vertex
+colour of its own in `prims`, and the original device runs with D3D
+lighting off, so these arrays are the only per-vertex colour source for
+lit cell models (`models.md`, "Why `--material diffuse|layers` render
+near-black"). The host does not read them yet.
+
 ## Measured entries
 
 | Name suffix | Width | Height | Index bytes |
@@ -106,7 +120,8 @@ against the no-lightmap + five-entry version.
   vertex-count fallback) for their models.
 - The group header fields after the name (12, 13 or 9 bytes depending on
   the group).
-- The per-vertex data after each group (`u32 count` + `count × 16
-  bytes`); it may be vertex colours or light-map UVs.
-- The exact combination of the light map with `mlyrcolr`/`mlyrctrl`.
+- How the per-vertex colours (below) combine with the light map in the
+  original; a spike of `texture × vertex colour × light map` ended farther
+  from the Wine frame than the unlit preview (`models.md`, BO2NX-68).
+- The group name to model binding (the host binds by vertex count).
 - Whether the second UV set is always the light-map set.
