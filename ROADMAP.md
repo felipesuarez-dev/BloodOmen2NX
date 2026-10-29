@@ -39,8 +39,8 @@ comparison.
 | Cell instances and placement | done | `cellinst` v3/v4; local `cellmdls` templates placed in world space |
 | Cell lights and markers | done | `cellight` v3 and `cellmark` v4 parsed; renderer consumer pending |
 | Collision payload | done | `collmodc` raw payload per model, header counts; runtime decode pending |
-| Skeleton and animations | done | 5,168 models parsed, 1,586 skinned; `animreel` clips decoded (root motion), `animatio` extracted raw |
-| M3 loop/world | wip | FixedStep, region entities, shared models, culling, streaming, navigation, collision, third-person `--play` with the original Kain tuning (turning, jump, gravity; run and walk-back speeds from `animreel` root motion, start phase and Shift measured), save/checkpoint flow and attack foundation |
+| Skeleton and animations | done | 5,168 models parsed, 1,586 skinned; `animreel` clips decoded (root motion) and the `animatio` graph decoded (clip nodes feed the Kain tuning) |
+| M3 loop/world | wip | FixedStep, region entities, shared models, culling, streaming, navigation, collision, third-person `--play` with the original Kain tuning (turning, jump, gravity, air control; run and walk-back speeds from `animreel` root motion and the `animatio` clip node, start phase and Shift measured), follow camera with yaw catch-up and jump height lag, Spanish locale lookup, hidden helper objects, save/checkpoint flow and attack foundation |
 | Material layer records | done | `mlyrcolr`/`mlyrctrl`; diagnostic `--material` tints |
 | Light maps (`litedata`) | done | 71 `.slm` entries, per-instance match with model fallback, `--lightmap`; external shared models open |
 | Host renderer (OpenGL) | done | SDL2/OpenGL window, free camera and Xvfb capture |
@@ -48,7 +48,7 @@ comparison.
 | Frame comparator | done | Side-by-side, diff, tile/region metrics; local Wine oracle (frames and state from memory) and native Windows `sl01` captures |
 | Wine oracle | done | Pristine `bo2.exe` under Wine/Xvfb, `wine_setup.sh` and scripted `wine_capture.py`; spawn frame 4.9/255 from Windows |
 | Native Windows oracle | done | Reverse SSH harness, client, capture validator and input/frame aligner; complete `sl01` capture used as cross-check |
-| Oracle state (camera, player) | done | Kain position, yaw, velocity, health, lore and the follow camera pose sampled from memory at 50 Hz; tick and animation pending |
+| Oracle state (camera, player) | done | Kain position, yaw, velocity, health, lore, animation id and the follow camera pose sampled from memory every 20 ms; the logic tick is pending |
 | Switch renderer (deko3d) | todo | M2+ |
 | Audio | partial | Ogg extraction, floor-0/1 decoder, stereo mixer, SDL output and event demo. The Ogg decoder has no unit test, floor 0 `dlopen`s the host `libvorbisfile` (absent on Switch), and the sound events are not wired to gameplay |
 | Video (Bink) | todo | M4; inventory and transcode plan done in `docs/FORMATS/video.md` |

@@ -132,13 +132,20 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   `FUN_00442ae0`) and the held-jump boost derived by `FUN_00451d00`.
   Ground speed is animation root motion in the original: forward is the
   `kain/run` root speed (200 u/s) x the run clip rate (1.15) = 230 u/s and
-  back is the `kain/walk_backwards` root speed (62.5) x the clip node speed
-  1.7 = 106.25 u/s, decoded from the `animreel` entries
-  (`docs/FORMATS/animreel.md`). The 100 u/s start phase and Shift+W speed are
-  still measured in the Wine oracle. The follow camera uses the offsets
-  measured in the oracle. `bo2nx --play` drives it in the SDL level viewer;
-  air control, glide and the collision size are still provisional (see
-  `docs/GAMEPLAY.md`). The `region` entity table is
+  back is the `kain/walk_backwards` root speed (62.5) x its clip node speed
+  in the `kain` animatio graph (1.7) = 106.25 u/s (`docs/FORMATS/animreel.md`,
+  `docs/FORMATS/animatio.md`). The 100 u/s start phase and Shift+W speed are
+  still measured in the Wine oracle. Jumps have the original air control
+  (`FUN_004436e0`, `FUN_00441f20`, `FUN_00442240`, `FUN_004423b0`, launch
+  blocks from `FUN_00452030`): 323/205/203 u/s forward/back/side, as the
+  oracle measures. The follow camera follows the yaw with a limited
+  acceleration (`FUN_00407ec0`) and lags in height after a jump
+  (`FUN_00407c70`). `bo2nx --play` drives it in the SDL level viewer; glide,
+  ledge falls and the collision size are still provisional (see
+  `docs/GAMEPLAY.md`). Localized resources are looked up in Spanish like the
+  original build (`FUN_006c8fb0`, `FUN_004aae40`) and `strtable` text is read
+  (`docs/FORMATS/strtable.md`). Entities whose `.etp` template has
+  `flag helperobj` are not drawn (`FUN_0070f100`). The `region` entity table is
   decoded (15,632 entities, 533 model names, 0 errors); entity models are
   resolved and appended as geometry (13 in sanctuary, 119 in cy01, 72 in
   lc01), with named light-map selection and a vertex-count fallback.
@@ -157,8 +164,9 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   material/light-map combination and the vertex diffuse equation.
 - Skeleton pose evaluation and skinning: the hierarchy, weights and joint
   indices are extracted, but the bind-pose and animation keyframe
-  evaluation are open. `animreel` clips are decoded
-  (`docs/FORMATS/animreel.md`); the `animatio` graph is extracted raw.
+  evaluation are open. `animreel` clips and the `animatio` graph are decoded
+  (`docs/FORMATS/animreel.md`, `docs/FORMATS/animatio.md`); clip blending
+  and the graph state machine are not ported.
 - Collision semantics: the raw `collmodc` payload is extracted for every
   model, but the compressed vertices, edges/faces and the collision
   runtime are not decoded. Entity/player logic is also open.
@@ -166,17 +174,17 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   `libvorbisfile`, floor-1 via the bundled fallback), one music voice and
   one-shot events mix to SDL, and `--event-ogg`/`--music-ogg` demonstrate
   it. Wiring the `sound`/`strmfile` event table to gameplay is pending.
-- `region`, `planinfo`, `bpackage`, `strtable`, `musicbnk`, `texfont`,
-  `liteinfo`.
-- Oracle state beyond position, velocity, health, lore and the camera: the
-  logic tick, the animation state and the grounded flag are not located.
-- The `sl01` port frame: a `pyramid/purple` helper volume tints it magenta
-  (the original never draws `pyramid/*` volumes) and the material/light
-  modes render near-black (BO2NX-68).
-- Gameplay parity beyond turning, jumping and the run and walk-back
-  speeds: the start phase and Shift speed, analog (partial stick) speed, air
-  control, glide, the camera setup logic, combat, animation and weapon
-  values are pending.
+- `planinfo`, `bpackage`, `musicbnk`, `texfont` and `liteinfo`.
+- Oracle state beyond position, velocity, health, lore, the animation id
+  and the camera: the logic tick and the grounded flag are not located.
+- The `sl01` port frame: helper objects are hidden now, but the frame still
+  differs from the oracle (world MAE 35/255): fog, ambient and dynamic
+  lights, the `.slm` group binding and pyramid-model types without
+  `helperobj` (detector, planhelper) are open (BO2NX-68).
+- Gameplay parity beyond turning, ground speeds, jumping and air control:
+  the start phase and Shift speed, analog (partial stick) speed, glide,
+  ledge falls, the camera range smoothing, combat (it needs combat mode;
+  map in BO2NX-34) and weapon values are pending.
 - The installer's native RAR decoder is not ported; development
   extraction uses `unrar`. The game does not need the installer decoder.
 
@@ -188,21 +196,20 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
 | 1 | Shared `model` entries and entity semantics | Bind the shared models and decode the consumers | `docs/FORMATS/models.md` |
 | 2 | `game.erg` boot-time keys | Decompile the key lookup in `bo2.exe` | `docs/FORMATS/erg.md` |
 | 3 | Original logic tick | Decompile the main loop and confirm it under the Wine oracle | `docs/ARCHITECTURE.md` |
-| 4 | Level list and streaming model | Derive it from the installer script and `list.txt` | `docs/GAMEPLAY.md` |
+| 4 | Streaming model | The 11 chapters are recovered (`docs/LEVELS.md`); the region load triggers are not decoded | `docs/LEVELS.md` |
 | 5 | Logic tick and animation state in the oracle | Locate them in the decompilation and add them to `state.csv` | `docs/ORACLE_WINE.md` |
-| 6 | `animatio` layout | Decompile the graph loader (`animreel` is decoded) | `docs/FORMATS/models.md` |
+| 6 | Graph state machine | Port the `animatio` state machine (FUN_00642c00) for blending and the combo chain | `docs/FORMATS/animatio.md` |
 
 ## Next steps
 
 1. Map the shared-model instances and combine the light map with the material layers.
 2. Bind the shared `model` entries and decode animation/skinning.
-3. Decompile how `bo2.exe` skips `pyramid/*` helper volumes and fix the
-   `sl01` materials, then gate the port spawn frame against the Wine
-   oracle (BO2NX-68).
-4. Decode the `animatio` graph (clip nodes, blending) to replace the
-   remaining measured ground speeds, then port air control
-   (`FUN_00441f20`, `FUN_004423b0`) and compare the port against a Wine `state.csv` route tick by tick
-   (BO2NX-34, BO2NX-37).
+3. Port the first claw combo with combat mode, the cone test and the damage
+   table (BO2NX-34), and find what hides the remaining pyramid-model helpers
+   and lights `sl01` (BO2NX-68).
+4. Compare the port against a Wine `state.csv` route tick by tick
+   (BO2NX-37), then wire the Spanish string tables into the front end and
+   HUD (BO2NX-44).
 
 ## Rules
 
