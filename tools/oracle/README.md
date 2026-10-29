@@ -11,7 +11,7 @@ needed. Setup, route grammar, parity numbers and limits are in
 | `scripts/oracle/wine_setup.sh` | Build `external/oracle_install/`, create the prefix, import the registry values, seed saves |
 | `wine_capture.py` | One scripted capture: Xvfb, game, route, inputs, screenshots, PPM frames, video, `state.csv` (`--no-state` skips it) |
 | `memstate.py` | Read Kain's position, yaw, velocity, health and lore, and the follow camera pose, from the game's memory (`/proc/<pid>/mem`) |
-| `routes/sl01_basic.txt` | Load PARTIDA 2 and walk, run, jump and attack (Windows phase names) |
+| `routes/sl01_basic.txt` | Load the second save slot and walk, run, jump and attack (Windows phase names) |
 
 ```sh
 scripts/oracle/wine_setup.sh external/captures/capture_20261028_0150

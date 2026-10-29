@@ -211,7 +211,7 @@ AirSteerDerived derive_air_steer(const AirSteerTuning& block, const JumpDerived&
     }
     // The extra acceleration over the ramp that makes up the rest of max_dist.
     double accel = 0.0;
-    if (1.0e-5 <= std::fabs(ramp)) {
+    if (1.0e-5 <= std::fabs(ramp)) {  // DAT_0084a92c
         accel = (block.max_dist - longest * speed) /
                 ((ramp * 0.5 + (longest - block.max_time)) * ramp);
     }
@@ -219,7 +219,7 @@ AirSteerDerived derive_air_steer(const AirSteerTuning& block, const JumpDerived&
     derived.launch_speed = static_cast<float>(speed);
     derived.accel = static_cast<float>(accel);
     derived.peak_speed = static_cast<float>(ramp * accel + speed);
-    derived.damping = block.kd * 0.01f;
+    derived.damping = block.kd * 0.01f;  // DAT_00841c08
     derived.lateral_speed = block.max_lateral_vel;
     return derived;
 }

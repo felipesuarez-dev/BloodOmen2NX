@@ -113,8 +113,10 @@ void FollowCamera::update(const PlayerState& player, const bo2::engine::Collisio
         yaw_velocity_ = blend.velocity(advance);
 
         // Height, FUN_00407c70. A jump gives the camera a setup with a delay and
-        // a blend time (FUN_004074c0); until the delay passes the pivot stays
-        // where it was, then it blends toward Kain over the blend time.
+        // a blend time (FUN_004074c0). The pivot holds its height for about the
+        // delay, then blends toward Kain; the progress is the time since takeoff
+        // over the blend time, as measured in the live follow object, so the
+        // blend ends 0.6 s after takeoff (see kJumpLagDelay).
         if (was_grounded_ && !player.grounded && player.vertical_velocity > 0.0f) {
             lag_waiting_ = true;
             lag_running_ = false;

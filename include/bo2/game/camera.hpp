@@ -19,8 +19,14 @@ constexpr float kFollowPivotHeight = 76.0f;   // setup+0x0c: the pivot is this f
 // camera lags Kain by up to 5 degrees on a turn and the oracle measured 0.2
 // degrees, while 750 stays within 1.6.
 constexpr float kFollowYawAccel = 150.0f * 5.0f;
-constexpr float kJumpLagDelay = 0.1f;         // the setup the camera gets at takeoff: setup+0x10 (FUN_004074c0)
-constexpr float kJumpLagTime = 0.6f;          // and setup+0x14
+// The setup the camera gets at takeoff (FUN_004074c0), read live: delay
+// setup+0x10 = 0.1 s, blend setup+0x14 = 0.6 s. The live follow object shows
+// the blend progress as the time since takeoff over 0.6 s (follow+0xD4 equals
+// follow+0xCC), and the delay field reads 0 from about 0.08 s on, so the hold
+// before the blend is approximated by kJumpLagDelay. FUN_00407c70 itself sets
+// +0xD4 = +0xCC - delay, which the live data does not show.
+constexpr float kJumpLagDelay = 0.1f;  // measured approximation of the hold
+constexpr float kJumpLagTime = 0.6f;   // setup+0x14
 
 class FollowCamera {
 public:
@@ -38,7 +44,7 @@ public:
     const bo2::engine::Vec3& target() const;
     // The camera's own yaw (radians, unwrapped): it follows Kain's yaw with a limited acceleration.
     float yaw() const;
-    // Height of the pivot above the world floor, which lags Kain for 0.7 s after a jump.
+    // Height of the pivot above the world floor, which lags Kain for 0.6 s after a jump.
     float pivot_z() const;
 
 private:

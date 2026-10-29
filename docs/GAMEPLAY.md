@@ -150,7 +150,7 @@ every tick). The code that builds that setup was not traced.
 | Pose | Eye 190.94 behind and 96.07 above Kain, looking along the yaw pitched down 6 deg | the three rows above; measured, oracle: 190.9, 96.1 and -6.0 deg |
 | Yaw catch-up | A cubic Hermite blend from the camera yaw and yaw speed to Kain's yaw at rest, advanced each frame by `min(dt, duration)`; the duration is the largest root of the four quadratics that bound the end accelerations by the limit | FUN_00407ec0 with FUN_00713360, FUN_00713450 (duration), FUN_00713810 and FUN_00713870 (position and velocity); the angle is taken closest to Kain's (FUN_00694400) |
 | Yaw acceleration limit | 150 rad/s2 from setup+0x30, times 5 when `input device type == 2` (DAT_0083f718); the port uses 750, see below | FUN_00407ec0 |
-| Height lag after a jump | At takeoff the camera is given a setup with delay 0.1 s and blend time 0.6 s. The pivot stays at its resting height for the delay, then blends from that height to Kain's z plus 76 with the same Hermite blend (end speed zero, start speed carried between frames), never below Kain's feet. After the blend it is rigid again | FUN_00407c70 and FUN_004074c0; the setup was read live (setup+0x10 = 0.1, setup+0x14 = 0.6) |
+| Height lag after a jump | At takeoff the camera is given a setup with delay 0.1 s and blend time 0.6 s. The pivot holds its resting height for about the delay, then blends from that height to Kain's z plus 76 with the same Hermite blend (end speed zero, start speed carried between frames), never below Kain's feet. The blend progress is the time since takeoff over 0.6 s, so it ends 0.6 s after takeoff; then the pivot is rigid again | FUN_00407c70 and FUN_004074c0; the setup was read live (setup+0x10 = 0.1, setup+0x14 = 0.6). Measured in the live follow object: +0xD4 equals +0xCC during the blend and the delay field reads 0 from about 0.08 s, so the 0.1 s hold is an approximation (FUN_00407c70 sets +0xD4 = +0xCC - delay, which the data does not show) |
 
 Checked against the capture (`FollowCamera` replayed over its `state.csv`
 rows, `docs/ORACLE_WINE.md`, route `sl01_camera.txt`):
@@ -159,7 +159,7 @@ rows, `docs/ORACLE_WINE.md`, route `sl01_camera.txt`):
 |---|---|---|
 | Camera yaw behind Kain on a 160 deg/s turn | 0.2 to 0.3 deg | at most 1.6 deg (first tick of a turn), 0.5 deg after a short tap |
 | Same turn with the limit at 150 (no keyboard factor) | 0.2 to 0.3 deg | up to 5.1 deg: too slow, so the factor of 5 is kept |
-| Eye height in a standing jump (rest 304.07, apex of Kain 281) | peak 356.04 | 356.32; within 1.1 over the jump except the first row (takeoff seen one row late) |
+| Eye height in a standing jump (rest 304.07, apex of Kain 281) | peak 356.19 | 356.32; within 1.1 over the jump except the first row (takeoff seen one row late) |
 | Pivot blend over 26 rows of the oracle's blend state (blend weight 0.07 to 1 over 0.5 s) | the pivot heights of the dump | the same Hermite blend: 22 rows within 0.4 u, the other 4 differ by 1.2 to 4.7 where the Kain z of that row is a tick off |
 
 Not ported: the range blend of FUN_004088c0 and the other steps. The eye is
@@ -200,6 +200,8 @@ These have no original source. They are development aids or placeholders.
 | Partial stick | At stick `s < 1` FUN_00445ba0 blends slot 0 (weight `s`) with slot 1 (weight `1 - s`, rate `(s + 1) * A+0x40`). Slot 1's clip is not identified, so analog speed scaling is not ported |
 | Start phase, Shift+W | The 100 u/s start phase (0.18 s) and the 200 u/s of Shift+W are measured constants with no decompiled source yet |
 | Air control extras | The run flag (a running jump with an off-axis stick counts as forward), the 0.25 stick scale, the platform velocity at takeoff and the blocked forward and back flags are not ported. The sideways rise (69.0 in the oracle against 64.0) is unexplained |
+| Air step rate | The original applies the air damping (0.96 per call) and the 1 degree turn rule once per frame, and so does the port; the port steps once per rendered frame, so the air feel follows the frame rate until the fixed logic tick lands (BO2NX-37) |
+| Landing | A running jump lands at the run speed and a standing one goes through the start phase (inferred from the graph and `wine_air_1`); the run_landing clip's own root motion is not modeled |
 | Glide | Not implemented. `g_glide` (-128) and `termGlide` (160) are parsed only |
 | Ledge fall | Not implemented. Walking off an edge only applies gravity and keeps the ground speed of the held input; the original fall state (FUN_00442800, FUN_00442ae0) has the same air control as a jump but its takeoff velocity was not traced |
 | Collision size | Body radius and eye height are provisional, see above |

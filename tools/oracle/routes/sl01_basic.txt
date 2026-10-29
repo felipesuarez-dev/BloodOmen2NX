@@ -1,4 +1,4 @@
-# Blood Omen 2, Spanish GoldMaster: load PARTIDA 2 (Save 01, slums/sl01
+# Blood Omen 2, Spanish GoldMaster: load the second save slot (Save 01, slums/sl01
 # checkpoint) from the main menu, then walk, run, jump and attack.
 # It mirrors the phases of the Windows capture_20261028_0150.
 # Run with wine_capture.py; it starts this route at the main menu.
@@ -6,7 +6,7 @@
 phase menu
 shot 00_main_menu
 
-# EMPEZAR PARTIDA, then the third entry of the save list.
+# The start-game menu entry, then the third entry of the save list.
 key Return
 wait 4000
 key Down

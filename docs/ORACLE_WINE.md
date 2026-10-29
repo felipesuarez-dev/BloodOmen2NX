@@ -87,7 +87,7 @@ reference build, and it exits non-zero without writing the manifest if
 ffmpeg dies before the end (a truncated video). `Ctrl+C`, `SIGTERM` and
 `SIGHUP` all stop Xvfb, Wine and ffmpeg.
 
-`tools/oracle/routes/sl01_basic.txt` loads PARTIDA 2 (`Save 01`, the
+`tools/oracle/routes/sl01_basic.txt` loads the second save slot (`Save 01`, the
 slums/sl01 checkpoint), then walks, runs, jumps and attacks, with the phase
 names of the Windows capture. Three more routes start from the same spawn and
 exist to measure one system each:
@@ -296,9 +296,9 @@ holds, each key alone and in pairs):
 
 The engine's virtual buttons are a different table (0x8F43C8: jump 0x5C, attack
 0x5D, evade 0x5E, combat 0x5F, action 0x60); the map from these rows to those
-ids is not traced. The melee attack needs combat mode (`kain.react`:
-`t_combo = ControlPress(c_attack) & FlagOn(InCombatMode) & ...`, combat mode
-held on the `combat` button). At the spawn no key or pair of keys starts one:
+ids is not traced. The melee attack needs combat mode: the combo trigger in
+`kain.react` requires an attack press while combat mode is on, and combat
+mode is held on the `combat` button. At the spawn no key or pair of keys starts one:
 Space, the left mouse button or Z held together with Alt, C, Ctrl or Shift
 leave `anim` at 0. So the attack is still unconfirmed; the Shift, Alt, Space
 and left mouse inputs of `sl01_basic` are the candidates, and the missing piece
