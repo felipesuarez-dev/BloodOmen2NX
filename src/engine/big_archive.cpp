@@ -207,7 +207,7 @@ const BigEntry* BigArchive::find(const std::string& type, const std::string& nam
             if (fallback == nullptr) {
                 fallback = &entry;
             }
-        } else if (iequals(language, locale)) {
+        } else if (!language.empty() && iequals(language, locale)) {
             return &entry;
         }
     }

@@ -185,9 +185,11 @@ detection. The port mirrors this with `kDefaultLocale = "spanish"`
 - The meaning of the `n` u16 values beyond the `cellgrup` and `strtable`
   symbol lists.
 - Which duplicate the engine returns when an entry and its `default` copy
-  collide (FUN_006c8fb0 only filters).
-- `planinfo`, `animatio`, `animreel`, `strtable`, `musicbnk`, `texfont`,
-  `liteinfo`; `region` is decoded in `docs/FORMATS/region.md`.
+  collide (FUN_006c8fb0 only filters); the port prefers the locale entry,
+  which matches the oracle.
+- `planinfo`, `animatio`, `musicbnk`, `texfont` and `liteinfo`. `region`,
+  `animreel` and `strtable` are decoded in `docs/FORMATS/region.md`,
+  `animreel.md` and `strtable.md`.
 - The `region`, `planinfo` and shared `model` records (the `cellgrup` tail is decoded in `docs/FORMATS/models.md`).
 - Which types the renderer and audio backend consume first.
 

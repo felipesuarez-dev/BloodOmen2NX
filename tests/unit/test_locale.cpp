@@ -132,6 +132,9 @@ void test_language_names() {
     CHECK(archive.language_name(archive.entries()[0]) == "spanish");
     // An index outside the name table has no name.
     CHECK(archive.language_name(archive.entries()[1]).empty());
+    // ... and never matches a locale, not even an empty one.
+    CHECK(archive.find("strtable", "ui/ui", "") == nullptr);
+    CHECK(archive.find("strtable", "ui/ui", "spanish") == &archive.entries()[0]);
 }
 
 void test_locale_wins_over_default() {
@@ -361,6 +364,10 @@ void test_display_text() {
     // Locales without a mapping return the stored text.
     CHECK(bo2::engine::display_text("TCUVWXY", "english") == "TCUVWXY");
     CHECK(bo2::engine::display_text("TCUVWXY", "default") == "TCUVWXY");
+    // Raw Latin-1 bytes become UTF-8 in every locale.
+    CHECK(bo2::engine::display_text("a\xE9" "z", "spanish") == "a\xC3\xA9" "z");
+    CHECK(bo2::engine::display_text("\xFC", "german") == "\xC3\xBC");
+    CHECK(bo2::engine::display_text("\x80\xFF", "english") == "\xC2\x80\xC3\xBF");
 }
 
 }  // namespace

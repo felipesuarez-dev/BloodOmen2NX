@@ -10,7 +10,8 @@ namespace bo2::engine {
 
 // One `strtable` record: both strings are names of the container name table.
 // `value` is the stored text: lower case, with upper-case letters standing for
-// accented glyphs of the game font (see display_text).
+// accented glyphs of the game font and a few raw Latin-1 bytes (see
+// display_text).
 struct StringTableRecord {
     std::string key;
     std::string value;
@@ -47,7 +48,8 @@ private:
 // evidence over every Spanish record (the only upper-case letters used
 // outside control codes are T C U V W X Y). For `spanish`:
 // T=a-acute C=e-acute U=i-acute V=o-acute W=u-acute X=n-tilde Y=inverted
-// question mark. Other locales have no table yet and return the text as is.
+// question mark. Other locales have no table yet and keep their letters.
+// Raw Latin-1 bytes (0x80-0xFF) become their UTF-8 form in every locale.
 // Control codes (`@c`, `@n`, `\x`, `\q`, `%d`) are lower case and pass through.
 std::string display_text(const std::string& stored, const std::string& locale);
 

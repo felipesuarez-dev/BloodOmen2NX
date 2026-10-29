@@ -101,6 +101,36 @@ std::string sha256_hex(const std::string& text) {
     return hex;
 }
 
+// Strict UTF-8 check: lead byte, continuation bytes, no overlong 2-byte form.
+bool is_utf8(const std::string& text) {
+    std::size_t index = 0;
+    while (index < text.size()) {
+        const auto lead = static_cast<unsigned char>(text[index]);
+        std::size_t extra = 0;
+        if (lead < 0x80) {
+            extra = 0;
+        } else if (lead >= 0xC2 && lead < 0xE0) {
+            extra = 1;
+        } else if (lead >= 0xE0 && lead < 0xF0) {
+            extra = 2;
+        } else if (lead >= 0xF0 && lead < 0xF5) {
+            extra = 3;
+        } else {
+            return false;
+        }
+        if (index + extra >= text.size()) {
+            return false;  // truncated sequence
+        }
+        for (std::size_t offset = 1; offset <= extra; ++offset) {
+            if ((static_cast<unsigned char>(text[index + offset]) & 0xC0) != 0x80) {
+                return false;
+            }
+        }
+        index += extra + 1;
+    }
+    return true;
+}
+
 bool has_non_ascii(const std::string& text) {
     for (const char character : text) {
         if (static_cast<unsigned char>(character) >= 0x80) {
@@ -178,13 +208,20 @@ int main() {
             if (credits != nullptr) {
                 CHECK(sha256_hex(*credits) ==
                       "4756995ad5f641e7bdcc03c2b8e05aeee9a7f1d1d74ed64d523085f419f85e39");
-                // The stored text is ASCII; the displayed text carries the accent.
+                // This stored value is ASCII; the displayed text carries the accent.
                 CHECK(!has_non_ascii(*credits));
                 const std::string shown =
                     bo2::engine::display_text(*credits, bo2::engine::kDefaultLocale);
                 CHECK(has_non_ascii(shown));
                 CHECK(shown.size() > credits->size());
             }
+            // One Spanish value stores a raw Latin-1 byte; every displayed value is UTF-8.
+            std::size_t raw_latin1 = 0;
+            for (const bo2::engine::StringTableRecord& record : table.records()) {
+                raw_latin1 += has_non_ascii(record.value) ? 1 : 0;
+                CHECK(is_utf8(bo2::engine::display_text(record.value, bo2::engine::kDefaultLocale)));
+            }
+            CHECK(raw_latin1 == 1);
         }
 
         // The default copy is the untranslated table; the Italian one has the irregular record.

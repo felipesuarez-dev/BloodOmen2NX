@@ -69,12 +69,21 @@ const std::string* StringTable::find(const std::string& key) const {
 }
 
 std::string display_text(const std::string& stored, const std::string& locale) {
-    if (!iequals(locale, "spanish")) {
-        return stored;
-    }
+    const bool spanish = iequals(locale, "spanish");
     std::string text;
     text.reserve(stored.size());
     for (const char character : stored) {
+        const auto byte = static_cast<unsigned char>(character);
+        if (byte >= 0x80) {
+            // A raw Latin-1 byte in the stored name (one Spanish and one German record).
+            text.push_back(static_cast<char>(0xC0 | (byte >> 6)));
+            text.push_back(static_cast<char>(0x80 | (byte & 0x3F)));
+            continue;
+        }
+        if (!spanish) {
+            text.push_back(character);
+            continue;
+        }
         switch (character) {
             case 'T': text += "\xC3\xA1"; break;  // a-acute
             case 'C': text += "\xC3\xA9"; break;  // e-acute

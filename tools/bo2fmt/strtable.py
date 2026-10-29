@@ -130,7 +130,11 @@ def main() -> int:
     p_dump.add_argument("--raw", action="store_true", help="print the stored text")
     p_dump.set_defaults(func=cmd_dump)
     args = parser.parse_args()
-    return args.func(args)
+    try:
+        return args.func(args)
+    except (OSError, big.BigError, StrTableError) as error:
+        print(f"strtable: {error}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":

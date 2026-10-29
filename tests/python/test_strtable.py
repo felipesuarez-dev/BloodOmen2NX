@@ -133,6 +133,18 @@ class DumpCommandTest(unittest.TestCase):
             self.assertIn("language=0 (default)", text)
             self.assertIn("key_one\tone\n", text)
 
+    def test_dump_reports_errors_without_a_traceback(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            missing = Path(tmp) / "missing.big"
+            broken = Path(tmp) / "broken.big"
+            broken.write_bytes(b"not a big file")
+            for path in (missing, broken):
+                errors = io.StringIO()
+                with contextlib.redirect_stderr(errors):
+                    code, _ = self.run_dump(str(path), "--entry", "ui/ui")
+                self.assertEqual(code, 1)
+                self.assertTrue(errors.getvalue().startswith("strtable: "))
+
 
 if __name__ == "__main__":
     unittest.main()

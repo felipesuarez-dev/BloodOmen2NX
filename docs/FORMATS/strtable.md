@@ -81,7 +81,10 @@ table when it exists, else the `default` copy.
 
 ## Text encoding
 
-The stored text is lower-case ASCII. **Upper-case letters stand for
+The stored text is lower case and almost all ASCII: one Spanish record of
+`code.big` `ui/UI` and one German `sl04_hints` record carry a raw Latin-1
+byte (0xE9 and 0xFC), which `display_text` converts to UTF-8 in every locale.
+**Upper-case letters stand for
 accented glyphs** of the game font (`fonts/revised`), which has no separate
 per-language font. Spanish uses seven placeholders:
 
