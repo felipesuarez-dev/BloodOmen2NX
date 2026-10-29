@@ -14,6 +14,13 @@ python3 tools/bo2fmt/bo2fmt.py info <file>
 python3 tools/bo2fmt/bo2fmt.py verify <container.big>
 ```
 
+Texture inspection (needs Pillow, `python3-pil`; write under `external/`):
+
+```sh
+python3 tools/bo2fmt/textures.py list <level.big> [--match text]
+python3 tools/bo2fmt/textures.py export <level.big> --out external/extracted/<level> [--match text]
+```
+
 `unpack` writes `manifest.json` with the BIG entry metadata (type, name,
 language, symbols and padding). `repack` rebuilds the container from that
 manifest and is byte-identical when the extracted data is unchanged.
@@ -71,7 +78,8 @@ Requirements:
 | `audio.py` | `sound` metadata and `strmfile` extraction | Verified on the installed tree; field semantics open |
 | `model.py` | model, skeleton and raw animation extraction | Verified: 5,168 models, 1,586 skinned |
 | `region.py` | entity table extraction | Verified: 15,632 entities, 533 models, 0 errors |
-| `compare_frames.py` | Frame side-by-side, diff and metrics | Synthetic tests; oracle capture blocked |
+| `textures.py` | `texture` entries to PNG (Pillow) with `index.json` | Verified on `slums/sl01`: 239/239 |
+| `compare_frames.py` | Frame side-by-side, diff and metrics | Synthetic tests; used against the Windows and Wine oracle frames |
 
 The numbered `data/*.dat` pipeline is documented in
 `docs/FORMATS/dat.md`. The content and audio containers are documented in
