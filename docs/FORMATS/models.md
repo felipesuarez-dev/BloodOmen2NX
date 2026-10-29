@@ -187,20 +187,22 @@ albedo multiplier.
 | Helper models carry editor colours, for example `c1 = (0.176, 0.063, 0.063)` on every `pyramid/red` model | same dump |
 | The device is initialised with `D3DRS_LIGHTING = FALSE` (`SetRenderState(0x89, 0)` at `0x55fe04`), so material diffuse is never combined with D3D lights for this geometry | disassembly of the device state setup around `0x55fdc4` |
 | The render-state cache binds a second texture to stage 1 with `COLOROP = MODULATE`, `ALPHAOP = SELECTARG2` (`0x565bf3`..`0x565c10`) and disables stage 1 when none is bound | disassembly of the state cache near `0x565b73` |
-| Measured on the oracle pose: `--material diffuse` has mean 0.016 against 0.108 in the Wine frame, and a luminance correlation of 0.01 (`off`: 0.12) | `docs/ORACLE_COMPARE.md` gate |
+| Measured on the oracle pose: `--material diffuse` has mean RGB 0.016 against 0.108 in the Wine frame, and a luma correlation of 0.015 (`off`: 0.13) | `docs/ORACLE_COMPARE.md` gate |
 
 So the layers are the exporter's fallback colours (they colour the
 untextured preview surfaces) and play no part in the lighting of textured
 surfaces; the modes stay as a diagnostic and are not a path to parity.
 
-The static lighting is baked. Each `.slm` group stores, after its light-map
-entries, one RGBA `f32` colour per vertex of the lit model
-(`docs/FORMATS/litedata.md`); the stage-1 `MODULATE` above is the
-light map. The equation the evidence supports is
+The static lighting appears to be baked. Each `.slm` group stores, after its
+light-map entries, one RGBA `f32` colour per vertex of the lit model
+(`docs/FORMATS/litedata.md`). Inferred, not traced: the stage-1 `MODULATE`
+above is the light map (the disassembly shows a second texture bound to
+stage 1; the code that binds the `.slm` image there was not found), and the
+per-vertex colours are the vertex diffuse. The equation this would give is
 `texture × vertex colour × light map luminance`. A spike of exactly that
 equation (vertex colours bound with the existing vertex-count group match)
 raised the masked world error against the Wine frame from 35.4 to 48.2 of
-255 and the mean luminance from 0.241 to 0.288 (Wine: 0.108), so it was
+255 and the mean RGB from 0.241 to 0.288 (Wine: 0.108), so it was
 not kept: the original is much darker than any combination available
 here, and the group-to-instance binding is itself a heuristic. Fog, the
 per-level ambient values and the dynamic lights are not implemented.
@@ -472,16 +474,26 @@ they belong to shared `model` entries (`kainemitter`, `sfxobj`,
 
 | Step | Function | Behavior |
 |---|---|---|
-| Parse the template | `FUN_00785c8d` | Reads the `.etp` text line by line (`\n` or `\r`). `flag <name>` lower-cases the name (`FUN_0068f430`) and compares it with `FUN_0068ec30` (`strcmp`). `helperobj` sets byte `+0x66` of the template. Other flag bytes: `notplaceable` `+0x60`, `waittouseanims` `+0x61`, `static` `+0x62`, `staticcollision` `+0x63`, `collisionresponse_stop` `+0x64`, `nevercull` `+0x65`, `alwayslit` `+0x67`, `neverlit` `+0x68`, `tokenchallenge` `+0x69`, `keeprendermodeldata` `+0x6a`, `training` `+0x6b`. |
-| `include <path>` | `FUN_00785c8d` | Looks the path up and splices the included text in front of the remaining lines, so its flags apply first. `apinclude` is ignored unless `DAT_00a6ad40` is set. |
+| Parse the template | `FUN_00785c8d` | Reads the `.etp` text line by line (`\n` or `\r`). Tokens are lower-cased (`FUN_0068f430`) and compared with `FUN_0068ec30` (`strcmp`); a line whose first token starts with `//` is a comment. `helperobj` sets byte `+0x66` of the template. Other flag bytes: `notplaceable` `+0x60`, `waittouseanims` `+0x61`, `static` `+0x62`, `staticcollision` `+0x63`, `collisionresponse_stop` `+0x64`, `nevercull` `+0x65`, `alwayslit` `+0x67`, `neverlit` `+0x68`, `tokenchallenge` `+0x69`, `keeprendermodeldata` `+0x6a`, `training` `+0x6b`. |
+| `include <path>` | `FUN_00785c8d` | Looks the path up and splices the included text in front of the remaining lines, so its models and flags come first. `apinclude` is ignored unless `DAT_00a6ad40` is set. |
 | Create the entity | `FUN_0070d0d5` | Copies template `+0x66` to bit 9 (`0x200`) of the entity flags at `+0xf0`, `+0x62` to bit 6 and `+0x63` to bit 7; clears the hidden byte at `+0x139`. |
 | Draw the entity | `FUN_0070f100` | Returns without drawing when `+0x139` is set or `flags & 0x200`. |
 
 Template files are `strmfile` entries named
-`assets/etypes/<path>.etp` in the level container. The entity type is the
-file name without directory or extension (`sfxobj.etp` is type `sfxobj`),
-and `include` paths are relative to `assets/etypes/` without extension
-(`camera.etp` is `include camera/ExportedCamera`, which carries the flag).
+`assets/etypes/<path>.etp` in the level container. A region entity's type
+names its template: the type is the path under `assets/etypes/` without
+extension, which is often just the file name (`sfxobj` is `sfxobj.etp`)
+and sometimes a path (`camera/animcamera`, `animated/animated_nocull`,
+`levels/hyldencity/cinematics/calvary_arrives/calvary_arrives`).
+`include` operands are paths of the same form. Counted over the template
+copies of the 177 containers, 478 of 5,671 `include` lines end in `.etp`
+and 16 are bare names (`include camera` inside `camera/animcamera.etp`).
+The port resolves the exact path first and then
+the file name alone, for types and includes alike
+(`camera.etp` is `include camera/ExportedCamera.etp`, which carries the
+flag). In the 161 levels that have a region table, 4,160 of 15,584 entities
+resolve to a template with `helperobj`, and one type (`lclub`) has no
+template.
 Reference examples from `slums/sl01`:
 
 ```
@@ -511,14 +523,30 @@ The port (`src/engine/entity_template.cpp`) parses `model`, `include` and
 `flag helperobj`, resolves the entity type against the container's
 `.etp` files and skips the entity model when the flag is set. In `sl01`
 47 of the 104 region entities are helper objects, including the
-`kainemitter` (`player`) whose purple box enclosed the spawn camera.
+`kainemitter` (`player`) whose purple box enclosed the spawn camera. An
+included template is parsed once per library, since an include graph fans
+out exponentially otherwise.
+
+Collision: skipping the entity also drops its triangles from the port's
+collision mesh, which is built from the render geometry (`sl01`: 49,624 to
+49,378 triangles). That matches the original, where Kain is not blocked by
+these volumes. The Wine captures (`wine_20261029_0110`, `wine_20261029_0052`)
+start Kain at `-8.8, 57.1, 208.0`. Testing his feet and a point 30 units
+above them against the model bounds placed at the entity (yaw applied), he
+stands inside the `hidden_checkpoint` box (unrotated `x -28.8..11.2,
+y 47.1..67.1, z 208..268`) and the `kainemitter` box (`player`, origin `z
+218.2`). At the start of `after_w` his velocity goes from 0 to 100 to 230
+along +X with no pause while he leaves both volumes. The evidence covers
+those two boxes only (the other helpers are off his path). The port's
+collision from render geometry is a simplification of the original's
+`collmodc` models (above); it must not bring helper volumes back.
 
 Open: the types in the right-hand column have no `helperobj` flag, yet the
 original shows no pyramid for them. `FUN_0070dfa0` (`SetHidden`, hidden
 byte `+0x139`) is the other path that stops the draw; its callers for
 `detector`, `planhelper*`, `conversation` and `cinematic` are not traced,
 and neither is a reader of the `show helpers` debug option (group 12,
-index 6 of `FUN_004a3c55`). The port still draws those six types.
+index 6 of `FUN_004a3c55`). The port still draws those types.
 
 ## Animation
 

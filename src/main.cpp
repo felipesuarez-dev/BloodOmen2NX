@@ -384,7 +384,7 @@ LoadedLevel load_level(const Options& options) {
     for (const bo2::engine::RegionEntity& entity : level.region_entities) {
         bo2::engine::EntityTemplate entity_template;
         if (templates.find_type(entity.model, entity_template) &&
-            !bo2::engine::entity_template_is_drawn(entity_template)) {
+            entity_template.helper_object) {
             ++level.helper_entities;
             continue;
         }
