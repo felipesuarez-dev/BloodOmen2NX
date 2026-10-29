@@ -576,6 +576,12 @@ void test_cell_instances() {
     CHECK(std::fabs(geometry.positions[4].x - 20.0f) < 1.0e-5f);
     CHECK(std::fabs(geometry.minimum.x - 10.0f) < 1.0e-5f);
     CHECK(std::fabs(geometry.maximum.x - 20.0f) < 1.0e-5f);
+    // The light-map UVs follow the placed vertices: the second instance's
+    // vertex 1 carries the model's vertex 1 UV.
+    CHECK(geometry.lightmap_texcoords.size() == geometry.positions.size());
+    CHECK(geometry.lightmap_texcoords.size() == 8 &&
+          std::fabs(geometry.lightmap_texcoords[5].x - 0.5f) < 1.0e-5f &&
+          std::fabs(geometry.lightmap_texcoords[5].y - 0.25f) < 1.0e-5f);
 
     std::vector<std::uint8_t> broken = data;
     const std::string needle = "cellinst";

@@ -109,6 +109,7 @@ box numbers below come from `tools/compare_frames.py`.
 | `develop`, `--material off --lightmap` | 54.90 | 60.41 | 0.314 |
 | helper rule, `--material off --lightmap` | 54.79 | 60.06 | 0.314 |
 | light maps bound by instance name, `--material off --lightmap` | 55.10 | n/a | 0.322 |
+| and light-map UVs placed with the instances | 40.79 | n/a | 0.261 |
 | `develop`, `--material diffuse` | 23.47 | 26.27 | 0.016 |
 | helper rule, `--material diffuse` | 23.39 | 26.19 | 0.016 |
 | helper rule, `--material layers` | 23.38 | 26.18 | 0.016 |
@@ -156,8 +157,12 @@ How to read it:
   and shadowed areas of the original are not reproduced.
 - Binding the light maps by instance name, as the original does
   (`litedata.md`), raises the luma correlation of the `--lightmap` frame
-  from 0.10 to 0.15, the best of the frames above, while its MAE stays
-  about 55. The light-map shading of the host is still not the original
+  from 0.10 to 0.15, while its MAE stays about 55. The placed instances
+  also kept the light-map UVs of the unplaced model, so every placed
+  triangle sampled another vertex's UV. Placing them with the instances
+  (`place_instances`) removes the smears on the walls and brings the MAE
+  to 40.79 and the mean RGB to 0.261. The correlation drops to -0.05: the
+  lit archway of the Wine frame is still dark in the port. The light-map shading of the host is still not the original
   equation. Stage 1 runs `COLOROP MODULATE` with the light map
   (`0x565bf3`). The `.slm` palette holds only the high byte
   (`0xLL000000`), so the texture format the original builds from it

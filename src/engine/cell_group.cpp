@@ -901,6 +901,7 @@ void place_instances(LevelGeometry& geometry) {
     std::vector<Vec3> positions;
     std::vector<Vec3> normals;
     std::vector<Vec2> texcoords;
+    std::vector<Vec2> lightmap_texcoords;
     std::vector<LevelTriangle> triangles;
     for (std::size_t instance_index = 0; instance_index < geometry.instances.size();
          ++instance_index) {
@@ -928,6 +929,11 @@ void place_instances(LevelGeometry& geometry) {
             }
             texcoords.push_back(source < geometry.texcoords.size() ? geometry.texcoords[source]
                                                                   : Vec2{});
+            if (!geometry.lightmap_texcoords.empty()) {
+                lightmap_texcoords.push_back(source < geometry.lightmap_texcoords.size()
+                                                 ? geometry.lightmap_texcoords[source]
+                                                 : Vec2{});
+            }
         }
         for (std::uint32_t index = 0; index < range.triangle_count; ++index) {
             const std::size_t source = static_cast<std::size_t>(range.first_triangle) + index;
@@ -952,6 +958,11 @@ void place_instances(LevelGeometry& geometry) {
     geometry.positions = std::move(positions);
     geometry.normals = std::move(normals);
     geometry.texcoords = std::move(texcoords);
+    // The light-map UVs follow the placed vertices too; the renderer indexes
+    // them with the placed triangle indices.
+    if (!geometry.lightmap_texcoords.empty()) {
+        geometry.lightmap_texcoords = std::move(lightmap_texcoords);
+    }
     geometry.triangles = std::move(triangles);
     compute_bounds(geometry);
 }

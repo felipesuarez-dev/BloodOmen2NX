@@ -82,6 +82,37 @@ scanner treats every valid entry signature in the file as a candidate,
 so it collects 71 unique entries from sanctuary; the first matching
 entry per texture wins.
 
+## Group header and lighting modes
+
+After the group name, FUN_00635f20 reads:
+
+```
+u8  flag A   mode 1: the per-vertex colours follow when set
+u8  flag B   mode 2: the per-prim light maps follow when set
+u8  flag C   mode 2: the per-vertex colours follow when clear
+u32 prim count           (at most 0x80)
+u8  per prim: has a light map (mode 2, under flag B)
+```
+
+That is 7 bytes plus one per prim, the 9, 12 and 13 bytes seen before.
+FUN_00636bd0 then follows the lighting mode of the level's `liteinfo`
+object (global `0x00A6AC40`, vtable `0x86eea8`, field `+0x1c`):
+
+- **Mode 1:** the per-vertex colours only (FUN_00636bd0).
+- **Mode 2:** FUN_006368c0 reads one light-map entry (FUN_00636380,
+  FUN_00636200) for each prim whose byte is set, then the per-vertex
+  colours unless flag C is set.
+
+The Wine oracle reads mode 2 at the `sl01` spawn (capture
+`wine_lightmode_1`).
+
+At draw time the render-state cache sets stage 1 to `COLOROP MODULATE`,
+`ALPHAOP SELECTARG2` with the light map, or disables stage 1 without one
+(`0x565bf3`-`0x565c52`). The `.slm` palette carries only the high byte
+(`0xLL000000`), so the light map acts as a luminance factor. The exact
+texture format the engine builds from it (FUN_0061bc10, FUN_005fe500) is
+not traced.
+
 ## Binding to the level geometry
 
 The original keys every lighting group by its object name. The
@@ -139,8 +170,7 @@ against the no-lightmap + five-entry version.
 - Instance mapping for shared `model` entries that are not placed by
   `cellinst`. Region entities now use group-name matching (with a
   vertex-count fallback) for their models.
-- The group header fields after the name (12, 13 or 9 bytes depending on
-  the group).
+- What flag A means in mode 2.
 - How the per-vertex colours (below) combine with the light map in the
   original; a spike of `texture × vertex colour × light map` ended farther
   from the Wine frame than the unlit preview (`models.md`, BO2NX-68).
