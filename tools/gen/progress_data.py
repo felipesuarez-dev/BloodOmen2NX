@@ -32,9 +32,19 @@ PLATFORM_FEATURES = [
     ("Headless host first frame", "done"),
     ("Level geometry (cellgrup)", "done"),
     ("Level textures (DDS binding)", "done"),
-    ("Host renderer (OpenGL)", "todo"),
+    # SDL2 window, GLSL 1.20 pipeline (src/platform/sdl/sdl_backend.cpp,
+    # render_pipeline.cpp); the sdl_triangle ctest draws a frame under Xvfb.
+    ("Host renderer (OpenGL)", "done"),
+    # No libnx or deko3d code exists: src/platform/switch/ is not created yet.
     ("Switch renderer (deko3d)", "todo"),
-    ("Audio", "todo"),
-    ("Input", "todo"),
+    # Mixer, SDL output and the floor-1 decoder work and the mixer has unit
+    # tests. Partial because the Ogg decoder has no unit test, its floor-0
+    # path dlopens the host libvorbisfile (absent on the Switch) and the
+    # sound/strmfile event table is not wired to gameplay.
+    ("Audio", "partial"),
+    # Keyboard and Switch button maps, deadzone and SDL game-controller
+    # support (src/platform/input.cpp, tests/unit/test_platform.cpp).
+    ("Input", "done"),
+    # Inventory only (docs/FORMATS/video.md); no Bink decoder or playback.
     ("Video (Bink)", "todo"),
 ]
