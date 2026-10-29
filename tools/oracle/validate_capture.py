@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
-"""Validate a downloaded native Windows oracle capture.
+"""Validate an oracle capture.
 
 The tool is read-only: it inspects a capture directory and reports whether
 the artifacts needed for a real oracle comparison are present and coherent.
 It never contacts the Windows host.
+
+A capture whose `game_manifest.json` has `"source": "wine"` comes from the
+Wine harness (`wine_capture.py`). That harness has no D3D hook, so it does
+not produce `camera_d3d8.jsonl` or `state.csv`; they are not required and
+the camera coverage checks are skipped. Windows captures are unchanged.
 """
 from __future__ import annotations
 
@@ -53,6 +58,8 @@ REQUIRED_FILES = (
     "camera_d3d8.jsonl",
 )
 FINAL_FILES = ("state.csv", "video.mkv")
+WINE_SOURCE = "wine"
+WINE_OPTIONAL_FILES = ("camera_d3d8.jsonl", "state.csv")
 
 
 def sha256_file(path: Path) -> str:
@@ -102,6 +109,11 @@ def manifest_resolution(manifest: dict) -> str:
     if width and height:
         return f"{width}x{height}"
     return ""
+
+
+def manifest_source(manifest: dict) -> str:
+    value = manifest.get("source")
+    return value.strip().lower() if isinstance(value, str) and value.strip() else "windows"
 
 
 def manifest_patch_applied(manifest: dict) -> bool:
@@ -317,10 +329,14 @@ def validate_capture(root: Path, partial: bool = False) -> dict:
     errors: list[str] = []
     warnings: list[str] = []
     manifest = load_manifest(root)
+    source = manifest_source(manifest)
+    wine = source == WINE_SOURCE
 
     required: list[str] = list(REQUIRED_FILES)
     if not partial:
         required.extend(FINAL_FILES)
+    if wine:
+        required = [name for name in required if name not in WINE_OPTIONAL_FILES]
     for name in required:
         if not (root / name).is_file():
             if partial and name in FINAL_FILES:
@@ -377,13 +393,15 @@ def validate_capture(root: Path, partial: bool = False) -> dict:
     camera_start = min(camera["timestamp"]) if camera["timestamp"] else None
     camera_end = max(camera["timestamp"]) if camera["timestamp"] else None
     if (
-        camera_start is not None
+        not wine
+        and camera_start is not None
         and inputs["first_epoch_ms"] is not None
         and inputs["first_epoch_ms"] < camera_start - 1000
     ):
         warnings.append("inputs start before the first camera present")
     if (
-        camera_end is not None
+        not wine
+        and camera_end is not None
         and inputs["last_epoch_ms"] is not None
         and inputs["last_epoch_ms"] > camera_end + 1000
     ):
@@ -441,6 +459,7 @@ def validate_capture(root: Path, partial: bool = False) -> dict:
         "errors": errors,
         "warnings": warnings,
         "manifest": {
+            "source": source,
             "bo2_sha256": manifest_hash(manifest),
             "resolution": manifest_resolution(manifest),
             "patch_applied": manifest_patch_applied(manifest),
@@ -474,6 +493,7 @@ def print_report(report: dict) -> None:
     print(f"capture: {report['capture']}")
     print(f"ok:      {report['ok']}")
     manifest = report["manifest"]
+    print(f"source:  {manifest['source']}")
     print(f"bo2:     {manifest['bo2_sha256'] or '<missing>'}")
     print(f"mode:    {'partial' if report['partial'] else 'final'}")
     print(f"res:     {manifest['resolution'] or '<missing>'}")
@@ -498,7 +518,7 @@ def print_report(report: dict) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Validate a native Windows oracle capture")
+    parser = argparse.ArgumentParser(description="Validate an oracle capture (Windows or Wine)")
     parser.add_argument("capture", help="downloaded capture directory")
     parser.add_argument("--partial", action="store_true", help="allow state/frames/video/saves to be missing")
     parser.add_argument("--json", action="store_true", help="print the full JSON report")

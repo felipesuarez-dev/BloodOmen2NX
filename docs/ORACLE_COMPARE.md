@@ -14,45 +14,29 @@ behaviour, not to run the game for fun.
 
 ## Status
 
-**Reaches the video configuration dialog; crash after accepting.**
-On 2026-10-25 the Spanish GoldMaster launches under Wine 9.0 with a
-virtual desktop:
+**The pristine `bo2.exe` runs under Wine, reaches the main menu and
+gameplay, and scripted captures work.** The setup, the capture tool, the
+route grammar and the measured parity are in
+[`ORACLE_WINE.md`](ORACLE_WINE.md). The spawn frame differs from the
+Windows frame by a mean absolute error of 4.9/255 (RMSE 8.6); the main
+menu by 0.57/255.
 
-```sh
-wine explorer /desktop=bo2,800x600 bo2.exe
-```
+The Wine diagnosis of 2026-10-25 and 2026-10-26 was wrong and is
+withdrawn:
 
-The initial warning appears; after accepting it the video configuration
-dialog appears (device `NVIDIA GeForce GTX 470`, 800x600, 16-bit,
-60 Hz). Accepting that dialog reproduces the fault at `0x56e2c9` in
-`FUN_0056e2b0` with a null `param_1[2]` (read of `0x1c`). Without the
-virtual desktop the fault happens before the configuration dialog.
-Disabling `PlayMovie`, `LogoMovie*` and `IntroMovie*` in a private copy
-of `game.erg` does not change it. The D3D8 device is created and vertex
-buffers are locked, so the crash is in the 2D/UI scaling path rather than
-in device creation.
+| Earlier claim | What is true |
+|---|---|
+| The video dialog's resolution list is empty under Wine | The list is filled. `ModeID` in `HKCU\Software\Crystal Dynamics\Blood Omen 2\1.00.000` pointed out of range, so nothing was selected |
+| Accepting the dialog crashes at `0x56E2C9` (null `param_1[2]` in `FUN_0056E2B0`) and the device init fails in `FUN_0055F480`; a patched exe is needed | The pristine exe does not crash once the registry and the install layout are set. The cause of the old crash was not isolated |
+| 3DNow `femms` raises `EXCEPTION_ILLEGAL_INSTRUCTION`, so it must be replaced | The exception at `0x6D327B` is the game's own 3DNow CPU probe, and the game handles it |
+| d8vk or a virtual desktop is needed | The builtin wined3d is used (`d3d8=b`); no virtual desktop |
 
-The game stores its video settings under
-`HKCU\Software\Crystal Dynamics\Blood Omen 2\1.00.000`
-(`ScreenWidth`, `ScreenHeight`, `ScreenDepth`, `Windowed`, `SkipMovies`,
-`ProgramsWarnings`, `DisableVShader`, `DisableModulate2x`, ...). Setting
-`ScreenDepth = 32`, `Windowed = 1`, `SkipMovies = 1` and
-`ProgramsWarnings = 0` replaces the initial crash with the message
-"Tu configuración gráfica ha cambiado" followed by the video
-configuration dialog. The dialog's resolution list is empty under Wine,
-so a mode cannot be selected; setting `Windowed = 0` and the original
-`ScreenDepth = 23` showed one 16-bit mode and reproduced the crash after
-accepting it.
-
-The next step is to inspect the class behind the `0x86db78` vtable and
-the display/UI initialization that fills `param_1[2]`, and to make Wine
-enumerate a valid video mode (or run the game windowed with a mode that
-does not need the 2D display object).
-
-The install tree was mounted as `C:\gogames\bo2` in a private prefix,
-with `bo2.exe`, `data/` and the `code.big`/`pc.rkv`/`resources` files at
-the root. The oracle remains optional and time-boxed; see
-`docs/RUNNING.md`.
+Those runs lacked `InstallPath` and `MoviePath` (`FUN_00578b80` reads them
+from `HKLM`, and without them the game opens `\data\game.erg` at the drive
+root and loads nothing), used a layout that did not mirror the Windows
+install, and a `ModeID` that selected no mode. The failures that followed
+were read as Wine or D3D8 limits, and each workaround treated a symptom.
+`tools/oracle/patch_bo2_oracle.py` was removed.
 
 ## Frame comparator
 
@@ -67,8 +51,15 @@ python3 tools/compare_frames.py port.ppm oracle.ppm --out /tmp/gate \
 ```
 
 It writes `/tmp/gate-side-by-side.ppm`, `/tmp/gate-diff.ppm` and
-`/tmp/gate-metrics.json`. The script is tested with synthetic frames; the
-oracle frame is still blocked by the Wine crash described above.
+`/tmp/gate-metrics.json`. The script is tested with synthetic frames and has
+been run on the Wine and Windows spawn frames (`ORACLE_WINE.md`).
+
+## Port divergences
+
+| Area | Divergence | Evidence | Next action |
+|---|---|---|---|
+| `sl01` spawn frame | Magenta tint over the whole view | A `pyramid/purple` box (flat `255,0,255,128`) encloses the camera; replacing the texture with green turns the tint green (`docs/FORMATS/textures.md`) | Decompile how `bo2.exe` excludes `pyramid/*` helper volumes from rendering (BO2NX-68) |
+| `sl01` materials | `--material diffuse` and `layers` render near-black | Port render at the spawn | Decompile the material/light-map combination for level models (BO2NX-68) |
 
 ## Rules
 
@@ -77,29 +68,6 @@ oracle frame is still blocked by the Wine crash described above.
 - Keep oracle captures under `external/captures/` (gitignored). Only derived
   facts (hashes, dimensions, counts) are committed.
 - Record every divergence with a `FUN_` reference and a next action.
-
-## Wine unlock attempt (2026-10-26)
-
-A patched copy (`tools/oracle/patch_bo2_oracle.py`, output kept under
-`external/`) now gets past the original `0x56E2C9` crash:
-
-- the 2D scale hook returns when the display object is null;
-- all 152 `femms` (3DNow) instructions are replaced by `emms`, because Wine
-  raises `EXCEPTION_ILLEGAL_INSTRUCTION` on `femms`;
-- the device-init `int3` at `0x568763` is skipped for diagnosis.
-
-The game reaches the warning and video-configuration dialogs. Accepting the
-configuration then fails in `FUN_0055F480` (device/display initialization)
-and the subsequent path hits the skipped assert / a null device. The
-resolution list is empty under Wine; forcing mode index 0 does not fix
-device creation. `d8vk-v1.0` was installed into the private prefix and
-initializes Vulkan/llvmpipe, but the same device-init failure remains.
-
-The working layout is `external/oracle_game/` (game files at the root,
-`bo2.exe` patched copy); launch with `wine ./bo2.exe` from that directory so
-argv[0] carries separators. Next steps: inspect `FUN_0055F480` return point
-under `winedbg`/gdb, or provide a 32-bit D3D8 mode that Wine accepts
-(possibly a newer Wine or a native d3d8 runtime).
 
 ## Native Windows oracle (2026-10-27)
 

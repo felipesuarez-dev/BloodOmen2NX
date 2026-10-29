@@ -163,21 +163,29 @@ SD card layout will be documented here before the first public build.
 
 ## Oracle
 
-The original game is a 32-bit Windows binary. Running it natively on Windows
-or under Wine is optional and time-boxed: it is used to capture screenshots,
-state and audio for comparison, never as a dependency of the build. The
-native Windows harness is documented in
-[`ORACLE_WINDOWS_NATIVE.md`](ORACLE_WINDOWS_NATIVE.md); it serves captures
-through an SSH reverse tunnel and is validated with
-`tools/oracle/validate_capture.py`.
+The original game is a 32-bit Windows binary. It is run only to capture
+screenshots, state and audio for comparison, never as a dependency of the
+build. Two harnesses exist:
+
+| Harness | Where | Guide |
+|---|---|---|
+| Wine + Xvfb (pristine `bo2.exe`, no GPU) | This host | [`ORACLE_WINE.md`](ORACLE_WINE.md) |
+| Native Windows (camera hook, `state.csv`) | Windows host over an SSH reverse tunnel | [`ORACLE_WINDOWS_NATIVE.md`](ORACLE_WINDOWS_NATIVE.md) |
+
+Wine capture from the main menu to the `sl01` checkpoint, with checks:
+
+```sh
+scripts/oracle/wine_setup.sh external/captures/capture_20261028_0150
+python3 tools/oracle/wine_capture.py tools/oracle/routes/sl01_basic.txt
+python3 tools/oracle/validate_capture.py external/captures/wine_YYYYMMDD_HHMM
+python3 tools/oracle/align.py external/captures/wine_YYYYMMDD_HHMM
+```
 
 Rules:
 
-- Do not spend more than one day making the oracle boot.
-- Do not block M0 or M1 on it.
-- Record the exact steps and the Wine prefix in this file if it works.
-- If it does not boot, continue with static analysis and note it in
-  `STATE.md` and `docs/ORACLE_COMPARE.md`.
+- Do not block M0 or M1 on the oracle.
+- Captures live under `external/captures/` and are never committed.
+- Record divergences in `docs/ORACLE_COMPARE.md`.
 
 ## Asset-gated tests
 

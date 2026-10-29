@@ -3,8 +3,8 @@
 This guide is for the development host (`ubuntu-m75q`,
 `/home/felipe/DECOMPILACION/BloodOmen2NX`). The native Windows oracle runs the
 original PC build on a Windows host, without Wine, and serves a capture
-directory to the development host through an SSH reverse tunnel. The Wine
-path and its blocker are documented in `docs/ORACLE_COMPARE.md`.
+directory to the development host through an SSH reverse tunnel. The local
+Wine harness is documented in `docs/ORACLE_WINE.md`.
 
 ## TL;DR
 

@@ -47,9 +47,18 @@ added with the platform backend; see `docs/RUNNING.md`.
 
 ## Oracle (optional)
 
-The original game under Wine is optional and time-boxed. Wine and Xvfb are
-available on the development machine; a prefix is created only when the
-oracle work starts. Do not block M0 or M1 on it.
+The Wine oracle needs a 32-bit Wine, a virtual display and input and capture
+tools:
+
+```sh
+sudo dpkg --add-architecture i386
+sudo apt update
+sudo apt install -y wine wine32:i386 xvfb xdotool ffmpeg imagemagick
+```
+
+The prefix is created by `scripts/oracle/wine_setup.sh`; see
+[`ORACLE_WINE.md`](ORACLE_WINE.md). The oracle is time-boxed: do not block M0
+or M1 on it.
 
 ## Verify
 

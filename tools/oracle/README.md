@@ -1,21 +1,36 @@
 # Oracle tools
 
-`patch_bo2_oracle.py` builds a derived copy of `bo2.exe` for the Wine oracle:
-it guards the null 2D display object, replaces 3DNow `femms` with `emms`, and
-(while diagnosing) skips the device-init `int3`. It never modifies the input
-executable.
+## Wine oracle
 
-The current blocker is documented in `docs/ORACLE_COMPARE.md`: Wine reaches
-the video configuration dialog, then display/device initialization fails.
+The pristine `bo2.exe` runs under Wine with wined3d on Xvfb; no patch is
+needed. Setup, route grammar, parity numbers and limits are in
+`docs/ORACLE_WINE.md`.
+
+| File | Purpose |
+|---|---|
+| `scripts/oracle/wine_setup.sh` | Build `external/oracle_install/`, create the prefix, import the registry values, seed saves |
+| `wine_capture.py` | One scripted capture: Xvfb, game, route, inputs, screenshots, PPM frames, video |
+| `routes/sl01_basic.txt` | Load PARTIDA 2 and walk, run, jump and attack (Windows phase names) |
+
+```sh
+scripts/oracle/wine_setup.sh external/captures/capture_20261028_0150
+python3 tools/oracle/wine_capture.py tools/oracle/routes/sl01_basic.txt
+python3 tools/oracle/validate_capture.py external/captures/wine_YYYYMMDD_HHMM
+```
+
+A Wine capture has `"source": "wine"` in `game_manifest.json`. It has no
+`camera_d3d8.jsonl` or `state.csv`; `validate_capture.py` does not require
+them for that source and `align.py` reports inputs and phases by time offset.
 
 ## Native Windows oracle (2026-10-27)
 
-A native Windows harness is available as a complement to the Wine oracle.
+A native Windows harness complements the Wine oracle.
 It runs `bo2.exe` on the Windows host (no Wine) in an 800x600 window and
 serves captures through an SSH reverse tunnel.
 
 `oracle_client.py` talks to the server. `validate_capture.py` checks the
-required artifacts, the `bo2.exe` hash and `SHA256SUMS`. `align.py` maps the
+required artifacts, the `bo2.exe` hash and `SHA256SUMS` (Windows and Wine
+captures). `align.py` maps the
 input events to the captured frames and summarizes the present rate.
 
 `capture_20261028_0150` is the first complete capture (`sl01` spawn,

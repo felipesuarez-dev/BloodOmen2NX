@@ -1,0 +1,52 @@
+# Blood Omen 2, Spanish GoldMaster: load PARTIDA 2 (Save 01, slums/sl01
+# checkpoint) from the main menu, then walk, run, jump and attack.
+# It mirrors the phases of the Windows capture_20261028_0150.
+# Run with wine_capture.py; it starts this route at the main menu.
+
+phase menu
+shot 00_main_menu
+
+# EMPEZAR PARTIDA, then the third entry of the save list.
+key Return
+wait 4000
+key Down
+key Down
+key Return
+
+# The level load takes 20-40 s on llvmpipe.
+phase spawn_idle
+wait 45000
+shot 01_spawn
+
+phase after_w
+hold w 2000
+shot 02_after_w
+
+phase after_s
+hold s 1000
+phase after_a
+hold a 1000
+phase after_d
+hold d 1000
+
+phase run
+hold shift+w 2000
+shot 03_after_run
+
+# Right mouse jumps.
+phase jump
+click 3
+wait 270
+shot 04a_during_jump
+wait 1500
+shot 04_after_jump
+
+# Left mouse attacks.
+phase attack
+click 1
+wait 270
+shot 05a_during_attack
+wait 1000
+shot 05_after_attack
+
+phase end

@@ -6,6 +6,9 @@ every `present` call. This tool maps each `inputs.jsonl` event to the nearest
 captured frame so a route can be replayed and compared by frame or tick. It
 also summarizes the state columns and the phases recorded by the capture
 runner.
+
+A Wine capture has no camera data. Its inputs stay unaligned and the report
+lists the inputs and phases with their time offset in seconds.
 """
 from __future__ import annotations
 
@@ -193,6 +196,10 @@ def summarize(root: Path) -> dict:
         "camera_coverage": index.coverage(),
         "inputs": {
             "count": len(annotated),
+            "first_epoch_ms": min(
+                (e["epoch_ms"] for e in annotated if isinstance(e.get("epoch_ms"), (int, float))),
+                default=None,
+            ),
             "invalid": invalid_inputs,
             "aligned": aligned,
             "unaligned": len(annotated) - aligned,
@@ -211,26 +218,32 @@ def summarize(root: Path) -> dict:
 
 def print_summary(report: dict) -> None:
     frames = report["frames"]
+    inputs = report["inputs"]
     print(f"capture: {report['capture']}")
-    print(
-        f"frames:  {frames['count']} present events, "
-        f"{frames['duration_ms']} ms"
-    )
+    if frames["count"]:
+        print(
+            f"frames:  {frames['count']} present events, "
+            f"{frames['duration_ms']} ms"
+        )
+    else:
+        print("frames:  no camera data")
     if "fps_mean" in frames:
         print(
             f"present: {frames['fps_mean']} fps mean, "
             f"{frames['fps_median']} fps median, p95={frames['p95_ms']} ms"
         )
-    inputs = report["inputs"]
-    print(
-        f"inputs:  {inputs['count']} events, {inputs['invalid']} invalid, "
-        f"{inputs['aligned']} aligned, {inputs['unaligned']} outside camera"
-    )
+    line = f"inputs:  {inputs['count']} events, {inputs['invalid']} invalid"
+    if frames["count"]:
+        line += f", {inputs['aligned']} aligned, {inputs['unaligned']} outside camera"
+    print(line)
     for name, phase in report["phases"].items():
-        print(
-            f"phase:   {name} at frame {phase['first_frame']} "
-            f"({phase['events']} events)"
-        )
+        if phase["first_frame"] is not None:
+            where = f"frame {phase['first_frame']}"
+        elif phase["first_epoch_ms"] is not None and inputs["first_epoch_ms"] is not None:
+            where = f"+{(phase['first_epoch_ms'] - inputs['first_epoch_ms']) / 1000:.1f} s"
+        else:
+            where = "unknown time"
+        print(f"phase:   {name} at {where} ({phase['events']} events)")
     state = report["state"]
     if state["rows"]:
         print(
@@ -242,7 +255,7 @@ def print_summary(report: dict) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Align native Windows capture events")
+    parser = argparse.ArgumentParser(description="Align oracle capture inputs with camera frames")
     parser.add_argument("capture", help="downloaded capture directory")
     parser.add_argument("--json", action="store_true", help="print the full JSON report")
     parser.add_argument("--out", help="write the full JSON report to this path")
