@@ -32,6 +32,75 @@ constexpr float kShiftSpeed = 200.0f;      // measured, Shift+W
 
 constexpr float kMaxTurnScale = 4.0f;  // FUN_0041ecf0 caps |ax| / (1 - deadzone) at 4
 
+// DAT_00844c00: degrees to radians. FUN_00441f20 turns a forward or back jump
+// by `jump_turn_rate` degrees per second and skips the speed update on a tick
+// that turns by one degree or more.
+constexpr float kDegrees = 0.017453292519943295f;
+
+// FUN_00425580: the stick class that picks the jump direction (it is stored at
+// KainState+0x540 every tick). `ax` is positive for D, `ay` is negative for W.
+// 0 neutral, 1 forward, 2 back, 3 left, 4 right.
+int stick_class(float ax, float ay, float deadzone) {
+    if (std::sqrt(ax * ax + ay * ay) < deadzone) {
+        return 0;
+    }
+    const float wedge = 2.0f * std::fabs(ay);  // the forward and back cones are 2 |ay| wide
+    if (ax > wedge) {
+        return 4;
+    }
+    if (-wedge <= ax) {
+        return ay >= 0.0f ? 2 : 1;
+    }
+    return 3;
+}
+
+// FUN_00442240: the speed the stick asks for on one axis, `limit_positive` for
+// a stick value that is negative and `limit_negative` for a positive one. The
+// stick is rescaled from the deadzone to 1.
+float stick_target(float stick, float deadzone, float limit_negative_stick, float limit_positive_stick) {
+    if (!(stick > deadzone || stick < -deadzone)) {
+        return 0.0f;
+    }
+    const float range = 1.0f - deadzone;
+    if (stick >= 0.0f) {
+        return -(((stick - deadzone) / range) * limit_positive_stick);
+    }
+    return (limit_negative_stick / range) * (-stick - deadzone);
+}
+
+// FUN_004423b0: moves the (forward, left) velocity toward the targets. With a
+// zero target the velocity is first multiplied by the damping of its sign,
+// once per call, so that part depends on the tick rate as in the original.
+void approach_targets(bo2::engine::Vec2& velocity, float dt, const AirSteerDerived& forward,
+                      const AirSteerDerived& back, const AirSteerDerived& side, float target_forward,
+                      float target_side) {
+    if (target_forward == 0.0f) {
+        velocity.x *= velocity.x >= 0.0f ? forward.damping : back.damping;
+    }
+    if (target_forward < velocity.x) {
+        velocity.x = std::max(target_forward, velocity.x - dt * back.accel);
+    }
+    if (velocity.x < target_forward) {
+        velocity.x = std::min(target_forward, dt * forward.accel + velocity.x);
+    }
+    if (target_side == 0.0f) {
+        velocity.y *= side.damping;
+    }
+    if (target_side < velocity.y) {
+        velocity.y = std::max(target_side, velocity.y - dt * side.accel);
+    }
+    if (velocity.y < target_side) {
+        velocity.y = std::min(target_side, dt * side.accel + velocity.y);
+    }
+}
+
+// FUN_00694970: rotates a vector counter-clockwise.
+bo2::engine::Vec2 rotate(const bo2::engine::Vec2& value, float angle) {
+    const float cosine = std::cos(angle);
+    const float sine = std::sin(angle);
+    return {cosine * value.x - sine * value.y, sine * value.x + cosine * value.y};
+}
+
 // A step longer than this is cut short, the same cap the SDL loop applies, so
 // a stalled frame cannot throw Kain through a wall or the floor.
 constexpr double kMaxStepSeconds = 0.1;
@@ -58,7 +127,13 @@ float window_overlap(float begin, float dt, float window_begin, float window_end
 
 PlayerController::PlayerController(bo2::engine::CollisionWorld& collision,
                                    const bo2::engine::Vec3& start, const KainTuning& tuning)
-    : collision_(collision), tuning_(tuning), jump_(derive_jump(tuning)) {
+    : collision_(collision),
+      tuning_(tuning),
+      jump_(derive_jump(tuning)),
+      side_jump_(derive_jump(tuning.side_jump)),
+      steer_forward_(derive_air_steer(tuning.air_forward, jump_)),
+      steer_side_(derive_air_steer(tuning.air_side, jump_)),
+      steer_back_(derive_air_steer(tuning.air_back, jump_)) {
     if (!(tuning.stick_deadzone >= 0.0f && tuning.stick_deadzone < 1.0f) ||
         !(tuning.jump.terminal_fall > 0.0f)) {
         throw std::invalid_argument("kain tuning has an invalid deadzone or fall speed cap");
@@ -96,7 +171,9 @@ void PlayerController::step(const PlayerInput& input, double seconds) {
     } else if (back_held) {
         turn_rate = tuning_.turn_rate_walk_back;
     }
-    if (input.move_x != 0.0f && deadzone <= std::fabs(input.move_x)) {  // FUN_0041ecf0: `deadzone <= ax`
+    if (air_jump_) {
+        steer_in_air(input, dt);
+    } else if (input.move_x != 0.0f && deadzone <= std::fabs(input.move_x)) {  // FUN_0041ecf0: `deadzone <= ax`
         const float scale =
             std::min(std::fabs(input.move_x) / (1.0f - deadzone), kMaxTurnScale);
         const float direction = input.move_x > 0.0f ? -1.0f : 1.0f;  // ax > 0 lowers the yaw
@@ -106,8 +183,12 @@ void PlayerController::step(const PlayerInput& input, double seconds) {
     state_.pitch += input.look_y * kLookSpeed * dt;
     state_.pitch = std::clamp(state_.pitch, -1.2f, 1.2f);
 
+    // Ground speed. A jump has its own horizontal velocity (steer_in_air); a
+    // plain fall keeps the ground speed of the held input.
     float speed = 0.0f;
-    if (forward_held) {
+    if (air_jump_) {
+        forward_time_ = 0.0f;
+    } else if (forward_held) {
         if (input.run) {
             speed = kShiftSpeed;
         } else if (forward_time_ < kRunStartTime) {
@@ -126,18 +207,25 @@ void PlayerController::step(const PlayerInput& input, double seconds) {
     // that is not modeled.
 
     const bo2::engine::Vec3 heading{std::cos(state_.yaw), std::sin(state_.yaw), 0.0f};
-    const float travel = std::fabs(speed) * dt;
+    // The step of this tick: the jump velocity, or the ground speed along the yaw.
+    const bo2::engine::Vec3 displacement =
+        air_jump_ ? bo2::engine::Vec3{air_velocity_.x * dt, air_velocity_.y * dt, 0.0f}
+                  : heading * (speed * dt);
+    const float travel = bo2::engine::length(displacement);
     if (travel > 0.0f) {
         // The original body sphere is small next to a tick of travel, so walk
         // the move in sub-steps of at most one radius; otherwise a thin wall
         // can be skipped between two samples.
         const int steps = std::clamp(static_cast<int>(std::ceil(travel / kBodyRadius)), 1, kMaxSubSteps);
-        const bo2::engine::Vec3 sub_step = heading * (speed * dt / static_cast<float>(steps));
+        const bo2::engine::Vec3 sub_step = displacement / static_cast<float>(steps);
         for (int index = 0; index < steps; ++index) {
             const bo2::engine::Vec3 next = state_.position + sub_step;
             const bo2::engine::Vec3 body_center =
                 next + bo2::engine::Vec3{0.0f, 0.0f, kBodyRadius + kBodyClearance};
             if (collision_.intersects_sphere(body_center, kBodyRadius)) {
+                // The original zeroes the forward or back velocity when a
+                // probe is blocked (KainState+0x450/0x454); the port stops the jump.
+                air_velocity_ = {0.0f, 0.0f};
                 break;
             }
             state_.position = next;
@@ -157,21 +245,21 @@ void PlayerController::step(const PlayerInput& input, double seconds) {
     // jump. The original trigger path (the caller of FUN_004436e0) is not
     // traced; the edge is an assumption.
     if (input.jump && !jump_was_down_ && state_.grounded) {
-        state_.vertical_velocity = jump_.launch_speed;
-        state_.grounded = false;
-        air_time_ = 0.0f;
-        boost_armed_ = true;
+        start_jump(input);
     }
     jump_was_down_ = input.jump;
 
     // Gravity is g_up while vz >= 0 and g_down once vz < 0 (FUN_00442ae0). A
     // held jump adds boost_accel between boost_start and boost_end after
     // takeoff, averaged over the part of the tick that lies in the window.
-    float acceleration =
-        state_.vertical_velocity >= 0.0f ? tuning_.jump.gravity_up : tuning_.jump.gravity_down;
+    // A sideways jump climbs with the sideVertJump g_up and no boost, then
+    // falls with the normal g_down (FUN_00442ae0 reads A+0x408).
+    const JumpDerived& model = side_jump_active_ ? side_jump_ : jump_;
+    const float gravity_up = side_jump_active_ ? tuning_.side_jump.gravity_up : tuning_.jump.gravity_up;
+    float acceleration = state_.vertical_velocity >= 0.0f ? gravity_up : tuning_.jump.gravity_down;
     if (boost_armed_) {
-        acceleration += jump_.boost_accel *
-                        window_overlap(air_time_, dt, jump_.boost_start, jump_.boost_end) / dt;
+        acceleration +=
+            model.boost_accel * window_overlap(air_time_, dt, model.boost_start, model.boost_end) / dt;
     }
     // FUN_00443a50 accumulates the tick's boost first and only then checks the
     // button, so the tick that sees the release still gets its boost.
@@ -200,10 +288,121 @@ void PlayerController::step(const PlayerInput& input, double seconds) {
         state_.grounded = true;
         boost_armed_ = false;
         air_time_ = 0.0f;
+        end_jump();
     } else {
         state_.grounded = false;
         air_time_ += dt;
     }
+}
+
+// FUN_004436e0: the takeoff. The stick class (FUN_00425580) picks the
+// direction; the speed is the stick magnitude times the launch speed of that
+// direction's block, and a sideways jump swaps in the sideVertJump model. The
+// original then rotates the local velocity by the yaw (FUN_00694970).
+void PlayerController::start_jump(const PlayerInput& input) {
+    const float stick_x = input.move_x;
+    const float stick_y = -input.move_y;  // the original's stick y is negative for W
+    const int kind = stick_class(stick_x, stick_y, tuning_.stick_deadzone);
+    bo2::engine::Vec2 local;
+    side_jump_active_ = false;
+    switch (kind) {
+        case 1:
+            local.x = std::fabs(stick_y) * steer_forward_.launch_speed;
+            break;
+        case 2:
+            local.x = -(std::fabs(stick_y) * steer_back_.launch_speed);
+            break;
+        case 3:
+            local.y = std::fabs(stick_x) * steer_side_.launch_speed;
+            side_jump_active_ = true;
+            break;
+        case 4:
+            local.y = -(std::fabs(stick_x) * steer_side_.launch_speed);
+            side_jump_active_ = true;
+            break;
+        default:
+            break;
+    }
+    air_kind_ = 0;
+    if (kind != 0) {
+        install_air_kind(kind);
+    }
+    air_velocity_ = rotate(local, state_.yaw);
+    air_jump_ = true;
+
+    state_.vertical_velocity = (side_jump_active_ ? side_jump_ : jump_).launch_speed;
+    state_.grounded = false;
+    air_time_ = 0.0f;
+    boost_armed_ = true;
+}
+
+void PlayerController::end_jump() {
+    air_jump_ = false;
+    air_kind_ = 0;
+    air_velocity_ = {0.0f, 0.0f};
+    side_jump_active_ = false;
+}
+
+// FUN_00441dc0: the top speeds a jump direction allows on each axis.
+void PlayerController::install_air_kind(int kind) {
+    air_kind_ = kind;
+    switch (kind) {
+        case 1:  // forward: its own peak, nothing sideways or backward
+            air_max_forward_ = steer_forward_.peak_speed;
+            air_max_side_ = steer_forward_.lateral_speed;
+            air_max_back_ = steer_forward_.lateral_speed;
+            break;
+        case 2:  // back
+            air_max_forward_ = steer_back_.lateral_speed;
+            air_max_side_ = steer_back_.lateral_speed;
+            air_max_back_ = steer_back_.peak_speed;
+            break;
+        case 3:
+        case 4:  // sideways, either way
+            air_max_forward_ = steer_side_.lateral_speed;
+            air_max_side_ = steer_side_.peak_speed;
+            air_max_back_ = steer_side_.lateral_speed;
+            break;
+        default:
+            air_max_forward_ = air_max_side_ = air_max_back_ = 0.0f;
+            break;
+    }
+}
+
+// FUN_00441f20, the horizontal part: the air turn of a forward or back jump
+// and the velocity moving toward the speed the stick asks for.
+void PlayerController::steer_in_air(const PlayerInput& input, float dt) {
+    const float deadzone = tuning_.stick_deadzone;
+    const float stick_x = input.move_x;
+    const float stick_y = -input.move_y;
+    // A jump without a direction takes the first one pressed in the air.
+    if (air_kind_ == 0) {
+        const int kind = stick_class(stick_x, stick_y, deadzone);
+        if (kind != 0) {
+            install_air_kind(kind);
+        }
+    }
+    const bool turns = air_kind_ == 1 || air_kind_ == 2;
+    float turn = 0.0f;
+    if (turns && (stick_x > deadzone || stick_x < -deadzone)) {
+        turn = -(kDegrees * tuning_.jump_turn_rate * stick_x * dt);
+    }
+    // The velocity is turned to the local frame with the old yaw, changed, and
+    // turned back with the new one, so a turn carries it around with Kain.
+    bo2::engine::Vec2 local = rotate(air_velocity_, -state_.yaw);
+    state_.yaw += turn;
+    // A tick that turns by a degree or more leaves the velocity alone.
+    if (!(turns && std::fabs(turn) >= kDegrees)) {
+        const float target_forward = stick_target(stick_y, deadzone, air_max_forward_, air_max_back_);
+        const float target_side = stick_target(stick_x, deadzone, air_max_side_, air_max_side_);
+        approach_targets(local, dt, steer_forward_, steer_back_, steer_side_, target_forward,
+                         target_side);
+    }
+    air_velocity_ = rotate(local, state_.yaw);
+}
+
+bo2::engine::Vec2 PlayerController::air_velocity() const {
+    return air_velocity_;
 }
 
 void PlayerController::look(float yaw_delta, float pitch_delta) {
@@ -218,6 +417,7 @@ void PlayerController::restore(const PlayerState& state) {
     air_time_ = 0.0f;
     boost_armed_ = false;
     jump_was_down_ = false;
+    end_jump();
 }
 
 bool PlayerController::attack(std::vector<std::uint64_t>& targets,

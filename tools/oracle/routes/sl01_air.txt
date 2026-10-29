@@ -1,0 +1,67 @@
+# Blood Omen 2, Spanish GoldMaster: load PARTIDA 2 (Save 01, slums/sl01
+# checkpoint) and jump in every direction to measure the air control
+# (docs/GAMEPLAY.md, "Air"). X jumps like the right mouse button (settings.cfg).
+# `key@ms` presses a key that long after the start of the hold, so
+# `hold w+x@800 2300` runs for 0.8 s and then jumps while W stays down.
+# Each forward phase is followed by a turn of about 180 deg (A held 1.3 s) so
+# Kain does not run into the wall ahead of him.
+# Run with wine_capture.py; it starts this route at the main menu.
+
+phase menu
+shot 00_main_menu
+
+# EMPEZAR PARTIDA, then the third entry of the save list.
+key Return
+wait 4000
+key Down
+key Down
+key Return
+
+# The level load takes 20-40 s on llvmpipe.
+phase spawn_idle
+wait 45000
+shot 01_spawn
+
+# No stick: the plain jump of the first capture.
+phase jump_stand
+key x
+wait 2500
+
+# Forward jump with W and X held to the end (hold boost).
+phase jump_w_hold
+hold w+x@800 2300
+wait 2500
+phase turn_1
+hold a 1300
+wait 500
+
+# Forward jump with a tap: X and W are released 80 ms after the press.
+phase jump_w_tap
+hold w+x@800 880
+wait 2500
+phase turn_2
+hold a 1300
+wait 500
+
+# Backward jump.
+phase jump_back
+hold s+x@500 2000
+wait 2500
+
+# Sideways jump: D is down first, so the stick is mostly sideways.
+phase jump_side_d
+hold d+x@100 1600
+wait 2500
+
+# Plain jump, then W (and later A) pressed while already in the air.
+phase air_w
+hold x+w@250 1500
+wait 2500
+phase turn_3
+hold a 1300
+wait 500
+phase air_a
+hold x+a@250 1500
+wait 2500
+shot 02_end
+phase end

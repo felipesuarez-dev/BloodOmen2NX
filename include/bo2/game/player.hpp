@@ -41,6 +41,8 @@ public:
     bool attack(std::vector<std::uint64_t>& targets, const bo2::engine::EntityWorld& world) const;
     void restore(const PlayerState& state);
     const PlayerState& state() const;
+    // Horizontal velocity of a jump in world axes, zero on the ground and in a fall.
+    bo2::engine::Vec2 air_velocity() const;
     bo2::engine::Vec3 camera_eye() const;
     bo2::engine::Vec3 camera_target() const;
 
@@ -48,6 +50,10 @@ private:
     bo2::engine::CollisionWorld& collision_;
     KainTuning tuning_;
     JumpDerived jump_;
+    JumpDerived side_jump_;  // the vertical model of a sideways jump
+    AirSteerDerived steer_forward_;
+    AirSteerDerived steer_side_;
+    AirSteerDerived steer_back_;
     float run_speed_ = 0.0f;   // run root speed * run clip rate (FUN_00445ba0)
     float back_speed_ = 0.0f;  // walk-back root speed * clip node speed
     PlayerState state_;
@@ -55,6 +61,19 @@ private:
     float air_time_ = 0.0f;      // seconds since takeoff
     bool boost_armed_ = false;   // jump held since takeoff
     bool jump_was_down_ = false;  // jump input of the previous step (press edge)
+    // Air control of a jump (FUN_004436e0 at takeoff, FUN_00441f20 every tick).
+    bool air_jump_ = false;       // airborne from a jump; a plain fall keeps the ground speed
+    int air_kind_ = 0;            // 0 none, 1 forward, 2 back, 3 left, 4 right (KainState+0x540 classes)
+    float air_max_forward_ = 0.0f;  // behavior+0x10c
+    float air_max_side_ = 0.0f;     // behavior+0x110
+    float air_max_back_ = 0.0f;     // behavior+0x114
+    bo2::engine::Vec2 air_velocity_;
+    bool side_jump_active_ = false;  // the jump launched with the sideVertJump model (kinds 3 and 4)
+
+    void start_jump(const PlayerInput& input);
+    void end_jump();
+    void install_air_kind(int kind);
+    void steer_in_air(const PlayerInput& input, float dt);
 };
 
 }  // namespace bo2::game

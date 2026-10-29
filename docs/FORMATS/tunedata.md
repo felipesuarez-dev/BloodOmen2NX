@@ -32,15 +32,24 @@ least `4 + size` bytes long; bytes after that are ignored.
 
 All values are `f32`. B offsets are in hex; the value column is what the
 shipped `kain` entry holds. Units are game units (about 1 cm) and seconds.
+The field names in parentheses are those of the C struct that kain.big ships
+as `src/etemplates/kaintune.h` (entry 0505, extracted as
+`0505_src_etemplates_kaintune.h`); the struct reproduces the 11,973-byte blob
+layout. The behaviour of each field is cited from the decompile (FUN_).
 
 | B offset | Field | Value | Consumers |
 |---|---|---|---|
-| 0x00C | Stick deadzone | 0.1 | FUN_00425520, FUN_0041ecf0 (copy step not traced) |
-| 0x9FC | `normalJump` block, 9 floats | see below | FUN_00451d00 builds the jump from it |
-| 0xAC8 | Turn rate, Ready | 2.5 rad/s | copied to A+0x18 by FUN_00428fe0; FUN_00445e70 passes it to FUN_0041ecf0 |
-| 0xACC | Turn rate, Run | 2.5 rad/s | copied to A+0x1C; FUN_00445930 passes it to FUN_0041ecf0 |
-| 0xAD0 | Turn rate, WalkBack | 2.5 rad/s | copied to A+0x20; FUN_00446270 passes it to FUN_0041ecf0 |
-| 0xB14 | Run clip rate | 1.15 | copied to A+0x40 by FUN_00428fe0; FUN_00445ba0 uses it as the playback rate of the run clip at full stick. The port multiplies the `kain/run` root speed (200 u/s) by it to get 230 u/s (`docs/FORMATS/animreel.md`) |
+| 0x00C | Stick deadzone (`airParams.controlThresh`) | 0.1 | FUN_00425520, FUN_0041ecf0 (copy step not traced) |
+| 0x9DC | Air turn rate (`jumpParams.jumpTurnRate`) | 45 deg/s | FUN_00441f20: yaw change per unit stick in a forward or back jump. `glideTurnRate` (B+0x9E0, 45) and `glideMaxDist` (B+0x9E4, 320) are read there too and not ported |
+| 0x9FC | `jumpParams.normalJumpParams`, 9 floats | see below | FUN_00451d00 builds the jump from it |
+| 0xA20 | `jumpParams.forwardJumpParams`, 6 floats | see below | FUN_00428fe0 passes it to FUN_00452030 (result at A+0x47c, copied to behavior+0x7c by FUN_00428f80) |
+| 0xA38 | `jumpParams.sideJumpParams`, 6 floats | see below | same, result at A+0x4dc (behavior+0xdc) |
+| 0xA50 | `jumpParams.sideVertJumpParams`, 9 floats | see below | FUN_00451d00, result at A+0x440; FUN_004436e0 copies it over the current jump model for a sideways jump |
+| 0xA74 | `jumpParams.backwardJumpParams`, 6 floats | see below | same, result at A+0x4ac (behavior+0xac) |
+| 0xAC8 | Turn rate, Ready (`moveParams.standTurnRate`) | 2.5 rad/s | copied to A+0x18 by FUN_00428fe0; FUN_00445e70 passes it to FUN_0041ecf0 |
+| 0xACC | Turn rate, Run (`moveParams.runTurnRate`) | 2.5 rad/s | copied to A+0x1C; FUN_00445930 passes it to FUN_0041ecf0 |
+| 0xAD0 | Turn rate, WalkBack (`moveParams.backTurnRate`) | 2.5 rad/s | copied to A+0x20; FUN_00446270 passes it to FUN_0041ecf0 |
+| 0xB14 | Run clip rate (`moveParams.moveSpeedMult`) | 1.15 | copied to A+0x40 by FUN_00428fe0; FUN_00445ba0 uses it as the playback rate of the run clip at full stick. The port multiplies the `kain/run` root speed (200 u/s) by it to get 230 u/s (`docs/FORMATS/animreel.md`) |
 
 The chain is B -> A -> consumer. FUN_00428fe0 copies fields of the tunedata
 into the runtime tune object A (`behavior+0x164`, for example B+0xAC8 is
@@ -54,15 +63,15 @@ a traced state machine.
 
 | B offset | Field | Value | Meaning |
 |---|---|---|---|
-| 0x9FC | `g_up` | -2500 | Gravity while vz >= 0 (FUN_00442ae0) |
-| 0xA00 | `g_down` | -700 | Gravity once vz < 0 |
-| 0xA04 | `g_glide` | -128 | Gravity while gliding (not used yet) |
-| 0xA08 | `termFall` | 512 | Fall speed cap (FUN_00441f20) |
-| 0xA0C | `termGlide` | 160 | Glide speed cap (not used yet) |
-| 0xA10 | `h1` | 64 | Apex of a tapped jump |
-| 0xA14 | `h2` | 128 | Apex target of a held jump |
-| 0xA18 | `tMin` | 0.066 | Start of the hold boost window, seconds after takeoff |
-| 0xA1C | `tMax` | 0.3 | End of the hold boost window |
+| 0x9FC | `g_up` (`jAscentGravity`) | -2500 | Gravity while vz >= 0 (FUN_00442ae0) |
+| 0xA00 | `g_down` (`jDescentGravity`) | -700 | Gravity once vz < 0 |
+| 0xA04 | `g_glide` (`jFloatGravity`) | -128 | Gravity while gliding (not used yet) |
+| 0xA08 | `termFall` (`jNormalMaxV`) | 512 | Fall speed cap (FUN_00441f20) |
+| 0xA0C | `termGlide` (`jFloatMaxV`) | 160 | Glide speed cap (not used yet) |
+| 0xA10 | `h1` (`jMinHeight`) | 64 | Apex of a tapped jump |
+| 0xA14 | `h2` (`jMaxHeight`) | 128 | Apex target of a held jump |
+| 0xA18 | `tMin` (`jMinTime`) | 0.066 | Start of the hold boost window, seconds after takeoff |
+| 0xA1C | `tMax` (`jMaxTime`) | 0.3 | End of the hold boost window |
 
 FUN_00451d00 turns the block into the jump model. The port computes the same
 values in `derive_jump` instead of storing them:
@@ -76,12 +85,33 @@ values in `derive_jump` instead of storing them:
 `re/decomp/kain_movement/jump_model.py` is a local hand port of the same
 function used to cross-check these numbers.
 
-## Observed, not consumed yet
+### `sideVertJump` block (B+0xA50)
 
-| B offset | Shape | Notes |
-|---|---|---|
-| 0xA20, 0xA38, 0xA74 | 6 floats each | FUN_00452030 builds a jump variant from each. The derived launch speeds are 146.8, 110.1 and 97.9. They are likely the air-control launch speeds; not verified and not used by the port |
-| 0xA50 | 9 floats, same shape as `normalJump` | Parses cleanly as a second jump block (-3000, -500, -96, 512, 160, 64, 64, 0.05, 0.06). Its consumer is not identified |
+Same nine fields as `normalJump`, values -3000, -500, -96, 512, 160, 64, 64,
+0.05, 0.06. The heights are equal, so there is no hold boost, and the launch
+speed is `sqrt(2 * 64 * 3000)` = 619.68. FUN_004436e0 copies this model over
+the current jump for a sideways jump. The descent still uses the normal
+`g_down` (FUN_00442ae0 reads A+0x408).
+
+### Air steering blocks (B+0xA20, 0xA38, 0xA74)
+
+Six floats each, named `MinDist`, `MaxDist`, `MinTime`, `MaxTime`, `Kd` and
+`MaxLateralVel` in kaintune.h. FUN_00452030 derives the air control of one
+jump direction from the block and the `normalJump` airtimes (0.6539 s for the
+tap apex, 1.0181 s for the held apex):
+
+| Derived | Formula | Forward (0xA20) | Back (0xA74) | Side (0xA38) |
+|---|---|---|---|---|
+| Fields (shipped) | `MinDist`, `MaxDist`, `MinTime`, `MaxTime`, `Kd`, `MaxLateralVel` | 96, 320, 0.03, 0.07, 96, 0 | 64, 192, 0.066, 0.25, 96, 0 | 72, 192, 0.066, 0.25, 96, 256 |
+| Launch speed | `MinDist / min_airtime`, cut to `MaxDist / max_airtime` when that is smaller | 146.81 | 97.88 | 110.11 |
+| Acceleration | `(MaxDist - max_airtime * launch) / ((ramp / 2 + max_airtime - MaxTime) * ramp)`, `ramp = MaxTime - MinTime`; zero when `abs(ramp) < 1e-5` | 4403.56 | 583.54 | 504.83 |
+| Peak speed | `ramp * acceleration + launch` | 322.96 | 205.25 | 203.00 |
+| Damping | `Kd * 0.01`, per tick | 0.96 | 0.96 | 0.96 |
+
+`re/decomp/kain_movement/jump_model.py` (`variant`) cross-checks these
+numbers. FUN_00452030 also stores a ninth value, a glide speed, that the port
+does not use yet. The use of these numbers is in
+[`GAMEPLAY.md`](../GAMEPLAY.md#air-control).
 
 ## Open questions
 

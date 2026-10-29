@@ -42,6 +42,20 @@ std::vector<std::uint8_t> make_blob() {
     for (std::size_t index = 0; index < 9; ++index) {
         put_float(data, 0x9FC + 4 * index, jump[index]);
     }
+    put_float(data, 0x9DC, 45.0f);
+    const float side_jump[9] = {-3000.0f, -500.0f, -96.0f, 512.0f, 160.0f,
+                                64.0f,    64.0f,   0.05f,  0.06f};
+    for (std::size_t index = 0; index < 9; ++index) {
+        put_float(data, 0xA50 + 4 * index, side_jump[index]);
+    }
+    const float forward[6] = {96.0f, 320.0f, 0.03f, 0.07f, 96.0f, 0.0f};
+    const float side[6] = {72.0f, 192.0f, 0.066f, 0.25f, 96.0f, 256.0f};
+    const float back[6] = {64.0f, 192.0f, 0.066f, 0.25f, 96.0f, 0.0f};
+    for (std::size_t index = 0; index < 6; ++index) {
+        put_float(data, 0xA20 + 4 * index, forward[index]);
+        put_float(data, 0xA38 + 4 * index, side[index]);
+        put_float(data, 0xA74 + 4 * index, back[index]);
+    }
     put_float(data, 0xAC8, 2.5f);
     put_float(data, 0xACC, 2.6f);
     put_float(data, 0xAD0, 2.7f);
@@ -65,6 +79,21 @@ void test_round_trip() {
     CHECK(tuning.turn_rate_run == 2.6f);
     CHECK(tuning.turn_rate_walk_back == 2.7f);
     CHECK(tuning.run_clip_rate == 1.15f);
+    CHECK(tuning.jump_turn_rate == 45.0f);
+    CHECK(tuning.side_jump.gravity_up == -3000.0f);
+    CHECK(tuning.side_jump.gravity_down == -500.0f);
+    CHECK(tuning.side_jump.height_tap == 64.0f);
+    CHECK(tuning.side_jump.height_hold == 64.0f);
+    CHECK(tuning.side_jump.boost_end == 0.06f);
+    CHECK(tuning.air_forward.min_dist == 96.0f);
+    CHECK(tuning.air_forward.max_dist == 320.0f);
+    CHECK(tuning.air_forward.min_time == 0.03f);
+    CHECK(tuning.air_forward.max_time == 0.07f);
+    CHECK(tuning.air_forward.kd == 96.0f);
+    CHECK(tuning.air_side.min_dist == 72.0f);
+    CHECK(tuning.air_side.max_lateral_vel == 256.0f);
+    CHECK(tuning.air_back.min_dist == 64.0f);
+    CHECK(tuning.air_back.max_lateral_vel == 0.0f);
 }
 
 template <typename Callback>
@@ -107,6 +136,66 @@ void test_derived_jump_matches_the_original() {
     CHECK(std::fabs(derived.min_airtime - 0.6539f) < 1.0e-2f);
     CHECK(std::fabs(derived.boost_start - 0.066f) < 1.0e-4f);
     CHECK(std::fabs(derived.boost_end - 0.3f) < 1.0e-3f);
+}
+
+void test_derived_airtimes_match_the_original() {
+    // FUN_00451d00 model[11] and model[12], cross-checked with
+    // re/decomp/kain_movement/jump_model.py: 0.6539 and 1.0181.
+    const bo2::game::KainTuning tuning = bo2::game::parse_kain_tuning(make_blob());
+    const bo2::game::JumpDerived normal = bo2::game::derive_jump(tuning);
+    CHECK(std::fabs(normal.min_airtime - 0.6539f) < 1.0e-3f);
+    CHECK(std::fabs(normal.max_airtime - 1.0181f) < 1.0e-3f);
+    // sideVertJump has equal heights: no boost and the launch of a 64 apex at g -3000.
+    const bo2::game::JumpDerived side = bo2::game::derive_jump(tuning.side_jump);
+    CHECK(side.boost_accel == 0.0f);
+    CHECK(std::fabs(side.launch_speed - 619.677f) < 1.0e-2f);
+    CHECK(std::fabs(side.max_airtime - 0.7125f) < 1.0e-3f);
+}
+
+void test_derived_air_steering_matches_the_original() {
+    // FUN_00452030 on the three blocks, cross-checked with jump_model.py.
+    const bo2::game::KainTuning tuning = bo2::game::parse_kain_tuning(make_blob());
+    const bo2::game::JumpDerived normal = bo2::game::derive_jump(tuning);
+    const bo2::game::AirSteerDerived forward = bo2::game::derive_air_steer(tuning.air_forward, normal);
+    CHECK(std::fabs(forward.launch_speed - 146.813f) < 1.0e-2f);
+    CHECK(std::fabs(forward.accel - 4403.56f) < 0.5f);
+    CHECK(std::fabs(forward.peak_speed - 322.956f) < 1.0e-2f);
+    CHECK(std::fabs(forward.damping - 0.96f) < 1.0e-6f);
+    CHECK(forward.lateral_speed == 0.0f);
+    const bo2::game::AirSteerDerived back = bo2::game::derive_air_steer(tuning.air_back, normal);
+    CHECK(std::fabs(back.launch_speed - 97.8755f) < 1.0e-2f);
+    CHECK(std::fabs(back.accel - 583.535f) < 0.05f);
+    CHECK(std::fabs(back.peak_speed - 205.246f) < 1.0e-2f);
+    const bo2::game::AirSteerDerived side = bo2::game::derive_air_steer(tuning.air_side, normal);
+    CHECK(std::fabs(side.launch_speed - 110.110f) < 1.0e-2f);
+    CHECK(std::fabs(side.accel - 504.829f) < 0.05f);
+    CHECK(std::fabs(side.peak_speed - 202.998f) < 1.0e-2f);
+    CHECK(side.lateral_speed == 256.0f);
+}
+
+void test_air_steering_caps_the_speed_by_the_longest_distance() {
+    // max_dist below what the launch speed covers in the longest airtime:
+    // the speed is cut to max_dist / max_airtime and no ramp is needed.
+    const bo2::game::KainTuning tuning = bo2::game::parse_kain_tuning(make_blob());
+    const bo2::game::JumpDerived normal = bo2::game::derive_jump(tuning);
+    bo2::game::AirSteerTuning block = tuning.air_forward;
+    block.max_dist = 100.0f;
+    const bo2::game::AirSteerDerived derived = bo2::game::derive_air_steer(block, normal);
+    CHECK(std::fabs(derived.launch_speed - 100.0f / normal.max_airtime) < 1.0e-3f);
+    CHECK(std::fabs(derived.accel) < 1.0e-3f);
+    CHECK(std::fabs(derived.peak_speed - derived.launch_speed) < 1.0e-3f);
+    // A ramp of no length leaves the speed alone.
+    block = tuning.air_forward;
+    block.max_time = block.min_time;
+    CHECK(bo2::game::derive_air_steer(block, normal).accel == 0.0f);
+    // Without airtimes there is nothing to divide by.
+    bool threw = false;
+    try {
+        bo2::game::derive_air_steer(tuning.air_forward, bo2::game::JumpDerived{});
+    } catch (const std::invalid_argument&) {
+        threw = true;
+    }
+    CHECK(threw);
 }
 
 void test_equal_heights_disable_the_boost() {
@@ -160,6 +249,9 @@ int main() {
     test_round_trip();
     test_rejects_bad_blobs();
     test_derived_jump_matches_the_original();
+    test_derived_airtimes_match_the_original();
+    test_derived_air_steering_matches_the_original();
+    test_air_steering_caps_the_speed_by_the_longest_distance();
     test_equal_heights_disable_the_boost();
     test_collapsed_boost_window_disables_the_boost();
     test_early_return_case_disables_the_boost();

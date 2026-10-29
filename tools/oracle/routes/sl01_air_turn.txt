@@ -1,0 +1,48 @@
+# Blood Omen 2, Spanish GoldMaster: load PARTIDA 2 (Save 01, slums/sl01
+# checkpoint) and turn in the air (docs/GAMEPLAY.md, "Air"). A forward or back
+# jump turns with the stick at B+0x9DC deg/s; a jump without stick or a
+# sideways jump does not turn. Each phase starts after a pause, near the spawn.
+# `key@ms` presses a key that long after the start of the hold.
+# Run with wine_capture.py; it starts this route at the main menu.
+
+phase menu
+shot 00_main_menu
+
+# EMPEZAR PARTIDA, then the third entry of the save list.
+key Return
+wait 4000
+key Down
+key Down
+key Return
+
+# The level load takes 20-40 s on llvmpipe.
+phase spawn_idle
+wait 45000
+shot 01_spawn
+
+# Forward jump, D pressed 200 ms after takeoff and held through the landing.
+phase jump_w_d
+hold w+x@300+d@500 1700
+wait 2500
+
+# Turn about 180 deg, then a forward jump with A pressed in the air.
+phase turn_1
+hold a 1300
+wait 500
+phase jump_w_a
+hold w+x@300+a@500 1700
+wait 2500
+
+# Standing jump with D pressed in the air: no turn is expected.
+phase turn_2
+hold a 1300
+wait 500
+phase jump_stand_d
+hold x+d@250 1500
+wait 2500
+
+# Back jump with D pressed in the air.
+phase jump_s_d
+hold s+x@300+d@500 1700
+wait 2500
+phase end

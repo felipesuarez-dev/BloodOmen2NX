@@ -58,6 +58,12 @@ bo2::game::KainTuning kain_tuning() {
     bo2::game::KainTuning tuning;
     tuning.stick_deadzone = 0.1f;
     tuning.jump = {-2500.0f, -700.0f, -128.0f, 512.0f, 160.0f, 64.0f, 128.0f, 0.066f, 0.3f};
+    // The air control fields of the real tunedata (B+0x9DC, B+0xA50, B+0xA20, B+0xA38, B+0xA74).
+    tuning.jump_turn_rate = 45.0f;
+    tuning.side_jump = {-3000.0f, -500.0f, -96.0f, 512.0f, 160.0f, 64.0f, 64.0f, 0.05f, 0.06f};
+    tuning.air_forward = {96.0f, 320.0f, 0.03f, 0.07f, 96.0f, 0.0f};
+    tuning.air_side = {72.0f, 192.0f, 0.066f, 0.25f, 96.0f, 256.0f};
+    tuning.air_back = {64.0f, 192.0f, 0.066f, 0.25f, 96.0f, 0.0f};
     tuning.turn_rate_ready = kTurnReady;
     tuning.turn_rate_run = kTurnRun;
     tuning.turn_rate_walk_back = kTurnWalkBack;
@@ -331,6 +337,292 @@ void test_jump_fires_on_the_press_edge() {
     CHECK(player.state().vertical_velocity > 0.0f);
 }
 
+// Launch speeds, accelerations and peaks that FUN_00452030 derives from the
+// real tunedata (docs/GAMEPLAY.md, "Air"). The forward peak is what the Wine
+// oracle measured as 323.0 u/s in the air.
+constexpr float kForwardLaunch = 146.813f;
+constexpr float kForwardAccel = 4403.56f;
+constexpr float kForwardPeak = 322.956f;
+constexpr float kBackLaunch = 97.8755f;
+constexpr float kBackAccel = 583.535f;
+constexpr float kBackPeak = 205.246f;
+constexpr float kSideLaunch = 110.110f;
+constexpr float kSideAccel = 504.829f;
+constexpr float kSidePeak = 202.998f;
+constexpr float kDegreesToRadians = 0.017453292519943295f;
+
+bo2::game::PlayerInput jump_input(float move_x, float move_y) {
+    bo2::game::PlayerInput input;
+    input.move_x = move_x;
+    input.move_y = move_y;
+    input.jump = true;
+    return input;
+}
+
+// The jump velocity in Kain's frame: x along his heading, y to his left.
+bo2::engine::Vec2 local_air_velocity(const bo2::game::PlayerController& player) {
+    const bo2::engine::Vec2 velocity = player.air_velocity();
+    const float yaw = player.state().yaw;
+    return {velocity.x * std::cos(yaw) + velocity.y * std::sin(yaw),
+            -velocity.x * std::sin(yaw) + velocity.y * std::cos(yaw)};
+}
+
+void test_forward_jump_ramps_to_the_peak_speed() {
+    const bo2::engine::LevelGeometry floor = make_floor();
+    bo2::engine::CollisionWorld collision(floor);
+    bo2::game::PlayerController player(collision, {0.0f, 0.0f, 0.0f}, kain_tuning());
+    run(player, {}, 2);
+    const bo2::game::PlayerInput input = jump_input(0.0f, 1.0f);
+    player.step(input, kTick);
+    // FUN_004436e0: |ay| * the launch speed of the forward block, along the yaw.
+    CHECK(!player.state().grounded);
+    CHECK(std::fabs(player.air_velocity().x - kForwardLaunch) < 0.01f);
+    CHECK(std::fabs(player.air_velocity().y) < 1.0e-3f);
+    // FUN_004423b0 adds accel * dt per tick toward the stick target (the peak).
+    player.step(input, kTick);
+    CHECK(std::fabs(player.air_velocity().x - (kForwardLaunch + kForwardAccel / 60.0f)) < 0.05f);
+    run(player, input, 4);
+    CHECK(std::fabs(player.air_velocity().x - kForwardPeak) < 0.01f);
+    // It stays at the peak for the rest of the flight.
+    run(player, input, 10);
+    CHECK(std::fabs(player.air_velocity().x - kForwardPeak) < 0.01f);
+}
+
+void test_released_stick_damps_the_air_speed() {
+    const bo2::engine::LevelGeometry floor = make_floor();
+    bo2::engine::CollisionWorld collision(floor);
+    bo2::game::PlayerController player(collision, {0.0f, 0.0f, 0.0f}, kain_tuning());
+    run(player, {}, 2);
+    bo2::game::PlayerInput input = jump_input(0.0f, 1.0f);
+    run(player, input, 8);
+    input.move_y = 0.0f;
+    // With no stick the velocity keeps 96 percent per tick and loses the back
+    // acceleration times dt (FUN_004423b0, target zero).
+    player.step(input, kTick);
+    CHECK(std::fabs(player.air_velocity().x - (kForwardPeak * 0.96f - kBackAccel / 60.0f)) < 0.05f);
+    // Then it falls to zero and stays there, never negative.
+    for (int tick = 0; tick < 60; ++tick) {
+        player.step(input, kTick);
+        CHECK(player.air_velocity().x >= 0.0f);
+    }
+    CHECK(player.air_velocity().x == 0.0f);
+}
+
+void test_back_jump() {
+    const bo2::engine::LevelGeometry floor = make_floor();
+    bo2::engine::CollisionWorld collision(floor);
+    bo2::game::PlayerController player(collision, {0.0f, 0.0f, 0.0f}, kain_tuning());
+    run(player, {}, 2);
+    const bo2::game::PlayerInput input = jump_input(0.0f, -1.0f);
+    player.step(input, kTick);
+    CHECK(std::fabs(player.air_velocity().x + kBackLaunch) < 0.01f);
+    player.step(input, kTick);
+    CHECK(std::fabs(player.air_velocity().x + kBackLaunch + kBackAccel / 60.0f) < 0.05f);
+    run(player, input, 20);
+    CHECK(std::fabs(player.air_velocity().x + kBackPeak) < 0.01f);
+    // The yaw is unchanged: a back jump keeps facing forward.
+    CHECK(player.state().yaw == 0.0f);
+}
+
+void test_sideways_jump_uses_the_side_model() {
+    // D (positive stick x) is kind 4 and goes to Kain's right, A is kind 3 and
+    // goes left; the left of yaw 0 is +y.
+    for (const float stick : {1.0f, -1.0f}) {
+        const bo2::engine::LevelGeometry floor = make_floor();
+        bo2::engine::CollisionWorld collision(floor);
+        bo2::game::PlayerController player(collision, {0.0f, 0.0f, 0.0f}, kain_tuning());
+        run(player, {}, 2);
+        const bo2::game::PlayerInput input = jump_input(stick, 0.0f);
+        player.step(input, kTick);
+        // The takeoff tick still turns Kain on the ground; the velocity is
+        // rotated by that yaw, so read it in Kain's frame.
+        const float yaw_after_takeoff = player.state().yaw;
+        const float direction = stick > 0.0f ? -1.0f : 1.0f;
+        CHECK(std::fabs(local_air_velocity(player).y - direction * kSideLaunch) < 0.01f);
+        CHECK(std::fabs(local_air_velocity(player).x) < 1.0e-3f);
+        // The side model: launch 619.68 at g -3000 (sqrt(2 * 64 * 3000)), no boost.
+        CHECK(std::fabs(player.state().vertical_velocity - (619.677f - 3000.0f / 60.0f)) < 0.05f);
+        run(player, input, 30);
+        CHECK(std::fabs(local_air_velocity(player).y - direction * kSidePeak) < 0.01f);
+        // A sideways jump neither turns nor moves along the yaw.
+        CHECK(player.state().yaw == yaw_after_takeoff);
+        CHECK(std::fabs(local_air_velocity(player).x) < 1.0e-3f);
+    }
+}
+
+void test_sideways_jump_flight() {
+    // Apex 64 from the side model, then the normal g_down (-700): 0.2066 s up
+    // and 0.4276 s down, a bit shorter than the 0.654 s of a plain tap jump.
+    const bo2::engine::LevelGeometry floor = make_floor();
+    bo2::engine::CollisionWorld collision(floor);
+    bo2::game::PlayerController player(collision, {0.0f, 0.0f, 0.0f}, kain_tuning());
+    run(player, {}, 2);
+    bo2::game::PlayerInput input = jump_input(1.0f, 0.0f);
+    float peak = 0.0f;
+    int ticks = 0;
+    for (; ticks < 200; ++ticks) {
+        player.step(input, kTick);
+        input.jump = ticks < 1;  // a tap, though the side model has no boost
+        peak = std::max(peak, player.state().position.z);
+        if (player.state().grounded) {
+            break;
+        }
+    }
+    CHECK(std::fabs(peak - 64.0f) < 1.0f);
+    CHECK(std::fabs(static_cast<double>(ticks + 1) * kTick - 0.634) < 0.03);
+    CHECK(player.air_velocity().x == 0.0f && player.air_velocity().y == 0.0f);
+}
+
+void test_diagonal_stick_is_a_forward_jump() {
+    // W plus D: |ax| <= 2 |ay|, so the jump is forward (FUN_00425580).
+    const bo2::engine::LevelGeometry floor = make_floor();
+    bo2::engine::CollisionWorld collision(floor);
+    bo2::game::PlayerController player(collision, {0.0f, 0.0f, 0.0f}, kain_tuning());
+    run(player, {}, 2);
+    const bo2::game::PlayerInput input = jump_input(1.0f, 1.0f);
+    player.step(input, kTick);
+    CHECK(std::fabs(std::hypot(player.air_velocity().x, player.air_velocity().y) - kForwardLaunch) <
+          0.01f);
+    // A stick mostly sideways (|ax| > 2 |ay|) is a sideways jump instead.
+    bo2::game::PlayerController side(collision, {0.0f, 0.0f, 0.0f}, kain_tuning());
+    run(side, {}, 2);
+    side.step(jump_input(1.0f, 0.4f), kTick);
+    CHECK(std::fabs(local_air_velocity(side).y + kSideLaunch) < 0.01f);
+    CHECK(std::fabs(local_air_velocity(side).x) < 1.0e-3f);
+    // Inside the deadzone the jump has no direction.
+    bo2::game::PlayerController still(collision, {0.0f, 0.0f, 0.0f}, kain_tuning());
+    run(still, {}, 2);
+    still.step(jump_input(0.05f, 0.05f), kTick);
+    CHECK(still.air_velocity().x == 0.0f && still.air_velocity().y == 0.0f);
+}
+
+void test_air_turn_carries_the_velocity() {
+    // A forward jump turns at jump_turn_rate deg/s (B+0x9DC): D lowers the yaw.
+    const bo2::engine::LevelGeometry floor = make_floor();
+    bo2::engine::CollisionWorld collision(floor);
+    bo2::game::PlayerController player(collision, {0.0f, 0.0f, 0.0f}, kain_tuning());
+    run(player, {}, 2);
+    const bo2::game::PlayerInput input = jump_input(1.0f, 1.0f);
+    player.step(input, kTick);
+    const float yaw_after_takeoff = player.state().yaw;
+    run(player, input, 20);
+    const float expected = -45.0f * kDegreesToRadians * 20.0f / 60.0f;
+    CHECK(std::fabs((player.state().yaw - yaw_after_takeoff) - expected) < 1.0e-4f);
+    // The velocity turns with Kain: it points along the heading.
+    const bo2::engine::Vec2 velocity = player.air_velocity();
+    CHECK(std::fabs(std::atan2(velocity.y, velocity.x) - player.state().yaw) < 1.0e-3f);
+    CHECK(std::fabs(std::hypot(velocity.x, velocity.y) - kForwardPeak) < 0.05f);
+}
+
+void test_air_turn_is_skipped_by_a_long_tick() {
+    // FUN_00441f20 leaves the velocity alone on a tick that turns by a degree
+    // or more: 45 deg/s * 0.05 s is 2.25 deg.
+    const bo2::engine::LevelGeometry floor = make_floor();
+    bo2::engine::CollisionWorld collision(floor);
+    bo2::game::PlayerController player(collision, {0.0f, 0.0f, 0.0f}, kain_tuning());
+    run(player, {}, 2);
+    const bo2::game::PlayerInput input = jump_input(1.0f, 1.0f);
+    player.step(input, 0.05);
+    const float yaw = player.state().yaw;
+    for (int tick = 0; tick < 3; ++tick) {
+        player.step(input, 0.05);
+    }
+    CHECK(std::fabs((player.state().yaw - yaw) + 3.0f * 45.0f * kDegreesToRadians * 0.05f) < 1.0e-4f);
+    CHECK(std::fabs(std::hypot(player.air_velocity().x, player.air_velocity().y) - kForwardLaunch) <
+          0.01f);
+}
+
+void test_standing_jump_takes_a_direction_in_the_air() {
+    const bo2::engine::LevelGeometry floor = make_floor();
+    bo2::engine::CollisionWorld collision(floor);
+    bo2::game::PlayerController player(collision, {0.0f, 0.0f, 0.0f}, kain_tuning());
+    run(player, {}, 2);
+    bo2::game::PlayerInput input = jump_input(0.0f, 0.0f);
+    player.step(input, kTick);
+    run(player, input, 3);
+    CHECK(player.air_velocity().x == 0.0f && player.air_velocity().y == 0.0f);
+    // D in the air installs the sideways kind: it speeds up to the side peak and does not turn.
+    input.move_x = 1.0f;
+    run(player, input, 30);
+    CHECK(std::fabs(player.air_velocity().y + kSidePeak) < 0.01f);
+    CHECK(player.state().yaw == 0.0f);
+
+    // W in the air installs the forward kind and the forward peak.
+    bo2::game::PlayerController forward(collision, {0.0f, 0.0f, 0.0f}, kain_tuning());
+    run(forward, {}, 2);
+    input = jump_input(0.0f, 0.0f);
+    forward.step(input, kTick);
+    run(forward, input, 3);
+    input.move_y = 1.0f;
+    run(forward, input, 10);
+    CHECK(std::fabs(forward.air_velocity().x - kForwardPeak) < 0.01f);
+    // The kind is fixed for the flight: S now only slows it (back accel), it
+    // does not turn into a back jump with its own peak.
+    input.move_y = -1.0f;
+    run(forward, input, 2);
+    CHECK(forward.air_velocity().x < kForwardPeak);
+    CHECK(forward.air_velocity().x > 0.0f);
+}
+
+void test_landing_ends_the_jump_velocity() {
+    const bo2::engine::LevelGeometry floor = make_floor();
+    bo2::engine::CollisionWorld collision(floor);
+    bo2::game::PlayerController player(collision, {0.0f, 0.0f, 0.0f}, kain_tuning());
+    run(player, {}, 2);
+    bo2::game::PlayerInput input = jump_input(0.0f, 1.0f);
+    for (int tick = 0; tick < 300 && !(tick > 2 && player.state().grounded); ++tick) {
+        player.step(input, kTick);
+        input.jump = false;
+    }
+    CHECK(player.state().grounded);
+    CHECK(player.air_velocity().x == 0.0f && player.air_velocity().y == 0.0f);
+    // The ground speed is back: the 100 u/s start phase of W.
+    const float before = player.state().position.x;
+    player.step(input, kTick);
+    CHECK(std::fabs(player.state().position.x - before - 100.0f / 60.0f) < 1.0e-3f);
+}
+
+void test_wall_stops_a_jump() {
+    bo2::engine::LevelGeometry level = make_floor();
+    add_wall(level, 60.0f);
+    bo2::engine::CollisionWorld collision(level);
+    bo2::game::PlayerController player(collision, {0.0f, 0.0f, 0.0f}, kain_tuning());
+    run(player, {}, 2);
+    bo2::game::PlayerInput input = jump_input(0.0f, 1.0f);
+    for (int tick = 0; tick < 120; ++tick) {
+        player.step(input, kTick);
+        input.jump = false;
+    }
+    CHECK(player.state().position.x < 60.0f);
+    CHECK(player.state().position.x > 40.0f);
+    CHECK(player.state().grounded);
+}
+
+void test_a_fall_keeps_the_ground_speed() {
+    // Walking off a ledge is not a jump: the port keeps the ground speed of the
+    // held input (docs/GAMEPLAY.md, "Ledge fall").
+    const bo2::engine::LevelGeometry floor = make_floor();
+    bo2::engine::CollisionWorld collision(floor);
+    bo2::game::PlayerController player(collision, {0.0f, 0.0f, 300.0f}, kain_tuning());
+    bo2::game::PlayerInput input;
+    input.move_y = 1.0f;
+    run(player, input, 6);
+    CHECK(!player.state().grounded);
+    CHECK(std::fabs(player.state().position.x - 10.0f) < 0.1f);
+    CHECK(player.air_velocity().x == 0.0f);
+}
+
+void test_restore_clears_the_jump() {
+    const bo2::engine::LevelGeometry floor = make_floor();
+    bo2::engine::CollisionWorld collision(floor);
+    bo2::game::PlayerController player(collision, {0.0f, 0.0f, 0.0f}, kain_tuning());
+    run(player, {}, 2);
+    run(player, jump_input(0.0f, 1.0f), 3);
+    CHECK(player.air_velocity().x > 0.0f);
+    player.restore(bo2::game::PlayerState{});
+    CHECK(player.air_velocity().x == 0.0f && player.air_velocity().y == 0.0f);
+}
+
 void test_huge_step_is_capped() {
     // A stalled frame must not throw Kain through a wall or the floor.
     bo2::engine::LevelGeometry level = make_floor();
@@ -463,6 +755,19 @@ int main() {
     test_held_jump();
     test_early_release_gives_a_partial_boost();
     test_jump_fires_on_the_press_edge();
+    test_forward_jump_ramps_to_the_peak_speed();
+    test_released_stick_damps_the_air_speed();
+    test_back_jump();
+    test_sideways_jump_uses_the_side_model();
+    test_sideways_jump_flight();
+    test_diagonal_stick_is_a_forward_jump();
+    test_air_turn_carries_the_velocity();
+    test_air_turn_is_skipped_by_a_long_tick();
+    test_standing_jump_takes_a_direction_in_the_air();
+    test_landing_ends_the_jump_velocity();
+    test_wall_stops_a_jump();
+    test_a_fall_keeps_the_ground_speed();
+    test_restore_clears_the_jump();
     test_huge_step_is_capped();
     test_terminal_fall_speed();
     test_invalid_tuning_is_rejected();

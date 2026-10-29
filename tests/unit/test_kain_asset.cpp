@@ -63,6 +63,27 @@ int main() {
             CHECK(std::fabs(derived.launch_speed - 565.685f) < 1.0e-2f);
             CHECK(std::fabs(derived.boost_accel - 1998.94f) < 1.0e-2f);
             CHECK(std::fabs(derived.min_airtime - 0.6539f) < 1.0e-2f);
+            CHECK(std::fabs(derived.max_airtime - 1.0181f) < 1.0e-3f);
+            // The air control fields (docs/FORMATS/tunedata.md) and what FUN_00452030 derives
+            // from them. The Wine oracle measured 323.0, 205.2 and 203.0 u/s in the air.
+            CHECK(tuning.jump_turn_rate == 45.0f);
+            CHECK(tuning.side_jump.gravity_up == -3000.0f);
+            CHECK(tuning.side_jump.height_tap == 64.0f);
+            CHECK(tuning.air_forward.max_dist == 320.0f);
+            CHECK(tuning.air_side.max_lateral_vel == 256.0f);
+            CHECK(tuning.air_back.min_dist == 64.0f);
+            const bo2::game::AirSteerDerived forward =
+                bo2::game::derive_air_steer(tuning.air_forward, derived);
+            const bo2::game::AirSteerDerived back =
+                bo2::game::derive_air_steer(tuning.air_back, derived);
+            const bo2::game::AirSteerDerived side =
+                bo2::game::derive_air_steer(tuning.air_side, derived);
+            CHECK(std::fabs(forward.launch_speed - 146.813f) < 1.0e-2f);
+            CHECK(std::fabs(forward.peak_speed - 322.956f) < 1.0e-2f);
+            CHECK(std::fabs(back.launch_speed - 97.8755f) < 1.0e-2f);
+            CHECK(std::fabs(back.peak_speed - 205.246f) < 1.0e-2f);
+            CHECK(std::fabs(side.launch_speed - 110.110f) < 1.0e-2f);
+            CHECK(std::fabs(side.peak_speed - 202.998f) < 1.0e-2f);
         }
         const bo2::engine::BigEntry* walk = archive.find("animreel", "kain/walk");
         CHECK(walk != nullptr);
