@@ -3,7 +3,9 @@
 The pristine `bo2.exe` runs under Wine on Ubuntu with no patch. A script
 prepares the prefix, and a second script replays a route of keyboard and
 mouse steps and records screenshots, PPM frames, video and an input log in
-the layout of the Windows captures. It needs no GPU and no display.
+the layout of the Windows captures. It also samples Kain's position,
+velocity, health and lore from the game's memory into `state.csv`. It needs
+no GPU and no display.
 
 Reference build: `bo2.exe` SHA-256
 `91758398a17de9c9f974a8a102762a534fb523d40fa6868a5e5a4f0483b2753c`, the same
@@ -44,16 +46,19 @@ scripts. `WINEDEBUG=+seh` shows the game's `OutputDebugString` log in
 
 | File | Content |
 |---|---|
-| `game_manifest.json` | `source: "wine"`, exe hash, Wine version, renderer, video mode, route name |
+| `game_manifest.json` | `source: "wine"`, exe hash, Wine version, renderer, video mode, route name, `state` summary |
+| `state.csv` | Kain's state sampled every 20 ms; see [Game state](#game-state). Absent with `--no-state`, if the memory cannot be read, or if Kain never appears. If sampling stops mid-run, the rows taken so far are kept |
 | `inputs.jsonl` | Same schema as Windows: `epoch_ms`, `mono_ms`, `event`, `key`, `duration_ms`, `name` |
 | `screenshots/`, `frames_ppm/` | One PNG and one 800x600 PPM per `shot` step |
 | `video.mkv`, `video_start.json` | x11grab 800x600, 30 fps; start time is the ffmpeg spawn time (about 0.3 s uncertainty) |
 | `saves/` | Copy of the prefix saves taken after the run |
 | `route.txt`, `notes.md`, `SHA256SUMS`, `logs/` | Route copy, generated notes, checksums, Wine and ffmpeg logs |
 
-`validate_capture.py` treats `"source": "wine"` as a capture without
-`camera_d3d8.jsonl` and `state.csv`, and skips the camera coverage warnings.
-Windows captures are validated as before.
+`validate_capture.py` treats `"source": "wine"` as a capture that does not
+need `camera_d3d8.jsonl` or `state.csv`, and skips the camera coverage
+warnings. A `state.csv` that is present is checked like the Windows one; its
+empty `cam_*` columns are not an error. Windows captures are validated as
+before.
 
 ## Route grammar
 
@@ -131,10 +136,127 @@ clear jump (Kain in the air above the shed in `04a_during_jump`). The left
 mouse attack shows no animation, which matches the Windows capture, where
 the attack was also not confirmed.
 
+## Game state
+
+`wine_capture.py` reads Kain's state and the gameplay camera from the game's
+memory every 20 ms and writes them as `state.csv` with the Windows header
+plus four columns. `--no-state` disables sampling.
+
+### How it works
+
+- `tools/oracle/memstate.py` reads `/proc/<pid>/mem`. Addresses are the
+  Windows virtual addresses of the decompilation; they are the same inside
+  the Wine process.
+- The pid is the one `wine_capture.py` launched: `wine` runs `bo2.exe` in
+  that process. Yama `ptrace_scope` 1 lets a process read the memory of its
+  descendants, so no privileges are needed. If the memory cannot be read
+  (`ptrace_scope` 2 or 3 refuses the open with `EACCES`), the tool logs one
+  warning, stops sampling and finishes the capture without `state.csv`. It
+  also writes none if Kain never appears.
+- A background thread looks for Kain from the start of the route, every
+  0.5 s, until he exists. Then it samples every 20 ms.
+- Kain is found by walking the instance list. An instance is Kain when its
+  behavior object has the RTTI vtable of `kain::KainTopLevelBehavior`.
+- Freed heap objects stay mapped and keep reading fine, so a reload could
+  leave frozen rows. Every sample checks that `u32(behavior)` is still the
+  Kain vtable and that `u32(instance+0x124)` is still that behavior. If
+  either fails, or a pointer stops reading, the thread drops Kain and
+  searches again.
+- The camera is searched once Kain exists, at most every 2 s, because the
+  search reads the writable heap (see "Camera" below). Each search logs its
+  duration in ms (57 ms in `wine_20261029_0110`). Every sample checks that the camera still has the follow
+  camera vtable and that `u32(follow+4)` is Kain's instance; otherwise it is
+  dropped and searched again.
+- Sampling stops for good, and keeps the rows already taken, when the game
+  exits (a read fails and `/proc/<pid>` is gone) or an unexpected exception
+  is raised. It logs one warning, and `game_manifest.json` records the
+  reason in `state.stopped`.
+
+### Offsets
+
+Each value comes from the decompilation. "HUD" is the Kain debug HUD
+(0x42a200; Ghidra splits its tail as `FUN_0042a3e0`).
+
+| Field | Read | Source |
+|---|---|---|
+| Instance list | `u32(0xA836A8)` is the head node of a circular list; node `[next, prev, instance]` | `FUN_004a5290` |
+| Behavior | `u32(instance+0x124)`; Kain when `u32(behavior) == 0x841D84` | `FUN_004d9850` (`GetPlayerHitPoints`), RTTI |
+| `player_x/y/z` | f32 x3 at `instance+0xB4` | HUD |
+| `player_yaw_deg` | f32 at `instance+0xC8` (radians), in degrees. Only the yaw is read | The rotation triple at `instance+0xC0` is applied as X, Y, Z rotations by `FUN_005c1790` (called from `FUN_007535d0` with `inst+0xb4`, `inst+0xc0`); the HUD reads `+0xC8` as yaw (its debug arc drawing uses `instance+200`) |
+| `vel_x/y/z` | f32 x3 at `behavior+0x19C`, world frame | HUD |
+| `on_platform` | u32 at `behavior+0x4E0` | HUD |
+| Stats | `u32(behavior+0x128+0x594)` | The HUD passes ECX=`behavior+0x128` to `FUN_00425fb0` |
+| `h` | `u32(stats+0x11C)` | `FUN_00425fb0` is the getter returning `u32(u32(this+0x594)+0x11C)` |
+| `health` | f32 at `h+0xC` | Read in `FUN_004d9850` (`GetPlayerHitPoints`) |
+| `health_max` | f32 at `h+0x14` | Read at 0x42a696 in the HUD |
+| `lore` | f32 at `l+4`, with `l = u32(stats+0x124)` | `FUN_00425fc0`, plus the HUD "Cur Lore" print |
+| GameCamera | 0x180-byte object with a second vtable `0x83F770` at `+0x18`; found by that vtable in the heap | `FUN_00409b50` (constructor), RTTI |
+| Follow camera | `follow = u32(GameCamera+0x68)`, vtable `0x83F5E4` (`FollowingCreatureCameraImpl`, 0x114 bytes) | `FUN_00406de0`, RTTI |
+| Follow target | `u32(follow+4)` is the followed creature's instance; it held Kain's instance address | Observed live, not read in the decompilation. Used only to pick and validate the camera, never emitted |
+| `cam_x/y/z` | f32 x16 camera-to-world matrix at `follow+0xC`; the eye is elements 12-14 (`follow+0x3C`), valid when the type u32 at `follow+0x4C` is 4 or 8 | `FUN_004088c0` reads the translation and the type |
+| `cam_yaw_deg`, `cam_pitch_deg` | row 0 of that matrix as the forward vector: yaw `atan2(y, x)`, pitch `asin(z)` | Checked live only: row 0 matches Kain's heading when the camera has caught up |
+
+### Columns
+
+| Filled | Empty (not sampled, never invented) |
+|---|---|
+| `frame` (sample index), `epoch_ms`, `mono_ms` (sample time), `phase` (route phase), `cam_*`, `player_*`, `vel_*`, `health`, `player_yaw_deg`, `health_max`, `lore`, `on_platform` | `fps_inst`, `grounded`, `mana`, `weapon`, `anim`, `tick`, `view_*`, `proj_*` |
+
+Floats have six decimals. `player_yaw_deg` is the raw Euler value, not
+unwrapped. `game_manifest.json` gets a `state` entry: rows, target and mean
+period, the Kain instance and behavior addresses, the follow camera
+address, the number of rows with a camera pose, `offsets` (a pointer to the
+table above) and, if sampling stopped early, `stopped` with the reason.
+
+### Camera
+
+`VIEW` is the identity in gameplay and `CamView` (vtable `0x87805C`) is
+inactive, so the pose comes from the follow camera that `GameCamera` owns.
+`FUN_004088c0`, its update, reads `follow+0xC` as a camera-to-world matrix.
+The sampler takes the eye from the translation and uses row 0 as the
+forward vector; that row was checked live only.
+
+Checked in `wine_20261029_0052`: at `after_w` the camera sits on Kain's
+heading (side offset 0.0), 190.9 behind and 96.1 above him with a pitch of
+-6.0 deg. At the end of `after_a` and `after_d` its yaw follows his (157.7
+vs 157.9 deg, -9.6 vs -9.9). In the `run` phase Kain was blocked (his speed
+fell to about 40 u/s) and the camera pulled in to as little as 8.9 behind,
+consistent with the collision pull-in in `FUN_004079c0`.
+
+### Measured (`wine_20261029_0043`, `sl01_basic`)
+
+| Check | Result |
+|---|---|
+| Rows, rate | 2991 rows in 59.8 s; 50.0 Hz mean, 20 ms median, 26 ms max interval |
+| Kain found | 0.8 s after the load was requested (the last `Return` of the route) |
+| Spawn | (-8.803, 57.129, 208.000), the expected (-8.80, 57.13, 208.0) |
+| Health, lore | health 30 of 30 (18.3 at the first sample, full after 0.24 s); lore 0 |
+| `on_platform` | 0 in every row |
+| `after_w` (`w`, 2 s) | horizontal speed rises 0, 100, 230 u/s and holds 230 |
+| `run` (`shift+w`, 2 s) | peak horizontal speed 200 u/s; it falls to about 45 u/s for 1 s, so Kain was probably blocked, and then reaches 200 again |
+| Turn rate (`after_a`, `after_d`, key held 1 s each) | Least-squares slope of `player_yaw_deg` over `mono_ms`: `a` +158.1 deg/s (50 rows over 0.98 s, r 0.9999), `d` -160.1 deg/s (51 rows over 1.00 s, r -0.9999); no horizontal velocity |
+| Jump | first airborne sample vz 554 u/s, peak 75.4 above the ground (z 208.0 to 283.4) about 0.24 s after the first airborne sample, airborne 0.66 s, landing vz -308 |
+| Gravity from vz(t) | ascent -2156 u/s2 (12 samples, r -0.994), descent -706 u/s2 (22 samples, r -0.999) |
+
+The turn fits use the rows of `state.csv` between the key's `down` and `up`
+events in `inputs.jsonl`, from the first to the last sample where the yaw
+changes. Yaw does not wrap in these rows.
+
+Reading the jump: vz does not follow one line. The ascent decelerates three
+times faster than the descent, so the jump is not a single constant gravity.
+The first airborne sample is at z 215.3, not at the takeoff, so 554 u/s is a
+lower bound on the takeoff impulse (the ascent fit extrapolates to 537 u/s at
+that sample). The 200 u/s peak of `run` is below the 230 u/s that plain `w`
+reaches; the run phase was probably blocked, so it is not a clean top speed.
+
 ## Limits
 
-- No D3D hook: no camera pose and no player state. The Windows capture
-  also has no camera pose, because `VIEW` is the identity in gameplay.
+- No D3D hook: no `camera_d3d8.jsonl`. The camera pose comes from memory;
+  the Windows capture has none, because `VIEW` is the identity in gameplay.
+- `state.csv` rows are stamped when the sampler reads, not at a game tick.
+  The game updates at its own rate, so consecutive rows can repeat or skip a
+  tick (the jump's vz steps are uneven).
+- Sampling needs `ptrace_scope` 0 or 1.
 - llvmpipe is a CPU rasterizer. Frame timing does not match a GPU, so
   compare frame content, not timing.
 - The game's present rate under Wine is unknown. On Windows it was
@@ -147,8 +269,7 @@ the attack was also not confirmed.
 
 ## Next step
 
-Read the player and camera state from `/proc/<pid>/mem` of the Wine process
-and write it as `state.csv`. Use only offsets verified in the decompilation,
-as the Windows harness does, and add the columns `validate_capture.py`
-already expects. The reasoning for each offset belongs in
-[`REVERSING.md`](REVERSING.md).
+Use `state.csv` to derive the movement and camera constants for the port
+(`--play`): walk and turn rates, the jump curve, and the follow distance,
+height and pitch, each confirmed in the decompilation before it is used.
+Add the logic tick and the animation state when they are located.

@@ -7,8 +7,10 @@ It never contacts the Windows host.
 
 A capture whose `game_manifest.json` has `"source": "wine"` comes from the
 Wine harness (`wine_capture.py`). That harness has no D3D hook, so it does
-not produce `camera_d3d8.jsonl` or `state.csv`; they are not required and
-the camera coverage checks are skipped. Windows captures are unchanged.
+not produce `camera_d3d8.jsonl`, and `state.csv` exists only when it sampled
+the game's memory; neither is required and the camera coverage checks are
+skipped. A `state.csv` that is present is checked like any other, and its
+empty `cam_*` columns are not an error. Windows captures are unchanged.
 """
 from __future__ import annotations
 

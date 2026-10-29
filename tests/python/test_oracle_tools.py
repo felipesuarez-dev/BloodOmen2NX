@@ -1,4 +1,5 @@
 import contextlib
+import csv
 import io
 import json
 import shutil
@@ -203,6 +204,26 @@ class WineCaptureValidationTest(unittest.TestCase):
             self.assertEqual(report["manifest"]["source"], "windows")
             self.assertTrue(any("camera_d3d8.jsonl" in error for error in report["errors"]))
             self.assertTrue(any("state.csv" in error for error in report["errors"]))
+
+    def test_wine_state_csv_from_memory_sampling_passes_cleanly(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "wine_test"
+            root.mkdir()
+            build_capture(root, with_camera=False, source="wine")
+            columns = wine_capture.STATE_COLUMNS
+            row = {"frame": 0, "epoch_ms": 1000, "mono_ms": 1, "phase": "run", "player_x": "-8.8"}
+            with (root / "state.csv").open("w", newline="", encoding="utf-8") as handle:
+                writer = csv.DictWriter(handle, columns, lineterminator="\n")
+                writer.writeheader()
+                writer.writerow(row)
+            write_sums(root)
+            report = validate_capture.validate_capture(root)
+            self.assertTrue(report["ok"], report["errors"])
+            self.assertFalse(
+                any("state" in warning or "camera" in warning for warning in report["warnings"])
+            )
+            self.assertEqual(report["counts"]["state_rows"], 1)
+            self.assertEqual(report["state_fields"], columns)
 
     def test_wine_source_skips_camera_coverage_warnings(self):
         with tempfile.TemporaryDirectory() as directory:

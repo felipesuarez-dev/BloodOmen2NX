@@ -9,7 +9,8 @@ needed. Setup, route grammar, parity numbers and limits are in
 | File | Purpose |
 |---|---|
 | `scripts/oracle/wine_setup.sh` | Build `external/oracle_install/`, create the prefix, import the registry values, seed saves |
-| `wine_capture.py` | One scripted capture: Xvfb, game, route, inputs, screenshots, PPM frames, video |
+| `wine_capture.py` | One scripted capture: Xvfb, game, route, inputs, screenshots, PPM frames, video, `state.csv` (`--no-state` skips it) |
+| `memstate.py` | Read Kain's position, yaw, velocity, health and lore, and the follow camera pose, from the game's memory (`/proc/<pid>/mem`) |
 | `routes/sl01_basic.txt` | Load PARTIDA 2 and walk, run, jump and attack (Windows phase names) |
 
 ```sh
@@ -19,8 +20,13 @@ python3 tools/oracle/validate_capture.py external/captures/wine_YYYYMMDD_HHMM
 ```
 
 A Wine capture has `"source": "wine"` in `game_manifest.json`. It has no
-`camera_d3d8.jsonl` or `state.csv`; `validate_capture.py` does not require
-them for that source and `align.py` reports inputs and phases by time offset.
+`camera_d3d8.jsonl`. Its `state.csv` is sampled from the game's memory every
+20 ms and has the Windows header plus `player_yaw_deg`, `health_max`, `lore`
+and `on_platform`. The `cam_*` columns come from the follow camera
+(`memstate.py`); `view_*` and `proj_*` stay empty. The offsets and their
+sources are in `docs/ORACLE_WINE.md`, "Game state". `validate_capture.py`
+requires neither file for that source, and `align.py` reports inputs and
+phases by time offset.
 
 ## Native Windows oracle (2026-10-27)
 
@@ -35,7 +41,8 @@ input events to the captured frames and summarizes the present rate.
 
 `capture_20261028_0150` is the first complete capture (`sl01` spawn,
 walk, run, jump; `validate_capture.py` passes). It has no camera pose or
-player state because `VIEW` is the identity in gameplay. See `docs/ORACLE_WINDOWS.md` for the capture
+player state because `VIEW` is the identity in gameplay; the Wine capture
+reads both from memory. See `docs/ORACLE_WINDOWS.md` for the capture
 facts and `docs/ORACLE_WINDOWS_NATIVE.md` for the harness.
 
 Quick check from this host:
