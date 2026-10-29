@@ -184,7 +184,8 @@ class ParseTest(unittest.TestCase):
 
     def test_header(self):
         self.assertEqual(self.graph.version, 0)
-        self.assertEqual(self.graph.header[0], 0x4F000001)
+        # FUN_005e8ee0 reads the nine header values as floats.
+        self.assertEqual(self.graph.header[0], struct.unpack("<f", struct.pack("<I", 0x4F000001))[0])
         self.assertEqual(len(self.graph.header), 9)
 
     def test_states_and_actions(self):

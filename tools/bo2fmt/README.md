@@ -108,6 +108,7 @@ Requirements:
 | `textures.py` | `texture` entries to PNG (Pillow) with `index.json` | Verified on `slums/sl01`: 239/239 |
 | `strtable.py` | `strtable` reader: `dump <container.big> --entry <name> [--locale spanish] [--raw]` | Verified: 92/92 tables parse, 1 irregular record (Italian `ui/UI`); accent mapping inferred |
 | `animreel.py` | `animreel` clip reader: `info <entry>`, `root <container.big> [--match text]` | Verified: 134/134 Kain clips parse; root speed of `kain/run` is 200 u/s |
+| `animatio.py` | `animatio` graph reader: `nodes`, `states` (`--big <container.big> --entry <name>` or an extracted entry) | Verified: all 4,081 `animatio` entries of the installed tree parse to the last byte (2,156 graphs, 1,925 alias lists) |
 | `compare_frames.py` | Frame side-by-side, diff and metrics | Synthetic tests; used against the Windows and Wine oracle frames |
 
 The numbered `data/*.dat` pipeline is documented in

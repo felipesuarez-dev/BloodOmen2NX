@@ -156,7 +156,7 @@ class ClipNode:
 class Graph:
     version: int
     flags: int  # the third int
-    header: tuple  # nine 32-bit values stored as floats (opaque)
+    header: tuple  # nine floats, read with FUN_006a09e0; squared distances (inferred)
     states: list
     bindings: list
     sequences: list
@@ -205,7 +205,7 @@ class Graph:
             return None
         if index >= REEL_TABLE2_BASE:
             return None  # a pair of reels (second table); not resolved to one name
-        return self.reels[index] if index < len(self.reels) else None
+        return self.reels[index] if 0 <= index < len(self.reels) else None
 
 
 class _Stream:
@@ -294,7 +294,7 @@ def parse(data: bytes) -> Graph | list:
         raise AnimatioError(f"unsupported version {version}")
 
     flags = s.i32("flags")
-    header = tuple(s.u32("header value") for _ in range(9))
+    header = tuple(s.f32("header value") for _ in range(9))
     states = _states(s)
     bindings = [Binding(a, b) for a, b in _pairs(s, "binding")]
     sequences = [Sequence(*(s.i32("sequence field") for _ in range(3)))
@@ -384,7 +384,8 @@ def _load(args) -> tuple[Graph, list | None]:
         if not args.entry:
             raise AnimatioError("--big needs --entry")
         names, entries = big.load(Path(args.big))
-        matches = [e for e in entries if e.type == "animatio" and e.name == args.entry]
+        wanted = args.entry.lower()
+        matches = [e for e in entries if e.type == "animatio" and e.name.lower() == wanted]
         if not matches:
             raise AnimatioError(f"no animatio entry named {args.entry}")
         data = matches[0].data
@@ -415,6 +416,8 @@ def cmd_nodes(args) -> int:
 
 def _describe(graph: Graph, symbol_names: list | None, action: Action) -> str:
     if action.kind in (ACTION_PLAY_SEQUENCE, ACTION_PLAY_ON_LAYER):
+        if not 0 <= action.target < len(graph.sequences):
+            return f"play sequence {action.target} (outside the sequence table)"
         seq = graph.sequences[action.target]
         clips = [f"{graph.clips[c].name}({reel_name(graph, graph.clips[c], symbol_names)})"
                  for c in graph.sequence_clips(action.target)]
@@ -423,6 +426,8 @@ def _describe(graph: Graph, symbol_names: list | None, action: Action) -> str:
     if action.kind in (ACTION_GOTO_STATE, ACTION_START_STATE):
         verb = "goto" if action.kind == ACTION_GOTO_STATE else "start"
         where = "" if action.kind == ACTION_GOTO_STATE else f" on layer {action.arg}"
+        if not 0 <= action.target < len(graph.states):
+            return f"{verb} state {action.target} (outside the state table){where}"
         return f"{verb} state {action.target} {graph.states[action.target].name}{where}"
     return f"action {action.kind} target {action.target} arg {action.arg:#x}"
 

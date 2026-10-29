@@ -68,7 +68,7 @@ same offsets.
 | # | Object | Content | Record | Reader |
 |---:|---|---|---|---|
 | 1 | +0x00 | int (flags, 0 in every Kain graph) | 4 | FUN_005e8ee0 |
-| 2 | +0x04 | nine 32-bit values (opaque; *inferred* hashes stored as floats) | 36 | FUN_005e8ee0 |
+| 2 | +0x04 | nine floats (read with the float reader FUN_006a09e0); *inferred* squared distances: in `bshpnm` they read 50000², 95000², 120000², 200000² and 1500² | 36 | FUN_005e8ee0 |
 | 3 | +0x28 | **states** | 36 | FUN_005eab00, FUN_005ea770, FUN_005e8e00 |
 | 4 | +0x34 | **bindings**: condition operand pairs | 8 | FUN_005eaea0 |
 | 5 | +0x40 | **sequences** | 12 | FUN_005eb000 |
@@ -130,8 +130,10 @@ FUN_00723620 writes that same field (see the run state below).
 A sequence (12 bytes, FUN_00643d60) is `head` (tag into the chain), `events`
 (tag into the event lists) and `name` (tag). The chain (8 bytes: `clip` int and
 `blend` tag) is an array; a sequence is the run of links from `head` up to the
-first link whose clip is -1. FUN_00643f10 starts the first link: the blend
-comes from the action or, when it is 0, from the link.
+first link whose clip is -1. FUN_00643f10 starts the first link. The blend
+is the action's; when that is 0, FUN_00642c00 (action kind 1) takes the
+blend of the machine's current state (state +0x18), and when that is 0 too
+FUN_00643f10 uses the link's.
 
 ## States, transitions and actions
 

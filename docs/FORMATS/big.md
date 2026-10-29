@@ -187,9 +187,9 @@ detection. The port mirrors this with `kDefaultLocale = "spanish"`
 - Which duplicate the engine returns when an entry and its `default` copy
   collide (FUN_006c8fb0 only filters); the port prefers the locale entry,
   which matches the oracle.
-- `planinfo`, `animatio`, `musicbnk`, `texfont` and `liteinfo`. `region`,
-  `animreel` and `strtable` are decoded in `docs/FORMATS/region.md`,
-  `animreel.md` and `strtable.md`.
+- `planinfo`, `musicbnk`, `texfont` and `liteinfo`. `region`, `animreel`,
+  `animatio` and `strtable` are decoded in `docs/FORMATS/region.md`,
+  `animreel.md`, `animatio.md` and `strtable.md`.
 - The `region`, `planinfo` and shared `model` records (the `cellgrup` tail is decoded in `docs/FORMATS/models.md`).
 - Which types the renderer and audio backend consume first.
 
