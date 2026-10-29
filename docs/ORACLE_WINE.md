@@ -89,7 +89,17 @@ ffmpeg dies before the end (a truncated video). `Ctrl+C`, `SIGTERM` and
 
 `tools/oracle/routes/sl01_basic.txt` loads PARTIDA 2 (`Save 01`, the
 slums/sl01 checkpoint), then walks, runs, jumps and attacks, with the phase
-names of the Windows capture.
+names of the Windows capture. Three more routes start from the same spawn and
+exist to measure one system each:
+
+| Route | Measures | Used in |
+|---|---|---|
+| `sl01_air.txt` | Jump direction: forward, back, sideways, and a direction pressed in the air | `docs/GAMEPLAY.md`, Air control |
+| `sl01_air_turn.txt` | The turn in the air | same |
+| `sl01_camera.txt` | The follow camera: turns in place, a standing jump and a turn while walking | `docs/GAMEPLAY.md`, Camera |
+
+The state of a run depends on where Kain ends the earlier phases, so each of
+these routes keeps its phases short and turns around between forward runs.
 
 ## Why the setup is needed
 

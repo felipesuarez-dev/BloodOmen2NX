@@ -7,7 +7,7 @@ translated and verified.
 |---|---|---|
 | Boot and front-end | todo | Logos, menus, options, language |
 | Level loading and streaming | todo | Container readers, level table |
-| Camera | partial | Follow pose measured in the oracle; combat and scripted cameras todo. See [Kain movement](#kain-movement) |
+| Camera | partial | Follow pose, yaw catch-up and the jump height lag ported; range smoothing, combat and scripted cameras todo. See [Camera](#camera) |
 | Player movement | partial | Ground turn, ground speeds, jump, air control and fall cap; glide, climb and swim todo. See [Kain movement](#kain-movement) |
 | Combat | todo | Melee, block, grab, finishers |
 | Dark gifts | todo | Unlock and use |
@@ -28,8 +28,8 @@ translated and verified.
 ## Kain movement
 
 Kain turns in place, walks and runs along his yaw, jumps with two-phase
-gravity and a hold boost, steers in the air, and a rigid follow camera sits
-behind him.
+gravity and a hold boost, steers in the air, and a follow camera sits behind
+him and lags a jump.
 The code is `src/game/kain_tuning.cpp`, `src/game/player.cpp` and
 `src/game/camera.cpp`; `bo2nx --play` runs it. Units are game units (about
 1 cm) and seconds, Z up, forward = (cos yaw, sin yaw, 0).
@@ -132,17 +132,50 @@ takeoff in the oracle against the model's 64.0; not explained.
 
 ### Camera
 
+`FollowCamera` (`src/game/camera.cpp`) ports `FollowingCreatureCameraImpl`
+(vtable 0x83F5E4). Its per-frame update is FUN_00408b10, which calls the yaw
+step FUN_00407ec0, the height step FUN_00407c70, the pitch, range and look
+steps FUN_00407fb0, FUN_00408300 and FUN_00408480, builds the pose, and ends
+in FUN_004088c0 (range smoothing and the collision pull-in FUN_004079c0).
+The constants are fields of the live `CameraSetup` (`follow+8`) that the oracle
+read from the game's memory at the `sl01` spawn
+(`external/captures/wine_camera_1`, a one-off dump of `follow` and its setup
+every tick). The code that builds that setup was not traced.
+
 | Value | Number | Source |
 |---|---|---|
-| Distance behind Kain, along his yaw (caught up) | 190.9 | measured, oracle |
-| Height above Kain (caught up) | 96.1 | measured, oracle |
-| Pitch | -6 deg (looking slightly down) | measured, oracle |
-| Scripted range | 192 (CameraSetup, follow+0x50) | FUN_004074c0 |
+| Range, pivot to eye | 192 | setup+0x18; follow+0x50 (FUN_004074c0 copies it) |
+| Eye elevation above the pivot | 0.10472 rad (6 deg) | setup+0x1c; FUN_00408b10 offsets the eye by `(-cos p, 0, sin p) * range` in the yaw frame |
+| Pivot height above Kain | 76 | setup+0x0c; FUN_00407c70 sets the pivot to Kain's z plus it |
+| Pose | Eye 190.94 behind and 96.07 above Kain, looking along the yaw pitched down 6 deg | the three rows above; measured, oracle: 190.9, 96.1 and -6.0 deg |
+| Yaw catch-up | A cubic Hermite blend from the camera yaw and yaw speed to Kain's yaw at rest, advanced each frame by `min(dt, duration)`; the duration is the largest root of the four quadratics that bound the end accelerations by the limit | FUN_00407ec0 with FUN_00713360, FUN_00713450 (duration), FUN_00713810 and FUN_00713870 (position and velocity); the angle is taken closest to Kain's (FUN_00694400) |
+| Yaw acceleration limit | 150 rad/s2 from setup+0x30, times 5 when `input device type == 2` (DAT_0083f718); the port uses 750, see below | FUN_00407ec0 |
+| Height lag after a jump | At takeoff the camera is given a setup with delay 0.1 s and blend time 0.6 s. The pivot stays at its resting height for the delay, then blends from that height to Kain's z plus 76 with the same Hermite blend (end speed zero, start speed carried between frames), never below Kain's feet. After the blend it is rigid again | FUN_00407c70 and FUN_004074c0; the setup was read live (setup+0x10 = 0.1, setup+0x14 = 0.6) |
 
-The port camera is rigid: it always sits at the caught-up offsets above. The
-original lags Kain's yaw; at the end of the `after_a` phase of the oracle it
-was 117 back and 88 high. The eye is pulled in along the line back from Kain
-when the level collision mesh is in the way.
+Checked against the capture (`FollowCamera` replayed over its `state.csv`
+rows, `docs/ORACLE_WINE.md`, route `sl01_camera.txt`):
+
+| Check | Oracle | Port |
+|---|---|---|
+| Camera yaw behind Kain on a 160 deg/s turn | 0.2 to 0.3 deg | at most 1.6 deg (first tick of a turn), 0.5 deg after a short tap |
+| Same turn with the limit at 150 (no keyboard factor) | 0.2 to 0.3 deg | up to 5.1 deg: too slow, so the factor of 5 is kept |
+| Eye height in a standing jump (rest 304.07, apex of Kain 281) | peak 356.04 | 356.32; within 1.1 over the jump except the first row (takeoff seen one row late) |
+| Pivot blend over 26 rows of the oracle's blend state (blend weight 0.07 to 1 over 0.5 s) | the pivot heights of the dump | the same Hermite blend: 22 rows within 0.4 u, the other 4 differ by 1.2 to 4.7 where the Kain z of that row is a tick off |
+
+Not ported: the range blend of FUN_004088c0 and the other steps. The eye is
+pulled in when the level collision mesh is in the way (FUN_004079c0, a ray from
+the pivot) and the port does it with its own ray and no smoothing. The
+original runs the range through the same Hermite blend with acceleration
+limits read live at follow+0xe0 (2000, growing), +0xe4 (30000, when blocked)
+and a 0.5 s timer at +0xe8 after a pull-in (growth at one third of the limit
+meanwhile), and keeps it at least 10 from the pivot. The oracle's eye grew back
+at about 94 u/s over 0.5 s after the wall was left behind. The setup blend of
+FUN_00408300 (range, pitch and tilt changes by script), the second-target
+pitch of FUN_00407fb0 and the stick look of FUN_00408480 are not needed for the
+keyboard on this level.
+
+The `after_a` phase of the first oracle capture (117 back, 88 high) is that
+collision pull-in against a wall, not a yaw lag, as the earlier notes read it.
 
 ### Port-only behaviour
 
@@ -171,4 +204,5 @@ These have no original source. They are development aids or placeholders.
 | Ledge fall | Not implemented. Walking off an edge only applies gravity and keeps the ground speed of the held input; the original fall state (FUN_00442800, FUN_00442ae0) has the same air control as a jump but its takeoff velocity was not traced |
 | Collision size | Body radius and eye height are provisional, see above |
 | Release slide | The short slide after releasing W is not modeled |
-| Camera lag | Not modeled: the port camera is rigid. Needs the catch-up of FollowingCreatureCameraImpl (update FUN_004088c0, setup acceleration limits) |
+| Camera range smoothing | The pull-in is instant; FUN_004088c0 smooths the range back out with an acceleration-limited blend. The setup blends of FUN_00408300 (range, pitch and tilt changes by script), the second-target pitch (FUN_00407fb0) and the stick look (FUN_00408480) are not ported |
+| Camera setups | The range, pitch, pivot height and yaw limit are those of one live setup; the code or data that builds the setups (including the jump setup with delay 0.1 and blend 0.6) was not traced |

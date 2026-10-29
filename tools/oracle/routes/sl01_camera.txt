@@ -1,0 +1,60 @@
+# Blood Omen 2, Spanish GoldMaster: load PARTIDA 2 (Save 01, slums/sl01
+# checkpoint) and turn in place and jump to measure the follow camera
+# (docs/GAMEPLAY.md, "Camera"): the yaw lag behind Kain on a turn and the
+# catch-up after it, and the camera height around a jump.
+# Run with wine_capture.py; it starts this route at the main menu.
+
+phase menu
+shot 00_main_menu
+
+# EMPEZAR PARTIDA, then the third entry of the save list.
+key Return
+wait 4000
+key Down
+key Down
+key Return
+
+# The level load takes 20-40 s on llvmpipe.
+phase spawn_idle
+wait 45000
+shot 01_spawn
+
+# Rest pose: nothing is pressed for a while.
+phase rest
+wait 3000
+
+# Turn left for 1 s, then let the camera catch up.
+phase turn_a
+hold a 1000
+phase settle_a
+wait 3000
+
+# Turn right for 1 s.
+phase turn_d
+hold d 1000
+phase settle_d
+wait 3000
+
+# A short tap: the camera barely leaves its rest yaw.
+phase tap_a
+hold a 200
+phase settle_tap
+wait 3000
+
+# A long turn: more than a half turn at the full rate.
+phase turn_a_long
+hold a 2500
+phase settle_long
+wait 3000
+
+# A standing jump: the camera height around takeoff and landing.
+phase jump
+key x
+wait 3000
+
+# Walk forward and turn while moving.
+phase walk_turn
+hold w+d@300 1500
+phase settle_walk
+wait 3000
+phase end

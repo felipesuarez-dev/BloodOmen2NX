@@ -573,7 +573,7 @@ int run_level(const engine::LevelGeometry& geometry,
             player_input.jump = state.action(InputAction::Jump);
             player_input.attack = state.action(InputAction::Attack);
             player->step(player_input, static_cast<double>(dt));
-            follow->update(player->state(), *collision);
+            follow->update(player->state(), *collision, static_cast<double>(dt));
             ++play_tick;
         } else {
             const float step = std::max(0.01f, orbit.distance * 0.01f) *
