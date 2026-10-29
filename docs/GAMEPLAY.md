@@ -157,7 +157,7 @@ These have no original source. They are development aids or placeholders.
 | Forward and back | Only on or off past the deadzone; analog speed scaling is not modeled. The platform layer also zeroes sticks below 0.25 before the deadzone applies |
 | Step cap | A step is cut to 0.1 s (the cap the SDL loop already uses) and a move to 64 sub-steps, so a stalled frame cannot tunnel through a wall or the floor |
 | Deadzone edge | Turning starts at exactly the deadzone (FUN_0041ecf0 compares `deadzone <= ax`); the forward/back gate is not traced and the port uses past-the-deadzone |
-| Run button | `run` is Shift and gives 200 u/s, which is slower than plain W (230). That is what the oracle measured (unverified, see above); the name is kept from the input layer |
+| Run button | `run` is Shift and gives 200 u/s, which is slower than plain W (230). That is what the oracle measured (unverified, see above); the name is kept from the input layer. In the oracle prefix Shift is the `autoface` row, not a run (`docs/ORACLE_WINE.md`, Input bindings), so this speed is probably that action |
 
 ### Pending
 

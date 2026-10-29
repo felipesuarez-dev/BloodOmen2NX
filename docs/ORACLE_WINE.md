@@ -250,6 +250,55 @@ lower bound on the takeoff impulse (the ascent fit extrapolates to 537 u/s at
 that sample). The 200 u/s peak of `run` is below the 230 u/s that plain `w`
 reaches; the run phase was probably blocked, so it is not a clean top speed.
 
+## Input bindings
+
+The keys of the oracle run are not the game's defaults. The defaults are in
+`kain.imp` (keyboard: attack C, combat Z, evade X, jump S, action Space); the
+prefix holds a user rebinding in
+`drive_c/users/<user>/Documents/Blood Omen 2/settings.cfg` (784 bytes, written
+by the Windows install and seeded by `wine_setup.sh`). Layout, read from the
+file and cross-checked with the oracle:
+
+| Part | Content |
+|---|---|
+| Header | 16 bytes: `60 2b 1d 6f a0 d5 cf 11 bf c7 44 45 53 54 00 00` |
+| Records | From offset 0x10, 12 bytes each: `u32 index, u32 key1, u32 key2` (0 = unbound) |
+| Key code | `0x400 + DirectInput scancode` for the keyboard (`0x42d` is X, `0x438` Left Alt); `0x100 + button` for the mouse (`0x100` left, `0x101` right) |
+
+The index follows the rows of the options menu (list at 0x8FE514, FUN_0055a370).
+Only the first row is verified: the oracle jumps with the right mouse button
+and with X. The effect column is what the `anim` column of `state.csv` showed at
+the `sl01` spawn (`external/captures/wine_probe_attack_1` to `_4`, taps and
+holds, each key alone and in pairs):
+
+| Index | Row | Keys in the prefix | Effect at the spawn |
+|---|---|---|---|
+| 0 | jump | right mouse, X | Jump: animations 76, 78, 79, 86 |
+| 1 | bloodsuck | Left Alt | None |
+| 2 | dark gift | Z | None |
+| 3 | action | left mouse, Space | None |
+| 4 | dark gift menu | Left Ctrl | None |
+| 5 | autoface | Left Shift | Animation 13 for about 0.2 s, then idle |
+| 6 | block | C | None |
+| 7 to 10 | forward, backward, left, right | W, S, A, D | Walk and turn |
+| 11 | look around | Right Ctrl | None |
+| 12 | (pause) | Esc | Not probed |
+
+The engine's virtual buttons are a different table (0x8F43C8: jump 0x5C, attack
+0x5D, evade 0x5E, combat 0x5F, action 0x60); the map from these rows to those
+ids is not traced. The melee attack needs combat mode (`kain.react`:
+`t_combo = ControlPress(c_attack) & FlagOn(InCombatMode) & ...`, combat mode
+held on the `combat` button). At the spawn no key or pair of keys starts one:
+Space, the left mouse button or Z held together with Alt, C, Ctrl or Shift
+leave `anim` at 0. So the attack is still unconfirmed; the Shift, Alt, Space
+and left mouse inputs of `sl01_basic` are the candidates, and the missing piece
+is the state that enables combat (an equipped weapon or a target is the first
+thing to check).
+
+Shift is bound to the autoface row, not to a run, so the 200 u/s of `shift+w`
+measured in `sl01_basic` is probably Kain with that action active (not
+verified).
+
 ## Limits
 
 - No D3D hook: no `camera_d3d8.jsonl`. The camera pose comes from memory;
@@ -266,7 +315,7 @@ reaches; the run phase was probably blocked, so it is not a clean top speed.
 - The level load time varies (20-40 s); the route uses a fixed 45 s wait.
 - Only the spawn frame is reproducible. After the first move the game state depends on
   frame timing: two `sl01_basic` runs gave different jump frames (position and camera).
-- The attack input is unconfirmed on both platforms.
+- The attack input is unconfirmed on both platforms; see [Input bindings](#input-bindings).
 
 ## Next step
 

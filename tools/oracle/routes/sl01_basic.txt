@@ -41,12 +41,21 @@ shot 04a_during_jump
 wait 1500
 shot 04_after_jump
 
-# Left mouse attacks.
+# The left mouse button and Space are the `action` row of settings.cfg; the
+# melee attack also needs combat mode (docs/ORACLE_WINE.md, Input bindings).
+# No bound key starts an attack at this spawn, so these phases only record
+# the attempt; check the `anim` column of state.csv.
 phase attack
 click 1
 wait 270
 shot 05a_during_attack
 wait 1000
 shot 05_after_attack
+
+# Space held and Left Alt pressed on top of it, the other candidates.
+phase attack_combat
+hold space+Alt_L@400 1500
+wait 500
+shot 06_after_attack_combat
 
 phase end
