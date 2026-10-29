@@ -86,7 +86,7 @@ Function map: 35513 rows. Levels and platform features are defined in [`tools/ge
 | Installed game tree | 227 files, 1.9 GB; manifest hash in `docs/PROVENANCE.md` |
 | Level renderer, audio, input | Level shell with free-camera input; audio and gameplay pending |
 | Game logic translation | Not started |
-| Original game as oracle | Runs locally under Wine/Xvfb (pristine `bo2.exe`, no GPU): scripted `sl01` captures with frames, video and inputs; a complete native Windows capture is the cross-check; camera/player state pending |
+| Original game as oracle | Runs locally under Wine/Xvfb (pristine `bo2.exe`, no GPU): scripted `sl01` captures with frames, video, inputs and player/camera state read from memory; a complete native Windows capture is the cross-check |
 
 Source of truth: [`STATE.md`](STATE.md) and [`ROADMAP.md`](ROADMAP.md).
 
@@ -240,7 +240,7 @@ Per-function loop: [`docs/PORTING_GUIDE.md`](docs/PORTING_GUIDE.md). The rule is
 | [`docs/PROVENANCE.md`](docs/PROVENANCE.md) | Hashes and chain of custody |
 | [`docs/SETUP.md`](docs/SETUP.md) | One-time environment setup |
 | [`docs/ORACLE_COMPARE.md`](docs/ORACLE_COMPARE.md) | Parity results against the original |
-| [`docs/ORACLE_WINE.md`](docs/ORACLE_WINE.md) | Local Wine/Xvfb oracle: setup, scripted capture, route grammar and parity |
+| [`docs/ORACLE_WINE.md`](docs/ORACLE_WINE.md) | Local Wine/Xvfb oracle: setup, scripted capture, game state from memory, parity |
 | [`docs/ORACLE_WINDOWS_NATIVE.md`](docs/ORACLE_WINDOWS_NATIVE.md) | Native Windows capture harness, client and validation |
 | [`docs/ORACLE_WINDOWS.md`](docs/ORACLE_WINDOWS.md) | Native Windows gameplay captures: facts, gaps and next steps |
 

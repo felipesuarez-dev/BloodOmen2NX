@@ -103,8 +103,10 @@ and assets) is complete.
   prefix (HKLM `InstallPath`/`MoviePath` read by `FUN_00578b80`, a valid
   video mode, the flat `data/` layout) and `tools/oracle/wine_capture.py`
   replays a route and records frames, video and inputs. The Wine spawn
-  frame is within 4.9/255 mean error of the Windows frame. See
-  `docs/ORACLE_WINE.md`.
+  frame is within 4.9/255 mean error of the Windows frame. The same run
+  samples Kain's state (position, yaw, velocity, health, lore) and the
+  follow camera's pose from the process memory at 50 Hz into `state.csv`;
+  every offset has a `FUN_` source. See `docs/ORACLE_WINE.md`.
 - The native Windows oracle harness is available: a reverse SSH server on
   the Windows host, `tools/oracle/oracle_client.py`, a capture validator and
   an input/frame aligner. `capture_20261028_0150` is the first complete
@@ -155,9 +157,8 @@ and assets) is complete.
   it. Wiring the `sound`/`strmfile` event table to gameplay is pending.
 - `region`, `planinfo`, `bpackage`, `strtable`, `musicbnk`, `texfont`,
   `liteinfo`.
-- The oracle state comparison: both oracles produce frames but no camera
-  pose or player state (`VIEW` is the identity under D3D8). Under Wine the
-  state can be read from `/proc/<pid>/mem` once the offsets are decompiled.
+- Oracle state beyond position, velocity, health, lore and the camera: the
+  logic tick, the animation state and the grounded flag are not located.
 - The `sl01` port frame: a `pyramid/purple` helper volume tints it magenta
   (the original never draws `pyramid/*` volumes) and the material/light
   modes render near-black (BO2NX-68).
@@ -175,7 +176,7 @@ and assets) is complete.
 | 2 | `game.erg` boot-time keys | Decompile the key lookup in `bo2.exe` | `docs/FORMATS/erg.md` |
 | 3 | Original logic tick | Decompile the main loop and confirm it under the Wine oracle | `docs/ARCHITECTURE.md` |
 | 4 | Level list and streaming model | Derive it from the installer script and `list.txt` | `docs/GAMEPLAY.md` |
-| 5 | Oracle state comparison | Decompile the player and camera structures and read them from the Wine process memory | `docs/ORACLE_WINE.md` |
+| 5 | Logic tick and animation state in the oracle | Locate them in the decompilation and add them to `state.csv` | `docs/ORACLE_WINE.md` |
 | 6 | `animatio` and `animreel` layout | Decompile the animation loader | `docs/FORMATS/models.md` |
 
 ## Next steps
@@ -185,8 +186,9 @@ and assets) is complete.
 3. Decompile how `bo2.exe` skips `pyramid/*` helper volumes and fix the
    `sl01` materials, then gate the port spawn frame against the Wine
    oracle (BO2NX-68).
-4. Read the camera and player state from the Wine process memory (verified
-   offsets only) to compare state, not only frames (BO2NX-69).
+4. Replace the provisional `--play` movement and camera constants with
+   values traced in the Wine `state.csv` and confirmed in the decompilation
+   (BO2NX-34).
 
 ## Rules
 
