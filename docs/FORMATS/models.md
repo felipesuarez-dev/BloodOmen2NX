@@ -95,39 +95,47 @@ geometry.
 ### `collmodc`
 
 The collision chunk is a sibling of `rmd` in the model block, not a
-subchunk. The payload starts with a NUL-terminated record name
-(`default`), a u32 header size, two header u32 values and a vector of
-8-byte property records. After the header the observed sequence is:
+subchunk. The payload starts with a NUL-terminated record name (`default`), a u32
+header size, two header u32 values and a vector of 8-byte property records.
+After the header the observed sequence is:
 
 ```
 u32  vertex flag (0xFFFFFF01 in the reference models)
-u8   compressed flag
-u32  data size; bytes[data size]       (compressed vertex blob)
+u32  data size; bytes[data size]       (12-byte AABBs)
 u32  index count
 u32  index bytes; bytes[index bytes]
 u32  edge count; edge[24 bytes]
-u32  face count; face[16 bytes]
+u32  face count; face bytes
 u16, u16, u32, u8, u32 x4              (trailer)
 ```
 
-The host stores the raw `collmodc` payload per model
-(`LevelGeometry::collisions`) and reports the model and byte counts.
-The data blob is a list of 12-byte AABBs: three int16 minimum and three
-int16 maximum values. The edge/face records and the exact collision runtime
-are not decoded yet.
+The first blob is a list of 12-byte AABBs: three int16 minimum and three
+int16 maximum values. `parse_collmodc_boxes` maps it and `CollisionWorld`
+can place the boxes with the cell instances and the entity offsets. The
+AABBs are a broad phase, not the collision hull.
+
+`bo2nx --collision-dump --big <level.big> [--collision-model <substring>]
+[--collision-out <file>]` prints every cell collision with its instances and
+world AABBs, the u32 values after the AABB blob and the raw payload. In
+`sanctuary` the dump has 76 cell collisions and no entity boxes. Model 0
+`default` is 244 bytes with 5 AABBs; after the AABBs it has index count 12,
+index bytes 48, edge count 0, face count 1 and 48 face bytes, so the payload
+ends after the face. Model 2 `default` has 593 AABBs in 18,536 bytes. The
+index, edge and face bytes are extracted, but their record layout and the
+runtime prim/attribute semantics are still open. The small shared models
+show 6-byte faces, so the face record is not fixed at the 16 bytes guessed
+earlier.
 
 Measured (`sl01_basic`, `wine_20261029_0043`): the W speed matches 230 u/s
 until frame 2316; the oracle slows to 177.76 and 86.67 and stops at
 x = 326.15, while the port keeps 230 and stops at x = 351.60. The 25.44 u
 difference is the missing collision mesh, not the movement tuning; tracked
-as BO2NX-72.
+as BO2NX-72. The AABB broad phase stops the port at x = 255.3, 70.8 u before
+the oracle, and the box mode is the `use_boxes` constructor diagnostic, off
+by default. The cell AABBs in the dump do not contain x = 255.3 or
+x = 326.15, so the 255.3 box is not a cell AABB at those coordinates and the
+W collision source is still open.
 
-`parse_collmodc_boxes` maps the blob to local AABBs and `CollisionWorld`
-can place them with the cell instances and the entity offsets. The AABBs
-are a broad phase: enabling them stops the port at x = 255.3, 70.8 u before
-the oracle, because the exact edge/face hull is inside the boxes. The box
-mode is the `use_boxes` constructor diagnostic, off by default; the port
-keeps the render-geometry collision until the hull is decoded.
 
 ## Textures and materials
 

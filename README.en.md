@@ -116,7 +116,7 @@ Source of truth: [`STATE.md`](STATE.md) and [`ROADMAP.md`](ROADMAP.md).
 |---|---|
 | Chapters | None is completable; there is no level flow, no menus and no front end |
 | Gameplay systems | Combat, enemies and AI, dark gifts, weapons and inventory, scripting and triggers are not translated. Glide, ledge falls and the run start phase are pending |
-| Animation and collision | The animation graph (`animatio`) is decoded, but skeleton evaluation, skinning and clip blending are not ported; the compressed collision (`collmodc`) is a list of 12-byte AABBs (a broad phase) and the exact edge/face hull is still needed. The W state comparison shows the oracle stopping at x = 326.15, the render geometry at x = 351.60 and the AABB broad phase at x = 255.3 |
+| Animation and collision | The animation graph (`animatio`) is decoded, but skeleton evaluation, skinning and clip blending are not ported; the compressed collision (`collmodc`) is a list of 12-byte AABBs (a broad phase) and the exact edge/face hull is still needed. The W state comparison shows the oracle stopping at x = 326.15, the render geometry at x = 351.60 and the AABB broad phase at x = 255.3; the `sanctuary` dump has 76 cell collisions and no cell AABB contains x = 255.3 or x = 326.15 |
 | Lighting and materials | The `.slm` palette is a shadow map; at the `sl01` spawn the world error is 8.69/255. Kain, the HUD, the green `bo2cinematic001` marker and the exact palette texture format remain; fog is disabled in `sl01` |
 | Audio events and video | The `sound` and `strmfile` event table is not wired to gameplay; there is no Bink playback |
 | Switch | The libnx and deko3d backend has not started |
@@ -216,6 +216,7 @@ LEVELS=external/installed/media/gogames/bo2/resources/levels
 ./build/linux-debug/bo2nx --level --big "$LEVELS/slums/sl01.big" --out /tmp/sl01.ppm
 ./build/linux-debug/bo2nx --sdl --big "$LEVELS/slums/sl01.big"
 ./build/linux-debug/bo2nx --play --big "$LEVELS/slums/sl01.big"   # walk Kain
+./build/linux-debug/bo2nx --collision-dump --big "$LEVELS/sanctuary/sanctuary.big" --collision-out /tmp/collisions.txt
 ```
 
 `--play` reads the `kain` tunedata from `<level dir>/../kain/kain.big` (for `sl01`, `resources/levels/kain/kain.big`). All options: [`docs/RUNNING.md`](docs/RUNNING.md).

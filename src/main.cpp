@@ -47,6 +47,7 @@ struct Options {
     bool play = false;
     bool headless = false;
     bool stats = false;
+    bool collision_dump = false;
     std::uint32_t frames = 0;
     std::uint32_t tick_rate = 60;
     bool eye_set = false;
@@ -57,6 +58,8 @@ struct Options {
     std::string out;
     std::string replay;
     std::string state_out;
+    std::string collision_model;
+    std::string collision_out;
     std::string event_ogg;
     std::string music_ogg;
     float audio_seconds = 5.0f;
@@ -136,6 +139,8 @@ Options parse_options(int argc, char** argv) {
                 << "  bo2nx --sdl [--big <file.big>] [--out <screenshot.ppm>] [options]\n"
                 << "  bo2nx --play --big <level.big> [--kain <kain.big>] [options]\n"
                 << "  bo2nx --replay <inputs.csv> --big <level.big> --state-out <state.csv> [options]\n"
+                << "  bo2nx --collision-dump --big <level.big> [--collision-model <substring>]\n"
+                << "                           [--collision-out <file>]\n"
                 << "  bo2nx --event-ogg <event.ogg> [--music-ogg <music.ogg>] [--audio-seconds n]\n"
                 << "  bo2nx --headless --frames <n> [--tick-rate <hz>]\n\n"
                 << "Frame options:\n"
@@ -164,7 +169,10 @@ Options parse_options(int argc, char** argv) {
                 << "  --frames <n>           fixed-step iterations for --headless\n"
                 << "  --tick-rate <hz>       logic ticks per second (default 60)\n"
                 << "  --replay <file.csv>    replay an oracle input timeline headless\n"
-                << "  --state-out <file.csv> write the replayed player and camera state\n";
+                << "  --state-out <file.csv> write the replayed player and camera state\n"
+                << "  --collision-dump       dump the collmodc payloads and their actors\n"
+                << "  --collision-model <s>  only models whose name contains <s>\n"
+                << "  --collision-out <file> write the collision dump to <file>\n";
             std::exit(0);
         }
         if (argument == "--list-big") {
@@ -175,6 +183,12 @@ Options parse_options(int argc, char** argv) {
             options.frame = true;
         } else if (argument == "--level") {
             options.level = true;
+        } else if (argument == "--collision-dump") {
+            options.collision_dump = true;
+        } else if (argument == "--collision-model") {
+            options.collision_model = next_argument(index, argc, argv);
+        } else if (argument == "--collision-out") {
+            options.collision_out = next_argument(index, argc, argv);
         } else if (argument == "--sdl") {
             options.sdl = true;
         } else if (argument == "--play") {
@@ -266,13 +280,24 @@ Options parse_options(int argc, char** argv) {
     if (!options.replay.empty() && options.big.empty()) {
         usage_error("--replay requires --big");
     }
+    if (options.collision_dump && options.big.empty()) {
+        usage_error("--collision-dump requires --big");
+    }
+    if (!options.collision_model.empty() && !options.collision_dump) {
+        usage_error("--collision-model requires --collision-dump");
+    }
+    if (!options.collision_out.empty() && !options.collision_dump) {
+        usage_error("--collision-out requires --collision-dump");
+    }
     const bool audio = !options.event_ogg.empty() || !options.music_ogg.empty();
     const int modes = (!options.list_big.empty() ? 1 : 0) + (!options.erg.empty() ? 1 : 0) +
                       (options.frame ? 1 : 0) + (options.level ? 1 : 0) +
-                      (options.sdl ? 1 : 0) + (options.headless ? 1 : 0) +
-                      (!options.replay.empty() ? 1 : 0) + (audio ? 1 : 0);
+                      (options.collision_dump ? 1 : 0) + (options.sdl ? 1 : 0) +
+                      (options.headless ? 1 : 0) + (!options.replay.empty() ? 1 : 0) +
+                      (audio ? 1 : 0);
     if (modes > 1) {
-        usage_error("--list-big, --erg, --frame, --level, --sdl, --headless, --replay and audio are mutually exclusive");
+        usage_error("--list-big, --erg, --frame, --level, --collision-dump, --sdl, "
+                    "--headless, --replay and audio are mutually exclusive");
     }
     return options;
 }
@@ -534,6 +559,121 @@ LoadedLevel load_level(const Options& options) {
     level.lightmaps_ms = elapsed_ms(lightmaps_start);
     level.load_ms = elapsed_ms(load_start);
     return level;
+}
+
+std::uint32_t collision_u32(const std::vector<std::uint8_t>& data, std::size_t offset) {
+    return static_cast<std::uint32_t>(data[offset]) |
+           (static_cast<std::uint32_t>(data[offset + 1]) << 8) |
+           (static_cast<std::uint32_t>(data[offset + 2]) << 16) |
+           (static_cast<std::uint32_t>(data[offset + 3]) << 24);
+}
+
+bo2::engine::LevelCollisionBox world_collision_box(const bo2::engine::LevelCollisionBox& box,
+                                                   const bo2::engine::LevelInstance& instance) {
+    bo2::engine::Vec3 minimum{std::numeric_limits<float>::infinity(),
+                              std::numeric_limits<float>::infinity(),
+                              std::numeric_limits<float>::infinity()};
+    bo2::engine::Vec3 maximum{-std::numeric_limits<float>::infinity(),
+                              -std::numeric_limits<float>::infinity(),
+                              -std::numeric_limits<float>::infinity()};
+    for (int corner = 0; corner < 8; ++corner) {
+        bo2::engine::Vec3 point{(corner & 1) != 0 ? box.maximum.x : box.minimum.x,
+                                (corner & 2) != 0 ? box.maximum.y : box.minimum.y,
+                                (corner & 4) != 0 ? box.maximum.z : box.minimum.z};
+        point = {point.x * instance.scale.x, point.y * instance.scale.y,
+                 point.z * instance.scale.z};
+        point = bo2::engine::rotate_euler(point, instance.rotation) + instance.position;
+        minimum = {std::min(minimum.x, point.x), std::min(minimum.y, point.y),
+                   std::min(minimum.z, point.z)};
+        maximum = {std::max(maximum.x, point.x), std::max(maximum.y, point.y),
+                   std::max(maximum.z, point.z)};
+    }
+    return {minimum, maximum};
+}
+
+int dump_collisions(const Options& options) {
+    const LoadedLevel level = load_level(options);
+    std::ofstream file;
+    if (!options.collision_out.empty()) {
+        file.open(options.collision_out, std::ios::binary);
+        if (!file) {
+            std::cerr << "bo2nx: cannot write " << options.collision_out << '\n';
+            return 1;
+        }
+    }
+    std::ostream& out = options.collision_out.empty() ? std::cout : file;
+    out << "# level " << level.name << " collisions " << level.geometry.collisions.size()
+        << " entity_boxes " << level.geometry.collision_boxes.size() << '\n';
+    for (const bo2::engine::LevelCollision& collision : level.geometry.collisions) {
+        if (!options.collision_model.empty() &&
+            !bo2::engine::contains_ci(collision.name, options.collision_model)) {
+            continue;
+        }
+        const std::vector<bo2::engine::LevelCollisionBox> boxes =
+            bo2::engine::parse_collmodc_boxes(collision.data);
+        out << "model " << collision.model << ' ' << collision.name << " bytes "
+            << collision.data.size() << " boxes " << boxes.size() << '\n';
+        for (std::size_t instance_index = 0;
+             instance_index < level.geometry.instances.size(); ++instance_index) {
+            const bo2::engine::LevelInstance& instance =
+                level.geometry.instances[instance_index];
+            if (instance.model != collision.model) {
+                continue;
+            }
+            out << "  instance " << instance_index << " pos " << instance.position.x << ' '
+                << instance.position.y << ' ' << instance.position.z << " rot "
+                << instance.rotation.x << ' ' << instance.rotation.y << ' '
+                << instance.rotation.z << " scale " << instance.scale.x << ' '
+                << instance.scale.y << ' ' << instance.scale.z << " flags "
+                << instance.flags << '\n';
+            for (std::size_t box_index = 0; box_index < boxes.size(); ++box_index) {
+                const bo2::engine::LevelCollisionBox world =
+                    world_collision_box(boxes[box_index], instance);
+                out << "    box " << box_index << " local " << boxes[box_index].minimum.x
+                    << ' ' << boxes[box_index].minimum.y << ' '
+                    << boxes[box_index].minimum.z << ' ' << boxes[box_index].maximum.x
+                    << ' ' << boxes[box_index].maximum.y << ' '
+                    << boxes[box_index].maximum.z << " world " << world.minimum.x << ' '
+                    << world.minimum.y << ' ' << world.minimum.z << ' ' << world.maximum.x
+                    << ' ' << world.maximum.y << ' ' << world.maximum.z << '\n';
+            }
+        }
+        std::size_t name_end = 0;
+        while (name_end < collision.data.size() && collision.data[name_end] != 0) {
+            ++name_end;
+        }
+        if (name_end + 5 <= collision.data.size()) {
+            const std::uint32_t header_size = collision_u32(collision.data, name_end + 1);
+            const std::size_t flag_offset = name_end + 5 + header_size;
+            if (flag_offset + 8 <= collision.data.size()) {
+                const std::uint32_t data_size = collision_u32(collision.data, flag_offset + 4);
+                const std::size_t data_offset = flag_offset + 8;
+                out << "  header " << header_size << " flag 0x" << std::hex
+                    << collision_u32(collision.data, flag_offset) << std::dec << " data_size "
+                    << data_size << " data_offset " << data_offset << '\n';
+                out << "  rest_u32";
+                for (std::size_t offset = data_offset + data_size;
+                     offset + 4 <= collision.data.size(); offset += 4) {
+                    out << ' ' << collision_u32(collision.data, offset);
+                }
+                out << '\n';
+            }
+        }
+        out << "  raw";
+        for (const std::uint8_t byte : collision.data) {
+            out << ' ' << std::hex << std::setw(2) << std::setfill('0')
+                << static_cast<int>(byte) << std::dec;
+        }
+        out << '\n';
+    }
+    out << "entity_boxes\n";
+    for (std::size_t index = 0; index < level.geometry.collision_boxes.size(); ++index) {
+        const bo2::engine::LevelCollisionBox& box = level.geometry.collision_boxes[index];
+        out << "  box " << index << ' ' << box.minimum.x << ' ' << box.minimum.y << ' '
+            << box.minimum.z << ' ' << box.maximum.x << ' ' << box.maximum.y << ' '
+            << box.maximum.z << '\n';
+    }
+    return 0;
 }
 
 void print_stats(const LoadedLevel& level, double render_ms) {
@@ -981,6 +1121,9 @@ int main(int argc, char** argv) {
         }
         if (options.level) {
             return render_level_frame(options);
+        }
+        if (options.collision_dump) {
+            return dump_collisions(options);
         }
         if (!options.replay.empty()) {
             return run_replay(options);

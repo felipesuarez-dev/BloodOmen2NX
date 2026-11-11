@@ -38,7 +38,7 @@ comparison.
 | Cell grid and visibility BSP | done | 173 groups with `cells`; 162 with `cellbsp`; leaf count verified |
 | Cell instances and placement | done | `cellinst` v3/v4; local `cellmdls` templates placed in world space |
 | Cell lights and markers | done | `cellight` v3 and `cellmark` v4 parsed; renderer consumer pending |
-| Collision payload | done | `collmodc` raw payload per model, header counts; runtime decode pending |
+| Collision payload | done | `collmodc` raw payload per model, AABB broad phase and `--collision-dump`; the face/index bytes are extracted, but the runtime prim/attribute decode is pending |
 | Skeleton and animations | done | 5,168 models parsed, 1,586 skinned; `animreel` clips decoded (root motion) and the `animatio` graph decoded (clip nodes feed the Kain tuning) |
 | M3 loop/world | wip | FixedStep, region entities, shared models, culling, streaming, navigation, collision, third-person `--play` with the original Kain tuning (turning, jump, gravity, air control, partial-stick run/walk blend; run and walk-back speeds from `animreel` root motion and the `animatio` clip node, start phase and Shift measured), follow camera with yaw catch-up, jump height lag and range smoothing, Spanish locale lookup, hidden helper objects, save/checkpoint flow and attack foundation |
 | Material layer records | done | `mlyrcolr`/`mlyrctrl`; diagnostic `--material` tints |

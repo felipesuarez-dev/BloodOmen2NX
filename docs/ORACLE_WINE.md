@@ -356,7 +356,10 @@ Measured:
   The 25.44 u wall mismatch is the render-geometry collision, not the
   movement tuning (BO2NX-72). The `collmodc` AABB broad phase stops the
   player at x = 255.3, 70.8 u before the oracle; it is a broad phase, not
-  the exact edge/face hull, and stays off by default.
+  the exact edge/face hull, and stays off by default. The `sanctuary`
+  `--collision-dump` has 76 cell collisions and no entity boxes; no cell
+  AABB contains x = 255.3 or x = 326.15, so the 255.3 box is not a cell AABB
+  at those coordinates and the W collision source is still open.
 - `wine_camera_1` (`sl01_camera`, 3,611 rows): the player stays within
   0.08 u through the spawn, the turns and the settles; the first divergence
   is the jump at frame 3229 (11.03 u). The spawn camera differs by up to

@@ -56,6 +56,12 @@ light maps), the render time and the resident/peak memory snapshot. It
 works with `--level` and `--sdl`; the SDL backend adds its first-frame
 time.
 
+`--collision-dump` prints every `collmodc` model with its instances, local
+and world AABBs, the u32 values after the AABB blob and the raw payload.
+`--collision-model <substring>` filters by model name and `--collision-out`
+writes to a file. In `sanctuary` the dump has 76 cell collisions and no
+entity boxes; the exact index/edge/face decode is still open (BO2NX-72).
+
 Measured on this container for `sanctuary` at 640x480 with `--lightmap`:
 
 | Phase | Time |
@@ -154,6 +160,9 @@ provisional until the original controls are recovered from `bo2.exe`.
 | `--erg <file>` | Parse and print a `game.erg` configuration |
 | `--frame --big <file>` | Render a textured preview frame |
 | `--level --big <level.big>` | Render the static `cellgrup` level shell |
+| `--collision-dump --big <level.big>` | Dump `collmodc` models, instances, world AABBs and raw payloads |
+| `--collision-model <substring>` | Filter the collision dump by model name |
+| `--collision-out <file>` | Write the collision dump to a file |
 | `--sdl [--big <file>]` | SDL2 + OpenGL window; no `--big` draws a triangle |
 | `--play --big <level.big>` | Kain third-person player in the SDL window |
 | `--kain <kain.big>` | `kain` tunedata for `--play` (default `<level dir>/../kain/kain.big`) |
