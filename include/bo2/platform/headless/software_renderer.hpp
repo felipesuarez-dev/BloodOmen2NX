@@ -23,6 +23,17 @@ struct FrameOptions {
     Camera camera;
     engine::MaterialMode material_mode = engine::MaterialMode::Off;
     bool lightmap = false;
+    // Diagnostic for the .slm palette: the original builds a D3D8 texture from
+    // the palette high byte; the format is not traced. These factors test
+    // whether the palette behaves like sRGB or needs a different scale.
+    float lightmap_gamma = 1.0f;
+    float lightmap_scale = 1.0f;
+    // More diagnostics for the .slm mapping: invert the palette (index 0 could
+    // be the shadow end), sample with the first UV set, or disable the .slm
+    // vertex colours.
+    bool lightmap_invert = true;
+    bool lightmap_first_uv = false;
+    bool lightmap_no_vertex_colors = false;
 };
 
 std::vector<std::uint8_t> render_textured_cube(const engine::Image& texture,

@@ -172,6 +172,20 @@ int main() {
     CHECK(vertex_frame[center + 0] > 55 && vertex_frame[center + 0] < 75);
     CHECK(vertex_frame[center + 1] > 118 && vertex_frame[center + 1] < 138);
 
+    // The .slm palette is a shadow map: the renderer uses 1 - value, so a
+    // dark palette entry brightens the surface. The raw sample is still
+    // available for diagnostics.
+    bo2::engine::Image shadow = lightmap;
+    shadow.rgba = {32, 32, 32, 255};
+    vertex_lit.lightmaps = {shadow};
+    const std::vector<std::uint8_t> shadow_frame =
+        bo2::platform::headless::render_level(vertex_lit, white_texture, light_options);
+    CHECK(shadow_frame[center + 0] > 90);  // 255 * 0.5 * (1 - 32/255) = 111
+    light_options.lightmap_invert = false;
+    const std::vector<std::uint8_t> raw_frame =
+        bo2::platform::headless::render_level(vertex_lit, white_texture, light_options);
+    CHECK(raw_frame[center + 0] < 30);  // 255 * 0.5 * 32/255 = 16
+
     if (failures != 0) {
         std::cerr << failures << " check(s) failed\n";
         return 1;

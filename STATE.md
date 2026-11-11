@@ -80,8 +80,10 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   textures resolve. The loader also matches model vertex counts to the
   group counts: 62 model light maps cover 2,769 triangles. Models are
   consumed in order, so duplicate counts (coffins, roofbits) get
-  different groups. Shared-model instance mapping and the per-vertex
-  data are open.
+  different groups. The palette high byte is a shadow factor, not a
+  luminance: the host samples `1 - palette`, which takes the `sl01` spawn
+  world MAE from 35.58 to 8.69/255 and the luma correlation from -0.03 to
+  0.37. Shared-model instance mapping and the per-vertex data are open.
 - Material layer records are parsed: `mlyrcolr` (three RGBA colors) and
   `mlyrctrl` (three `u32`/`f32`/`u16`/`u16` controls) per material.
   Untextured surfaces use the diffuse layer. The D3D8 trace shows texture
@@ -179,10 +181,10 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
 - `planinfo`, `bpackage`, `musicbnk`, `texfont` and `liteinfo`.
 - Oracle state beyond position, velocity, health, lore, the animation id
   and the camera: the logic tick and the grounded flag are not located.
-- The `sl01` port frame: helper objects are hidden now, but the frame still
-  differs from the oracle (world MAE 35/255): fog, ambient and dynamic
-  lights, the `.slm` group binding and pyramid-model types without
-  `helperobj` (detector, planhelper) are open (BO2NX-68).
+- The `sl01` port frame: helper objects are hidden and the `.slm` palette is
+  inverted as a shadow map; the world MAE is 8.69/255 with luma correlation
+  0.37. Kain, the HUD, the green `bo2cinematic001` marker and the exact
+  palette texture format remain (BO2NX-68).
 - Gameplay parity beyond turning, ground speeds, partial stick, jumping,
   air control and the camera range blend: the start phase and Shift speed,
   glide, ledge falls, combat (it needs combat mode; map in BO2NX-34) and

@@ -140,6 +140,12 @@ Options parse_options(int argc, char** argv) {
                 << "  --material <mode>     diagnostic tint by the material layer colours (not the\n"
                 << "                        original lighting): off, diffuse, layers, layers2x\n"
                 << "  --lightmap            light textured surfaces with the .slm (light maps, vertex colours)\n"
+                << "  --lightmap-gamma <v>  software-renderer diagnostic: palette gamma (default 1)\n"
+                << "  --lightmap-scale <v>  software-renderer diagnostic: light-map scale (default 1)\n"
+                << "  --lightmap-invert     software-renderer diagnostic: invert the palette (default)\n"
+                << "  --lightmap-no-invert  software-renderer diagnostic: keep the raw palette sample\n"
+                << "  --lightmap-first-uv   software-renderer diagnostic: sample with UV set 0\n"
+                << "  --lightmap-no-vertex  software-renderer diagnostic: skip the .slm vertex colours\n"
                 << "  --stats               print load, parse, render and memory numbers\n"
                 << "  --event-ogg <file>     play one Ogg event\n"
                 << "  --music-ogg <file>     loop an Ogg music track\n"
@@ -199,6 +205,26 @@ Options parse_options(int argc, char** argv) {
                 parse_material_mode(next_argument(index, argc, argv));
         } else if (argument == "--lightmap") {
             options.frame_options.lightmap = true;
+        } else if (argument == "--lightmap-gamma") {
+            options.frame_options.lightmap_gamma =
+                parse_float(next_argument(index, argc, argv), "lightmap-gamma");
+            if (!(options.frame_options.lightmap_gamma > 0.0f)) {
+                usage_error("lightmap-gamma must be positive");
+            }
+        } else if (argument == "--lightmap-scale") {
+            options.frame_options.lightmap_scale =
+                parse_float(next_argument(index, argc, argv), "lightmap-scale");
+            if (!(options.frame_options.lightmap_scale >= 0.0f)) {
+                usage_error("lightmap-scale must be non-negative");
+            }
+        } else if (argument == "--lightmap-invert") {
+            options.frame_options.lightmap_invert = true;
+        } else if (argument == "--lightmap-no-invert") {
+            options.frame_options.lightmap_invert = false;
+        } else if (argument == "--lightmap-first-uv") {
+            options.frame_options.lightmap_first_uv = true;
+        } else if (argument == "--lightmap-no-vertex") {
+            options.frame_options.lightmap_no_vertex_colors = true;
         } else if (argument == "--stats") {
             options.stats = true;
         } else if (argument == "--event-ogg") {

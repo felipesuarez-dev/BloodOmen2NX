@@ -178,7 +178,9 @@ void rasterize(const ScreenVertex& v0, const ScreenVertex& v1, const ScreenVerte
                const engine::Image& texture, std::uint32_t width, std::uint32_t height,
                std::vector<std::uint8_t>& color, std::vector<float>& depth,
                const engine::Vec3& tint = {1.0f, 1.0f, 1.0f},
-               const engine::Image* lightmap = nullptr, bool vertex_lit = false) {
+               const engine::Image* lightmap = nullptr, bool vertex_lit = false,
+               float lightmap_gamma = 1.0f, float lightmap_scale = 1.0f,
+               bool lightmap_invert = false) {
     const float area = edge(v0.x, v0.y, v1.x, v1.y, v2.x, v2.y);
     if (std::fabs(area) < 1.0e-6f) {
         return;
@@ -235,6 +237,13 @@ void rasterize(const ScreenVertex& v0, const ScreenVertex& v1, const ScreenVerte
                 const float light_v =
                     (w0 * v0.v2_over_w + w1 * v1.v2_over_w + w2 * v2.v2_over_w) / inverse_w;
                 light = static_cast<float>(sample_bilinear(*lightmap, light_u, light_v).r) / 255.0f;
+                if (lightmap_invert) {
+                    light = 1.0f - light;
+                }
+                if (lightmap_gamma != 1.0f) {
+                    light = std::pow(light, lightmap_gamma);
+                }
+                light = std::clamp(light * lightmap_scale, 0.0f, 1.0f);
             }
             const Texel texel = sample_bilinear(texture, u, v);
             const float alpha = static_cast<float>(texel.a) / 255.0f;
@@ -495,6 +504,7 @@ std::vector<std::uint8_t> render_level(const engine::LevelGeometry& geometry,
         }
         const std::uint32_t corner_index[3] = {triangle.a, triangle.b, triangle.c};
         const bool vertex_lit = options.lightmap && textured &&
+                                !options.lightmap_no_vertex_colors &&
                                 geometry.vertex_colors.size() == geometry.positions.size();
         ClipVertex clipped_input[3];
         for (int corner = 0; corner < 3; ++corner) {
@@ -502,8 +512,9 @@ std::vector<std::uint8_t> render_level(const engine::LevelGeometry& geometry,
                 positions[corner].x, positions[corner].y, positions[corner].z, 1.0f};
             clipped_input[corner].u = uv[corner].x;
             clipped_input[corner].v = uv[corner].y;
-            clipped_input[corner].u2 = light_uv[corner].x;
-            clipped_input[corner].v2 = light_uv[corner].y;
+            const engine::Vec2& sample_uv = options.lightmap_first_uv ? uv[corner] : light_uv[corner];
+            clipped_input[corner].u2 = sample_uv.x;
+            clipped_input[corner].v2 = sample_uv.y;
             clipped_input[corner].shade = shade_of(normals[corner]);
             if (vertex_lit) {
                 clipped_input[corner].color = geometry.vertex_colors[corner_index[corner]];
@@ -537,7 +548,8 @@ std::vector<std::uint8_t> render_level(const engine::LevelGeometry& geometry,
                 continue;
             }
             rasterize(screen[0], screen[1], screen[2], image, options.width, options.height, color,
-                      depth, textured ? tint : engine::Vec3{1.0f, 1.0f, 1.0f}, lightmap, vertex_lit);
+                      depth, textured ? tint : engine::Vec3{1.0f, 1.0f, 1.0f}, lightmap, vertex_lit,
+                      options.lightmap_gamma, options.lightmap_scale, options.lightmap_invert);
         }
     }
     return color;

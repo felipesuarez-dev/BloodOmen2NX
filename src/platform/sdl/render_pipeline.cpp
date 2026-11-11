@@ -95,7 +95,10 @@ void main() {
         color = texture2D(u_texture, v_uv);
         color.rgb *= u_tint;
         if (u_use_lightmap != 0) {
-            color *= texture2D(u_lightmap, v_light_uv);
+            // The .slm palette is a shadow map: 0 is fully lit, 255 is fully
+            // shadowed. The oracle gate matches the complement (world MAE
+            // 8.69 vs 35.58 on the sl01 spawn frame).
+            color.rgb *= (1.0 - texture2D(u_lightmap, v_light_uv).rgb);
         } else {
             color.rgb *= v_shade;
         }

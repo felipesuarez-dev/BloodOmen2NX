@@ -60,12 +60,14 @@ been run on the Wine and Windows spawn frames (`ORACLE_WINE.md`).
 |---|---|---|---|
 | `sl01` spawn frame | Helper boxes drawn; a `pyramid/purple` box (flat `255,0,255,128`) enclosed the camera and tinted the view magenta | The original skips entities whose template has `flag helperobj`: `FUN_00785c8d` parses it, `FUN_0070d0d5` copies it to entity flag `0x200`, `FUN_0070f100` returns without drawing (`docs/FORMATS/models.md`). The port applies the flag; the magenta box is gone | Trace why `detector`, `planhelper*`, `conversation` and `bo2cinematic` models, which carry no `helperobj`, are not drawn either (the green `bo2cinematic001` diamond remains at the oracle pose) |
 | `sl01` materials | `--material diffuse` and `layers` render near-black (mean RGB 0.016 against 0.108 in the Wine frame) | The layer colours are exporter fallbacks, not albedo: 1,015 of 1,075 used materials have a grey `c1` of 0.098 or 0.118, characters have all-zero layers, and the device runs with `D3DRS_LIGHTING = FALSE` (`docs/FORMATS/models.md`) | Decode the baked lighting: the group-to-model binding of the `.slm` vertex colours and light maps, fog and the per-level ambient values |
-| `sl01` spawn frame | Whole-frame error 35.5/255 against the Wine frame, luma correlation 0.13 | Gate below | Lighting (above), the Kain model, the HUD and the types that hide through other paths |
+| `sl01` spawn frame | World MAE 35.5/255 and luma correlation 0.13 before the palette inversion; 8.69/255 and 0.37 after it | Gate below | Kain, the HUD and the green `bo2cinematic001` marker; the palette texture format is still open |
 
 ## `sl01` spawn gate (BO2NX-68)
 
-**Status: not met.** The helper-object rule removes the pyramid boxes, but
-the frame is still far from the Wine frame; the lighting is not decoded.
+**Status: improved; world MAE 8.69/255 and luma correlation 0.37.** The
+helper-object rule removes the pyramid boxes and the palette inversion closes
+the lighting gap. The Kain model, the HUD and the green `bo2cinematic001`
+marker remain; the exact `.slm` palette texture format is still open.
 
 Reference: `wine_20261029_0110`, `screenshots/01_spawn` (`frames_ppm/01_spawn.ppm`,
 800x600). Camera: the `state.csv` row sampled at the screenshot
@@ -111,6 +113,7 @@ box numbers below come from `tools/compare_frames.py`.
 | light maps bound by instance name, `--material off --lightmap` | 55.10 | n/a | 0.322 |
 | and light-map UVs placed with the instances | 40.79 | n/a | 0.261 |
 | and the `.slm` vertex colours (`texture × vertex colour × light map`) | 35.58 | n/a | 0.239 |
+| and the palette inverted as a shadow map (`texture × vertex colour × (1 - light map)`) | 8.69 | 14.53 | 0.104 |
 | `develop`, `--material diffuse` | 23.47 | 26.27 | 0.016 |
 | helper rule, `--material diffuse` | 23.39 | 26.19 | 0.016 |
 | helper rule, `--material layers` | 23.38 | 26.18 | 0.016 |
@@ -182,9 +185,16 @@ How to read it:
   (`0xLL000000`), so the texture format the original builds from it
   decides the colour, and that format is not traced. The `.slm` vertex
   colours and the fog are not applied either.
-- Still different from the original: lighting, fog, the green
-  `bo2cinematic001` diamond (no `helperobj` flag, see `models.md`), Kain
-  and the HUD.
+- The `.slm` palette is a shadow map. Sampling `1 - palette` takes the world
+  MAE from 35.58 to 8.69/255, the luma correlation from -0.03 to 0.37, and
+  the mean RGB from 0.239 to 0.104 (Wine 0.108). The SDL shader applies the
+  same inversion (MAE 9.12, correlation 0.399). This is now the host
+  equation, `texture × vertex colour × (1 - light map)`; the gamma, scale,
+  first-UV and raw-palette diagnostics are in `litedata.md`.
+- Still different from the original: Kain, the HUD, the green
+  `bo2cinematic001` diamond (no `helperobj` flag, see `models.md`) and the
+  exact palette texture format. Fog is disabled in `sl01`; the static
+  lighting now matches the gate within 8.69/255.
 
 ## Rules
 

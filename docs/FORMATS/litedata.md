@@ -40,15 +40,16 @@ u16  0x10
 u16  0x61
 u16  width
 u16  height
-16 × u32 palette               (luminance in the high byte)
+16 × u32 palette               (shadow factor in the high byte)
 (width * height + 1) / 2 bytes of 4-bit indices
 ```
 
 The name is the group prefix plus the normalized texture name:
 `cryptexithall-inner city-textures-walls-sewbrick3` maps to
 `Inner City/Textures/Walls/SewBrick3` (lowercase, `/` becomes `-`).
-Indices are packed high nibble first. The palette is 16 colors with the
-luminance in the high byte of each `u32`.
+Indices are packed high nibble first. The palette is 16 colors with a
+shadow factor in the high byte of each `u32`: 0 is fully lit and 255 fully
+shadowed. The host samples the complement.
 
 ## Per-vertex colours
 
@@ -57,7 +58,7 @@ the `count × 16` bytes after it are one RGBA colour of four little-endian
 `f32` per vertex. Measured on `slums/sl01.slm` (2,032,896 bytes): all 286
 groups carry the array, 38,849 vertices in total, alpha is always 1.0, the
 channels range from 0.157 to 1.0 and average (0.855, 0.825, 0.910), a
-slightly blue white. The mean light-map palette luminance over the 286
+slightly blue white. The mean light-map palette shadow over the 286
 groups' entries is 135/255 (range 12 to 194). Level geometry has no vertex
 colour of its own in `prims`, and the original device runs with D3D
 lighting off, so these arrays are the only per-vertex colour source for
@@ -111,9 +112,11 @@ The Wine oracle reads mode 2 at the `sl01` spawn (capture
 At draw time the render-state cache sets stage 1 to `COLOROP MODULATE`,
 `ALPHAOP SELECTARG2` with the light map, or disables stage 1 without one
 (`0x565bf3`-`0x565c52`). The `.slm` palette carries only the high byte
-(`0xLL000000`), so the light map acts as a luminance factor. The exact
-texture format the engine builds from it (FUN_0061bc10, FUN_005fe500) is
-not traced.
+(`0xLL000000`), a shadow factor. The host uses its complement: on the
+`sl01` spawn gate that takes the world MAE from 35.58 to 8.69/255 and the
+luma correlation from -0.03 to 0.37 (`ORACLE_COMPARE.md`). The exact D3D8
+texture format the engine builds from the palette (FUN_0061bc10,
+FUN_005fe500) is still not traced.
 
 ## Binding to the level geometry
 
@@ -162,15 +165,21 @@ The model reader stores the second UV set in
 `cellmdls`) still need their own instance mapping.
 
 `bo2nx --level --lightmap` samples the light map with those UVs and uses
-its luminance as the light factor. When the level has `.slm` vertex
-colours it draws the original equation, `texture × vertex colour × light
-map` (stage 0 modulates the texture with the vertex diffuse because D3D
-lighting is off; stage 1 modulates with the light map). Unlit vertices are
-white; what the original does for a Terrain without a lighting group is
-not traced. Without vertex colours it keeps `texture × tint × light map`. The
-`--material` tint can be combined with it. In `sanctuary` 16 of 34
-textures resolve to a light map; the frame changes by about 0.0098 RMSE
-against the no-lightmap + five-entry version.
+`1 - palette` as the light factor. When the level has `.slm` vertex
+colours it draws `texture × vertex colour × (1 - light map)` (stage 0
+modulates the texture with the vertex diffuse because D3D lighting is off;
+stage 1 modulates with the light map). The complementary light map is the
+measured sign: on the `sl01` spawn gate the world MAE falls from 35.58 to
+8.69/255, the luma correlation rises from -0.03 to 0.37 and the mean RGB
+moves from 0.239 to 0.104 (Wine 0.108). The SDL shader applies the same
+inversion (MAE 9.12, correlation 0.399). Unlit vertices are white; what the
+original does for a Terrain without a lighting group is not traced. Without
+vertex colours it keeps `texture × tint × (1 - light map)`. The `--material`
+tint can be combined with it. In `sanctuary` 16 of 34 textures resolve to a
+light map; the frame changes by about 0.0098 RMSE against the no-lightmap +
+five-entry version. `--lightmap-gamma`, `--lightmap-scale`,
+`--lightmap-no-invert`, `--lightmap-first-uv` and `--lightmap-no-vertex` are
+software-renderer diagnostics for the remaining format question.
 
 ## Open questions
 
@@ -179,6 +188,7 @@ against the no-lightmap + five-entry version.
   vertex-count fallback) for their models.
 - What flag A means in mode 2.
 - How the per-vertex colours (below) combine with the light map in the
-  original; a spike of `texture × vertex colour × light map` ended farther
-  from the Wine frame than the unlit preview (`models.md`, BO2NX-68).
+  original. The host equation `texture × vertex colour × (1 - light map)`
+  now matches the oracle gate at world MAE 8.69/255; the exact palette
+  texture format is still open (`models.md`, BO2NX-68).
 - Whether the second UV set is always the light-map set.
