@@ -129,9 +129,9 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   that x = 256 face and stops at x = 326.15, so the AABB is a broad phase;
   model 57 is 1,936 bytes with 66 AABBs, index 130/520 (four-byte records of
   three u8 vertex indices and one attribute), edge 0 and face 27 (568 face
-  bytes; 27 x 21 = 567, so the face layout is still open). The spawn camera
-  pull-in differs because the port's collision lacks the helper wall. The
-  full route/state gate remains open (BO2NX-37).
+  bytes = 27 x 20 + 28: a 20-byte face record plus a 28-byte trailer). The
+  spawn camera pull-in differs because the port's collision lacks the helper
+  wall. The full route/state gate remains open (BO2NX-37).
 - The native Windows oracle harness is available: a reverse SSH server on
   the Windows host, `tools/oracle/oracle_client.py`, a capture validator and
   an input/frame aligner. `capture_20261028_0150` is the first complete
