@@ -31,7 +31,7 @@ HEAD = 0x1000
 NODES = (0x2000, 0x2100, 0x2200)
 INSTANCES = (0xDEAD0000, 0x3400, 0x3800)  # the first one is not mapped
 BEHAVIOR_OTHER, BEHAVIOR_KAIN, BEHAVIOR_KAIN2 = 0x4000, 0x4800, 0x4C00
-STATS, HEALTH, LORE = 0x5000, 0x5100, 0x5200
+STATS, HEALTH, LORE = 0x6000, 0x6100, 0x6200
 OTHER_VTABLE = 0x00841000
 KAIN = memstate.Kain(INSTANCES[1], BEHAVIOR_KAIN)
 
@@ -76,6 +76,10 @@ class FakeMemory(memstate.Memory):
 def fill_kain(mem: FakeMemory, instance: int, behavior: int, x: float = -8.75) -> None:
     """Make `instance` a Kain with `behavior`. The pointer to the behavior is written last."""
     mem.u32s(behavior, memstate.KAIN_VTABLE)
+    mem.u32s(behavior + memstate.STATE_FLAGS, 0x100)
+    mem.u32s(behavior + memstate.PROBE_OBJECT, 0x12340000)
+    mem.u32s(behavior + memstate.STATE_FLAGS_KAIN, 0x200)
+    mem.u32s(behavior + memstate.PROBE_OBJECT_KAIN, 0x56780000)
     mem.f32s_at(instance + memstate.POSITION, x, 57.125, 208.0)
     mem.f32s_at(instance + memstate.YAW, 1.0)
     mem.f32s_at(behavior + memstate.VELOCITY, 1.5, -2.5, 3.5)
@@ -235,7 +239,9 @@ class ReadStateTest(unittest.TestCase):
         self.assertEqual(
             state,
             {"pos": (-8.75, 57.125, 208.0), "yaw": 1.0, "vel": (1.5, -2.5, 3.5), "on_platform": 1,
-             "anim": 78, "health": 75.0, "health_max": 100.0, "lore": 12.5},
+             "anim": 78, "health": 75.0, "health_max": 100.0, "lore": 12.5,
+             "state_flags": 0x100, "probe_object": 0x12340000,
+             "state_flags_kain": 0x200, "probe_object_kain": 0x56780000},
         )
 
     def test_broken_pointer_raises_oserror(self):
@@ -276,7 +282,9 @@ class StateCsvTest(unittest.TestCase):
     def test_header_extends_the_windows_header(self):
         header = ",".join(wine_capture.STATE_COLUMNS)
         self.assertTrue(header.startswith(WINDOWS_HEADER))
-        self.assertEqual(header[len(WINDOWS_HEADER) :], ",player_yaw_deg,health_max,lore,on_platform")
+        self.assertEqual(header[len(WINDOWS_HEADER) :],
+                         ",player_yaw_deg,health_max,lore,on_platform,state_flags,probe_object,"
+                         "state_flags_kain,probe_object_kain")
 
     def test_row_fills_only_what_is_sampled(self):
         mem = build_world()
@@ -295,6 +303,8 @@ class StateCsvTest(unittest.TestCase):
             "vel_x": "1.500000", "vel_y": "-2.500000", "vel_z": "3.500000",
             "health": "75.000000", "health_max": "100.000000", "lore": "12.500000",
             "on_platform": "1", "player_yaw_deg": "57.295780", "anim": "78",
+            "state_flags": "0x00000100", "probe_object": "0x12340000",
+            "state_flags_kain": "0x00000200", "probe_object_kain": "0x56780000",
         }
         for column, value in values.items():
             self.assertEqual(value, expected.get(column, ""), column)

@@ -38,6 +38,15 @@ ON_PLATFORM = 0x4E0  # u32; HUD
 # KainState (behavior+0x128) +0x458: the animation index passed to the animation play call
 # right after it is stored (FUN_00442800, FUN_004436e0).
 ANIMATION = 0x128 + 0x458  # u32
+# Run probe (FUN_0042ee60): probes the chest 32 u ahead with radius 8 and sets
+# bit 0x100 on a terrain hit; the hit object is stored at +0x524. The update
+# receives the behavior as `this` (it reads the tune at +0x164 and the owner
+# at +0x10), so the offsets are behavior-relative; the KainState variants are
+# sampled too until one is confirmed live.
+STATE_FLAGS = 0x588  # u32; FUN_0042ee60 ORs 0x100 here
+PROBE_OBJECT = 0x524  # u32; FUN_0042ee60 stores the hit object here
+STATE_FLAGS_KAIN = 0x128 + 0x588
+PROBE_OBJECT_KAIN = 0x128 + 0x524
 STATS = 0x128 + 0x594  # u32 pointer; the HUD passes ECX=behavior+0x128 to FUN_00425fb0
 # Stats.
 HEALTH = 0x11C  # u32 pointer; FUN_00425fb0
@@ -193,6 +202,10 @@ def read_state(mem: Memory, kain: Kain) -> dict:
         "vel": mem.f32s(kain.behavior + VELOCITY, 3),
         "on_platform": mem.u32(kain.behavior + ON_PLATFORM),
         "anim": mem.u32(kain.behavior + ANIMATION),
+        "state_flags": mem.u32(kain.behavior + STATE_FLAGS),
+        "probe_object": mem.u32(kain.behavior + PROBE_OBJECT),
+        "state_flags_kain": mem.u32(kain.behavior + STATE_FLAGS_KAIN),
+        "probe_object_kain": mem.u32(kain.behavior + PROBE_OBJECT_KAIN),
         "health": mem.f32s(health + HEALTH_CURRENT)[0],
         "health_max": mem.f32s(health + HEALTH_MAX)[0],
         "lore": mem.f32s(lore + LORE_CURRENT)[0],

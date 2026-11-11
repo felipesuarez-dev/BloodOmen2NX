@@ -58,7 +58,8 @@ STATE_COLUMNS = (
      "vel_z", "grounded", "health", "mana", "weapon", "anim", "tick"]
     + [f"view_m{i:02d}" for i in range(16)]
     + [f"proj_m{i:02d}" for i in range(16)]
-    + ["player_yaw_deg", "health_max", "lore", "on_platform"]
+    + ["player_yaw_deg", "health_max", "lore", "on_platform", "state_flags", "probe_object",
+       "state_flags_kain", "probe_object_kain"]
 )
 
 
@@ -180,7 +181,11 @@ def state_row(frame: int, epoch_ms: int, mono_ms: int, phase: str, state: dict,
            "health": number(state["health"]), "health_max": number(state["health_max"]),
            "lore": number(state["lore"]), "on_platform": state["on_platform"],
            "anim": state.get("anim", ""),
-           "player_yaw_deg": number(math.degrees(state["yaw"]))}
+           "player_yaw_deg": number(math.degrees(state["yaw"])),
+           "state_flags": f"0x{state['state_flags']:08x}",
+           "probe_object": f"0x{state['probe_object']:08x}",
+           "state_flags_kain": f"0x{state['state_flags_kain']:08x}",
+           "probe_object_kain": f"0x{state['probe_object_kain']:08x}"}
     for axis, value in zip("xyz", state["pos"]):
         row[f"player_{axis}"] = number(value)
     for axis, value in zip("xyz", state["vel"]):
