@@ -70,7 +70,7 @@ u32   2
 | `vtxweigh` | `u32 count` + `count` floats | Per-vertex skin weights |
 | `jointidx` | `u32 count` + `count` u16 | Per-vertex joint indices |
 | `skeleton` / `modlskel` | `u32 count` + `count` × (u32, u32) + 96 × count bytes | Bone hierarchy and bind pose |
-| `collmodc` | Collision model | Raw payload extracted; layout below |
+| `collmodc` | Collision model | Points, packed triangles, spheres and faces decoded |
 
 ### `prims`
 
@@ -94,65 +94,67 @@ geometry.
 
 ### `collmodc`
 
-The collision chunk is a sibling of `rmd` in the model block, not a
-subchunk. The payload starts with a NUL-terminated record name (`default`), a u32
-header size, two header u32 values and a vector of 8-byte property records.
-After the header the observed sequence is:
+The collision chunk is a sibling of `rmd` in the model block, not a subchunk.
+The decoded payload is:
 
 ```
-u32  vertex flag (0xFFFFFF01 in the reference models)
-u32  data size; bytes[data size]       (12-byte AABBs)
-u32  index count
-u32  index bytes; bytes[index bytes]
-u32  edge count; edge[24 bytes]
-u32  face count; face bytes
-u16, u16, u32, u8, u32 x4              (trailer)
+cstring record name (`default`)
+u32  header size; bytes[header size]
+u32  record flag (0xFFFFFF01)
+u32  vertex bytes; point[vertex bytes / 6]   (three i16 per point)
+     pad to a 4-byte boundary                 (2 bytes for an odd point count)
+u32  index bytes; record[index bytes / 4]    (three packed u8 indices + attr)
+u32  sphere count; sphere[24 bytes each]
+u32  face count; face[20 bytes each]
+28-byte trailer
 ```
 
-The first blob is a list of 12-byte AABBs: three int16 minimum and three
-int16 maximum values. `parse_collmodc_boxes` maps it and `CollisionWorld`
-can place the boxes with the cell instances and the entity offsets. The
-AABBs are a broad phase, not the collision hull.
+The vertex block is a point list, not a box list: each point is three `i16`
+in model space. The index record is three vertex indices, each stored one bit
+lower than the previous field, so the loader reads `v0 = b0`, `v1 = b1 >> 1`,
+`v2 = b2 >> 2` and keeps `b3` as the attribute (`0x18` in the shared models,
+`0x38`/`0x58`/`0x59` in model 57). A sphere is 24 bytes: centre `f32[3]`,
+radius `f32`, bone index `u32`, flags `u32`. Kain's model has three:
+`(0, 0, 51.98) r 19.8`, `(0, 0, 49.62) r 19.3` and `(0, 0, 23.60) r 15.0`, over
+the body AABB `(-20, -20, 0)..(20, 20, 72)`.
 
-`bo2nx --collision-dump --big <level.big> [--collision-model <substring>]
-[--collision-out <file>]` prints every cell collision with its instances and
-world AABBs, the u32 values after the AABB blob and the raw payload.
-`sanctuary` has 76 cell collisions and no entity boxes. Model 0 `default` is
-244 bytes with 5 AABBs; after the AABBs it has index count 12, index bytes
-48, edge count 0, face count 1 and 48 face bytes, so the payload ends after
-the face. Model 2 `default` has 593 AABBs in 18,536 bytes. The `sl01` dump
-has 660 cell collisions; the W AABB is model 57 `default`, instance 41, with
-boxes 39/40 at world x = 256..768, y = -264..512, z = 208..976 and boxes
-41/42 at x = 256..496, y = -256..96, z = 208..592. The oracle passes the
-x = 256 face and stops at x = 326.15, so the AABB is a broad phase and the
-hull inside it is the missing mesh. Model 57 is 1,936 bytes with 66 AABBs;
-its index count is 130, its index bytes are 520, its edge count is 0 and its
-face count is 27. The index block is 130 records of three u8 vertex indices
-plus one u8 attribute (0x18 in the shared models, 0x38/0x58 in model 57).
-The face block is 27 x 20 + 28 bytes: a 20-byte face record plus a 28-byte
-trailer. The shared model 0 fits the same split (1 x 20 + 28 = 48). The
-first u16 pair of each record (8/9 in model 0, 86/87 in model 57) looks like
-a vertex or edge pair; the rest of the 20 bytes and the 28-byte trailer are
-not decoded. The runtime prim/attribute semantics are still open. The
-post-load fixup `FUN_00621240` walks runtime arrays of 0x30-byte faces,
-0xc-byte vertices, 0x14-byte attributes and 0x68-byte models. `FUN_0066cac0`
-exports the prims: a 12-byte record whose type 1 is a sphere (center and
-radius) and type 3 is a triangle (three u16 vertex indices and an attribute
-index). `FUN_0061ed40` is the `rmd` chunk loader, not the `collmodc` loader;
-the `collmodc` 20-byte face plus 28-byte trailer do not map one to one to the
-runtime arrays yet, and the solid flag is still open. The small shared models
-show 6-byte faces, so the face record is not fixed at the 16 bytes guessed
-earlier.
+A face record is `{u16 anchor_a, u16 anchor_b, u32 adjacent[2], u16 flag,
+u16 triangle_count, u32 triangle_byte_offset}`. The anchor pair is the face's
+local AABB corners; the triangle slice indexes the global triangle block. The
+slices tile the block exactly: for model 57 the 14 faces with triangles sum to
+the 130 records, and the 13 faces without triangles are adjacency-only. The
+28-byte trailer closes the record; its first `u32` is `face_count - 1`.
+
+Some payloads wrap the record in a second named header, so the flag is not
+where the outer header ends; `parse_collmodc` locates it by the section chain
+and requires the sections to tile down to the trailer. All 660 `collmodc`
+payloads of `sl01` and the 76 of `sanctuary` decode with this rule.
+
+`parse_collmodc` returns the points, the packed triangles, the faces and the
+spheres; `parse_collmodc_boxes` returns the face and model AABBs, which are
+only a broad phase. `bo2nx --collision-dump --big <level.big>
+[--collision-model <substring>] [--collision-out <file>]` prints the instances,
+the broad-phase boxes, the hull summary and the raw payload. The `sl01` dump
+has 660 cell collisions; the W wall is model 57 `default`, instance 41, with
+the model AABB at world x = 256..768, y = -264..512, z = 208..976 and 132
+points, 130 triangles and 27 faces.
+
+The runtime side matches the file: `FUN_0066cac0` exports the prims, type 1 a
+sphere (centre and radius) and type 3 a triangle (three `u16` vertex indices
+and an attribute index); `FUN_00621240` walks runtime arrays of 0x30-byte
+faces, 0xc-byte vertices and 0x14-byte attributes; `FUN_0061ed40` is the `rmd`
+chunk loader, not the `collmodc` loader.
 
 Measured (`sl01_basic`, `wine_20261029_0043`): the W speed matches 230 u/s
 until frame 2316; the oracle slows to 177.76 and 86.67 and stops at
-x = 326.15, while the port keeps 230 and stops at x = 351.60. The 25.44 u
-difference is the missing collision mesh, not the movement tuning; tracked
-as BO2NX-72. The AABB broad phase stops the port at x = 255.3, 70.8 u before
-the oracle, and the box mode is the `use_boxes` constructor diagnostic, off
-by default. The `sl01` model 57 AABB starts the wall at x = 256; the oracle
-passes that face and stops at x = 326.15, so the exact hull inside the AABB
-is still needed.
+x = 326.15, while the port keeps 230 and stops at x = 351.60. Both stops are
+collision walls: the port's hull has one at x = 352.0 (model 68) and the
+oracle's at x = 326.75 (model 57). The 25.44 u difference is not the mesh
+format any more, it is the player collision volume: the oracle traces show a
+contact 10 u above the feet (a small probe at the foot cannot reach it) and a
+slide from y = 57.13 to y = 44.14 between frames 2311 and 2318. The port moves
+a sphere at the feet and stops dead, so it never reaches the model 57 wall.
+The player volume and the slide response are the next BO2NX-72 step.
 
 
 ## Textures and materials

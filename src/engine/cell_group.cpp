@@ -977,50 +977,211 @@ Vec3 rotate_euler(const Vec3& value, const Vec3& rotation) {
     return rotate_euler_impl(value, rotation);
 }
 
-std::vector<LevelCollisionBox> parse_collmodc_boxes(const std::vector<std::uint8_t>& data) {
-    std::vector<LevelCollisionBox> boxes;
+namespace {
+
+void compute_collision_bounds(CollisionModel& model) {
+    if (model.vertices.empty()) {
+        return;
+    }
+    model.bounds.minimum = model.vertices.front();
+    model.bounds.maximum = model.vertices.front();
+    for (const Vec3& vertex : model.vertices) {
+        model.bounds.minimum = {std::min(model.bounds.minimum.x, vertex.x),
+                                std::min(model.bounds.minimum.y, vertex.y),
+                                std::min(model.bounds.minimum.z, vertex.z)};
+        model.bounds.maximum = {std::max(model.bounds.maximum.x, vertex.x),
+                                std::max(model.bounds.maximum.y, vertex.y),
+                                std::max(model.bounds.maximum.z, vertex.z)};
+    }
+}
+
+// Decodes one collision record anchored at its 0xFFFFFF01 flag. `complete`
+// requires the whole section chain to tile the payload down to its 28-byte
+// trailer; the short form stops after the vertex block.
+bool parse_collmodc_at(const common::Reader& reader, std::size_t flag_offset, bool complete,
+                       CollisionModel& model) {
+    model = CollisionModel{};
+    const std::size_t size = reader.size();
+    if (flag_offset + 8 > size || reader.u32(flag_offset) != 0xFFFFFF01U) {
+        return false;
+    }
+    const std::uint32_t blob_size = reader.u32(flag_offset + 4);
+    std::size_t position = flag_offset + 8;
+    if (blob_size % 6 != 0 || blob_size > size - position) {
+        return false;
+    }
+    const std::size_t point_count = blob_size / 6;
+    if (point_count == 0) {
+        return false;
+    }
+    model.vertices.reserve(point_count);
+    for (std::size_t index = 0; index < point_count; ++index) {
+        const std::size_t offset = position + index * 6;
+        model.vertices.push_back(
+            {static_cast<float>(static_cast<std::int16_t>(reader.u16(offset))),
+             static_cast<float>(static_cast<std::int16_t>(reader.u16(offset + 2))),
+             static_cast<float>(static_cast<std::int16_t>(reader.u16(offset + 4)))});
+    }
+    compute_collision_bounds(model);
+    position += blob_size;
+    // The vertex block is 4-byte aligned, so an odd point count leaves a
+    // two-byte pad before the triangle list.
+    position = (position + 3) & ~static_cast<std::size_t>(3);
+    if (position + 8 > size) {
+        model.valid = !complete;
+        return !complete;
+    }
+    // Triangle list: one 4-byte record per index, three packed u8 indices plus
+    // the attribute. Each index loses one alignment bit per byte position.
+    const std::uint32_t index_bytes = reader.u32(position + 4);
+    position += 8;
+    if (index_bytes % 4 != 0 || index_bytes > size - position) {
+        model = CollisionModel{};
+        return false;
+    }
+    const std::size_t triangle_count = index_bytes / 4;
+    model.triangles.reserve(triangle_count);
+    for (std::size_t index = 0; index < triangle_count; ++index) {
+        const std::size_t offset = position + index * 4;
+        CollisionTriangle triangle;
+        triangle.a = reader.u8(offset);
+        triangle.b = static_cast<std::uint32_t>(reader.u8(offset + 1) >> 1);
+        triangle.c = static_cast<std::uint32_t>(reader.u8(offset + 2) >> 2);
+        triangle.attribute = reader.u8(offset + 3);
+        model.triangles.push_back(triangle);
+    }
+    position += index_bytes;
+    if (position + 4 > size) {
+        model = CollisionModel{};
+        return false;
+    }
+    // Solid spheres: 24-byte records of centre, radius, bone and flags.
+    const std::uint32_t sphere_count = reader.u32(position);
+    position += 4;
+    if (sphere_count > (size - position) / 24) {
+        model = CollisionModel{};
+        return false;
+    }
+    model.spheres.reserve(sphere_count);
+    for (std::uint32_t index = 0; index < sphere_count; ++index) {
+        const std::size_t offset = position + static_cast<std::size_t>(index) * 24;
+        CollisionSphere sphere;
+        sphere.center = {read_float(reader, offset), read_float(reader, offset + 4),
+                         read_float(reader, offset + 8)};
+        sphere.radius = read_float(reader, offset + 12);
+        sphere.bone = reader.u32(offset + 16);
+        sphere.flags = reader.u32(offset + 20);
+        if (std::isfinite(sphere.radius) && sphere.radius >= 0.0f) {
+            model.spheres.push_back(sphere);
+        }
+    }
+    position += static_cast<std::size_t>(sphere_count) * 24;
+    if (position + 4 > size) {
+        model = CollisionModel{};
+        return false;
+    }
+    // Faces: anchor AABB corners, two neighbour faces and a triangle slice.
+    const std::uint32_t face_count = reader.u32(position);
+    position += 4;
+    if (face_count > (size - position) / 20) {
+        model = CollisionModel{};
+        return false;
+    }
+    model.faces.reserve(face_count);
+    for (std::uint32_t index = 0; index < face_count; ++index) {
+        const std::size_t offset = position + static_cast<std::size_t>(index) * 20;
+        const std::uint32_t anchor_a = reader.u16(offset);
+        const std::uint32_t anchor_b = reader.u16(offset + 2);
+        if (anchor_a >= model.vertices.size() || anchor_b >= model.vertices.size()) {
+            continue;
+        }
+        const std::uint32_t triangle_offset = reader.u32(offset + 16);
+        const std::uint16_t face_triangles = reader.u16(offset + 14);
+        if (triangle_offset % 4 != 0 ||
+            triangle_offset / 4 + face_triangles > model.triangles.size()) {
+            continue;
+        }
+        CollisionFace face;
+        const Vec3& first = model.vertices[anchor_a];
+        const Vec3& second = model.vertices[anchor_b];
+        face.bounds.minimum = {std::min(first.x, second.x), std::min(first.y, second.y),
+                               std::min(first.z, second.z)};
+        face.bounds.maximum = {std::max(first.x, second.x), std::max(first.y, second.y),
+                               std::max(first.z, second.z)};
+        face.adjacent[0] = reader.u32(offset + 4);
+        face.adjacent[1] = reader.u32(offset + 8);
+        face.first_triangle = triangle_offset / 4;
+        face.triangle_count = face_triangles;
+        face.has_triangles = face_triangles != 0;
+        model.faces.push_back(face);
+    }
+    position += static_cast<std::size_t>(face_count) * 20;
+    if (complete && size - position != 28) {
+        model = CollisionModel{};
+        return false;
+    }
+    model.valid = true;
+    return true;
+}
+
+}  // namespace
+
+CollisionModel parse_collmodc(const std::vector<std::uint8_t>& data) {
+    CollisionModel model;
+    const common::Reader reader(data);
+    if (data.size() < 16) {
+        return model;
+    }
     std::size_t name_end = 0;
     while (name_end < data.size() && data[name_end] != 0) {
         ++name_end;
     }
     if (name_end + 5 > data.size()) {
+        return model;
+    }
+    const std::uint32_t header_size = reader.u32(name_end + 1);
+    const std::size_t header_end = name_end + 5;
+    if (header_size <= data.size() - header_end) {
+        const std::size_t flag_offset = header_end + header_size;
+        if (parse_collmodc_at(reader, flag_offset, true, model) ||
+            parse_collmodc_at(reader, flag_offset, false, model)) {
+            return model;
+        }
+    }
+    // Some payloads wrap the record in a second named header: the flag is not
+    // where the outer header ends. Locate it by the section chain instead.
+    for (std::size_t offset = 0; offset + 4 <= data.size(); ++offset) {
+        if (reader.u32(offset) == 0xFFFFFF01U && parse_collmodc_at(reader, offset, true, model)) {
+            return model;
+        }
+    }
+    model = CollisionModel{};
+    return model;
+}
+
+std::vector<LevelCollisionBox> parse_collmodc_boxes(const std::vector<std::uint8_t>& data) {
+    const CollisionModel model = parse_collmodc(data);
+    std::vector<LevelCollisionBox> boxes;
+    if (!model.valid) {
         return boxes;
     }
-    const auto u32 = [&data](std::size_t offset) {
-        return static_cast<std::uint32_t>(data[offset]) |
-               (static_cast<std::uint32_t>(data[offset + 1]) << 8) |
-               (static_cast<std::uint32_t>(data[offset + 2]) << 16) |
-               (static_cast<std::uint32_t>(data[offset + 3]) << 24);
+    const auto same = [](const LevelCollisionBox& left, const LevelCollisionBox& right) {
+        return left.minimum.x == right.minimum.x && left.minimum.y == right.minimum.y &&
+               left.minimum.z == right.minimum.z && left.maximum.x == right.maximum.x &&
+               left.maximum.y == right.maximum.y && left.maximum.z == right.maximum.z;
     };
-    const auto i16 = [&data](std::size_t offset) {
-        const auto value = static_cast<std::uint16_t>(
-            static_cast<std::uint16_t>(data[offset]) |
-            (static_cast<std::uint16_t>(data[offset + 1]) << 8));
-        return static_cast<std::int16_t>(value);
-    };
-    const std::uint32_t header_size = u32(name_end + 1);
-    if (header_size > data.size()) {
-        return boxes;
-    }
-    const std::size_t flag_offset = name_end + 5 + header_size;
-    if (flag_offset + 8 > data.size() || u32(flag_offset) != 0xFFFFFF01U) {
-        return boxes;
-    }
-    const std::uint32_t size = u32(flag_offset + 4);
-    const std::size_t data_offset = flag_offset + 8;
-    if (size < 12 || size % 12 != 0 || data_offset + size > data.size()) {
-        return boxes;
-    }
-    const std::size_t count = size / 12;
-    boxes.reserve(count);
-    for (std::size_t index = 0; index < count; ++index) {
-        const std::size_t offset = data_offset + index * 12;
-        LevelCollisionBox box;
-        box.minimum = {static_cast<float>(i16(offset)), static_cast<float>(i16(offset + 2)),
-                       static_cast<float>(i16(offset + 4))};
-        box.maximum = {static_cast<float>(i16(offset + 6)), static_cast<float>(i16(offset + 8)),
-                       static_cast<float>(i16(offset + 10))};
-        boxes.push_back(box);
+    boxes.push_back(model.bounds);
+    for (const CollisionFace& face : model.faces) {
+        bool duplicate = false;
+        for (const LevelCollisionBox& box : boxes) {
+            if (same(box, face.bounds)) {
+                duplicate = true;
+                break;
+            }
+        }
+        if (!duplicate) {
+            boxes.push_back(face.bounds);
+        }
     }
     return boxes;
 }

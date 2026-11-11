@@ -142,16 +142,8 @@ std::optional<RayHit> ray_box_hit(const Vec3& origin, const Vec3& direction,
 
 }  // namespace
 
-CollisionWorld::CollisionWorld(const LevelGeometry& geometry, bool use_boxes) {
-    triangles_.reserve(geometry.triangles.size());
-    for (const LevelTriangle& triangle : geometry.triangles) {
-        if (triangle.a >= geometry.positions.size() || triangle.b >= geometry.positions.size() ||
-            triangle.c >= geometry.positions.size()) {
-            continue;
-        }
-        const Vec3 a = geometry.positions[triangle.a];
-        const Vec3 b = geometry.positions[triangle.b];
-        const Vec3 c = geometry.positions[triangle.c];
+CollisionWorld::CollisionWorld(const LevelGeometry& geometry, CollisionSource source) {
+    const auto append_triangle = [this](const Vec3& a, const Vec3& b, const Vec3& c) {
         Triangle value;
         value.a = a;
         value.b = b;
@@ -161,8 +153,46 @@ CollisionWorld::CollisionWorld(const LevelGeometry& geometry, bool use_boxes) {
         value.maximum = {std::max({a.x, b.x, c.x}), std::max({a.y, b.y, c.y}),
                          std::max({a.z, b.z, c.z})};
         triangles_.push_back(value);
+    };
+    if (source == CollisionSource::Render) {
+        triangles_.reserve(geometry.triangles.size());
+        for (const LevelTriangle& triangle : geometry.triangles) {
+            if (triangle.a >= geometry.positions.size() ||
+                triangle.b >= geometry.positions.size() ||
+                triangle.c >= geometry.positions.size()) {
+                continue;
+            }
+            append_triangle(geometry.positions[triangle.a], geometry.positions[triangle.b],
+                            geometry.positions[triangle.c]);
+        }
+    } else if (source == CollisionSource::Collmodc) {
+        for (const LevelCollision& collision : geometry.collisions) {
+            const CollisionModel model = parse_collmodc(collision.data);
+            if (!model.valid) {
+                continue;
+            }
+            for (const LevelInstance& instance : geometry.instances) {
+                if (instance.model != collision.model) {
+                    continue;
+                }
+                const auto to_world = [&instance](const Vec3& point) {
+                    const Vec3 scaled{point.x * instance.scale.x, point.y * instance.scale.y,
+                                      point.z * instance.scale.z};
+                    return instance.position + rotate_euler(scaled, instance.rotation);
+                };
+                for (const CollisionTriangle& triangle : model.triangles) {
+                    if (triangle.a >= model.vertices.size() || triangle.b >= model.vertices.size() ||
+                        triangle.c >= model.vertices.size()) {
+                        continue;
+                    }
+                    append_triangle(to_world(model.vertices[triangle.a]),
+                                    to_world(model.vertices[triangle.b]),
+                                    to_world(model.vertices[triangle.c]));
+                }
+            }
+        }
     }
-    if (use_boxes) {
+    if (source == CollisionSource::Boxes) {
         const auto append_world = [this](const LevelCollisionBox& local, const Vec3& scale,
                                          const Vec3& rotation, const Vec3& offset) {
             Vec3 minimum{std::numeric_limits<float>::infinity(),

@@ -14,9 +14,16 @@ struct RayHit {
     Vec3 normal{0.0f, 0.0f, 1.0f};
 };
 
+// Which mesh the collision world queries. `Collmodc` is the original's static
+// collision hull; `Render` is the visible `rmd` mesh and `Boxes` is the
+// `collmodc` broad-phase AABB list. The last two are diagnostics; gameplay
+// collision uses `Collmodc`.
+enum class CollisionSource { Collmodc, Render, Boxes };
+
 class CollisionWorld {
 public:
-    explicit CollisionWorld(const LevelGeometry& geometry, bool use_boxes = false);
+    explicit CollisionWorld(const LevelGeometry& geometry,
+                            CollisionSource source = CollisionSource::Render);
 
     std::size_t triangles() const;
     std::size_t boxes() const;

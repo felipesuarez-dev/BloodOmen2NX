@@ -97,11 +97,51 @@ struct LevelCollision {
     std::vector<std::uint8_t> data;
 };
 
-// One local-space collision box from a `collmodc` payload. The data is a list
-// of 12-byte records: three int16 minimum and three int16 maximum values.
+// One local-space collision box. The `collmodc` payload stores the hull as a
+// vertex/edge list, so these only appear as the per-face and per-model bounds.
 struct LevelCollisionBox {
     Vec3 minimum{0.0f, 0.0f, 0.0f};
     Vec3 maximum{0.0f, 0.0f, 0.0f};
+};
+
+// One solid sphere of a `collmodc` payload. The sphere block follows the
+// triangle index block and stores 24-byte records: the centre (three floats),
+// the radius, the bone index and a flag word.
+struct CollisionSphere {
+    Vec3 center{0.0f, 0.0f, 0.0f};
+    float radius = 0.0f;
+    std::uint32_t bone = 0;
+    std::uint32_t flags = 0;
+};
+
+struct CollisionTriangle {
+    std::uint32_t a = 0;
+    std::uint32_t b = 0;
+    std::uint32_t c = 0;
+    std::uint8_t attribute = 0;
+};
+
+// One convex face of a `collmodc` hull. The payload stores the face as the two
+// corners of its local AABB plus a slice of the model's global triangle list.
+struct CollisionFace {
+    LevelCollisionBox bounds;
+    std::uint32_t adjacent[2] = {0, 0};
+    std::uint32_t first_triangle = 0;
+    std::uint32_t triangle_count = 0;
+    bool has_triangles = false;
+};
+
+// A decoded `collmodc` payload. The vertex block is a list of 6-byte points
+// (three i16); the faces' AABB corners are points of the same list, so the
+// model bounds and the face bounds come from those pairs. The triangle list
+// follows, then the solid spheres and the face records.
+struct CollisionModel {
+    std::vector<Vec3> vertices;
+    std::vector<CollisionTriangle> triangles;
+    std::vector<CollisionFace> faces;
+    std::vector<CollisionSphere> spheres;
+    LevelCollisionBox bounds;
+    bool valid = false;
 };
 
 struct ModelSkeleton {
@@ -222,6 +262,10 @@ Vec3 material_tint(const LevelGeometry& geometry, const LevelTriangle& triangle,
                    MaterialMode mode);
 Vec3 material_color(const LevelGeometry& geometry, const LevelTriangle& triangle);
 std::vector<LevelLightMap> parse_lightmaps(const std::vector<std::uint8_t>& data);
+CollisionModel parse_collmodc(const std::vector<std::uint8_t>& data);
+// The broad-phase boxes of a `collmodc` payload: its face AABBs plus the
+// whole-model AABB, deduplicated. These are not the collision hull; use
+// parse_collmodc for the triangles.
 std::vector<LevelCollisionBox> parse_collmodc_boxes(const std::vector<std::uint8_t>& data);
 Vec3 rotate_euler(const Vec3& value, const Vec3& rotation);
 void assign_model_lightmaps(LevelGeometry& geometry,

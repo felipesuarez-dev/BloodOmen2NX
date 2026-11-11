@@ -1,4 +1,5 @@
 #include <cmath>
+#include <cstring>
 #include <iostream>
 #include <vector>
 
@@ -40,6 +41,17 @@ void put_i16(std::vector<std::uint8_t>& data, std::int16_t value) {
     data.push_back(static_cast<std::uint8_t>((bits >> 8) & 0xFF));
 }
 
+void put_u16(std::vector<std::uint8_t>& data, std::uint16_t value) {
+    data.push_back(static_cast<std::uint8_t>(value & 0xFF));
+    data.push_back(static_cast<std::uint8_t>((value >> 8) & 0xFF));
+}
+
+void put_f32(std::vector<std::uint8_t>& data, float value) {
+    std::uint32_t bits = 0;
+    std::memcpy(&bits, &value, sizeof bits);
+    put_u32(data, bits);
+}
+
 std::vector<std::uint8_t> make_collision_payload() {
     std::vector<std::uint8_t> data = {'d', 'e', 'f', 'a', 'u', 'l', 't', 0};
     put_u32(data, 20);
@@ -60,6 +72,115 @@ std::vector<std::uint8_t> make_collision_payload() {
     return data;
 }
 
+void put_packed_triangle(std::vector<std::uint8_t>& data, std::uint8_t a, std::uint8_t b,
+                         std::uint8_t c, std::uint8_t attribute) {
+    data.push_back(a);
+    data.push_back(static_cast<std::uint8_t>(b << 1));
+    data.push_back(static_cast<std::uint8_t>(c << 2));
+    data.push_back(attribute);
+}
+
+// A complete payload shaped like the reference model 0: a 160 x 64 x 80 box
+// built from four rails plus the model AABB diagonal, twelve triangles and a
+// single face anchored at the diagonal.
+std::vector<std::uint8_t> make_box_model_payload() {
+    std::vector<std::uint8_t> data = {'d', 'e', 'f', 'a', 'u', 'l', 't', 0};
+    put_u32(data, 20);
+    for (int index = 0; index < 20; ++index) {
+        data.push_back(0);
+    }
+    put_u32(data, 0xFFFFFF01U);
+    put_u32(data, 5 * 12);
+    const std::int16_t records[5][6] = {{-80, -32, 0, 80, -32, 0},
+                                        {-80, 32, 0, 80, 32, 0},
+                                        {-80, -32, 80, 80, -32, 80},
+                                        {-80, 32, 80, 80, 32, 80},
+                                        {-80, -32, 0, 80, 32, 80}};
+    for (const auto& record : records) {
+        for (std::int16_t value : record) {
+            put_i16(data, value);
+        }
+    }
+    const std::uint8_t triangles[12][3] = {{3, 2, 0}, {0, 1, 3}, {7, 5, 4}, {4, 6, 7},
+                                           {5, 1, 0}, {0, 4, 5}, {7, 3, 1}, {1, 5, 7},
+                                           {6, 2, 3}, {3, 7, 6}, {4, 0, 2}, {2, 6, 4}};
+    put_u32(data, 12);
+    put_u32(data, 48);
+    for (const auto& triangle : triangles) {
+        put_packed_triangle(data, triangle[0], triangle[1], triangle[2], 0x18);
+    }
+    put_u32(data, 0);  // spheres
+    put_u32(data, 1);  // faces
+    put_u16(data, 8);
+    put_u16(data, 9);
+    put_u32(data, 0);
+    put_u32(data, 0);
+    put_u16(data, 1);
+    put_u16(data, 12);
+    put_u32(data, 0);
+    for (int index = 0; index < 28; ++index) {
+        data.push_back(0);
+    }
+    return data;
+}
+
+std::vector<std::uint8_t> make_sphere_payload() {
+    std::vector<std::uint8_t> data = {'d', 'e', 'f', 'a', 'u', 'l', 't', 0};
+    put_u32(data, 20);
+    for (int index = 0; index < 20; ++index) {
+        data.push_back(0);
+    }
+    put_u32(data, 0xFFFFFF01U);
+    put_u32(data, 12);
+    const std::int16_t values[6] = {-1, -1, -1, 1, 1, 1};
+    for (const std::int16_t value : values) {
+        put_i16(data, value);
+    }
+    put_u32(data, 0);  // triangles
+    put_u32(data, 0);
+    put_u32(data, 1);  // spheres
+    put_f32(data, 0.0f);
+    put_f32(data, 0.0f);
+    put_f32(data, 5.0f);
+    put_f32(data, 2.5f);
+    put_u32(data, 3);
+    put_u32(data, 0);
+    put_u32(data, 0);  // faces
+    return data;
+}
+
+void test_collmodc_model() {
+    const bo2::engine::CollisionModel model =
+        bo2::engine::parse_collmodc(make_box_model_payload());
+    CHECK(model.valid);
+    CHECK(model.vertices.size() == 10);
+    CHECK(model.triangles.size() == 12);
+    CHECK(model.faces.size() == 1);
+    CHECK(model.spheres.empty());
+    CHECK(model.vertices[1].x == 80.0f);
+    CHECK(model.triangles[0].a == 3);
+    CHECK(model.triangles[0].b == 2);
+    CHECK(model.triangles[0].c == 0);
+    CHECK(model.triangles[0].attribute == 0x18);
+    CHECK(model.faces[0].has_triangles);
+    CHECK(model.faces[0].triangle_count == 12);
+    CHECK(model.faces[0].first_triangle == 0);
+    CHECK(model.faces[0].bounds.minimum.x == -80.0f);
+    CHECK(model.faces[0].bounds.maximum.z == 80.0f);
+    CHECK(model.bounds.minimum.z == 0.0f);
+    CHECK(model.bounds.maximum.z == 80.0f);
+
+    const bo2::engine::CollisionModel spheres =
+        bo2::engine::parse_collmodc(make_sphere_payload());
+    CHECK(spheres.valid);
+    CHECK(spheres.spheres.size() == 1);
+    CHECK(spheres.spheres[0].center.z == 5.0f);
+    CHECK(spheres.spheres[0].radius == 2.5f);
+    CHECK(spheres.spheres[0].bone == 3);
+
+    CHECK(!bo2::engine::parse_collmodc({1, 2, 3}).valid);
+}
+
 void test_collmodc_boxes() {
     const std::vector<bo2::engine::LevelCollisionBox> boxes =
         bo2::engine::parse_collmodc_boxes(make_collision_payload());
@@ -67,23 +188,40 @@ void test_collmodc_boxes() {
     CHECK(boxes[0].minimum.x == -10.0f);
     CHECK(boxes[0].maximum.z == 10.0f);
 
+    const std::vector<bo2::engine::LevelCollisionBox> model_boxes =
+        bo2::engine::parse_collmodc_boxes(make_box_model_payload());
+    CHECK(model_boxes.size() == 1);
+    CHECK(model_boxes[0].minimum.x == -80.0f);
+    CHECK(model_boxes[0].minimum.z == 0.0f);
+
     bo2::engine::LevelGeometry geometry;
     bo2::engine::LevelCollision collision;
     collision.model = 0;
-    collision.data = make_collision_payload();
+    collision.data = make_box_model_payload();
     geometry.collisions.push_back(collision);
     bo2::engine::LevelInstance instance;
     instance.model = 0;
     instance.position = {100.0f, 0.0f, 0.0f};
     geometry.instances.push_back(instance);
-    const bo2::engine::CollisionWorld world(geometry, true);
-    CHECK(world.boxes() == 1);
-    CHECK(world.intersects_sphere({100.0f, 0.0f, 0.0f}, 1.0f));
-    CHECK(!world.intersects_sphere({100.0f, 0.0f, 100.0f}, 1.0f));
-    const auto hit = world.raycast({100.0f, 0.0f, 100.0f}, {0.0f, 0.0f, -1.0f}, 200.0f);
-    CHECK(hit.has_value());
-    CHECK(std::fabs(hit->distance - 90.0f) < 1.0e-4f);
-    CHECK(hit->normal.z > 0.9f);
+
+    const bo2::engine::CollisionWorld hull(geometry,
+                                            bo2::engine::CollisionSource::Collmodc);
+    CHECK(hull.triangles() == 12);
+    // The hull is a surface: a point inside the box is not a hit, a sphere
+    // overlapping the top face is.
+    CHECK(!hull.intersects_sphere({100.0f, 0.0f, 10.0f}, 1.0f));
+    CHECK(hull.intersects_sphere({100.0f, 0.0f, 81.0f}, 2.0f));
+    CHECK(!hull.intersects_sphere({100.0f, 0.0f, 100.0f}, 1.0f));
+    const auto hull_hit = hull.raycast({100.0f, 0.0f, 100.0f}, {0.0f, 0.0f, -1.0f}, 200.0f);
+    CHECK(hull_hit.has_value());
+    CHECK(std::fabs(hull_hit->distance - 20.0f) < 1.0e-4f);
+    CHECK(hull_hit->normal.z > 0.9f);
+
+    const bo2::engine::CollisionWorld boxes_world(geometry,
+                                                  bo2::engine::CollisionSource::Boxes);
+    CHECK(boxes_world.boxes() == 1);
+    CHECK(boxes_world.triangles() == 0);
+    CHECK(boxes_world.intersects_sphere({100.0f, 0.0f, 0.0f}, 1.0f));
 }
 
 void test_raycast() {
@@ -108,6 +246,7 @@ void test_sphere() {
 int main() {
     test_raycast();
     test_sphere();
+    test_collmodc_model();
     test_collmodc_boxes();
     if (failures != 0) {
         std::cerr << failures << " check(s) failed\n";

@@ -638,6 +638,30 @@ int dump_collisions(const Options& options) {
                     << ' ' << world.maximum.y << ' ' << world.maximum.z << '\n';
             }
         }
+        const bo2::engine::CollisionModel model =
+            bo2::engine::parse_collmodc(collision.data);
+        if (model.valid) {
+            std::size_t face_triangles = 0;
+            std::size_t empty_faces = 0;
+            for (const bo2::engine::CollisionFace& face : model.faces) {
+                face_triangles += face.triangle_count;
+                empty_faces += face.has_triangles ? 0 : 1;
+            }
+            out << "  hull vertices " << model.vertices.size() << " triangles "
+                << model.triangles.size() << " faces " << model.faces.size() << " ("
+                << empty_faces << " without triangles, " << face_triangles << " face triangles)"
+                << " spheres " << model.spheres.size() << '\n';
+            out << "  hull bounds " << model.bounds.minimum.x << ' '
+                << model.bounds.minimum.y << ' ' << model.bounds.minimum.z << ' '
+                << model.bounds.maximum.x << ' ' << model.bounds.maximum.y << ' '
+                << model.bounds.maximum.z << '\n';
+            for (std::size_t index = 0; index < model.spheres.size(); ++index) {
+                const bo2::engine::CollisionSphere& sphere = model.spheres[index];
+                out << "    sphere " << index << " center " << sphere.center.x << ' '
+                    << sphere.center.y << ' ' << sphere.center.z << " radius "
+                    << sphere.radius << " bone " << sphere.bone << '\n';
+            }
+        }
         std::size_t name_end = 0;
         while (name_end < collision.data.size() && collision.data[name_end] != 0) {
             ++name_end;
@@ -725,7 +749,8 @@ void print_scene(const LoadedLevel& level) {
                   << geometry.cell_bsp.leaf_count << " leaves, depth "
                   << geometry.cell_bsp.depth << ")\n";
     }
-    const bo2::engine::CollisionWorld collision_world(geometry);
+    const bo2::engine::CollisionWorld collision_world(
+        geometry, bo2::engine::CollisionSource::Collmodc);
     std::cout << "collision mesh: " << collision_world.triangles() << " triangles\n";
     if (level.entity_models != 0) {
         std::cout << "entity models: " << level.entity_models << " (helper objects not drawn "
@@ -900,7 +925,8 @@ int run_replay(const Options& options) {
         bo2::platform::FileSystem::read_text(options.replay));
     const LoadedLevel level = load_level(options);
     const bo2::game::KainTuning tuning = load_kain_tuning(options);
-    bo2::engine::CollisionWorld collision(level.geometry);
+    bo2::engine::CollisionWorld collision(level.geometry,
+                                          bo2::engine::CollisionSource::Collmodc);
     bo2::game::PlayerController player(collision, route.start, tuning);
     bo2::game::PlayerState initial;
     initial.position = route.start;
