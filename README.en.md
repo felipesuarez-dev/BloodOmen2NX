@@ -105,7 +105,8 @@ Source of truth: [`STATE.md`](STATE.md) and [`ROADMAP.md`](ROADMAP.md).
 | Asset pipeline | The installer is decoded and materialises a 227-file tree; the `.big` parser reads all 179 containers (246,332 entries) and `pc.rkv` yields 2,666 Ogg Vorbis streams; DDS textures and `game.erg` are read |
 | Level rendering | A level renders headless (software rasterizer, PPM output) and in an SDL2 + OpenGL window with textures, cell grid, visibility BSP, placed instances, lights and markers parsed. Helper objects (`flag helperobj` in their `.etp` template) are hidden like the original. Lighting is incomplete |
 | Original as oracle | The pristine `bo2.exe` runs under Wine on a private Xvfb with scripted input. Frames and video are grabbed from the Xvfb (x11grab at 30 fps); Kain's state, his animation and the follow camera are read from process memory every 20 ms. A native Windows harness is the cross-check |
-| Kain in `sl01` | `bo2nx --play` walks, runs and jumps Kain in the `sl01` level with the original movement tuning read from the `kain` data (tank turning, two-phase jump gravity, hold boost, air control) and the run and walk-back speeds taken from the animation root motion and the animation graph. The camera follows the turn with a limited acceleration and lags in height on a jump, like the original |
+| Oracle replay and state comparison | The port replays a Wine capture's input timeline and compares the player, camera and velocity state frame by frame. The spawn matches within 0.05 u and the first W and jump divergences are measured |
+| Kain in `sl01` | `bo2nx --play` walks, runs and jumps Kain in the `sl01` level with the original movement tuning read from the `kain` data (tank turning, two-phase jump gravity, hold boost, air control, partial stick) and the run and walk-back speeds taken from the animation root motion and the animation graph. The camera follows the turn with a limited acceleration, smooths the range back after a collision and lags in height on a jump, like the original |
 | Engine foundations | Fixed-step loop, entity world with frustum culling, cell streaming, collision, third-person camera, checkpoint saves and a health and mana bar |
 | Audio and input | Ogg decoding, mixer and SDL output; keyboard, controller and Switch button maps |
 
@@ -114,9 +115,9 @@ Source of truth: [`STATE.md`](STATE.md) and [`ROADMAP.md`](ROADMAP.md).
 | Area | State |
 |---|---|
 | Chapters | None is completable; there is no level flow, no menus and no front end |
-| Gameplay systems | Combat, enemies and AI, dark gifts, weapons and inventory, scripting and triggers are not translated. Glide, ledge falls, analog speed and the run start phase are pending |
+| Gameplay systems | Combat, enemies and AI, dark gifts, weapons and inventory, scripting and triggers are not translated. Glide, ledge falls and the run start phase are pending |
 | Animation and collision | The animation graph (`animatio`) is decoded, but skeleton evaluation, skinning and clip blending are not ported; the compressed collision (`collmodc`) is only extracted |
-| Lighting and materials | Shared-model light maps and the material and light-map combination are open; at the `sl01` spawn the frame still differs from the oracle (MAE 35/255): fog, ambient and dynamic lights are missing |
+| Lighting and materials | The `.slm` palette is a shadow map; at the `sl01` spawn the world error is 8.69/255. Kain, the HUD, the green `bo2cinematic001` marker and the exact palette texture format remain; fog is disabled in `sl01` |
 | Audio events and video | The `sound` and `strmfile` event table is not wired to gameplay; there is no Bink playback |
 | Switch | The libnx and deko3d backend has not started |
 

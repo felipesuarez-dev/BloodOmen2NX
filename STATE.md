@@ -115,9 +115,11 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   camera, and `tools/oracle/compare_state.py` reports the per-phase error.
   On `sl01_basic` the spawn matches within 0.05 u and the first divergence is
   `after_w` at 2.5 u; on `sl01_camera` the player matches within 0.08 u
-  through the turns and diverges at the jump (11 u). The spawn camera
-  pull-in differs because the port's collision lacks the helper wall. The
-  full route/state gate remains open (BO2NX-37).
+  through the turns and diverges at the jump (11 u). A ±2-row shift search
+  picks 0 for both captures: the jump apex (281.35) and landing frame (3265)
+  match, but the port starts about one row late, and the W path/collision
+  remains. The spawn camera pull-in differs because the port's collision
+  lacks the helper wall. The full route/state gate remains open (BO2NX-37).
 - The native Windows oracle harness is available: a reverse SSH server on
   the Windows host, `tools/oracle/oracle_client.py`, a capture validator and
   an input/frame aligner. `capture_20261028_0150` is the first complete

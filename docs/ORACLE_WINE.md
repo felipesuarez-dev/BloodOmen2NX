@@ -357,6 +357,11 @@ Measured:
   172.31 u because the oracle pulls in against a wall that the port's
   render-geometry collision does not have; the turn camera errors are 18.86
   and 26.11 u.
+- `compare_state.py` searches a ±2-row shift to separate input sampling from
+  state divergence; the best global shift is 0 for both captures. The jump
+  apex (281.35) and the landing frame (3265) match, but the port starts about
+  one row late, so the jump and W divergences are not a simple row offset.
+  The W path and the collision remain.
 - The full route/state parity is still open: the port's collision comes from
   render geometry instead of `collmodc`, and the jump model and helper
   volumes remain. `#37` stays In Progress.

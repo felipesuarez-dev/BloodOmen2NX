@@ -484,6 +484,15 @@ class CompareStateTest(unittest.TestCase):
         self.assertEqual(report["first_divergence"]["frame"], "0")
         self.assertEqual(report["first_divergence"]["error"], 2.0)
 
+    def test_best_shift_removes_a_one_row_timing_offset(self):
+        oracle = self.rows()
+        port = [dict(row) for row in oracle[1:]] + [dict(oracle[-1])]
+        report, _ = compare_state.best_report(oracle, port, 1, 1.0)
+        self.assertEqual(report["best_shift"], -1)
+        self.assertEqual(
+            sum(item["player_mean"] for item in report["phases"].values()), 0.0
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
-"""Compare the port replay state with the oracle state.csv, phase by phase."""
+"""Compare the port replay state with the oracle state.csv, phase by phase.
+
+The oracle rows are sampler reads, not game ticks, and the input timestamps
+are when xdotool returned, so a one- or two-row offset is expected. The tool
+searches that offset and reports the residual after the best alignment; a
+growing residual is a real state divergence, a small one at a nonzero offset
+is timing.
+"""
 from __future__ import annotations
 
 import argparse
@@ -37,16 +44,17 @@ def wrap_degrees(value: float) -> float:
     return math.remainder(value, 360.0)
 
 
-def compare_states(oracle_rows: list[dict], port_rows: list[dict], tolerance: float = 1.0) -> dict:
-    port_by_frame = {row.get("frame"): row for row in port_rows}
+def compare_states(
+    oracle_rows: list[dict], port_rows: list[dict], tolerance: float = 1.0, shift: int = 0
+) -> dict:
     phases: dict[str, dict] = {}
     first_divergence = None
     matched = 0
-    for oracle in oracle_rows:
-        frame = oracle.get("frame")
-        port = port_by_frame.get(frame)
-        if port is None:
+    for index, oracle in enumerate(oracle_rows):
+        port_index = index + shift
+        if port_index < 0 or port_index >= len(port_rows):
             continue
+        port = port_rows[port_index]
         matched += 1
         phase = oracle.get("phase") or ""
         item = phases.setdefault(
@@ -82,7 +90,7 @@ def compare_states(oracle_rows: list[dict], port_rows: list[dict], tolerance: fl
             }
             if first_divergence is None and player_distance > tolerance:
                 first_divergence = {
-                    "frame": frame,
+                    "frame": oracle.get("frame"),
                     "phase": phase,
                     "error": round(player_distance, 3),
                     "oracle": item["player_end"]["oracle"],
@@ -111,6 +119,7 @@ def compare_states(oracle_rows: list[dict], port_rows: list[dict], tolerance: fl
         item["velocity_max"] = round(item["velocity_max"], 3)
         del item["player_sum"]
     return {
+        "shift": shift,
         "matched_rows": matched,
         "oracle_rows": len(oracle_rows),
         "port_rows": len(port_rows),
@@ -120,18 +129,48 @@ def compare_states(oracle_rows: list[dict], port_rows: list[dict], tolerance: fl
     }
 
 
+def report_score(report: dict) -> tuple[float, float, int]:
+    phases = report["phases"].values()
+    mean = sum(item["player_mean"] for item in phases)
+    maximum = sum(item["player_max"] for item in phases)
+    return (mean, maximum, abs(report["shift"]))
+
+
+def best_report(oracle_rows: list[dict], port_rows: list[dict], max_shift: int,
+                tolerance: float) -> tuple[dict, dict[int, dict]]:
+    reports = {
+        shift: compare_states(oracle_rows, port_rows, tolerance, shift)
+        for shift in range(-max_shift, max_shift + 1)
+    }
+    best_shift = min(reports, key=lambda shift: report_score(reports[shift]))
+    report = reports[best_shift]
+    report["best_shift"] = best_shift
+    report["shifts"] = {
+        shift: {
+            "player_mean": round(
+                sum(item["player_mean"] for item in item_report["phases"].values()), 3
+            ),
+            "player_max": round(
+                sum(item["player_max"] for item in item_report["phases"].values()), 3
+            ),
+        }
+        for shift, item_report in reports.items()
+    }
+    return report, reports
+
+
 def print_report(report: dict) -> None:
     print(
         f"rows: oracle {report['oracle_rows']}, port {report['port_rows']}, "
-        f"matched {report['matched_rows']}"
+        f"matched {report['matched_rows']}; best shift {report['best_shift']} rows"
     )
-    print(f"{'phase':12} {'rows':>5} {'player max':>11} {'player mean':>12} "
+    print(f"{'phase':14} {'rows':>5} {'player max':>11} {'player mean':>12} "
           f"{'yaw max':>8} {'cam max':>9} {'vel max':>9}")
     for phase, item in report["phases"].items():
         camera = f"{item['camera_max']:.3f}" if item["camera_rows"] else "-"
         velocity = f"{item['velocity_max']:.3f}" if item["velocity_rows"] else "-"
         print(
-            f"{phase:12} {item['rows']:5d} {item['player_max']:11.3f} "
+            f"{phase:14} {item['rows']:5d} {item['player_max']:11.3f} "
             f"{item['player_mean']:12.3f} {item['yaw_max']:8.3f} "
             f"{camera:>9} {velocity:>9}"
         )
@@ -143,6 +182,10 @@ def print_report(report: dict) -> None:
             f"first divergence: frame {divergence['frame']} ({divergence['phase']}) "
             f"{divergence['error']} u"
         )
+    print("shift search: " + ", ".join(
+        f"{shift}: mean {data['player_mean']:.3f}/max {data['player_max']:.3f}"
+        for shift, data in sorted(report["shifts"].items())
+    ))
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -150,6 +193,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("oracle", help="oracle state.csv")
     parser.add_argument("port", help="port state.csv from bo2nx --replay")
     parser.add_argument("--tolerance", type=float, default=1.0, help="player error in u")
+    parser.add_argument("--max-shift", type=int, default=2, help="rows to search around 0")
     parser.add_argument("--json", action="store_true", help="print the full JSON report")
     args = parser.parse_args(argv)
     try:
@@ -158,7 +202,7 @@ def main(argv: list[str] | None = None) -> int:
     except OSError as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
-    report = compare_states(oracle, port, args.tolerance)
+    report, _ = best_report(oracle, port, max(0, args.max_shift), args.tolerance)
     if args.json:
         print(json.dumps(report, indent=2, ensure_ascii=False))
     else:

@@ -105,7 +105,8 @@ Fuente de verdad: [`STATE.md`](STATE.md) y [`ROADMAP.md`](ROADMAP.md) (en inglé
 | Canalización de recursos | El instalador está decodificado y materializa un árbol de 227 archivos; el parser de `.big` lee los 179 contenedores (246 332 entradas) y `pc.rkv` entrega 2666 flujos Ogg Vorbis; se leen las texturas DDS y `game.erg` |
 | Renderizado de niveles | Un nivel se renderiza sin ventana (rasterizador por software, salida PPM) y en una ventana SDL2 + OpenGL, con texturas, cuadrícula de celdas, BSP de visibilidad, instancias colocadas, luces y marcadores analizados. Los objetos auxiliares (`flag helperobj` en su plantilla `.etp`) se ocultan como en el original. La iluminación está incompleta |
 | Original como oráculo | El `bo2.exe` intacto se ejecuta bajo Wine en un Xvfb privado con entrada guiada por script. Los fotogramas y el video se capturan del Xvfb (x11grab a 30 fps); el estado de Kain, su animación y la cámara de seguimiento se leen de la memoria del proceso cada 20 ms. Un arnés nativo de Windows sirve de verificación cruzada |
-| Kain en `sl01` | `bo2nx --play` hace caminar, correr y saltar a Kain en el nivel `sl01` con los ajustes de movimiento originales leídos de los datos de `kain` (giro tipo tanque, gravedad de salto en dos fases, impulso al mantener el salto, control en el aire) y con las velocidades de carrera y de retroceso tomadas del movimiento de raíz de las animaciones y del grafo de animación. La cámara sigue el giro con aceleración limitada y se retrasa en altura al saltar, como en el original |
+| Reproducción del oráculo y comparación de estado | El port reproduce el timeline de entrada de una captura Wine y compara el estado del jugador, la cámara y la velocidad frame a frame. El spawn coincide dentro de 0,05 u y se miden las primeras divergencias de W y salto |
+| Kain en `sl01` | `bo2nx --play` hace caminar, correr y saltar a Kain en el nivel `sl01` con los ajustes de movimiento originales leídos de los datos de `kain` (giro tipo tanque, gravedad de salto en dos fases, impulso al mantener el salto, control en el aire y stick parcial) y con las velocidades de carrera y de retroceso tomadas del movimiento de raíz de las animaciones y del grafo de animación. La cámara sigue el giro con aceleración limitada, recupera el rango tras una colisión y se retrasa en altura al saltar, como en el original |
 | Base del motor | Bucle de paso fijo, mundo de entidades con descarte por frustum, carga por celdas, colisión, cámara en tercera persona, guardado en puntos de control y una barra de salud y maná |
 | Audio y entrada | Decodificación Ogg, mezclador y salida por SDL; mapas de teclado, de control y de botones de Switch |
 
@@ -114,9 +115,9 @@ Fuente de verdad: [`STATE.md`](STATE.md) y [`ROADMAP.md`](ROADMAP.md) (en inglé
 | Área | Estado |
 |---|---|
 | Capítulos | Ninguno se puede completar; no hay flujo de niveles, ni menús, ni pantalla de inicio |
-| Sistemas de juego | El combate, los enemigos y la IA, los dotes oscuras, las armas y el inventario, y los scripts y disparadores no están traducidos. Faltan el planeo, la caída desde bordes, la velocidad analógica y la fase de arranque de la carrera |
+| Sistemas de juego | El combate, los enemigos y la IA, los dotes oscuras, las armas y el inventario, y los scripts y disparadores no están traducidos. Faltan el planeo, la caída desde bordes y la fase de arranque de la carrera |
 | Animación y colisión | El grafo de animación (`animatio`) está decodificado, pero la evaluación de esqueletos, el skinning y la mezcla de clips no están portados; la colisión comprimida (`collmodc`) solo se extrae |
-| Iluminación y materiales | Los mapas de luz de modelos compartidos y la combinación de materiales con mapas de luz siguen abiertos. En el punto de inicio de `sl01` el fotograma todavía difiere del oráculo (MAE 35/255): faltan niebla, luz ambiente y luces dinámicas |
+| Iluminación y materiales | El palette de `.slm` es un mapa de sombra; en el punto de inicio de `sl01` el error del mundo es 8,69/255. Quedan Kain, el HUD, el marcador verde `bo2cinematic001` y el formato exacto de textura del palette; la niebla está desactivada en `sl01` |
 | Eventos de audio y video | La tabla de eventos `sound` y `strmfile` no está conectada al juego; no hay reproducción de Bink |
 | Switch | El backend libnx y deko3d no se ha iniciado |
 
