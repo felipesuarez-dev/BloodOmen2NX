@@ -353,14 +353,16 @@ Measured:
   about 120 u. The camera columns are empty in this capture. The W speed
   matches 230 u/s until frame 2316; the oracle slows (177.76, then 86.67)
   and stops at x = 326.15, while the port keeps 230 and stops at x = 351.60.
-  The 25.44 u wall mismatch is the render-geometry collision, not the
-  movement tuning (BO2NX-72). The `collmodc` AABB broad phase stops the
-  player at x = 255.3, 70.8 u before the oracle; it is a broad phase, not
-  the exact edge/face hull, and stays off by default. The `sl01`
-  `--collision-dump` has 660 cell collisions; the W AABB is model 57
-  `default`, instance 41, boxes 39/40 at world x = 256..768, y = -264..512,
-  z = 208..976. The oracle passes that x = 256 face and stops at x = 326.15,
-  so the exact hull inside the AABB is still needed.
+  The 25.44 u wall mismatch is not the mesh format: the port now collides
+  with the decoded `collmodc` hull and stops at x = 351.60 against the model
+  68 wall at x = 352.0, while the oracle stops at x = 326.35 against the
+  model 57 wall at x = 326.75 (BO2NX-72). The oracle slides from y = 57.13
+  to y = 44.14 between frames 2311 and 2318, and the blocking surface is
+  10 u above the feet, so the remaining gap is the player collision volume
+  (a sphere chain, not a sphere at the feet). The `sl01`
+  `--collision-dump` has 660 cell collisions and decodes all of them; the W
+  wall is model 57 `default`, instance 41, with 132 points, 130 triangles
+  and 27 faces.
 - `wine_camera_1` (`sl01_camera`, 3,611 rows): the player stays within
   0.08 u through the spawn, the turns and the settles; the first divergence
   is the jump at frame 3229 (11.03 u). The spawn camera differs by up to
@@ -372,9 +374,10 @@ Measured:
   apex (281.35) and the landing frame (3265) match, but the port starts about
   one row late, so the jump and W divergences are not a simple row offset.
   The W path and the collision remain.
-- The full route/state parity is still open: the port's collision comes from
-  render geometry instead of `collmodc`, and the jump model and helper
-  volumes remain. `#37` stays In Progress.
+- The full route/state parity is still open: the collision mesh is the
+  decoded `collmodc` hull, but the player collision volume and the slide
+  response are pending, and the jump model and helper volumes remain. `#37`
+  stays In Progress.
 
 ## Limits
 

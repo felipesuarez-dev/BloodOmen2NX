@@ -118,21 +118,23 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   through the turns and diverges at the jump (11 u). A ±2-row shift search
   picks 0 for both captures: the jump apex (281.35) and landing frame (3265)
   match, but the port starts about one row late. The W run shows the
-  collision gap: the oracle stops at x = 326.15 while the render-geometry
-  collision stops at x = 351.60 (25.44 u). The `collmodc` data is a list of
-  12-byte AABBs; `parse_collmodc_boxes` and the `CollisionWorld` box
-  diagnostic are in place, but the AABB broad phase stops the player at
-  x = 255.3, 70.8 u before the oracle, so the exact edge/face hull is still
-  needed (BO2NX-72). The `sl01` `--collision-dump` has 660 cell collisions
-  and identifies the W AABB as model 57 `default`, instance 41: boxes 39/40
-  span world x = 256..768, y = -264..512, z = 208..976. The oracle passes
-  that x = 256 face and stops at x = 326.15, so the AABB is a broad phase;
-  model 57 is 1,936 bytes with 66 AABBs, index 130/520 (four-byte records of
-  three u8 vertex indices and one attribute), edge 0 and face 27 (568 face
-  bytes = 27 x 20 + 28: a 20-byte face record plus a 28-byte trailer). Ghidra:
-  `FUN_00621240` walks runtime arrays of 0x30-byte faces, 0xc-byte vertices
-  and 0x14-byte attrs; `FUN_0066cac0` exports 12-byte prims (sphere or
-  triangle); the collmodc face/trailer mapping and the solid flag are open.
+  collision gap: the oracle stops at x = 326.15 while the port stops at
+  x = 351.60 (25.44 u). The `collmodc` payload is decoded: a 6-byte point
+  list, 4-byte packed triangle records (`v0 = b0`, `v1 = b1 >> 1`,
+  `v2 = b2 >> 2` plus the attribute byte), 24-byte solid spheres and 20-byte
+  face records closed by a 28-byte trailer. All 660 `sl01` payloads (and 76
+  in `sanctuary`) decode, including the variant that wraps the record in a
+  second named header. `CollisionWorld` takes an explicit source; gameplay
+  uses the `collmodc` hull (36,129 world triangles in `sl01`) and the render
+  mesh and the broad-phase boxes stay as diagnostics. The port's stop is the
+  hull's model 68 wall at x = 352.0; the oracle's is the model 57 wall at
+  x = 326.75, reached after sliding from y = 57.13 to y = 44.14 between
+  frames 2311 and 2318. The remaining gap is the player volume: the blocking
+  surface is 10 u above the feet (a sphere at the feet cannot reach it),
+  while Kain's model ships three spheres (z = 52.0/49.6/23.6,
+  r = 19.8/19.3/15.0) that are too wide (they would stop at x = 254). The
+  `kain` tunedata documents `KainCollisionParams` (`footSphereIdx` plus a
+  radius/z-offset array per bone); its blob offset is not located yet.
   The spawn camera pull-in differs because the port's collision lacks the
   helper wall. The full route/state gate remains open (BO2NX-37).
 - The native Windows oracle harness is available: a reverse SSH server on
