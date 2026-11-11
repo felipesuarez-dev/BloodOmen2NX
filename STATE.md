@@ -139,8 +139,9 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   (`FUN_004436e0`, `FUN_00441f20`, `FUN_00442240`, `FUN_004423b0`, launch
   blocks from `FUN_00452030`): 323/205/203 u/s forward/back/side, as the
   oracle measures. The follow camera follows the yaw with a limited
-  acceleration (`FUN_00407ec0`) and lags in height after a jump
-  (`FUN_00407c70`). `bo2nx --play` drives it in the SDL level viewer; glide,
+  acceleration (`FUN_00407ec0`), lags in height after a jump
+  (`FUN_00407c70`) and smooths the range back after a collision pull-in
+  (`FUN_004088c0`). `bo2nx --play` drives it in the SDL level viewer; glide,
   ledge falls and the collision size are still provisional (see
   `docs/GAMEPLAY.md`). Localized resources are looked up in Spanish like the
   original build (`FUN_006c8fb0`, `FUN_004aae40`) and `strtable` text is read
@@ -181,10 +182,10 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   differs from the oracle (world MAE 35/255): fog, ambient and dynamic
   lights, the `.slm` group binding and pyramid-model types without
   `helperobj` (detector, planhelper) are open (BO2NX-68).
-- Gameplay parity beyond turning, ground speeds, jumping and air control:
-  the start phase and Shift speed, analog (partial stick) speed, glide,
-  ledge falls, the camera range smoothing, combat (it needs combat mode;
-  map in BO2NX-34) and weapon values are pending.
+- Gameplay parity beyond turning, ground speeds, jumping, air control and
+  the camera range blend: the start phase and Shift speed, analog (partial
+  stick) speed, glide, ledge falls, combat (it needs combat mode; map in
+  BO2NX-34) and weapon values are pending.
 - The installer's native RAR decoder is not ported; development
   extraction uses `unrar`. The game does not need the installer decoder.
 

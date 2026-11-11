@@ -135,6 +135,7 @@ Two more facts that are easy to misread:
 | Fresh prefix (`WINEPREFIX=<new dir>`), setup then capture | Main menu without the config dialog; spawn frame equals the main prefix (mean 0.009/255, RMSE 0.29) |
 | Main menu vs Windows `00_main_menu_reference` | mean abs error 0.57/255, RMSE 6.5 |
 | Spawn vs Windows `01_spawn` | mean abs error 4.88/255, RMSE 8.55, max 184 |
+| Camera range recovery (`wine_camera_1`) | 19.76 to 192 in about 0.99 s; the port reaches 192 in 1.00 s |
 | Menu detected | about 10 s after launch |
 | `sl01_basic` route | about 80 s of input time, 9.5 MB video |
 

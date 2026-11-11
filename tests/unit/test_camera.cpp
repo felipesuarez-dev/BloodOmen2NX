@@ -85,6 +85,69 @@ void test_wall_pulls_the_camera_in() {
     CHECK(view_direction(camera).x < -0.99f);
 }
 
+void test_range_never_gets_closer_than_ten() {
+    // FUN_004088c0 keeps at least 10 between the pivot and the eye.
+    const bo2::engine::LevelGeometry wall = make_wall(5.0f);
+    bo2::engine::CollisionWorld collision(wall);
+    bo2::game::FollowCamera camera;
+    bo2::game::PlayerState player;
+    player.yaw = kPi;
+    camera.update(player, collision);
+    CHECK(std::fabs(camera.range() - 10.0f) < 1.0e-4f);
+}
+
+void test_range_grows_back_after_the_wall() {
+    // The pull-in is instant; the range grows back through the acceleration-
+    // limited blend. FUN_004088c0 grows at one third of the 2000 limit during
+    // the 0.5 s after a pull-in, so the first 20 ms cannot move it much.
+    const bo2::engine::LevelGeometry near_wall = make_wall(100.0f);
+    const bo2::engine::LevelGeometry far_wall = make_wall(10000.0f);
+    bo2::engine::CollisionWorld near_collision(near_wall);
+    bo2::engine::CollisionWorld far_collision(far_wall);
+    bo2::game::FollowCamera camera;
+    bo2::game::PlayerState player;
+    player.yaw = kPi;
+    camera.update(player, near_collision);
+    const float pulled = camera.range();
+    CHECK(pulled > 90.0f);
+    CHECK(pulled < 110.0f);
+
+    camera.update(player, far_collision, kTick);
+    const float delta = camera.range() - pulled;
+    CHECK(delta > 0.05f);
+    CHECK(delta < 0.25f);  // 0.5 * (2000 / 3) * 0.02^2 = 0.133
+
+    for (int tick = 0; tick < 100; ++tick) {
+        camera.update(player, far_collision, kTick);
+    }
+    CHECK(std::fabs(camera.range() - 192.0f) < 1.0e-3f);
+}
+
+void test_range_recovery_is_not_instant() {
+    // The oracle (wine_camera_1) starts at 19.76 and reaches 192 in about
+    // 0.9 s. This synthetic pull-in starts at the same distance and follows
+    // the same slow-then-fast blend.
+    const bo2::engine::LevelGeometry near_wall = make_wall(19.87f);
+    const bo2::engine::LevelGeometry far_wall = make_wall(10000.0f);
+    bo2::engine::CollisionWorld near_collision(near_wall);
+    bo2::engine::CollisionWorld far_collision(far_wall);
+    bo2::game::FollowCamera camera;
+    bo2::game::PlayerState player;
+    player.yaw = kPi;
+    camera.update(player, near_collision);
+    CHECK(std::fabs(camera.range() - 19.76f) < 0.2f);
+
+    int ticks = 0;
+    while (camera.range() < 191.9f && ticks < 200) {
+        camera.update(player, far_collision, kTick);
+        ++ticks;
+    }
+    const float seconds = static_cast<float>(ticks) * static_cast<float>(kTick);
+    CHECK(camera.range() >= 191.9f);
+    CHECK(seconds > 0.80f);
+    CHECK(seconds < 1.15f);
+}
+
 // Camera yaw minus Kain's yaw, in degrees, wrapped to [-180, 180].
 float lag_degrees(const bo2::game::FollowCamera& camera, const bo2::game::PlayerState& player) {
     return std::remainder(camera.yaw() - player.yaw, 2.0f * kPi) * 180.0f / kPi;
@@ -224,6 +287,9 @@ int main() {
     test_default_pose_matches_the_oracle();
     test_pose_follows_position_and_yaw();
     test_wall_pulls_the_camera_in();
+    test_range_never_gets_closer_than_ten();
+    test_range_grows_back_after_the_wall();
+    test_range_recovery_is_not_instant();
     test_yaw_stays_close_on_a_tank_turn();
     test_yaw_catch_up_is_limited_by_the_acceleration();
     test_yaw_takes_the_short_way_round();

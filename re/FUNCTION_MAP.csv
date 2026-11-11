@@ -132,11 +132,11 @@ address,name,subsystem,status,notes
 004070e0,FUN_004070e0,unknown,todo,ghidra
 004072f0,FUN_004072f0,unknown,todo,ghidra
 00407370,FUN_00407370,unknown,todo,ghidra
-004074c0,FUN_004074c0,unknown,todo,ghidra
+004074c0,FUN_004074c0,camera,wip,src/game/camera.cpp: setup copy; the jump lag setup is approximated
 00407700,FUN_00407700,unknown,todo,ghidra
 00407920,FUN_00407920,unknown,todo,ghidra
 00407940,FUN_00407940,unknown,todo,ghidra
-004079c0,FUN_004079c0,unknown,todo,ghidra
+004079c0,FUN_004079c0,camera,wip,src/game/camera.cpp: collision pull-in; the host raycast replaces the original
 00407c00,FUN_00407c00,unknown,todo,ghidra
 00407c70,FUN_00407c70,camera,wip,src/game/camera.cpp: jump height lag; the 0.1 s hold is an approximation of the setup swap
 00407ec0,FUN_00407ec0,camera,wip,src/game/camera.cpp: yaw catch-up with the Hermite step; the x5 factor for input device type 2 is fitted not read
@@ -145,8 +145,8 @@ address,name,subsystem,status,notes
 004082e0,FUN_004082e0,unknown,todo,ghidra
 00408300,FUN_00408300,unknown,todo,ghidra
 00408480,FUN_00408480,unknown,todo,ghidra
-004088c0,FUN_004088c0,unknown,todo,ghidra
-00408b10,FUN_00408b10,camera,wip,src/game/camera.cpp: the follow pose only; range smoothing (FUN_004088c0) is not ported
+004088c0,FUN_004088c0,camera,wip,src/game/camera.cpp: range blend ported and pinned by test_camera.cpp; the pose tail still uses the host camera
+00408b10,FUN_00408b10,camera,wip,src/game/camera.cpp: follow pose; range smoothing (FUN_004088c0) is ported, the look steps are not
 00409340,FUN_00409340,unknown,todo,ghidra
 00409360,FUN_00409360,unknown,todo,ghidra
 00409400,FUN_00409400,unknown,todo,ghidra

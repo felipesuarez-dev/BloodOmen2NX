@@ -7,7 +7,7 @@ translated and verified.
 |---|---|---|
 | Boot and front-end | partial | Language: the port starts in the `spanish` locale like the Spanish build (FUN_004aae40 forces it, FUN_006c8fb0 filters BIG entries) and reads the localized string tables, see [`FORMATS/big.md`](FORMATS/big.md#language) and [`FORMATS/strtable.md`](FORMATS/strtable.md). Logos, menus and options todo |
 | Level loading and streaming | todo | Container readers, level table |
-| Camera | partial | Follow pose, yaw catch-up and the jump height lag ported; range smoothing, combat and scripted cameras todo. See [Camera](#camera) |
+| Camera | partial | Follow pose, yaw catch-up, jump height lag and range smoothing ported; combat and scripted cameras todo. See [Camera](#camera) |
 | Player movement | partial | Ground turn, ground speeds, jump, air control and fall cap; glide, climb and swim todo. See [Kain movement](#kain-movement) |
 | Combat | todo | Melee, block, grab, finishers |
 | Dark gifts | todo | Unlock and use |
@@ -153,6 +153,7 @@ every tick). The code that builds that setup was not traced.
 | Yaw catch-up | A cubic Hermite blend from the camera yaw and yaw speed to Kain's yaw at rest, advanced each frame by `min(dt, duration)`; the duration is the largest root of the four quadratics that bound the end accelerations by the limit | FUN_00407ec0 with FUN_00713360, FUN_00713450 (duration), FUN_00713810 and FUN_00713870 (position and velocity); the angle is taken closest to Kain's (FUN_00694400) |
 | Yaw acceleration limit | 150 rad/s2 from setup+0x30, times 5 when `input device type == 2` (DAT_0083f718); the port uses 750, see below | FUN_00407ec0 |
 | Height lag after a jump | At takeoff the camera is given a setup with delay 0.1 s and blend time 0.6 s. The pivot holds its resting height for about the delay, then blends from that height to Kain's z plus 76 with the same Hermite blend (end speed zero, start speed carried between frames), never below Kain's feet. The blend progress is the time since takeoff over 0.6 s, so it ends 0.6 s after takeoff; then the pivot is rigid again | FUN_00407c70 and FUN_004074c0; the setup was read live (setup+0x10 = 0.1, setup+0x14 = 0.6). Measured in the live follow object: +0xD4 equals +0xCC during the blend and the delay field reads 0 from about 0.08 s, so the 0.1 s hold is an approximation (FUN_00407c70 sets +0xD4 = +0xCC - delay, which the data does not show) |
+| Range smoothing | Pull-in instant; growth with the Hermite blend at 2000 u/s2, one third of the limit for the 0.5 s after a pull-in, at least 10 from the pivot | FUN_004088c0 and FUN_004079c0; `wine_camera_1` grows from 19.76 to 192 in 0.99 s; the port reaches 192 in 1.00 s in `tests/unit/test_camera.cpp` |
 
 Checked against the capture (`FollowCamera` replayed over its `state.csv`
 rows, `docs/ORACLE_WINE.md`, route `sl01_camera.txt`):
@@ -163,18 +164,18 @@ rows, `docs/ORACLE_WINE.md`, route `sl01_camera.txt`):
 | Same turn with the limit at 150 (no keyboard factor) | 0.2 to 0.3 deg | up to 5.1 deg: too slow, so the factor of 5 is kept |
 | Eye height in a standing jump (rest 304.07, apex of Kain 281) | peak 356.19 | 356.32; within 1.1 over the jump except the first row (takeoff seen one row late) |
 | Pivot blend over 26 rows of the oracle's blend state (blend weight 0.07 to 1 over 0.5 s) | the pivot heights of the dump | the same Hermite blend: 22 rows within 0.4 u, the other 4 differ by 1.2 to 4.7 where the Kain z of that row is a tick off |
+| Range recovery after a collision pull-in | 19.76 to 192 in about 0.99 s (`wine_camera_1`) | 1.00 s with the 0.5 s one-third limit and the Hermite blend |
 
-Not ported: the range blend of FUN_004088c0 and the other steps. The eye is
-pulled in when the level collision mesh is in the way (FUN_004079c0, a ray from
-the pivot) and the port does it with its own ray and no smoothing. The
-original runs the range through the same Hermite blend with acceleration
-limits read live at follow+0xe0 (2000, growing), +0xe4 (30000, when blocked)
-and a 0.5 s timer at +0xe8 after a pull-in (growth at one third of the limit
-meanwhile), and keeps it at least 10 from the pivot. The oracle's eye grew back
-at about 94 u/s over 0.5 s after the wall was left behind. The setup blend of
-FUN_00408300 (range, pitch and tilt changes by script), the second-target
-pitch of FUN_00407fb0 and the stick look of FUN_00408480 are not needed for the
-keyboard on this level.
+The range blend of FUN_004088c0 is ported. The eye is pulled in at once when
+the level collision mesh is in the way (FUN_004079c0, a ray from the pivot);
+the range then grows back through the same acceleration-limited Hermite
+blend, at 2000 u/s2 (30000 when blocked), one third of the limit during the
+0.5 s after a pull-in, and never closer than 10 to the pivot. The oracle
+`wine_camera_1` grows from 19.76 to 192 in 0.99 s; the port reaches 192 in
+1.00 s in `tests/unit/test_camera.cpp`. The setup blend of FUN_00408300
+(range, pitch and tilt changes by script), the second-target pitch of
+FUN_00407fb0 and the stick look of FUN_00408480 are not ported and are not
+needed for the keyboard on this level.
 
 The `after_a` phase of the first oracle capture (117 back, 88 high) is that
 collision pull-in against a wall, not a yaw lag, as the earlier notes read it.
@@ -208,5 +209,4 @@ These have no original source. They are development aids or placeholders.
 | Ledge fall | Not implemented. Walking off an edge only applies gravity and keeps the ground speed of the held input; the original fall state (FUN_00442800, FUN_00442ae0) has the same air control as a jump but its takeoff velocity was not traced |
 | Collision size | Body radius and eye height are provisional, see above |
 | Release slide | The short slide after releasing W is not modeled |
-| Camera range smoothing | The pull-in is instant; FUN_004088c0 smooths the range back out with an acceleration-limited blend. The setup blends of FUN_00408300 (range, pitch and tilt changes by script), the second-target pitch (FUN_00407fb0) and the stick look (FUN_00408480) are not ported |
-| Camera setups | The range, pitch, pivot height and yaw limit are those of one live setup; the code or data that builds the setups (including the jump setup with delay 0.1 and blend 0.6) was not traced |
+| Camera setups | The range, pitch, pivot height and yaw limit are those of one live setup; the code or data that builds the setups (including the jump setup with delay 0.1 and blend 0.6) was not traced. The range blend itself is ported |

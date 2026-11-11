@@ -150,19 +150,51 @@ void FollowCamera::update(const PlayerState& player, const bo2::engine::Collisio
     }
     was_grounded_ = player.grounded;
 
-    // Pose, FUN_00408b10: the eye is `kFollowRange` from the pivot, behind the
-    // camera yaw and raised by the follow pitch, and looks back down at the pivot.
+    // Pose, FUN_00408b10: the eye is `range_` from the pivot, behind the
+    // camera yaw and raised by the follow pitch, and looks back down at the
+    // pivot. The range comes from FUN_004088c0: the collision pulls it in at
+    // once and it grows back with an acceleration-limited Hermite blend.
     const bo2::engine::Vec3 heading{std::cos(yaw_), std::sin(yaw_), 0.0f};
     const bo2::engine::Vec3 pivot{player.position.x, player.position.y, pivot_z_};
     const float elevation = kFollowPitch;
     const bo2::engine::Vec3 away{-std::cos(elevation) * heading.x, -std::cos(elevation) * heading.y,
                                  std::sin(elevation)};
-    float reach = kFollowRange;
     const auto hit = collision.raycast(pivot, away, kFollowRange);
-    if (hit.has_value()) {
-        reach = std::max(0.05f, hit->distance - 0.2f);
+    const float range_target =
+        hit.has_value() ? std::max(kRangeMin, hit->distance - kRangeClearance) : kFollowRange;
+
+    if (!step) {
+        range_ = range_target;
+        range_velocity_ = 0.0f;
+        range_timer_ = hit.has_value() ? kRangeTimer : 0.0f;
+    } else if (range_target < range_) {
+        range_ = range_target;
+        range_velocity_ = 0.0f;
+        range_timer_ = kRangeTimer;
+    } else {
+        range_timer_ = std::max(0.0f, range_timer_ - dt);
+        if (range_ < range_target) {
+            const float accel =
+                range_timer_ > 0.0f ? kRangeAccel * kRangeSlowFactor : kRangeAccel;
+            const float duration =
+                hermite_duration(range_target - range_, range_velocity_, 0.0f, accel);
+            const Hermite blend(duration, range_, range_velocity_, range_target, 0.0f);
+            const float advance = std::min(dt, duration);
+            range_ = blend.position(advance);
+            range_velocity_ = blend.velocity(advance);
+            if (range_ >= range_target || duration <= dt) {
+                range_ = range_target;
+                range_velocity_ = 0.0f;
+            }
+        } else {
+            range_velocity_ = 0.0f;
+        }
     }
-    eye_ = pivot + away * reach;
+    if (range_ < kRangeMin) {
+        range_ = kRangeMin;
+        range_velocity_ = 0.0f;
+    }
+    eye_ = pivot + away * range_;
 
     const float pitch = -elevation + player.pitch;
     const bo2::engine::Vec3 view{std::cos(pitch) * heading.x, std::cos(pitch) * heading.y,
@@ -184,6 +216,10 @@ float FollowCamera::yaw() const {
 
 float FollowCamera::pivot_z() const {
     return pivot_z_;
+}
+
+float FollowCamera::range() const {
+    return range_;
 }
 
 }  // namespace bo2::game

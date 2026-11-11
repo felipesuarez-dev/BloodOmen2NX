@@ -27,6 +27,17 @@ constexpr float kFollowYawAccel = 150.0f * 5.0f;
 // +0xD4 = +0xCC - delay, which the live data does not show.
 constexpr float kJumpLagDelay = 0.1f;  // measured approximation of the hold
 constexpr float kJumpLagTime = 0.6f;   // setup+0x14
+// Range smoothing, FUN_004088c0. A pull-in is instant; the range grows back
+// through the same acceleration-limited Hermite blend. The original reads
+// 2000 from the setup (follow+0xe0) and 30000 when blocked (+0xe4); for the
+// 0.5 s after a pull-in (+0xe8) it grows at one third of the limit, and it
+// never comes closer than 10 to the pivot. The oracle (wine_camera_1) grows
+// from 19.76 to 192 in about 0.9 s.
+constexpr float kRangeAccel = 2000.0f;
+constexpr float kRangeSlowFactor = 1.0f / 3.0f;
+constexpr float kRangeTimer = 0.5f;
+constexpr float kRangeMin = 10.0f;
+constexpr float kRangeClearance = 0.2f;  // port safety margin off the hit distance
 
 class FollowCamera {
 public:
@@ -46,6 +57,8 @@ public:
     float yaw() const;
     // Height of the pivot above the world floor, which lags Kain for 0.6 s after a jump.
     float pivot_z() const;
+    // Current distance from the pivot to the eye, after the range blend.
+    float range() const;
 
 private:
     bool placed_ = false;
@@ -59,6 +72,11 @@ private:
     float lag_time_ = 0.0f;      // +0xcc: seconds since takeoff
     float lag_start_ = 0.0f;     // +0xbc: pivot height when the blend began
     float lag_velocity_ = 0.0f;  // +0xc0: slope of the blend, carried between frames
+    // Range blend (FUN_004088c0): current range, its velocity and the timer
+    // that keeps the growth at one third of the limit after a pull-in.
+    float range_ = kFollowRange;
+    float range_velocity_ = 0.0f;
+    float range_timer_ = 0.0f;
     bo2::engine::Vec3 eye_{0.0f, 0.0f, 0.0f};
     bo2::engine::Vec3 target_{0.0f, 0.0f, 0.0f};
 };
