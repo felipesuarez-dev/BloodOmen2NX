@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <stdexcept>
 
 namespace bo2::engine {
@@ -90,9 +91,58 @@ bool ray_hits_aabb(const Vec3& origin, const Vec3& direction, const Vec3& minimu
     return true;
 }
 
+std::optional<RayHit> ray_box_hit(const Vec3& origin, const Vec3& direction,
+                                  const LevelCollisionBox& box, float max_distance) {
+    float t_min = 0.0f;
+    float t_max = max_distance;
+    int axis = -1;
+    float sign = 1.0f;
+    const float origin_values[3] = {origin.x, origin.y, origin.z};
+    const float direction_values[3] = {direction.x, direction.y, direction.z};
+    const float minimum_values[3] = {box.minimum.x, box.minimum.y, box.minimum.z};
+    const float maximum_values[3] = {box.maximum.x, box.maximum.y, box.maximum.z};
+    for (int index = 0; index < 3; ++index) {
+        if (std::fabs(direction_values[index]) < 1.0e-8f) {
+            if (origin_values[index] < minimum_values[index] ||
+                origin_values[index] > maximum_values[index]) {
+                return std::nullopt;
+            }
+            continue;
+        }
+        const float inverse = 1.0f / direction_values[index];
+        float first = (minimum_values[index] - origin_values[index]) * inverse;
+        float second = (maximum_values[index] - origin_values[index]) * inverse;
+        if (first > second) {
+            std::swap(first, second);
+        }
+        if (first > t_min) {
+            t_min = first;
+            axis = index;
+            sign = direction_values[index] > 0.0f ? -1.0f : 1.0f;
+        }
+        t_max = std::min(t_max, second);
+        if (t_min > t_max) {
+            return std::nullopt;
+        }
+    }
+    RayHit hit;
+    hit.distance = t_min;
+    hit.point = origin + direction * t_min;
+    if (axis == 0) {
+        hit.normal = {sign, 0.0f, 0.0f};
+    } else if (axis == 1) {
+        hit.normal = {0.0f, sign, 0.0f};
+    } else if (axis == 2) {
+        hit.normal = {0.0f, 0.0f, sign};
+    } else {
+        hit.normal = -direction;
+    }
+    return hit;
+}
+
 }  // namespace
 
-CollisionWorld::CollisionWorld(const LevelGeometry& geometry) {
+CollisionWorld::CollisionWorld(const LevelGeometry& geometry, bool use_boxes) {
     triangles_.reserve(geometry.triangles.size());
     for (const LevelTriangle& triangle : geometry.triangles) {
         if (triangle.a >= geometry.positions.size() || triangle.b >= geometry.positions.size() ||
@@ -112,10 +162,53 @@ CollisionWorld::CollisionWorld(const LevelGeometry& geometry) {
                          std::max({a.z, b.z, c.z})};
         triangles_.push_back(value);
     }
+    if (use_boxes) {
+        const auto append_world = [this](const LevelCollisionBox& local, const Vec3& scale,
+                                         const Vec3& rotation, const Vec3& offset) {
+            Vec3 minimum{std::numeric_limits<float>::infinity(),
+                         std::numeric_limits<float>::infinity(),
+                         std::numeric_limits<float>::infinity()};
+            Vec3 maximum{-std::numeric_limits<float>::infinity(),
+                         -std::numeric_limits<float>::infinity(),
+                         -std::numeric_limits<float>::infinity()};
+            for (int corner = 0; corner < 8; ++corner) {
+                Vec3 point{(corner & 1) != 0 ? local.maximum.x : local.minimum.x,
+                           (corner & 2) != 0 ? local.maximum.y : local.minimum.y,
+                           (corner & 4) != 0 ? local.maximum.z : local.minimum.z};
+                point = {point.x * scale.x, point.y * scale.y, point.z * scale.z};
+                point = rotate_euler(point, rotation) + offset;
+                minimum = {std::min(minimum.x, point.x), std::min(minimum.y, point.y),
+                           std::min(minimum.z, point.z)};
+                maximum = {std::max(maximum.x, point.x), std::max(maximum.y, point.y),
+                           std::max(maximum.z, point.z)};
+            }
+            boxes_.push_back({minimum, maximum});
+        };
+        for (const LevelCollision& collision : geometry.collisions) {
+            const std::vector<LevelCollisionBox> local = parse_collmodc_boxes(collision.data);
+            if (local.empty()) {
+                continue;
+            }
+            for (const LevelInstance& instance : geometry.instances) {
+                if (instance.model != collision.model) {
+                    continue;
+                }
+                for (const LevelCollisionBox& box : local) {
+                    append_world(box, instance.scale, instance.rotation, instance.position);
+                }
+            }
+        }
+        boxes_.insert(boxes_.end(), geometry.collision_boxes.begin(),
+                      geometry.collision_boxes.end());
+    }
 }
 
 std::size_t CollisionWorld::triangles() const {
     return triangles_.size();
+}
+
+std::size_t CollisionWorld::boxes() const {
+    return boxes_.size();
 }
 
 bool CollisionWorld::intersects_sphere(const Vec3& center, float radius) const {
@@ -133,6 +226,15 @@ bool CollisionWorld::intersects_sphere(const Vec3& center, float radius) const {
         }
         if (distance_squared_to_triangle(center, triangle.a, triangle.b, triangle.c) <=
             radius_squared) {
+            return true;
+        }
+    }
+    for (const LevelCollisionBox& box : boxes_) {
+        const Vec3 closest{std::clamp(center.x, box.minimum.x, box.maximum.x),
+                           std::clamp(center.y, box.minimum.y, box.maximum.y),
+                           std::clamp(center.z, box.minimum.z, box.maximum.z)};
+        const Vec3 difference = center - closest;
+        if (dot(difference, difference) <= radius_squared) {
             return true;
         }
     }
@@ -182,6 +284,14 @@ std::optional<RayHit> CollisionWorld::raycast(const Vec3& origin, const Vec3& di
             normal = -normal;
         }
         hit = RayHit{best, origin + ray * best, normal};
+    }
+    for (const LevelCollisionBox& box : boxes_) {
+        const std::optional<RayHit> box_hit = ray_box_hit(origin, ray, box, best);
+        if (!box_hit.has_value() || box_hit->distance >= best) {
+            continue;
+        }
+        best = box_hit->distance;
+        hit = box_hit;
     }
     return hit;
 }

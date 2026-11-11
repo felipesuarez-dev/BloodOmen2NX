@@ -119,10 +119,13 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   picks 0 for both captures: the jump apex (281.35) and landing frame (3265)
   match, but the port starts about one row late. The W run shows the
   collision gap: the oracle stops at x = 326.15 while the render-geometry
-  collision stops at x = 351.60 (25.44 u); the compressed `collmodc` mesh is
-  still needed (BO2NX-72). The spawn camera pull-in differs because the
-  port's collision lacks the helper wall. The full route/state gate remains
-  open (BO2NX-37).
+  collision stops at x = 351.60 (25.44 u). The `collmodc` data is a list of
+  12-byte AABBs; `parse_collmodc_boxes` and the `CollisionWorld` box
+  diagnostic are in place, but the AABB broad phase stops the player at
+  x = 255.3, 70.8 u before the oracle, so the exact edge/face hull is still
+  needed (BO2NX-72). The spawn camera pull-in differs because the port's
+  collision lacks the helper wall. The full route/state gate remains open
+  (BO2NX-37).
 - The native Windows oracle harness is available: a reverse SSH server on
   the Windows host, `tools/oracle/oracle_client.py`, a capture validator and
   an input/frame aligner. `capture_20261028_0150` is the first complete

@@ -112,14 +112,22 @@ u16, u16, u32, u8, u32 x4              (trailer)
 
 The host stores the raw `collmodc` payload per model
 (`LevelGeometry::collisions`) and reports the model and byte counts.
-The compressed vertex blob, the edge/face semantics and the collision
-runtime are not decoded yet.
+The data blob is a list of 12-byte AABBs: three int16 minimum and three
+int16 maximum values. The edge/face records and the exact collision runtime
+are not decoded yet.
 
 Measured (`sl01_basic`, `wine_20261029_0043`): the W speed matches 230 u/s
 until frame 2316; the oracle slows to 177.76 and 86.67 and stops at
 x = 326.15, while the port keeps 230 and stops at x = 351.60. The 25.44 u
 difference is the missing collision mesh, not the movement tuning; tracked
 as BO2NX-72.
+
+`parse_collmodc_boxes` maps the blob to local AABBs and `CollisionWorld`
+can place them with the cell instances and the entity offsets. The AABBs
+are a broad phase: enabling them stops the port at x = 255.3, 70.8 u before
+the oracle, because the exact edge/face hull is inside the boxes. The box
+mode is the `use_boxes` constructor diagnostic, off by default; the port
+keeps the render-geometry collision until the hull is decoded.
 
 ## Textures and materials
 

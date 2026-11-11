@@ -613,7 +613,7 @@ Vec3 rotate_z(const Vec3& value, float angle) {
     return {value.x * cosine - value.y * sine, value.x * sine + value.y * cosine, value.z};
 }
 
-Vec3 rotate_euler(const Vec3& value, const Vec3& angles) {
+Vec3 rotate_euler_impl(const Vec3& value, const Vec3& angles) {
     return rotate_z(rotate_y(rotate_x(value, angles.x), angles.y), angles.z);
 }
 
@@ -925,9 +925,9 @@ void place_instances(LevelGeometry& geometry) {
             const Vec3 scaled{geometry.positions[source].x * instance.scale.x,
                               geometry.positions[source].y * instance.scale.y,
                               geometry.positions[source].z * instance.scale.z};
-            positions.push_back(instance.position + rotate_euler(scaled, instance.rotation));
+            positions.push_back(instance.position + rotate_euler_impl(scaled, instance.rotation));
             if (source < geometry.normals.size()) {
-                normals.push_back(normalize(rotate_euler(geometry.normals[source], instance.rotation)));
+                normals.push_back(normalize(rotate_euler_impl(geometry.normals[source], instance.rotation)));
             } else {
                 normals.push_back({0.0f, 0.0f, 0.0f});
             }
@@ -972,6 +972,58 @@ void place_instances(LevelGeometry& geometry) {
 }
 
 }  // namespace
+
+Vec3 rotate_euler(const Vec3& value, const Vec3& rotation) {
+    return rotate_euler_impl(value, rotation);
+}
+
+std::vector<LevelCollisionBox> parse_collmodc_boxes(const std::vector<std::uint8_t>& data) {
+    std::vector<LevelCollisionBox> boxes;
+    std::size_t name_end = 0;
+    while (name_end < data.size() && data[name_end] != 0) {
+        ++name_end;
+    }
+    if (name_end + 5 > data.size()) {
+        return boxes;
+    }
+    const auto u32 = [&data](std::size_t offset) {
+        return static_cast<std::uint32_t>(data[offset]) |
+               (static_cast<std::uint32_t>(data[offset + 1]) << 8) |
+               (static_cast<std::uint32_t>(data[offset + 2]) << 16) |
+               (static_cast<std::uint32_t>(data[offset + 3]) << 24);
+    };
+    const auto i16 = [&data](std::size_t offset) {
+        const auto value = static_cast<std::uint16_t>(
+            static_cast<std::uint16_t>(data[offset]) |
+            (static_cast<std::uint16_t>(data[offset + 1]) << 8));
+        return static_cast<std::int16_t>(value);
+    };
+    const std::uint32_t header_size = u32(name_end + 1);
+    if (header_size > data.size()) {
+        return boxes;
+    }
+    const std::size_t flag_offset = name_end + 5 + header_size;
+    if (flag_offset + 8 > data.size() || u32(flag_offset) != 0xFFFFFF01U) {
+        return boxes;
+    }
+    const std::uint32_t size = u32(flag_offset + 4);
+    const std::size_t data_offset = flag_offset + 8;
+    if (size < 12 || size % 12 != 0 || data_offset + size > data.size()) {
+        return boxes;
+    }
+    const std::size_t count = size / 12;
+    boxes.reserve(count);
+    for (std::size_t index = 0; index < count; ++index) {
+        const std::size_t offset = data_offset + index * 12;
+        LevelCollisionBox box;
+        box.minimum = {static_cast<float>(i16(offset)), static_cast<float>(i16(offset + 2)),
+                       static_cast<float>(i16(offset + 4))};
+        box.maximum = {static_cast<float>(i16(offset + 6)), static_cast<float>(i16(offset + 8)),
+                       static_cast<float>(i16(offset + 10))};
+        boxes.push_back(box);
+    }
+    return boxes;
+}
 
 LevelGeometry parse_cell_group(const std::vector<std::uint8_t>& data,
                                const std::vector<std::uint16_t>& symbols,

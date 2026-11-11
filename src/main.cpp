@@ -368,6 +368,13 @@ void append_entity_geometry(bo2::engine::LevelGeometry& target,
     for (const bo2::engine::Vec3& position : source.positions) {
         target.positions.push_back(position + offset);
     }
+    for (const bo2::engine::LevelCollision& collision : source.collisions) {
+        for (const bo2::engine::LevelCollisionBox& box :
+             bo2::engine::parse_collmodc_boxes(collision.data)) {
+            target.collision_boxes.push_back(
+                {box.minimum + offset, box.maximum + offset});
+        }
+    }
     target.normals.insert(target.normals.end(), source.normals.begin(), source.normals.end());
     target.texcoords.insert(target.texcoords.end(), source.texcoords.begin(),
                            source.texcoords.end());

@@ -354,7 +354,9 @@ Measured:
   matches 230 u/s until frame 2316; the oracle slows (177.76, then 86.67)
   and stops at x = 326.15, while the port keeps 230 and stops at x = 351.60.
   The 25.44 u wall mismatch is the render-geometry collision, not the
-  movement tuning (BO2NX-72).
+  movement tuning (BO2NX-72). The `collmodc` AABB broad phase stops the
+  player at x = 255.3, 70.8 u before the oracle; it is a broad phase, not
+  the exact edge/face hull, and stays off by default.
 - `wine_camera_1` (`sl01_camera`, 3,611 rows): the player stays within
   0.08 u through the spawn, the turns and the settles; the first divergence
   is the jump at frame 3229 (11.03 u). The spawn camera differs by up to

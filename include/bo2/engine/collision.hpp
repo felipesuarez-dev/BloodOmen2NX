@@ -16,9 +16,10 @@ struct RayHit {
 
 class CollisionWorld {
 public:
-    explicit CollisionWorld(const LevelGeometry& geometry);
+    explicit CollisionWorld(const LevelGeometry& geometry, bool use_boxes = false);
 
     std::size_t triangles() const;
+    std::size_t boxes() const;
     bool intersects_sphere(const Vec3& center, float radius) const;
     std::optional<RayHit> raycast(const Vec3& origin, const Vec3& direction,
                                   float max_distance) const;
@@ -33,6 +34,7 @@ private:
     };
 
     std::vector<Triangle> triangles_;
+    std::vector<LevelCollisionBox> boxes_;
 };
 
 }  // namespace bo2::engine

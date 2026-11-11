@@ -97,6 +97,13 @@ struct LevelCollision {
     std::vector<std::uint8_t> data;
 };
 
+// One local-space collision box from a `collmodc` payload. The data is a list
+// of 12-byte records: three int16 minimum and three int16 maximum values.
+struct LevelCollisionBox {
+    Vec3 minimum{0.0f, 0.0f, 0.0f};
+    Vec3 maximum{0.0f, 0.0f, 0.0f};
+};
+
 struct ModelSkeleton {
     std::uint32_t model = 0;
     std::vector<std::pair<std::uint32_t, std::uint32_t>> bones;
@@ -178,6 +185,8 @@ struct LevelGeometry {
     std::vector<CellAttributeTable> level_attributes;
     std::vector<ModelRange> model_ranges;
     std::vector<LevelCollision> collisions;
+    // World-space collision boxes from entity models (append_entity_geometry).
+    std::vector<LevelCollisionBox> collision_boxes;
     std::vector<ModelSkeleton> skeletons;
     std::vector<LevelInstance> instances;
     // First placed vertex of each instance (place_instances); UINT32_MAX for
@@ -213,6 +222,8 @@ Vec3 material_tint(const LevelGeometry& geometry, const LevelTriangle& triangle,
                    MaterialMode mode);
 Vec3 material_color(const LevelGeometry& geometry, const LevelTriangle& triangle);
 std::vector<LevelLightMap> parse_lightmaps(const std::vector<std::uint8_t>& data);
+std::vector<LevelCollisionBox> parse_collmodc_boxes(const std::vector<std::uint8_t>& data);
+Vec3 rotate_euler(const Vec3& value, const Vec3& rotation);
 void assign_model_lightmaps(LevelGeometry& geometry,
                             const std::vector<LevelLightMap>& lightmaps);
 void assign_named_model_lightmaps(LevelGeometry& geometry,
