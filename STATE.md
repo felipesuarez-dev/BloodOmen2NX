@@ -211,8 +211,11 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   and the camera: the logic tick and the grounded flag are not located.
 - The `sl01` port frame: helper objects are hidden and the `.slm` palette is
   inverted as a shadow map; the world MAE is 8.69/255 with luma correlation
-  0.37. Kain, the HUD, the green `bo2cinematic001` marker and the exact
-  palette texture format remain (BO2NX-68).
+  0.37. Kain's model is loaded and placed in the level viewer
+  (`--kain-model kain.big --kain-at x,y,z`: 2,846 triangles and 3 DDS
+  textures) but drawn in the bind pose; skeleton evaluation/skinning, the
+  HUD, the green `bo2cinematic001` marker and the exact palette texture
+  format remain (BO2NX-68).
 - Gameplay parity beyond turning, ground speeds, partial stick, jumping,
   air control and the camera range blend: the start phase and Shift speed,
   glide, ledge falls, combat (it needs combat mode; map in BO2NX-34) and
