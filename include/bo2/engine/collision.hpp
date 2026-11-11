@@ -28,6 +28,11 @@ public:
     std::size_t triangles() const;
     std::size_t boxes() const;
     bool intersects_sphere(const Vec3& center, float radius) const;
+    // Cell broad phase: the query only tests the objects of `cell` and its
+    // portal neighbours (FUN_005be8b0). Pass the mover's cell, not the
+    // sample's, for the probes.
+    bool intersects_sphere(const Vec3& center, float radius, std::int32_t cell) const;
+    std::int32_t cell_at(const Vec3& point) const;
     std::optional<RayHit> raycast(const Vec3& origin, const Vec3& direction,
                                   float max_distance) const;
 
@@ -38,9 +43,13 @@ private:
         Vec3 c;
         Vec3 minimum;
         Vec3 maximum;
+        std::int32_t cell = -1;
     };
 
     std::vector<Triangle> triangles_;
+    std::vector<LevelCell> cells_;
+    std::vector<std::vector<std::int32_t>> cell_neighbours_;
+    bool cell_filter_ = false;
     std::vector<LevelCollisionBox> boxes_;
 };
 

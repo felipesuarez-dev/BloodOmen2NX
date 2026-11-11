@@ -133,8 +133,14 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   surface is 10 u above the feet (a sphere at the feet cannot reach it),
   while Kain's model ships three spheres (z = 52.0/49.6/23.6,
   r = 19.8/19.3/15.0) that are too wide (they would stop at x = 254). The
-  `kain` tunedata documents `KainCollisionParams` (`footSphereIdx` plus a
-  radius/z-offset array per bone); its blob offset is not located yet.
+  the live trace shows the movement has no body cast: a vertical
+  ground/step probe (r=1), the run probe (r=8, 32 u ahead at z+48) and the
+  camera casts. The collision candidates are now filtered by the mover's
+  cell and its portal neighbours (the cells' `terrains` lists index the
+  `cellmdls` models), and the run probe stops the W run at x = 314.80
+  against the oracle's 326.35: `after_w` max 19.28 u and mean 8.94 u
+  (was 29.18 / 13.31). The probe is a provisional stop; the original uses
+  it as a flag and the final stop is the step probe plus the wall slide.
   The spawn camera pull-in differs because the port's collision lacks the
   helper wall. The full route/state gate remains open (BO2NX-37).
 - The native Windows oracle harness is available: a reverse SSH server on

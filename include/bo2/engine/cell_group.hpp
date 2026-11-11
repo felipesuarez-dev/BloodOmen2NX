@@ -229,6 +229,8 @@ struct LevelGeometry {
     std::vector<LevelCollisionBox> collision_boxes;
     std::vector<ModelSkeleton> skeletons;
     std::vector<LevelInstance> instances;
+    // Cell index of each instance, from the cells' `terrains` lists; -1 unknown.
+    std::vector<std::int32_t> instance_cells;
     // First placed vertex of each instance (place_instances); UINT32_MAX for
     // an instance that was skipped.
     std::vector<std::uint32_t> instance_vertex_base;

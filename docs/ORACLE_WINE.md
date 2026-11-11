@@ -353,13 +353,18 @@ Measured:
   about 120 u. The camera columns are empty in this capture. The W speed
   matches 230 u/s until frame 2316; the oracle slows (177.76, then 86.67)
   and stops at x = 326.15, while the port keeps 230 and stops at x = 351.60.
-  The 25.44 u wall mismatch is not the mesh format: the port now collides
-  with the decoded `collmodc` hull and stops at x = 351.60 against the model
-  68 wall at x = 352.0, while the oracle stops at x = 326.35 against the
-  model 57 wall at x = 326.75 (BO2NX-72). The oracle slides from y = 57.13
-  to y = 44.14 between frames 2311 and 2318, and the blocking surface is
-  10 u above the feet, so the remaining gap is the player collision volume
-  (a sphere chain, not a sphere at the feet). The `sl01`
+  The wall mismatch is not the mesh format: the port collides with the
+  decoded `collmodc` hull. A live gdb trace of the oracle shows the movement
+  has no body cast: a ground/step probe (r=1, vertical), the run probe (r=8,
+  32 u ahead at z+48) and the camera casts (r=10, backwards). The port now
+  filters the collision candidates by the mover's cell plus its portal
+  neighbours (the cells' `terrains` lists index the `cellmdls` models) and
+  applies the run probe: the W run stops at x = 314.80 against the oracle's
+  326.35 (`after_w` max 19.28 u, mean 8.94 u; it was 29.18 / 13.31). The
+  oracle slides from y = 57.13 to y = 44.14 between frames 2311 and 2318 and
+  the stop is 10 u above the feet, so the final gap is the step probe plus
+  the wall slide (the run probe is a flag, not a hard stop, in the
+  original). The `sl01`
   `--collision-dump` has 660 cell collisions and decodes all of them; the W
   wall is model 57 `default`, instance 41, with 132 points, 130 triangles
   and 27 faces.

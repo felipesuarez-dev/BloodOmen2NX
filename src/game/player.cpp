@@ -109,6 +109,11 @@ constexpr int kMaxSubSteps = 64;  // 0.1 s at 230 u/s needs 58
 constexpr float kEyeHeight = 1.7f;
 constexpr float kBodyRadius = 0.4f;
 constexpr float kBodyClearance = 0.05f;
+// Run probe (FUN_0042ee60, traced live): a radius-8 sphere swept from the
+// chest 32 u forward. A hit blocks the run.
+constexpr float kRunProbeRadius = 8.0f;
+constexpr float kRunProbeLength = 32.0f;
+constexpr float kRunProbeHeight = 48.0f;
 constexpr float kLookSpeed = 2.0f;  // port debug aid (mouse and right stick look)
 constexpr float kAttackCooldown = 0.45f;
 constexpr float kAttackRange = 2.2f;
@@ -231,7 +236,25 @@ void PlayerController::step(const PlayerInput& input, double seconds) {
         air_jump_ ? bo2::engine::Vec3{air_velocity_.x * dt, air_velocity_.y * dt, 0.0f}
                   : heading * (speed * dt);
     const float travel = bo2::engine::length(displacement);
-    if (travel > 0.0f) {
+    bool run_blocked = false;
+    if (travel > 0.0f && state_.grounded &&
+        bo2::engine::dot(displacement, heading) > 0.0f) {
+        // The run probe, filtered by the mover's cell (FUN_005be8b0).
+        const std::int32_t cell = collision_.cell_at(state_.position);
+        const bo2::engine::Vec3 origin =
+            state_.position + bo2::engine::Vec3{0.0f, 0.0f, kRunProbeHeight};
+        for (float along = 0.0f; along <= kRunProbeLength; along += 8.0f) {
+            const bo2::engine::Vec3 sample = origin + heading * along;
+            if (collision_.intersects_sphere(sample, kRunProbeRadius, cell)) {
+                run_blocked = true;
+                break;
+            }
+        }
+        if (run_blocked) {
+            air_velocity_ = {0.0f, 0.0f};
+        }
+    }
+    if (travel > 0.0f && !run_blocked) {
         // The original body sphere is small next to a tick of travel, so walk
         // the move in sub-steps of at most one radius; otherwise a thin wall
         // can be skipped between two samples.

@@ -143,11 +143,39 @@ std::optional<RayHit> ray_box_hit(const Vec3& origin, const Vec3& direction,
 }  // namespace
 
 CollisionWorld::CollisionWorld(const LevelGeometry& geometry, CollisionSource source) {
-    const auto append_triangle = [this](const Vec3& a, const Vec3& b, const Vec3& c) {
+    cells_ = geometry.cell_grid.cells;
+    cell_filter_ = !cells_.empty() && !geometry.instance_cells.empty();
+    cell_neighbours_.assign(cells_.size(), {});
+    for (std::size_t index = 0; index < cells_.size(); ++index) {
+        for (const CellPortal& portal : cells_[index].portals) {
+            const std::int32_t a = portal.cell_a;
+            const std::int32_t b = portal.cell_b;
+            const auto link = [this, index](std::int32_t other) {
+                if (other >= 0 && static_cast<std::size_t>(other) < cells_.size() &&
+                    static_cast<std::size_t>(other) != index) {
+                    cell_neighbours_[index].push_back(other);
+                }
+            };
+            if (static_cast<std::size_t>(a) == index) {
+                link(b);
+            } else if (static_cast<std::size_t>(b) == index) {
+                link(a);
+            }
+        }
+    }
+    const auto cell_of_instance = [&geometry](std::uint32_t instance) {
+        if (instance < geometry.instance_cells.size()) {
+            return geometry.instance_cells[instance];
+        }
+        return static_cast<std::int32_t>(-1);
+    };
+    const auto append_triangle = [this](const Vec3& a, const Vec3& b, const Vec3& c,
+                                        std::int32_t cell) {
         Triangle value;
         value.a = a;
         value.b = b;
         value.c = c;
+        value.cell = cell;
         value.minimum = {std::min({a.x, b.x, c.x}), std::min({a.y, b.y, c.y}),
                          std::min({a.z, b.z, c.z})};
         value.maximum = {std::max({a.x, b.x, c.x}), std::max({a.y, b.y, c.y}),
@@ -163,7 +191,8 @@ CollisionWorld::CollisionWorld(const LevelGeometry& geometry, CollisionSource so
                 continue;
             }
             append_triangle(geometry.positions[triangle.a], geometry.positions[triangle.b],
-                            geometry.positions[triangle.c]);
+                            geometry.positions[triangle.c],
+                            cell_of_instance(triangle.instance));
         }
     } else if (source == CollisionSource::Collmodc) {
         for (const LevelCollision& collision : geometry.collisions) {
@@ -175,6 +204,8 @@ CollisionWorld::CollisionWorld(const LevelGeometry& geometry, CollisionSource so
                 if (instance.model != collision.model) {
                     continue;
                 }
+                const std::int32_t cell = cell_of_instance(
+                    static_cast<std::uint32_t>(&instance - geometry.instances.data()));
                 const auto to_world = [&instance](const Vec3& point) {
                     const Vec3 scaled{point.x * instance.scale.x, point.y * instance.scale.y,
                                       point.z * instance.scale.z};
@@ -187,7 +218,7 @@ CollisionWorld::CollisionWorld(const LevelGeometry& geometry, CollisionSource so
                     }
                     append_triangle(to_world(model.vertices[triangle.a]),
                                     to_world(model.vertices[triangle.b]),
-                                    to_world(model.vertices[triangle.c]));
+                                    to_world(model.vertices[triangle.c]), cell);
                 }
             }
         }
@@ -241,12 +272,46 @@ std::size_t CollisionWorld::boxes() const {
     return boxes_.size();
 }
 
+std::int32_t CollisionWorld::cell_at(const Vec3& point) const {
+    for (std::size_t index = 0; index < cells_.size(); ++index) {
+        const LevelCell& cell = cells_[index];
+        if (point.x >= cell.minimum.x && point.x <= cell.maximum.x &&
+            point.y >= cell.minimum.y && point.y <= cell.maximum.y &&
+            point.z >= cell.minimum.z && point.z <= cell.maximum.z) {
+            return static_cast<std::int32_t>(index);
+        }
+    }
+    return -1;
+}
+
 bool CollisionWorld::intersects_sphere(const Vec3& center, float radius) const {
+    return intersects_sphere(center, radius, cell_at(center));
+}
+
+bool CollisionWorld::intersects_sphere(const Vec3& center, float radius,
+                                       std::int32_t cell) const {
     if (!std::isfinite(radius) || radius < 0.0f) {
         throw std::invalid_argument("sphere radius must be non-negative");
     }
     const float radius_squared = radius * radius;
+    const auto allowed = [this, cell](std::int32_t triangle_cell) {
+        if (!cell_filter_ || triangle_cell < 0 || cell < 0) {
+            return true;
+        }
+        if (triangle_cell == cell) {
+            return true;
+        }
+        for (const std::int32_t neighbour : cell_neighbours_[static_cast<std::size_t>(cell)]) {
+            if (neighbour == triangle_cell) {
+                return true;
+            }
+        }
+        return false;
+    };
     for (const Triangle& triangle : triangles_) {
+        if (!allowed(triangle.cell)) {
+            continue;
+        }
         const Vec3 closest{std::clamp(center.x, triangle.minimum.x, triangle.maximum.x),
                            std::clamp(center.y, triangle.minimum.y, triangle.maximum.y),
                            std::clamp(center.z, triangle.minimum.z, triangle.maximum.z)};

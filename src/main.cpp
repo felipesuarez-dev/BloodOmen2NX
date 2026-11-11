@@ -760,6 +760,16 @@ void print_scene(const LoadedLevel& level) {
               << ", lightmaps " << level.loaded_lightmaps << "/" << geometry.texture_names.size()
               << " (entries " << level.lightmap_entries << "))\n";
     if (geometry.has_cell_grid) {
+        for (std::size_t index = 0;
+             index < std::min<std::size_t>(geometry.cell_grid.cells.size(), 3); ++index) {
+            const bo2::engine::LevelCell& cell = geometry.cell_grid.cells[index];
+            std::cout << "cell " << index << " '" << cell.name << "' terrains "
+                      << cell.terrains.size();
+            for (std::size_t t = 0; t < std::min<std::size_t>(cell.terrains.size(), 8); ++t) {
+                std::cout << ' ' << cell.terrains[t];
+            }
+            std::cout << '\n';
+        }
         std::size_t portals = 0;
         std::size_t terrains = 0;
         for (const bo2::engine::LevelCell& cell : geometry.cell_grid.cells) {

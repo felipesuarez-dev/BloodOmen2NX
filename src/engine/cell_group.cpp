@@ -1286,6 +1286,25 @@ LevelGeometry parse_cell_group(const std::vector<std::uint8_t>& data,
         position = model_end;
     }
     read_cell_tail(reader, position, data.size(), symbols, names, geometry);
+    // Cell membership: each cell's `terrains` list indexes the `cellinst`
+    // entries (the terrain instances).
+    // The `terrains` values index the `cellmdls` models (the cell's geometry);
+    // an instance belongs to the cells of its model.
+    std::vector<std::int32_t> model_cells(geometry.model_ranges.size(), -1);
+    for (std::size_t cell_index = 0; cell_index < geometry.cell_grid.cells.size(); ++cell_index) {
+        for (const std::uint32_t model : geometry.cell_grid.cells[cell_index].terrains) {
+            if (model < model_cells.size() && model_cells[model] < 0) {
+                model_cells[model] = static_cast<std::int32_t>(cell_index);
+            }
+        }
+    }
+    geometry.instance_cells.assign(geometry.instances.size(), -1);
+    for (std::size_t index = 0; index < geometry.instances.size(); ++index) {
+        const std::uint32_t model = geometry.instances[index].model;
+        if (model < model_cells.size()) {
+            geometry.instance_cells[index] = model_cells[model];
+        }
+    }
     place_instances(geometry);
     if (geometry.positions.empty() || geometry.triangles.empty()) {
         throw common::ParseError("cell group has no renderable geometry");
