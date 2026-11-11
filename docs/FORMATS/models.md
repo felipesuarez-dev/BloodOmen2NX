@@ -133,9 +133,16 @@ The face block is 27 x 20 + 28 bytes: a 20-byte face record plus a 28-byte
 trailer. The shared model 0 fits the same split (1 x 20 + 28 = 48). The
 first u16 pair of each record (8/9 in model 0, 86/87 in model 57) looks like
 a vertex or edge pair; the rest of the 20 bytes and the 28-byte trailer are
-not decoded. The runtime prim/attribute semantics are still open. The small
-shared models show 6-byte faces, so the face record is not fixed at the 16
-bytes guessed earlier.
+not decoded. The runtime prim/attribute semantics are still open. The
+post-load fixup `FUN_00621240` walks runtime arrays of 0x30-byte faces,
+0xc-byte vertices, 0x14-byte attributes and 0x68-byte models. `FUN_0066cac0`
+exports the prims: a 12-byte record whose type 1 is a sphere (center and
+radius) and type 3 is a triangle (three u16 vertex indices and an attribute
+index). `FUN_0061ed40` is the `rmd` chunk loader, not the `collmodc` loader;
+the `collmodc` 20-byte face plus 28-byte trailer do not map one to one to the
+runtime arrays yet, and the solid flag is still open. The small shared models
+show 6-byte faces, so the face record is not fixed at the 16 bytes guessed
+earlier.
 
 Measured (`sl01_basic`, `wine_20261029_0043`): the W speed matches 230 u/s
 until frame 2316; the oracle slows to 177.76 and 86.67 and stops at
