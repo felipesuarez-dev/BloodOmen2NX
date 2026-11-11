@@ -11,7 +11,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools" / "oracle"))
 
 import align  # type: ignore  # noqa: E402
+import compare_state  # type: ignore  # noqa: E402
 import oracle_client  # type: ignore  # noqa: E402
+import prepare_replay  # type: ignore  # noqa: E402
 import validate_capture  # type: ignore  # noqa: E402
 import wine_capture  # type: ignore  # noqa: E402
 
@@ -399,6 +401,88 @@ class MenuDetectionTest(unittest.TestCase):
         pixels = bytes(range(256)) * (800 * 600 * 3 // 256)
         raw = b"P6\n800 600\n255\n" + pixels
         self.assertEqual(wine_capture.frame_bytes(raw), pixels)
+
+
+class PrepareReplayTest(unittest.TestCase):
+    def test_maps_keys_to_ticks(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "capture"
+            root.mkdir()
+            (root / "state.csv").write_text(
+                "frame,epoch_ms,mono_ms,phase,player_x,player_y,player_z,player_yaw_deg,"
+                "vel_x,vel_y,vel_z,cam_x,cam_y,cam_z\n"
+                "0,1000,1000,spawn_idle,-8.8,57.1,208,0,0,0,0,-190,57,300\n"
+                "1,1020,1020,after_w,-8.8,57.1,208,0,0,0,0,-190,57,300\n"
+                "2,1040,1040,after_w,-8.8,57.1,208,0,0,0,0,-190,57,300\n",
+                encoding="utf-8",
+            )
+            (root / "inputs.jsonl").write_text(
+                json.dumps({"mono_ms": 1010, "event": "down", "key": "w"}) + "\n"
+                + json.dumps({"mono_ms": 1030, "event": "up", "key": "w"}) + "\n",
+                encoding="utf-8",
+            )
+            replay = prepare_replay.build_replay(root)
+            self.assertEqual(len(replay), 3)
+            self.assertEqual(replay[0]["move_y"], 0)
+            self.assertEqual(replay[1]["move_y"], 1)
+            self.assertEqual(replay[2]["move_y"], 0)
+            self.assertAlmostEqual(float(replay[1]["dt"]), 0.02, places=6)
+            self.assertAlmostEqual(float(replay[0]["start_x"]), -8.8, places=3)
+            output = root / "replay_inputs.csv"
+            self.assertEqual(prepare_replay.write_replay(root, output), 3)
+            self.assertIn("start_yaw_deg", output.read_text(encoding="utf-8").splitlines()[0])
+
+
+class CompareStateTest(unittest.TestCase):
+    def rows(self):
+        return [
+            {
+                "frame": "0",
+                "phase": "spawn_idle",
+                "player_x": "0",
+                "player_y": "0",
+                "player_z": "0",
+                "player_yaw_deg": "0",
+                "cam_x": "1",
+                "cam_y": "2",
+                "cam_z": "3",
+                "vel_x": "0",
+                "vel_y": "0",
+                "vel_z": "0",
+            },
+            {
+                "frame": "1",
+                "phase": "after_w",
+                "player_x": "1",
+                "player_y": "0",
+                "player_z": "0",
+                "player_yaw_deg": "0",
+                "cam_x": "2",
+                "cam_y": "2",
+                "cam_z": "3",
+                "vel_x": "1",
+                "vel_y": "0",
+                "vel_z": "0",
+            },
+        ]
+
+    def test_identical_states_have_no_divergence(self):
+        oracle = self.rows()
+        port = [dict(row) for row in oracle]
+        report = compare_state.compare_states(oracle, port)
+        self.assertEqual(report["matched_rows"], 2)
+        self.assertIsNone(report["first_divergence"])
+        self.assertEqual(report["phases"]["after_w"]["player_max"], 0)
+
+    def test_shifted_port_reports_first_divergence(self):
+        oracle = self.rows()
+        port = [dict(row) for row in oracle]
+        for row in port:
+            row["player_x"] = str(float(row["player_x"]) + 2.0)
+        report = compare_state.compare_states(oracle, port)
+        self.assertEqual(report["phases"]["spawn_idle"]["player_max"], 2.0)
+        self.assertEqual(report["first_divergence"]["frame"], "0")
+        self.assertEqual(report["first_divergence"]["error"], 2.0)
 
 
 if __name__ == "__main__":

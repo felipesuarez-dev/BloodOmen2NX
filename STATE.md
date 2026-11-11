@@ -109,6 +109,15 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   samples Kain's state (position, yaw, velocity, health, lore) and the
   follow camera's pose from the process memory at 50 Hz into `state.csv`;
   every offset has a `FUN_` source. See `docs/ORACLE_WINE.md`.
+- The oracle replay and state comparison harness is in place:
+  `tools/oracle/prepare_replay.py` converts a Wine capture to a per-tick
+  input timeline, `bo2nx --replay` steps the port's controller and follow
+  camera, and `tools/oracle/compare_state.py` reports the per-phase error.
+  On `sl01_basic` the spawn matches within 0.05 u and the first divergence is
+  `after_w` at 2.5 u; on `sl01_camera` the player matches within 0.08 u
+  through the turns and diverges at the jump (11 u). The spawn camera
+  pull-in differs because the port's collision lacks the helper wall. The
+  full route/state gate remains open (BO2NX-37).
 - The native Windows oracle harness is available: a reverse SSH server on
   the Windows host, `tools/oracle/oracle_client.py`, a capture validator and
   an input/frame aligner. `capture_20261028_0150` is the first complete

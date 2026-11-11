@@ -28,6 +28,25 @@ sources are in `docs/ORACLE_WINE.md`, "Game state". `validate_capture.py`
 requires neither file for that source, and `align.py` reports inputs and
 phases by time offset.
 
+## Replay and state comparison
+
+| File | Purpose |
+|---|---|
+| `prepare_replay.py` | Convert a capture's `inputs.jsonl` and `state.csv` into the per-tick input CSV |
+| `compare_state.py` | Compare the oracle `state.csv` with the port replay state, phase by phase |
+
+```sh
+python3 tools/oracle/prepare_replay.py external/captures/wine_YYYYMMDD_HHMM \
+    --out /tmp/replay/replay_inputs.csv
+./build/linux-debug/bo2nx --replay /tmp/replay/replay_inputs.csv \
+    --big <level.big> --state-out /tmp/replay/port_state.csv
+python3 tools/oracle/compare_state.py \
+    external/captures/wine_YYYYMMDD_HHMM/state.csv /tmp/replay/port_state.csv
+```
+
+The measured `sl01` differences are in `docs/ORACLE_WINE.md`, "Port replay
+and state comparison".
+
 ## Native Windows oracle (2026-10-27)
 
 A native Windows harness complements the Wine oracle.

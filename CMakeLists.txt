@@ -41,6 +41,7 @@ add_library(bo2_game STATIC
     src/game/camera.cpp
     src/game/kain_tuning.cpp
     src/game/player.cpp
+    src/game/replay.cpp
     src/game/save.cpp
 )
 target_link_libraries(bo2_game PUBLIC bo2_engine)
@@ -80,7 +81,7 @@ if(BO2NX_ENABLE_SDL)
 endif()
 
 add_executable(bo2nx src/main.cpp)
-target_link_libraries(bo2nx PRIVATE bo2_platform_headless bo2_platform_core)
+target_link_libraries(bo2nx PRIVATE bo2_platform_headless bo2_platform_core bo2_game)
 target_compile_options(bo2nx PRIVATE ${BO2NX_WARNINGS})
 if(BO2NX_HAVE_SDL)
     target_compile_definitions(bo2nx PRIVATE BO2NX_HAVE_SDL)
@@ -153,6 +154,11 @@ if(BUILD_TESTING)
     target_link_libraries(bo2nx_player_tests PRIVATE bo2_game)
     target_compile_options(bo2nx_player_tests PRIVATE ${BO2NX_WARNINGS})
     add_test(NAME player COMMAND bo2nx_player_tests)
+
+    add_executable(bo2nx_replay_tests tests/unit/test_replay.cpp)
+    target_link_libraries(bo2nx_replay_tests PRIVATE bo2_game)
+    target_compile_options(bo2nx_replay_tests PRIVATE ${BO2NX_WARNINGS})
+    add_test(NAME replay COMMAND bo2nx_replay_tests)
 
     add_executable(bo2nx_collision_tests tests/unit/test_collision.cpp)
     target_link_libraries(bo2nx_collision_tests PRIVATE bo2_engine)

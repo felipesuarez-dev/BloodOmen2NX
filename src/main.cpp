@@ -4,6 +4,8 @@
 #include <chrono>
 #include <cstdlib>
 #include <exception>
+#include <fstream>
+#include <iomanip>
 #include <stdexcept>
 #include <iostream>
 #include <memory>
@@ -22,7 +24,10 @@
 #include "bo2/engine/region.hpp"
 #include "bo2/engine/tick.hpp"
 #include "bo2/engine/world.hpp"
+#include "bo2/game/camera.hpp"
 #include "bo2/game/kain_tuning.hpp"
+#include "bo2/game/player.hpp"
+#include "bo2/game/replay.hpp"
 #include "bo2/platform/platform.hpp"
 #include "bo2/platform/headless/software_renderer.hpp"
 #include "bo2/version.hpp"
@@ -50,6 +55,8 @@ struct Options {
     std::string kain;
     std::string entry;
     std::string out;
+    std::string replay;
+    std::string state_out;
     std::string event_ogg;
     std::string music_ogg;
     float audio_seconds = 5.0f;
@@ -128,6 +135,7 @@ Options parse_options(int argc, char** argv) {
                 << "  bo2nx --level --big <file.big> --out <frame.ppm> [options]\n"
                 << "  bo2nx --sdl [--big <file.big>] [--out <screenshot.ppm>] [options]\n"
                 << "  bo2nx --play --big <level.big> [--kain <kain.big>] [options]\n"
+                << "  bo2nx --replay <inputs.csv> --big <level.big> --state-out <state.csv> [options]\n"
                 << "  bo2nx --event-ogg <event.ogg> [--music-ogg <music.ogg>] [--audio-seconds n]\n"
                 << "  bo2nx --headless --frames <n> [--tick-rate <hz>]\n\n"
                 << "Frame options:\n"
@@ -154,7 +162,9 @@ Options parse_options(int argc, char** argv) {
                 << "  --kain <file.big>      kain tunedata for --play (default: <level dir>/../kain/kain.big)\n"
                 << "  --headless             run the fixed-step loop without a window\n"
                 << "  --frames <n>           fixed-step iterations for --headless\n"
-                << "  --tick-rate <hz>       logic ticks per second (default 60)\n";
+                << "  --tick-rate <hz>       logic ticks per second (default 60)\n"
+                << "  --replay <file.csv>    replay an oracle input timeline headless\n"
+                << "  --state-out <file.csv> write the replayed player and camera state\n";
             std::exit(0);
         }
         if (argument == "--list-big") {
@@ -172,6 +182,10 @@ Options parse_options(int argc, char** argv) {
             options.sdl = true;
         } else if (argument == "--headless") {
             options.headless = true;
+        } else if (argument == "--replay") {
+            options.replay = next_argument(index, argc, argv);
+        } else if (argument == "--state-out") {
+            options.state_out = next_argument(index, argc, argv);
         } else if (argument == "--frames") {
             options.frames = parse_dimension(next_argument(index, argc, argv), "frames");
         } else if (argument == "--tick-rate") {
@@ -240,15 +254,25 @@ Options parse_options(int argc, char** argv) {
             usage_error("unknown argument: " + argument);
         }
     }
-    if (!options.kain.empty() && !options.play) {
-        usage_error("--kain requires --play");
+    if (!options.kain.empty() && !options.play && options.replay.empty()) {
+        usage_error("--kain requires --play or --replay");
+    }
+    if (!options.replay.empty() && options.state_out.empty()) {
+        usage_error("--replay requires --state-out");
+    }
+    if (!options.state_out.empty() && options.replay.empty()) {
+        usage_error("--state-out requires --replay");
+    }
+    if (!options.replay.empty() && options.big.empty()) {
+        usage_error("--replay requires --big");
     }
     const bool audio = !options.event_ogg.empty() || !options.music_ogg.empty();
     const int modes = (!options.list_big.empty() ? 1 : 0) + (!options.erg.empty() ? 1 : 0) +
                       (options.frame ? 1 : 0) + (options.level ? 1 : 0) +
-                      (options.sdl ? 1 : 0) + (options.headless ? 1 : 0) + (audio ? 1 : 0);
+                      (options.sdl ? 1 : 0) + (options.headless ? 1 : 0) +
+                      (!options.replay.empty() ? 1 : 0) + (audio ? 1 : 0);
     if (modes > 1) {
-        usage_error("--list-big, --erg, --frame, --level, --sdl, --headless and audio are mutually exclusive");
+        usage_error("--list-big, --erg, --frame, --level, --sdl, --headless, --replay and audio are mutually exclusive");
     }
     return options;
 }
@@ -697,7 +721,6 @@ int render_level_frame(const Options& options) {
     return 0;
 }
 
-#ifdef BO2NX_HAVE_SDL
 // The Kain movement constants live in the `kain` tunedata entry of kain.big;
 // the ground speeds come from its `kain/run` and `kain/walk_backwards` clips.
 bo2::game::KainTuning load_kain_tuning(const Options& options) {
@@ -720,7 +743,74 @@ bo2::game::KainTuning load_kain_tuning(const Options& options) {
     bo2::game::apply_kain_clip_speeds(tuning, archive);
     return tuning;
 }
-#endif
+
+int run_replay(const Options& options) {
+    constexpr double kPi = 3.14159265358979323846;
+    if (options.replay.empty() || options.state_out.empty() || options.big.empty()) {
+        usage_error("--replay requires --big and --state-out");
+    }
+    const bo2::game::ReplayRoute route = bo2::game::parse_replay_csv(
+        bo2::platform::FileSystem::read_text(options.replay));
+    const LoadedLevel level = load_level(options);
+    const bo2::game::KainTuning tuning = load_kain_tuning(options);
+    bo2::engine::CollisionWorld collision(level.geometry);
+    bo2::game::PlayerController player(collision, route.start, tuning);
+    bo2::game::PlayerState initial;
+    initial.position = route.start;
+    initial.yaw = static_cast<float>(route.yaw_degrees * kPi / 180.0);
+    initial.grounded = true;
+    player.restore(initial);
+    bo2::game::FollowCamera camera;
+    camera.update(player.state(), collision, 0.0);
+
+    std::ofstream state(options.state_out);
+    if (!state) {
+        throw std::runtime_error("cannot write " + options.state_out);
+    }
+    state << std::fixed << std::setprecision(6);
+    state << "frame,phase,player_x,player_y,player_z,vel_x,vel_y,vel_z,"
+             "player_yaw_deg,grounded,cam_x,cam_y,cam_z,cam_yaw_deg,cam_pitch_deg\n";
+    bo2::engine::Vec3 previous = player.state().position;
+    for (const bo2::game::ReplayTick& tick : route.ticks) {
+        bo2::game::PlayerInput input;
+        input.move_x = tick.move_x;
+        input.move_y = tick.move_y;
+        input.run = tick.run;
+        input.jump = tick.jump;
+        input.attack = tick.attack;
+        player.step(input, tick.seconds);
+        camera.update(player.state(), collision, tick.seconds);
+        const bo2::engine::Vec3 position = player.state().position;
+        const bo2::engine::Vec3 velocity =
+            tick.seconds > 0.0 ? (position - previous) / static_cast<float>(tick.seconds)
+                               : bo2::engine::Vec3{0.0f, 0.0f, 0.0f};
+        const float player_yaw =
+            static_cast<float>(player.state().yaw * 180.0 / kPi);
+        const float camera_yaw = static_cast<float>(camera.yaw() * 180.0 / kPi);
+        const float camera_pitch = static_cast<float>(
+            (-bo2::game::kFollowPitch + player.state().pitch) * 180.0 / kPi);
+        state << tick.frame << ',' << tick.phase << ','
+              << position.x << ',' << position.y << ',' << position.z << ','
+              << velocity.x << ',' << velocity.y << ',' << velocity.z << ','
+              << player_yaw << ',' << (player.state().grounded ? 1 : 0) << ','
+              << camera.eye().x << ',' << camera.eye().y << ',' << camera.eye().z << ','
+              << camera_yaw << ',' << camera_pitch << '\n';
+        previous = position;
+    }
+    if (!options.out.empty()) {
+        bo2::platform::headless::FrameOptions frame = options.frame_options;
+        frame.camera.eye = camera.eye();
+        frame.camera.target = camera.target();
+        frame.camera.up = {0.0f, 0.0f, 1.0f};
+        const std::vector<std::uint8_t> pixels =
+            bo2::platform::headless::render_level(level.geometry, level.textures, frame);
+        bo2::platform::headless::write_ppm(options.out, frame.width, frame.height, pixels);
+    }
+    std::cout << "replay: " << route.ticks.size() << " ticks, final "
+              << player.state().position.x << ',' << player.state().position.y << ','
+              << player.state().position.z << " -> " << options.state_out << '\n';
+    return 0;
+}
 
 int run_sdl(const Options& options) {
 #ifdef BO2NX_HAVE_SDL
@@ -884,6 +974,9 @@ int main(int argc, char** argv) {
         }
         if (options.level) {
             return render_level_frame(options);
+        }
+        if (!options.replay.empty()) {
+            return run_replay(options);
         }
         if (options.headless) {
             return run_headless(options);

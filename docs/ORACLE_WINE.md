@@ -325,6 +325,42 @@ Shift is bound to the autoface row, not to a run, so the 200 u/s of `shift+w`
 measured in `sl01_basic` is probably Kain with that action active (not
 verified).
 
+## Port replay and state comparison
+
+`tools/oracle/prepare_replay.py` maps the capture's `inputs.jsonl` to one
+input row per `state.csv` sample. `bo2nx --replay` loads the level and the
+Kain tuning, steps the port's `PlayerController` and `FollowCamera` with the
+oracle timeline, and writes the player, velocity, yaw, grounded and camera
+columns per frame. `tools/oracle/compare_state.py` matches rows by frame and
+reports the per-phase player, yaw, camera and velocity errors.
+
+```sh
+python3 tools/oracle/prepare_replay.py external/captures/wine_20261029_0043 \
+    --out /tmp/replay/replay_inputs.csv
+./build/linux-debug/bo2nx --replay /tmp/replay/replay_inputs.csv \
+    --big external/installed/media/gogames/bo2/resources/levels/slums/sl01.big \
+    --state-out /tmp/replay/port_state.csv --width 800 --height 600 \
+    --out /tmp/replay/port_end.ppm
+python3 tools/oracle/compare_state.py \
+    external/captures/wine_20261029_0043/state.csv /tmp/replay/port_state.csv
+```
+
+Measured:
+
+- `wine_20261029_0043` (`sl01_basic`, 2,991 rows): `spawn_idle` player max
+  0.048 u (mean 0); the first divergence is frame 2258 (`after_w`, 2.497 u);
+  `after_w` mean 13.31 u / max 29.18 u, and `run`, `jump` and `attack` reach
+  about 120 u. The camera columns are empty in this capture.
+- `wine_camera_1` (`sl01_camera`, 3,611 rows): the player stays within
+  0.08 u through the spawn, the turns and the settles; the first divergence
+  is the jump at frame 3229 (11.03 u). The spawn camera differs by up to
+  172.31 u because the oracle pulls in against a wall that the port's
+  render-geometry collision does not have; the turn camera errors are 18.86
+  and 26.11 u.
+- The full route/state parity is still open: the port's collision comes from
+  render geometry instead of `collmodc`, and the jump model and helper
+  volumes remain. `#37` stays In Progress.
+
 ## Limits
 
 - No D3D hook: no `camera_d3d8.jsonl`. The camera pose comes from memory;
