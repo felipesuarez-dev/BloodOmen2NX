@@ -117,9 +117,12 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   `after_w` at 2.5 u; on `sl01_camera` the player matches within 0.08 u
   through the turns and diverges at the jump (11 u). A ±2-row shift search
   picks 0 for both captures: the jump apex (281.35) and landing frame (3265)
-  match, but the port starts about one row late, and the W path/collision
-  remains. The spawn camera pull-in differs because the port's collision
-  lacks the helper wall. The full route/state gate remains open (BO2NX-37).
+  match, but the port starts about one row late. The W run shows the
+  collision gap: the oracle stops at x = 326.15 while the render-geometry
+  collision stops at x = 351.60 (25.44 u); the compressed `collmodc` mesh is
+  still needed (BO2NX-72). The spawn camera pull-in differs because the
+  port's collision lacks the helper wall. The full route/state gate remains
+  open (BO2NX-37).
 - The native Windows oracle harness is available: a reverse SSH server on
   the Windows host, `tools/oracle/oracle_client.py`, a capture validator and
   an input/frame aligner. `capture_20261028_0150` is the first complete

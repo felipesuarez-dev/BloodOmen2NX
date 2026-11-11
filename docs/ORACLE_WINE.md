@@ -350,7 +350,11 @@ Measured:
 - `wine_20261029_0043` (`sl01_basic`, 2,991 rows): `spawn_idle` player max
   0.048 u (mean 0); the first divergence is frame 2258 (`after_w`, 2.497 u);
   `after_w` mean 13.31 u / max 29.18 u, and `run`, `jump` and `attack` reach
-  about 120 u. The camera columns are empty in this capture.
+  about 120 u. The camera columns are empty in this capture. The W speed
+  matches 230 u/s until frame 2316; the oracle slows (177.76, then 86.67)
+  and stops at x = 326.15, while the port keeps 230 and stops at x = 351.60.
+  The 25.44 u wall mismatch is the render-geometry collision, not the
+  movement tuning (BO2NX-72).
 - `wine_camera_1` (`sl01_camera`, 3,611 rows): the player stays within
   0.08 u through the spawn, the turns and the settles; the first divergence
   is the jump at frame 3229 (11.03 u). The spawn camera differs by up to

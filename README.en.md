@@ -116,7 +116,7 @@ Source of truth: [`STATE.md`](STATE.md) and [`ROADMAP.md`](ROADMAP.md).
 |---|---|
 | Chapters | None is completable; there is no level flow, no menus and no front end |
 | Gameplay systems | Combat, enemies and AI, dark gifts, weapons and inventory, scripting and triggers are not translated. Glide, ledge falls and the run start phase are pending |
-| Animation and collision | The animation graph (`animatio`) is decoded, but skeleton evaluation, skinning and clip blending are not ported; the compressed collision (`collmodc`) is only extracted |
+| Animation and collision | The animation graph (`animatio`) is decoded, but skeleton evaluation, skinning and clip blending are not ported; the compressed collision (`collmodc`) is extracted, and the W state comparison shows the oracle stopping at x = 326.15 while the render geometry stops at x = 351.60 (25.44 u), so the `collmodc` mesh is still needed |
 | Lighting and materials | The `.slm` palette is a shadow map; at the `sl01` spawn the world error is 8.69/255. Kain, the HUD, the green `bo2cinematic001` marker and the exact palette texture format remain; fog is disabled in `sl01` |
 | Audio events and video | The `sound` and `strmfile` event table is not wired to gameplay; there is no Bink playback |
 | Switch | The libnx and deko3d backend has not started |

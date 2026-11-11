@@ -115,6 +115,12 @@ The host stores the raw `collmodc` payload per model
 The compressed vertex blob, the edge/face semantics and the collision
 runtime are not decoded yet.
 
+Measured (`sl01_basic`, `wine_20261029_0043`): the W speed matches 230 u/s
+until frame 2316; the oracle slows to 177.76 and 86.67 and stops at
+x = 326.15, while the port keeps 230 and stops at x = 351.60. The 25.44 u
+difference is the missing collision mesh, not the movement tuning; tracked
+as BO2NX-72.
+
 ## Textures and materials
 
 The `cellgrup` entry header carries a list of `u16` symbol indices (the
