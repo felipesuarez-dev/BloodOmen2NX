@@ -49,8 +49,10 @@ void add_wall(bo2::engine::LevelGeometry& geometry, float wall_x) {
 constexpr float kTurnReady = 2.0f;
 constexpr float kTurnRun = 2.6f;
 constexpr float kTurnWalkBack = 3.1f;
-// Root speeds of kain/run and kain/walk_backwards (docs/FORMATS/animreel.md).
+// Root speeds of kain/run, kain/walk and kain/walk_backwards
+// (docs/FORMATS/animreel.md).
 constexpr float kRunRootSpeed = 200.0f;
+constexpr float kWalkRootSpeed = 56.3485f;
 constexpr float kWalkBackRootSpeed = 62.5f;
 constexpr float kWalkBackClipSpeed = 1.7f;  // kain animatio graph, walk_backwards clip node
 
@@ -69,6 +71,7 @@ bo2::game::KainTuning kain_tuning() {
     tuning.turn_rate_walk_back = kTurnWalkBack;
     tuning.run_clip_rate = 1.15f;
     tuning.run_root_speed = kRunRootSpeed;
+    tuning.walk_root_speed = kWalkRootSpeed;
     tuning.walk_back_root_speed = kWalkBackRootSpeed;
     tuning.walk_back_clip_speed = kWalkBackClipSpeed;
     return tuning;
@@ -193,6 +196,24 @@ void test_forward_speed() {
     input.move_y = 0.0f;
     run(player, input, 30);
     CHECK(player.state().position.x == stopped);
+}
+
+void test_partial_stick_speed() {
+    // FUN_00445ba0 at stick s = 0.5: the run layer has weight 0.5 and rate
+    // (0.25 + 0.5) * 1.15, the walk layer weight 0.5 and rate 1.5 * 1.15. The
+    // ground speed is 86.25 (run) + 48.6005 (walk) = 134.8505 u/s.
+    const bo2::engine::LevelGeometry floor = make_floor();
+    bo2::engine::CollisionWorld collision(floor);
+    bo2::game::PlayerController player(collision, {0.0f, 0.0f, 0.0f}, kain_tuning());
+    bo2::game::PlayerInput input;
+    input.move_y = 0.5f;
+    run(player, input, 30);  // past the 0.18 s start phase
+    const float before = player.state().position.x;
+    run(player, input, 60);
+    const float expected = 0.5f * (0.75f * 1.15f) * 200.0f +
+                           0.5f * (1.5f * 1.15f) * kWalkRootSpeed;
+    CHECK(std::fabs(expected - 134.8505f) < 1.0e-3f);
+    CHECK(std::fabs(player.state().position.x - before - expected) < 0.5f);
 }
 
 void test_shift_speed() {
@@ -703,10 +724,10 @@ void test_invalid_tuning_is_rejected() {
     const float bad_speeds[] = {0.0f, -1.0f, std::numeric_limits<float>::infinity(),
                                 std::numeric_limits<float>::quiet_NaN()};
     for (const float bad : bad_speeds) {
-        for (int which = 0; which < 3; ++which) {
+        for (int which = 0; which < 4; ++which) {
             bo2::game::KainTuning tuning = kain_tuning();
-            float* const field[] = {&tuning.run_root_speed, &tuning.walk_back_root_speed,
-                                    &tuning.walk_back_clip_speed};
+            float* const field[] = {&tuning.run_root_speed, &tuning.walk_root_speed,
+                                    &tuning.walk_back_root_speed, &tuning.walk_back_clip_speed};
             *field[which] = bad;
             threw = false;
             try {
@@ -770,6 +791,7 @@ int main() {
     test_analog_turn_and_deadzone();
     test_forward_follows_the_yaw();
     test_forward_speed();
+    test_partial_stick_speed();
     test_shift_speed();
     test_backward_speed();
     test_speeds_follow_the_tuning();

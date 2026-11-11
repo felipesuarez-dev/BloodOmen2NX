@@ -40,7 +40,7 @@ comparison.
 | Cell lights and markers | done | `cellight` v3 and `cellmark` v4 parsed; renderer consumer pending |
 | Collision payload | done | `collmodc` raw payload per model, header counts; runtime decode pending |
 | Skeleton and animations | done | 5,168 models parsed, 1,586 skinned; `animreel` clips decoded (root motion) and the `animatio` graph decoded (clip nodes feed the Kain tuning) |
-| M3 loop/world | wip | FixedStep, region entities, shared models, culling, streaming, navigation, collision, third-person `--play` with the original Kain tuning (turning, jump, gravity, air control; run and walk-back speeds from `animreel` root motion and the `animatio` clip node, start phase and Shift measured), follow camera with yaw catch-up, jump height lag and range smoothing, Spanish locale lookup, hidden helper objects, save/checkpoint flow and attack foundation |
+| M3 loop/world | wip | FixedStep, region entities, shared models, culling, streaming, navigation, collision, third-person `--play` with the original Kain tuning (turning, jump, gravity, air control, partial-stick run/walk blend; run and walk-back speeds from `animreel` root motion and the `animatio` clip node, start phase and Shift measured), follow camera with yaw catch-up, jump height lag and range smoothing, Spanish locale lookup, hidden helper objects, save/checkpoint flow and attack foundation |
 | Material layer records | done | `mlyrcolr`/`mlyrctrl`; diagnostic `--material` tints |
 | Light maps (`litedata`) | done | 71 `.slm` entries, per-instance match with model fallback, `--lightmap`; external shared models open |
 | Host renderer (OpenGL) | done | SDL2/OpenGL window, free camera and Xvfb capture |

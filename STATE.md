@@ -134,7 +134,8 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   `kain/run` root speed (200 u/s) x the run clip rate (1.15) = 230 u/s and
   back is the `kain/walk_backwards` root speed (62.5) x its clip node speed
   in the `kain` animatio graph (1.7) = 106.25 u/s (`docs/FORMATS/animreel.md`,
-  `docs/FORMATS/animatio.md`). The 100 u/s start phase and Shift+W speed are
+  `docs/FORMATS/animatio.md`). Partial stick runs the FUN_00445ba0 run/walk
+  blend (walk root speed 56.3485 u/s); at s = 0.5 it gives 134.85 u/s. The 100 u/s start phase and Shift+W speed are
   still measured in the Wine oracle. Jumps have the original air control
   (`FUN_004436e0`, `FUN_00441f20`, `FUN_00442240`, `FUN_004423b0`, launch
   blocks from `FUN_00452030`): 323/205/203 u/s forward/back/side, as the
@@ -182,10 +183,10 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   differs from the oracle (world MAE 35/255): fog, ambient and dynamic
   lights, the `.slm` group binding and pyramid-model types without
   `helperobj` (detector, planhelper) are open (BO2NX-68).
-- Gameplay parity beyond turning, ground speeds, jumping, air control and
-  the camera range blend: the start phase and Shift speed, analog (partial
-  stick) speed, glide, ledge falls, combat (it needs combat mode; map in
-  BO2NX-34) and weapon values are pending.
+- Gameplay parity beyond turning, ground speeds, partial stick, jumping,
+  air control and the camera range blend: the start phase and Shift speed,
+  glide, ledge falls, combat (it needs combat mode; map in BO2NX-34) and
+  weapon values are pending.
 - The installer's native RAR decoder is not ported; development
   extraction uses `unrar`. The game does not need the installer decoder.
 

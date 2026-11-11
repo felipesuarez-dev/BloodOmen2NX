@@ -121,6 +121,18 @@ float window_overlap(float begin, float dt, float window_begin, float window_end
     return std::max(0.0f, high - low);
 }
 
+// FUN_00445ba0 at stick magnitude s: layer 0 (run) gets weight s and rate
+// (0.5 s + 0.5) * run_clip_rate; layer 1 (walk) gets weight 1 - s and rate
+// (s + 1) * run_clip_rate. The ground speed is the weighted sum of the two
+// root motions (kain/run and kain/walk, docs/FORMATS/animreel.md).
+float partial_forward_speed(float stick, float run_clip_rate, float run_root_speed,
+                            float walk_root_speed) {
+    const float s = std::clamp(stick, 0.0f, 1.0f);
+    const float run_rate = (0.5f * s + 0.5f) * run_clip_rate;
+    const float walk_rate = (s + 1.0f) * run_clip_rate;
+    return run_rate * s * run_root_speed + walk_rate * (1.0f - s) * walk_root_speed;
+}
+
 }  // namespace
 
 PlayerController::PlayerController(bo2::engine::CollisionWorld& collision,
@@ -138,10 +150,10 @@ PlayerController::PlayerController(bo2::engine::CollisionWorld& collision,
     }
     const auto positive = [](float value) { return std::isfinite(value) && value > 0.0f; };
     if (!positive(tuning.run_clip_rate) || !positive(tuning.run_root_speed) ||
-        !positive(tuning.walk_back_root_speed) || !positive(tuning.walk_back_clip_speed)) {
+        !positive(tuning.walk_root_speed) || !positive(tuning.walk_back_root_speed) ||
+        !positive(tuning.walk_back_clip_speed)) {
         throw std::invalid_argument("kain tuning has an invalid run rate or root speed");
     }
-    run_speed_ = tuning.run_root_speed * tuning.run_clip_rate;
     back_speed_ = tuning.walk_back_root_speed * tuning.walk_back_clip_speed;
     state_.position = start;
 }
@@ -198,7 +210,10 @@ void PlayerController::step(const PlayerInput& input, double seconds) {
         } else if (forward_time_ < kRunStartTime) {
             speed = kRunStartSpeed;
         } else {
-            speed = run_speed_;
+            const float stick =
+                std::min(1.0f, std::sqrt(input.move_x * input.move_x + input.move_y * input.move_y));
+            speed = partial_forward_speed(stick, tuning_.run_clip_rate, tuning_.run_root_speed,
+                                          tuning_.walk_root_speed);
         }
         forward_time_ += dt;
     } else {

@@ -1223,7 +1223,7 @@ address,name,subsystem,status,notes
 00445800,FUN_00445800,unknown,todo,ghidra
 004458a0,FUN_004458a0,unknown,todo,ghidra
 004458d0,FUN_004458d0,unknown,todo,ghidra
-00445ba0,FUN_00445ba0,player,wip,src/game/player.cpp: run clip rate at full stick (slot 0) only; the partial-stick blend of slot 1 is not ported
+00445ba0,FUN_00445ba0,player,wip,src/game/player.cpp: partial-stick run/walk blend ported; the 0.18 s start ramp and Shift speed are measured approximations
 00445d10,FUN_00445d10,unknown,todo,ghidra
 00445db0,FUN_00445db0,unknown,todo,ghidra
 00445e00,FUN_00445e00,unknown,todo,ghidra

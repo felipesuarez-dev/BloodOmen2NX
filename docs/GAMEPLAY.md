@@ -8,7 +8,7 @@ translated and verified.
 | Boot and front-end | partial | Language: the port starts in the `spanish` locale like the Spanish build (FUN_004aae40 forces it, FUN_006c8fb0 filters BIG entries) and reads the localized string tables, see [`FORMATS/big.md`](FORMATS/big.md#language) and [`FORMATS/strtable.md`](FORMATS/strtable.md). Logos, menus and options todo |
 | Level loading and streaming | todo | Container readers, level table |
 | Camera | partial | Follow pose, yaw catch-up, jump height lag and range smoothing ported; combat and scripted cameras todo. See [Camera](#camera) |
-| Player movement | partial | Ground turn, ground speeds, jump, air control and fall cap; glide, climb and swim todo. See [Kain movement](#kain-movement) |
+| Player movement | partial | Ground turn, ground speeds, partial-stick blend, jump, air control and fall cap; glide, climb and swim todo. See [Kain movement](#kain-movement) |
 | Combat | todo | Melee, block, grab, finishers |
 | Dark gifts | todo | Unlock and use |
 | Weapons and inventory | todo | Pick up, equip, drop |
@@ -64,7 +64,9 @@ a number:
 | W, first 0.18 s | 100 u/s (= 200 * 0.5; the start phase is unexplained) | measured, oracle |
 | W, after 0.18 s | 230 u/s = run root speed 200 * run clip rate 1.15 | FUN_00445ba0; oracle-confirmed: 230 measured. Periodic peaks in `external/captures/wine_20261029_0110/state.csv` (W down at mono_ms 41388469): world \|vel_xy\| reads 300 at about +191, +892 and +1572 ms, spaced by the run cycle 0.8 / 1.15 = 0.696 s. That slot 0 is the run clip is inferred from this match |
 | Shift+W | 200 u/s (= 200 * 1.0, unexplained), no start ramp. Unverified: Kain was probably blocked for part of that phase | measured, oracle (`docs/ORACLE_WINE.md`) |
+| Walk root speed | 56.3485 u/s forward | `kain/walk` animreel, node 0 translation x: 0 to 86.4010 over 47 frames (1.5333 s) |
 | Walk-back root speed | 62.5 u/s backward | `kain/walk_backwards` animreel, node 0 translation x: -2.0833 to -100 over 47 frames (1.5667 s) |
+| Partial stick | At stick magnitude s (clamped to 1): run rate `(0.5 s + 0.5) * 1.15`, walk rate `(s + 1) * 1.15`; speed = `run_rate * s * 200 + walk_rate * (1 - s) * 56.3485`. At s = 0.5 it is 134.85 u/s; at s = 1, 230 | FUN_00445ba0; the 0.18 s start phase is still the full-stick approximation |
 | S | 106.25 u/s = walk-back root speed 62.5 * clip node speed 1.7, yaw unchanged | The 1.7 is the `speed` of the only clip node on `kain/walk_backwards` in the `kain` animatio graph (docs/FORMATS/animatio.md; read by `apply_kain_clip_speeds`). Unlike the run, nothing overrides it: FUN_00723620 rewrites the rate of the run layers only. The oracle confirms 62.5 * 1.7 = 106.25 u/s |
 | Release | Stops at once | measured, oracle shows a short slide that is not modeled |
 
@@ -190,7 +192,7 @@ These have no original source. They are development aids or placeholders.
 | Body radius 0.4, eye height 1.7, body clearance 0.05 | Provisional. They predate the Kain tuning, are in meter-like units and are about 100 times too small for game units |
 | Attack range 2.2, radius 1.0, cooldown 0.45 s | Provisional, same reason |
 | Move sub-steps | A tick of travel is up to 230 / 60 = 3.8 units, ten times the body radius, so a move is walked in steps of one radius to keep thin walls solid |
-| Forward and back | Only on or off past the deadzone; analog speed scaling is not modeled. The platform layer also zeroes sticks below 0.25 before the deadzone applies |
+| Forward and back | Forward uses the FUN_00445ba0 partial-stick blend; back is still on or off past the deadzone. The platform layer also zeroes sticks below 0.25 before the deadzone applies |
 | Step cap | A step is cut to 0.1 s (the cap the SDL loop already uses) and a move to 64 sub-steps, so a stalled frame cannot tunnel through a wall or the floor |
 | Deadzone edge | Turning starts at exactly the deadzone (FUN_0041ecf0 compares `deadzone <= ax`); the forward/back gate is not traced and the port uses past-the-deadzone |
 | Run button | `run` is Shift and gives 200 u/s, which is slower than plain W (230). That is what the oracle measured (unverified, see above); the name is kept from the input layer. In the oracle prefix Shift is the `autoface` row, not a run (`docs/ORACLE_WINE.md`, Input bindings), so this speed is probably that action |
@@ -200,8 +202,7 @@ These have no original source. They are development aids or placeholders.
 | Item | State |
 |---|---|
 | Root motion | Decoded for the `kain/run` and `kain/walk_backwards` clips and used for the W and S speeds above; the walk-back clip node speed is read from the `kain` animatio graph. Clip blending, events and the landing clips are not ported |
-| Partial stick | At stick `s < 1` FUN_00445ba0 blends layer 0 (`cl_run`, weight `s`) with layer 1 (`cl_walk`, weight `1 - s`, rate `(s + 1) * A+0x40`) through the cross blend of `st_moveblend` (docs/FORMATS/animatio.md). Not ported yet |
-| Start phase, Shift+W | The 100 u/s start phase (0.18 s) and the 200 u/s of Shift+W are measured constants with no decompiled source yet |
+| Start phase, Shift+W | The 100 u/s start phase (0.18 s) and the 200 u/s of Shift+W are measured constants with no decompiled source yet; the start phase at partial stick is not measured |
 | Air control extras | The run flag (a running jump with an off-axis stick counts as forward), the 0.25 stick scale, the platform velocity at takeoff and the blocked forward and back flags are not ported. The sideways rise (69.0 in the oracle against 64.0) is unexplained |
 | Air step rate | The original applies the air damping (0.96 per call) and the 1 degree turn rule once per frame, and so does the port; the port steps once per rendered frame, so the air feel follows the frame rate until the fixed logic tick lands (BO2NX-37) |
 | Landing | A running jump lands at the run speed and a standing one goes through the start phase (inferred from the graph and `wine_air_1`); the run_landing clip's own root motion is not modeled |

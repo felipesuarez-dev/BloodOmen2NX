@@ -55,6 +55,7 @@ int main() {
             CHECK(std::fabs(tuning.run_clip_rate - 1.15f) < 1.0e-6f);
             bo2::game::apply_kain_clip_speeds(tuning, archive);
             CHECK(std::fabs(tuning.run_root_speed - 200.0f) < 1.0e-3f);
+            CHECK(std::fabs(tuning.walk_root_speed - 56.3485f) < 1.0e-3f);
             CHECK(std::fabs(tuning.walk_back_root_speed - 62.5f) < 1.0e-3f);
             // The walk_backwards clip node of the kain animatio graph.
             CHECK(std::fabs(tuning.walk_back_clip_speed - 1.7f) < 1.0e-6f);

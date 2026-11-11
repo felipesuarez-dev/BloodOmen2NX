@@ -54,7 +54,6 @@ private:
     AirSteerDerived steer_forward_;
     AirSteerDerived steer_side_;
     AirSteerDerived steer_back_;
-    float run_speed_ = 0.0f;   // run root speed * run clip rate (FUN_00445ba0)
     float back_speed_ = 0.0f;  // walk-back root speed * clip node speed
     PlayerState state_;
     float forward_time_ = 0.0f;  // seconds forward has been held (ground speed ramp)

@@ -127,6 +127,7 @@ KainTuning parse_kain_tuning(const std::vector<std::uint8_t>& bytes) {
 
 void apply_kain_clip_speeds(KainTuning& tuning, const bo2::engine::BigArchive& archive) {
     tuning.run_root_speed = clip_root_speed(archive, "kain/run");
+    tuning.walk_root_speed = clip_root_speed(archive, "kain/walk");
     tuning.walk_back_root_speed = clip_root_speed(archive, "kain/walk_backwards");
     tuning.walk_back_clip_speed = clip_node_speed(archive, "kain/walk_backwards");
 }
