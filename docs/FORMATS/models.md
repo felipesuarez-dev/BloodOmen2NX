@@ -127,12 +127,13 @@ boxes 39/40 at world x = 256..768, y = -264..512, z = 208..976 and boxes
 x = 256 face and stops at x = 326.15, so the AABB is a broad phase and the
 hull inside it is the missing mesh. Model 57 is 1,936 bytes with 66 AABBs;
 its index count is 130, its index bytes are 520, its edge count is 0 and its
-face count is 27. The 568 face bytes do not divide evenly by 27 (27 x 21 =
-567), so the 21-byte face record (if that is the size) is not decoded. The
-index, edge and face bytes are extracted, but their record layout and the
-runtime prim/attribute semantics are still open. The small shared models
-show 6-byte faces, so the face record is not fixed at the 16 bytes guessed
-earlier.
+face count is 27. The index block is 130 records of three u8 vertex indices
+plus one u8 attribute (0x18 in the shared models, 0x38/0x58 in model 57).
+The 568 face bytes still do not divide by 27 (27 x 21 = 567), so either the
+face record is 21 bytes plus one trailing byte or the records are variable;
+the face layout is not decoded. The runtime prim/attribute semantics are
+still open. The small shared models show 6-byte faces, so the face record is
+not fixed at the 16 bytes guessed earlier.
 
 Measured (`sl01_basic`, `wine_20261029_0043`): the W speed matches 230 u/s
 until frame 2316; the oracle slows to 177.76 and 86.67 and stops at
