@@ -116,14 +116,20 @@ AABBs are a broad phase, not the collision hull.
 
 `bo2nx --collision-dump --big <level.big> [--collision-model <substring>]
 [--collision-out <file>]` prints every cell collision with its instances and
-world AABBs, the u32 values after the AABB blob and the raw payload. In
-`sanctuary` the dump has 76 cell collisions and no entity boxes. Model 0
-`default` is 244 bytes with 5 AABBs; after the AABBs it has index count 12,
-index bytes 48, edge count 0, face count 1 and 48 face bytes, so the payload
-ends after the face. Model 2 `default` has 593 AABBs in 18,536 bytes. The
-index, edge and face bytes are extracted, but their record layout and the
-runtime prim/attribute semantics are still open. The small shared models
-show 6-byte faces, so the face record is not fixed at the 16 bytes guessed
+world AABBs, the u32 values after the AABB blob and the raw payload.
+`sanctuary` has 76 cell collisions and no entity boxes. Model 0 `default` is
+244 bytes with 5 AABBs; after the AABBs it has index count 12, index bytes
+48, edge count 0, face count 1 and 48 face bytes, so the payload ends after
+the face. Model 2 `default` has 593 AABBs in 18,536 bytes. The `sl01` dump
+has 660 cell collisions; the W AABB is model 57 `default`, instance 41, with
+boxes 39/40 at world x = 256..768, y = -264..512, z = 208..976 and boxes
+41/42 at x = 256..496, y = -256..96, z = 208..592. The oracle passes the
+x = 256 face and stops at x = 326.15, so the AABB is a broad phase and the
+hull inside it is the missing mesh. Model 57 is 1,936 bytes with 66 AABBs;
+its index count is 130 and its index bytes are 520. The index, edge and face
+bytes are extracted, but their record layout and the runtime
+prim/attribute semantics are still open. The small shared models show
+6-byte faces, so the face record is not fixed at the 16 bytes guessed
 earlier.
 
 Measured (`sl01_basic`, `wine_20261029_0043`): the W speed matches 230 u/s
@@ -132,9 +138,9 @@ x = 326.15, while the port keeps 230 and stops at x = 351.60. The 25.44 u
 difference is the missing collision mesh, not the movement tuning; tracked
 as BO2NX-72. The AABB broad phase stops the port at x = 255.3, 70.8 u before
 the oracle, and the box mode is the `use_boxes` constructor diagnostic, off
-by default. The cell AABBs in the dump do not contain x = 255.3 or
-x = 326.15, so the 255.3 box is not a cell AABB at those coordinates and the
-W collision source is still open.
+by default. The `sl01` model 57 AABB starts the wall at x = 256; the oracle
+passes that face and stops at x = 326.15, so the exact hull inside the AABB
+is still needed.
 
 
 ## Textures and materials

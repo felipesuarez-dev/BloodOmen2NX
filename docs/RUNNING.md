@@ -59,8 +59,9 @@ time.
 `--collision-dump` prints every `collmodc` model with its instances, local
 and world AABBs, the u32 values after the AABB blob and the raw payload.
 `--collision-model <substring>` filters by model name and `--collision-out`
-writes to a file. In `sanctuary` the dump has 76 cell collisions and no
-entity boxes; the exact index/edge/face decode is still open (BO2NX-72).
+writes to a file. In `sl01` the W AABB is model 57 `default`, instance 41,
+starting at x = 256; the oracle passes that face and stops at x = 326.15, so
+the exact hull is still open (BO2NX-72).
 
 Measured on this container for `sanctuary` at 640x480 with `--lightmap`:
 

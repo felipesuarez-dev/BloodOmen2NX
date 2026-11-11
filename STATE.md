@@ -123,13 +123,13 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   12-byte AABBs; `parse_collmodc_boxes` and the `CollisionWorld` box
   diagnostic are in place, but the AABB broad phase stops the player at
   x = 255.3, 70.8 u before the oracle, so the exact edge/face hull is still
-  needed (BO2NX-72). A `--collision-dump` of `sanctuary` shows 76 cell
-  collisions and 0 entity boxes; model 0 is 244 bytes with 5 AABBs and model
-  2 is 18,536 bytes with 593 AABBs. None of the cell AABBs contain x = 255.3
-  or x = 326.15, so the 255.3 box is not a cell AABB at those coordinates and
-  the W collision source remains open. The spawn camera pull-in differs
-  because the port's collision lacks the helper wall. The full route/state
-  gate remains open (BO2NX-37).
+  needed (BO2NX-72). The `sl01` `--collision-dump` has 660 cell collisions
+  and identifies the W AABB as model 57 `default`, instance 41: boxes 39/40
+  span world x = 256..768, y = -264..512, z = 208..976. The oracle passes
+  that x = 256 face and stops at x = 326.15, so the AABB is a broad phase;
+  model 57 is 1,936 bytes with 66 AABBs and index 130/520. The spawn camera
+  pull-in differs because the port's collision lacks the helper wall. The
+  full route/state gate remains open (BO2NX-37).
 - The native Windows oracle harness is available: a reverse SSH server on
   the Windows host, `tools/oracle/oracle_client.py`, a capture validator and
   an input/frame aligner. `capture_20261028_0150` is the first complete
