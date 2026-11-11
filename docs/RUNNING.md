@@ -29,6 +29,9 @@ The frame is a PPM; no display is needed. The camera is `--eye` and
 ## Level frame
 
 `--level` reads the `cellgrup` entry and renders the static level shell.
+`--kain-model <kain.big> --kain-at x,y,z` appends Kain's model (bind pose,
+2,846 triangles and 3 textures in the reference `kain.big`) at the given
+position, which is how the spawn comparison frame draws him.
 The default camera is an isometric view of the whole level; `--eye` and
 `--target` select a free camera. The level axes are Z-up. The command
 also prints the parsed cell, portal, terrain, BSP, instance, light and marker counts.

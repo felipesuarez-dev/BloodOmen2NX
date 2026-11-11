@@ -54,6 +54,8 @@ struct Options {
     bool target_set = false;
     std::string big;
     std::string kain;
+    std::string kain_model;
+    bo2::engine::Vec3 kain_at{0.0f, 0.0f, 0.0f};
     std::string entry;
     std::string out;
     std::string replay;
@@ -165,6 +167,8 @@ Options parse_options(int argc, char** argv) {
                 << "  --audio-seconds <n>    audio demo duration (default 5)\n"
                 << "  --play                 Kain third-person player (needs --big)\n"
                 << "  --kain <file.big>      kain tunedata for --play (default: <level dir>/../kain/kain.big)\n"
+                << "  --kain-model <file.big> append Kain's model to --level at --kain-at\n"
+                << "  --kain-at x,y,z        Kain model placement for --level (default 0,0,0)\n"
                 << "  --headless             run the fixed-step loop without a window\n"
                 << "  --frames <n>           fixed-step iterations for --headless\n"
                 << "  --tick-rate <hz>       logic ticks per second (default 60)\n"
@@ -211,6 +215,10 @@ Options parse_options(int argc, char** argv) {
             options.big = next_argument(index, argc, argv);
         } else if (argument == "--kain") {
             options.kain = next_argument(index, argc, argv);
+        } else if (argument == "--kain-model") {
+            options.kain_model = next_argument(index, argc, argv);
+        } else if (argument == "--kain-at") {
+            options.kain_at = parse_vec3(next_argument(index, argc, argv), "kain-at");
         } else if (argument == "--entry") {
             options.entry = next_argument(index, argc, argv);
         } else if (argument == "--out") {
@@ -535,6 +543,37 @@ LoadedLevel load_level(const Options& options) {
         }
         append_entity_geometry(level.geometry, asset.geometry, asset.entity.position,
                                asset.texture_base);
+    }
+    if (!options.kain_model.empty()) {
+        const bo2::engine::BigArchive kain_archive =
+            bo2::engine::BigArchive::load(options.kain_model);
+        const bo2::engine::BigEntry* model_entry = kain_archive.find("model", "kain");
+        if (model_entry == nullptr) {
+            throw std::runtime_error("no model named kain in " + options.kain_model);
+        }
+        bo2::engine::LevelGeometry asset = bo2::engine::parse_model_asset(
+            kain_archive.extract(*model_entry), model_entry->symbols, kain_archive.names());
+        const std::uint32_t texture_base =
+            static_cast<std::uint32_t>(level.geometry.texture_names.size());
+        for (const std::string& name : asset.texture_names) {
+            level.geometry.texture_names.push_back(name);
+            const bo2::engine::BigEntry* texture_entry =
+                kain_archive.find("texture", name, bo2::engine::kDefaultLocale);
+            if (texture_entry == nullptr) {
+                level.textures.emplace_back();
+                continue;
+            }
+            try {
+                level.textures.push_back(bo2::engine::decode_dds(kain_archive.extract(*texture_entry)));
+                ++level.loaded_textures;
+            } catch (const std::exception&) {
+                level.textures.emplace_back();
+            }
+        }
+        append_entity_geometry(level.geometry, asset, options.kain_at, texture_base);
+        std::cout << "kain model: " << asset.triangles.size() << " triangles, "
+                  << asset.texture_names.size() << " textures at " << options.kain_at.x << ' '
+                  << options.kain_at.y << ' ' << options.kain_at.z << '\n';
     }
     level.geometry.lightmaps.reserve(level.geometry.texture_names.size());
     for (const std::string& name : level.geometry.texture_names) {
