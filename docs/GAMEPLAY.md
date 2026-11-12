@@ -253,7 +253,8 @@ neighbours now link the portal **symbols** (the fields are not cell indices:
 `sl01` cell01 has symbol 925 and its portal is 930 <-> 931 = cell02), so the
 move reaches the cell-1 geometry. The run probe then stops at x = 234.14 on
 a slanted surface at (274, 59, 254) that the oracle ignores. That triangle
-belongs to model 57 itself, so a per-object class filter cannot explain it,
-and `FUN_0062ec30` only advances the runtime attribute array without
-testing it: the filter is elsewhere (the query flags or the transform
-path). The slide response is implemented and tested; the gate is open.
+belongs to model 57 itself, so a per-object class filter cannot explain it.
+The run probe uses the general shape cast `FUN_0062d8f0`, not `FUN_0062ec30`
+(a live trace shows the latter only sees the camera cast), so the primitive
+filter decode must target `FUN_0062d8f0`. The slide response is implemented
+and tested; the gate is open.

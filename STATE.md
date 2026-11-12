@@ -142,11 +142,14 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   graph, so the move now reaches the cell-1 geometry. The run probe then
   stops at x = 234.14 on a slanted surface at (274, 59, 254) that the oracle
   ignores: `after_w` max 92.57 u, mean 44.20 u. That triangle belongs to
-  model 57 itself, so a per-object class filter cannot explain it, and the
-  narrow phase (`FUN_0062ec30`) only advances the runtime attribute array
-  without testing it. The filter is elsewhere (the query flags or the
-  transform path); the next measurement is a live trace of the narrow phase
-  or of the transform matrix source. A hardware watchpoint
+  model 57 itself, so a per-object class filter cannot explain it. A live
+  trace of the narrow phase (`wine_narrow_20261112`) shows the run probe does
+  **not** go through `FUN_0062ea60`: only the camera cast (z = 284, r = 10,
+  object `0x02ad4008`) does. The probe uses the general shape cast
+  `FUN_0062d8f0`, so the primitive filter decode must target that function.
+  The attribute bit 0 (the ramp writes 0x19/0x59, the 45 degree wall
+  0x18/0x38) was tried in the slide branch: `after_w` max 18.59 u / mean
+  8.44 u, not conclusive, and it was reverted. A hardware watchpoint
   on the position (`wine_poswatch2_20261111`) shows the slide is written by
   the `FUN_0070eac0` transform message, not by `FUN_0041f460`: the 230 u/s
   move projected on a 45 degree plane (162 on each axis). The port has the
