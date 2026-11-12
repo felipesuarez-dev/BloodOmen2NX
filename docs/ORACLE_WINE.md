@@ -374,9 +374,9 @@ Measured:
   The movement volume was tried as the traced step capsule (radius 1 and 0.4,
   feet to +16): `collmodc` stops at x = 296.1 / 269.1 and the render hull at
   x = 351.2, never the oracle's 326.35. The blocking surface is not in either
-  port hull at body height; the candidate is entity collision
-  (`staticcollision` +0x63 / `collisionresponse_stop` +0x64), which the port
-  does not parse. A hardware watchpoint
+  port hull at body height. Entity collision was ruled out: `staticcollision`
+  (+0x63) and `collisionresponse_stop` (+0x64) are parsed now and `sl01` has
+  0 static collision entities. A hardware watchpoint
   on the position (`wine_poswatch2_20261111`) shows the slide is written by
   the `FUN_0070eac0` transform message, not by `FUN_0041f460`: the 230 u/s
   move projected on a 45 degree plane (162 on each axis, yaw 0). The port

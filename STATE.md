@@ -155,10 +155,11 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   The movement volume was then tried as the traced step capsule (radius 1 and
   0.4, feet to +16): with `collmodc` the W stops at x = 296.1 / 269.1, with
   the render hull at x = 351.2. None reaches the oracle's 326.35, so the
-  blocking surface is not in either port hull at body height. The candidate
-  is entity collision: the `.etp` flags `staticcollision` (+0x63) and
-  `collisionresponse_stop` (+0x64) are parsed nowhere, and the gameplay hull
-  only contains `cellmdls`/`collmodc` models. A hardware watchpoint
+  blocking surface is not in either port hull at body height. Entity
+  collision was ruled out: the `.etp` flags `staticcollision` (+0x63) and
+  `collisionresponse_stop` (+0x64) are now parsed and counted, and `sl01` has
+  **0** static collision entities. The remaining candidate is the placement
+  or the hull of the model that stops the oracle at 326.35. A hardware watchpoint
   on the position (`wine_poswatch2_20261111`) shows the slide is written by
   the `FUN_0070eac0` transform message, not by `FUN_0041f460`: the 230 u/s
   move projected on a 45 degree plane (162 on each axis). The port has the

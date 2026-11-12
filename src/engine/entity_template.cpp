@@ -158,12 +158,19 @@ EntityTemplate EntityTemplateLibrary::parse(const std::string& key) const {
                 }
             }
             result.helper_object = result.helper_object || included.helper_object;
+            result.static_collision = result.static_collision || included.static_collision;
+            result.collision_response_stop =
+                result.collision_response_stop || included.collision_response_stop;
         } else if (keyword == "model") {
             if (result.models.size() < kMaxModels) {
                 result.models.push_back(argument);
             }
         } else if (keyword == "flag" && argument == "helperobj") {
             result.helper_object = true;
+        } else if (keyword == "flag" && argument == "staticcollision") {
+            result.static_collision = true;
+        } else if (keyword == "flag" && argument == "collisionresponse_stop") {
+            result.collision_response_stop = true;
         }
     }
     return result;

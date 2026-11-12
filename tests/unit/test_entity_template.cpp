@@ -48,6 +48,13 @@ void test_flag_and_model() {
 void test_tokenizer() {
     // The whole line is lower-cased (FUN_0068f430).
     CHECK(parse("flag HelperObj\n").helper_object);
+    // Collision flags (`staticcollision` +0x63, `collisionresponse_stop` +0x64).
+    const bo2::engine::EntityTemplate blocker =
+        parse("model crate\nflag staticcollision\nflag collisionresponse_stop\n");
+    CHECK(blocker.static_collision);
+    CHECK(blocker.collision_response_stop);
+    CHECK(!parse("model crate\nflag static\n").static_collision);
+    CHECK(!parse("// flag staticcollision\n").static_collision);
     CHECK(parse("FLAG HELPEROBJ\n").helper_object);
     CHECK(parse("Model Camera/ExportedCamera\n").models[0] == "camera/exportedcamera");
     // A line whose first token starts with `//` is a comment.

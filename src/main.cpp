@@ -341,6 +341,7 @@ struct LoadedLevel {
     std::size_t lightmap_entries = 0;
     std::size_t entity_models = 0;
     std::size_t helper_entities = 0;
+    std::size_t static_collision_entities = 0;
     std::vector<bo2::engine::RegionEntity> region_entities;
     std::vector<EntityAsset> entity_assets;
     std::string name;
@@ -480,7 +481,13 @@ LoadedLevel load_level(const Options& options) {
         if (templates.find_type(entity.model, entity_template) &&
             entity_template.helper_object) {
             ++level.helper_entities;
+            if (entity_template.static_collision) {
+                ++level.static_collision_entities;
+            }
             continue;
+        }
+        if (entity_template.static_collision) {
+            ++level.static_collision_entities;
         }
         const bo2::engine::BigEntry* model_entry = find_model_entry(archive, entity.model);
         if (model_entry == nullptr) {
@@ -803,7 +810,8 @@ void print_scene(const LoadedLevel& level) {
     std::cout << "collision mesh: " << collision_world.triangles() << " triangles\n";
     if (level.entity_models != 0) {
         std::cout << "entity models: " << level.entity_models << " (helper objects not drawn "
-                  << level.helper_entities << ")\n";
+                  << level.helper_entities << ", static collision "
+                  << level.static_collision_entities << ")\n";
     }
     if (!geometry.collisions.empty()) {
         std::size_t bytes = 0;

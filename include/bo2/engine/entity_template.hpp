@@ -14,6 +14,8 @@ namespace bo2::engine {
 struct EntityTemplate {
     std::vector<std::string> models;  // `model` lines, in order, lower case
     bool helper_object = false;       // `flag helperobj`
+    bool static_collision = false;    // `flag staticcollision` (template +0x63)
+    bool collision_response_stop = false;  // `flag collisionresponse_stop` (+0x64)
 };
 
 // The entity templates of one level container: its `strmfile` entries named
@@ -23,7 +25,8 @@ struct EntityTemplate {
 //   - the line is lower-cased, then split on white space;
 //   - a line whose first token starts with `//` is a comment;
 //   - `model <name>` appends a model;
-//   - `flag <name>`; only `helperobj` is kept. The original skips drawing an
+//   - `flag <name>`; `helperobj`, `staticcollision` and `collisionresponse_stop`
+//     are kept. The original skips drawing an
 //     entity whose template carries it (`FUN_0070d0d5` copies the flag to
 //     entity bit 0x200, `FUN_0070f100` returns without drawing);
 //   - `include <path>` splices the included template in place, so its

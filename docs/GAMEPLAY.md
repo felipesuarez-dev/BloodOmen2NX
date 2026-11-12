@@ -263,6 +263,6 @@ difference is the response (`FUN_0041ee60`), not a filter. The slide response
 is implemented and tested. The movement volume was also tried as the traced
 step capsule (radius 1 and 0.4, feet to +16): `collmodc` stops at x = 296.1 /
 269.1 and the render hull at 351.2, never the oracle's 326.35. The blocker is
-not in either port hull at body height; the candidate is entity collision
-(`staticcollision` / `collisionresponse_stop` flags in the `.etp`), which the
-port does not parse. The gate is open.
+not in either port hull at body height. Entity collision is ruled out:
+`staticcollision` / `collisionresponse_stop` are parsed now and `sl01` has 0
+static collision entities. The gate is open.
