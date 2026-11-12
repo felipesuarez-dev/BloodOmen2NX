@@ -141,9 +141,12 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   resolving them (cell01 symbol 925, portal 930 <-> 931 = cell02) links the
   graph, so the move now reaches the cell-1 geometry. The run probe then
   stops at x = 234.14 on a slanted surface at (274, 59, 254) that the oracle
-  ignores: `after_w` max 92.57 u, mean 44.20 u. The next piece is the
-  primitive solid/non-solid filter (the runtime 0x14-byte attribute records,
-  not the file's per-triangle byte, which is 0 there). A hardware watchpoint
+  ignores: `after_w` max 92.57 u, mean 44.20 u. That triangle belongs to
+  model 57 itself, so a per-object class filter cannot explain it, and the
+  narrow phase (`FUN_0062ec30`) only advances the runtime attribute array
+  without testing it. The filter is elsewhere (the query flags or the
+  transform path); the next measurement is a live trace of the narrow phase
+  or of the transform matrix source. A hardware watchpoint
   on the position (`wine_poswatch2_20261111`) shows the slide is written by
   the `FUN_0070eac0` transform message, not by `FUN_0041f460`: the 230 u/s
   move projected on a 45 degree plane (162 on each axis). The port has the

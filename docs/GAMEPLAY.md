@@ -252,7 +252,8 @@ The port has the contact machinery for that response (`sphere_contact` and
 neighbours now link the portal **symbols** (the fields are not cell indices:
 `sl01` cell01 has symbol 925 and its portal is 930 <-> 931 = cell02), so the
 move reaches the cell-1 geometry. The run probe then stops at x = 234.14 on
-a slanted surface at (274, 59, 254) that the oracle ignores: the missing
-piece is the primitive solid/non-solid filter (the runtime 0x14-byte
-attribute records, not the file's per-triangle byte, which is 0 there).
-The slide response is implemented and tested; the gate is open.
+a slanted surface at (274, 59, 254) that the oracle ignores. That triangle
+belongs to model 57 itself, so a per-object class filter cannot explain it,
+and `FUN_0062ec30` only advances the runtime attribute array without
+testing it: the filter is elsewhere (the query flags or the transform
+path). The slide response is implemented and tested; the gate is open.
