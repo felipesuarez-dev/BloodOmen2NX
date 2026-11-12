@@ -360,11 +360,14 @@ Measured:
   filters the collision candidates by the mover's cell plus its portal
   neighbours (the cells' `terrains` lists index the `cellmdls` models) and
   applies the run probe: the W run stops at x = 314.80 against the oracle's
-  326.35 (`after_w` max 19.28 u, mean 8.94 u; it was 29.18 / 13.31). The
-  oracle slides from y = 57.13 to y = 44.14 between frames 2311 and 2318 and
-  the stop is 10 u above the feet, so the final gap is the step probe plus
-  the wall slide (the run probe is a flag, not a hard stop, in the
-  original). The `sl01`
+  326.35 (`after_w` max 19.28 u, mean 8.94 u; it was 29.18 / 13.31). A
+  hardware watchpoint on the position (`wine_poswatch2_20261111`) shows the
+  slide is written by the `FUN_0070eac0` transform message, not by
+  `FUN_0041f460`: the 230 u/s move projected on a 45 degree plane (162 on
+  each axis, yaw 0). The port has the contact query and a collide-and-slide
+  capsule, but the cell mapping hides the model 57 wall from the body: with
+  the filter it runs to x = 351.2, without it it stops at x = 297.4 before
+  the slide. The cell-to-triangle mapping is the open piece. The `sl01`
   `--collision-dump` has 660 cell collisions and decodes all of them; the W
   wall is model 57 `default`, instance 41, with 132 points, 130 triangles
   and 27 faces.

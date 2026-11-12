@@ -225,16 +225,31 @@ run (`wine_trace_20261111`) shows three queries per tick:
 
 The run probe (`FUN_0042ee60`) records the blocker per direction in
 `KainState` (`+0x450`/`+0x454` flags, `+0x545`/`+0x558` records: flag,
-blocker object, contact point). The position writer `FUN_0041f460` calls
-`FUN_0041ee60` for each direction, which projects the target position along
-the blocker: `normal = (blocker.position - target) / dt`, `move = (target -
-position) / dt`; when `dot(move, normal)` points into the wall the target is
-replaced by the current position, otherwise it is kept. That projection is
-what produces the 45-degree slide (y 57.13 -> 44.14) and the stop at the
-model 57 wall.
+blocker object, contact point). `FUN_0041f460` calls `FUN_0041ee60` for each
+record, but the traced run shows it does not move the target: the slide is
+written later in the tick by the `FUN_0070eac0` "set transform" message, which
+overwrites the instance position from a matrix.
 
-The port implements the cell broad phase (the cells' `terrains` lists index
-the `cellmdls` models) and a run probe that currently acts as a hard stop
-(W 314.80 vs the oracle 326.35, `after_w` max 19.28 / mean 8.94 u). The
-blocker record plus the `FUN_0041ee60` projection is the next step; the
-step probe and its threshold follow.
+A hardware watchpoint on the position (`wine_poswatch2_20261111`) gives the
+writers per tick:
+
+| Writer | Fields | Role |
+|---|---|---|
+| `FUN_0041f460` (`0x41f640`) | x, y, z | the state's target position (unblocked) |
+| `FUN_0070eac0` (`0x70ec39`) | x, z, y | the transform message; runs after and wins |
+| `FUN_00432030` (`0x43227a`) | z | integrator |
+| `FUN_00430820` (`0x430b4a`) | z | ground snap |
+
+During the W run `FUN_0041f460` writes x only. At the slide the transform
+message corrects the target by -1.05 in x and y, and its own delta is
+(+0.98, -1.05): the 230 u/s move projected on a 45 degree plane (230 cos 45 =
+162 along (1, -1)). The behaviour's own position (`behavior+0x190`) follows
+the same path, and the velocity at `behavior+0x19C` is a finite difference of
+that position (`FUN_00431df0`), so it adds no information.
+
+The port has the contact machinery for that response (`sphere_contact` and
+`capsule_contact`, plus a tested collide-and-slide body capsule). Against
+`sl01` the body still does not see the model 57 wall: with the cell filter it
+runs to the model 68 wall at x = 351.2, and without the filter it stops at
+x = 297.4 on the diagonal wall before the slide. The cell-to-triangle mapping
+is the open piece, not the response.

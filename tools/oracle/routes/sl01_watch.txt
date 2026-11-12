@@ -1,0 +1,29 @@
+# Blood Omen 2, Spanish GoldMaster: load the second save slot (Save 01,
+# slums/sl01 checkpoint) and hold W into the 45-degree wall long enough to
+# trace the slide. The `wait` phase is the attach window for a debugger;
+# it mirrors sl01_basic up to the spawn.
+
+phase menu
+shot 00_main_menu
+
+# The start-game menu entry, then the third entry of the save list.
+key Return
+wait 4000
+key Down
+key Down
+key Return
+
+# The level load takes 20-40 s on llvmpipe.
+phase spawn_idle
+wait 45000
+shot 01_spawn
+
+# Attach the debugger here: Kain exists and stands still.
+phase wait
+wait 10000
+
+phase after_w
+hold w 12000
+shot 02_after_w
+
+phase end
