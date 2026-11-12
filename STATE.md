@@ -165,8 +165,12 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   `+0x30..+0x38`, type `+0x40` 4/8). At the slide it corrects the target by
   (-1.05, -1.05) per tick: the 2.15 u move projected on a plane with normal
   (0.707, 0.707, 0), i.e. 230 cos 45 = 162 u/s along (1, -1), the gate value;
-  the stop at 326.35 is the same path clamping the position. The sender and
-  the projection source are the open piece. Entity collision is ruled out:
+  the stop at 326.35 is the same path clamping the position. A live trace
+  (`wine_proxy_20261112`) closes the chain: the mover owns a persistent
+  collision proxy whose matrix translation `FUN_005ccb60` writes (the sweep
+  result), `FUN_0062ce70` builds the message from that matrix, and
+  `FUN_0070eac0` copies it into the instance. The proxy shape and the sweep
+  resolver are the next unit. Entity collision is ruled out:
   the `.etp` flags `staticcollision` (+0x63) and `collisionresponse_stop`
   (+0x64) are parsed and counted, and `sl01` has **0** static collision
   entities. The spawn camera pull-in differs because the port's collision

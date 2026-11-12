@@ -209,7 +209,7 @@ These have no original source. They are development aids or placeholders.
 | Glide | Not implemented. `g_glide` (-128) and `termGlide` (160) are parsed only |
 | Ledge fall | Not implemented. Walking off an edge only applies gravity and keeps the ground speed of the held input; the original fall state (FUN_00442800, FUN_00442ae0) has the same air control as a jump but its takeoff velocity was not traced |
 | Collision size | Body radius and eye height are provisional, see above |
-| Wall slide and stop | The W slide (162 u/s at -45 degrees, frames 2311-2318) and the stop at x = 326.35 are written by the `FUN_0070eac0` "set position" message from a payload object (`+0x30..+0x38`, type `+0x40` 4/8). The sender and the source of the 45 degree projection are not traced yet |
+| Wall slide and stop | The W slide (162 u/s at -45 degrees, frames 2311-2318) and the stop at x = 326.35 are the result of the mover's collision proxy sweep (`FUN_005ccb60`, which writes the proxy matrix translation); `FUN_0062ce70` builds the "set position" message from that matrix and `FUN_0070eac0` copies it into the instance. The proxy shape and the sweep resolver are not ported yet |
 | Release slide | The short slide after releasing W is not modeled |
 | Camera setups | The range, pitch, pivot height and yaw limit are those of one live setup; the code or data that builds the setups (including the jump setup with delay 0.1 and blend 0.6) was not traced. The range blend itself is ported |
 
@@ -271,7 +271,10 @@ then runs to the model 68 wall at x = 351.55, 25 u past the oracle's stop.
 The run probe uses the general shape cast `FUN_0062d8f0` and its leaf
 `FUN_0062dfc0`, not `FUN_0062ec30` (a live trace shows the latter only sees
 the camera cast); its leaf test is per object (query flag 2 against the class
-byte at `+0x38`, bit 0). The remaining W gap is the slide and the stop, which
-live in the "set position" payload, not in the movement response. Entity
-collision is ruled out: `staticcollision` / `collisionresponse_stop` are
-parsed and `sl01` has 0 static collision entities. The gate is open.
+byte at `+0x38`, bit 0). The remaining W gap is the slide and the stop: a live
+trace (`wine_proxy_20261112`) shows the mover owns a persistent collision
+proxy whose matrix translation `FUN_005ccb60` writes (the sweep result), and
+the "set position" message only copies that translation into the visual
+instance. Entity collision is ruled out: `staticcollision` /
+`collisionresponse_stop` are parsed and `sl01` has 0 static collision
+entities. The gate is open.
