@@ -211,3 +211,30 @@ These have no original source. They are development aids or placeholders.
 | Collision size | Body radius and eye height are provisional, see above |
 | Release slide | The short slide after releasing W is not modeled |
 | Camera setups | The range, pitch, pivot height and yaw limit are those of one live setup; the code or data that builds the setups (including the jump setup with delay 0.1 and blend 0.6) was not traced. The range blend itself is ported |
+
+## Movement collision (BO2NX-72, decoded live)
+
+The original has no body cast against the level. A live gdb trace of the W
+run (`wine_trace_20261111`) shows three queries per tick:
+
+| Query | Shape | Origin | Extent |
+|---|---|---|---|
+| Ground/step probe | sphere r=1 | feet, `z+16` | down to `z-24` |
+| Run probe | sphere r=8 | chest, `z+48` | 32 u forward |
+| Camera pull-in | sphere r=10 | `z+76` | backwards |
+
+The run probe (`FUN_0042ee60`) records the blocker per direction in
+`KainState` (`+0x450`/`+0x454` flags, `+0x545`/`+0x558` records: flag,
+blocker object, contact point). The position writer `FUN_0041f460` calls
+`FUN_0041ee60` for each direction, which projects the target position along
+the blocker: `normal = (blocker.position - target) / dt`, `move = (target -
+position) / dt`; when `dot(move, normal)` points into the wall the target is
+replaced by the current position, otherwise it is kept. That projection is
+what produces the 45-degree slide (y 57.13 -> 44.14) and the stop at the
+model 57 wall.
+
+The port implements the cell broad phase (the cells' `terrains` lists index
+the `cellmdls` models) and a run probe that currently acts as a hard stop
+(W 314.80 vs the oracle 326.35, `after_w` max 19.28 / mean 8.94 u). The
+blocker record plus the `FUN_0041ee60` projection is the next step; the
+step probe and its threshold follow.
