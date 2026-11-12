@@ -276,6 +276,26 @@ void test_wall_blocks_the_walk() {
     CHECK(player.state().position.x > 50.0f);
 }
 
+// A wall that runs along the path, 5 u to the side, is inside the radius-8
+// run probe but its normal is across the run, so it must not block.
+void test_parallel_wall_does_not_block() {
+    bo2::engine::LevelGeometry level = make_floor();
+    const std::uint32_t base = static_cast<std::uint32_t>(level.positions.size());
+    level.positions.push_back({-500.0f, 5.0f, 0.0f});
+    level.positions.push_back({500.0f, 5.0f, 0.0f});
+    level.positions.push_back({500.0f, 5.0f, 300.0f});
+    level.positions.push_back({-500.0f, 5.0f, 300.0f});
+    level.triangles.push_back({base, base + 1, base + 2, 0, 0, 0xFFFFFFFFU, -1, -1});
+    level.triangles.push_back({base, base + 2, base + 3, 0, 0, 0xFFFFFFFFU, -1, -1});
+    bo2::engine::CollisionWorld collision(level);
+    bo2::game::PlayerController player(collision, {0.0f, 0.0f, 0.0f}, kain_tuning());
+    bo2::game::PlayerInput input;
+    input.move_y = 1.0f;
+    run(player, input, 60);
+    CHECK(player.state().position.x > 150.0f);
+    CHECK(std::fabs(player.state().position.y) < 1.0e-3f);
+}
+
 void test_tap_jump() {
     const bo2::engine::LevelGeometry floor = make_floor();
     bo2::engine::CollisionWorld collision(floor);
@@ -798,6 +818,7 @@ int main() {
     test_backward_speed();
     test_speeds_follow_the_tuning();
     test_wall_blocks_the_walk();
+    test_parallel_wall_does_not_block();
     test_tap_jump();
     test_held_jump();
     test_early_release_gives_a_partial_boost();

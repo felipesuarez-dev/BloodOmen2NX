@@ -245,7 +245,14 @@ void PlayerController::step(const PlayerInput& input, double seconds) {
             state_.position + bo2::engine::Vec3{0.0f, 0.0f, kRunProbeHeight};
         for (float along = 0.0f; along <= kRunProbeLength; along += 8.0f) {
             const bo2::engine::Vec3 sample = origin + heading * along;
-            if (collision_.intersects_sphere(sample, kRunProbeRadius, cell)) {
+            const auto contact = collision_.sphere_contact(sample, kRunProbeRadius, cell);
+            if (!contact.has_value()) {
+                continue;
+            }
+            // A wall parallel to the path is not a blocker: the probe only
+            // blocks on surfaces it faces. Without this test the side walls
+            // of the corridor (7 u away, normal across the run) stop it.
+            if (bo2::engine::dot(contact->normal, heading) < -1.0e-4f) {
                 run_blocked = true;
                 break;
             }
