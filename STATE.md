@@ -151,7 +151,14 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   (`+0x38`) has bit 0. The ramp and the 45 degree wall are both model 57, so
   no prim filter separates them; the packed triangle's 3-bit category only
   affects the edge/corner test. Conclusion: the ramp is solid in the original
-  too, and what differs is the response (`FUN_0041ee60`), not a filter. A hardware watchpoint
+  too, and what differs is the response (`FUN_0041ee60`), not a filter.
+  The movement volume was then tried as the traced step capsule (radius 1 and
+  0.4, feet to +16): with `collmodc` the W stops at x = 296.1 / 269.1, with
+  the render hull at x = 351.2. None reaches the oracle's 326.35, so the
+  blocking surface is not in either port hull at body height. The candidate
+  is entity collision: the `.etp` flags `staticcollision` (+0x63) and
+  `collisionresponse_stop` (+0x64) are parsed nowhere, and the gameplay hull
+  only contains `cellmdls`/`collmodc` models. A hardware watchpoint
   on the position (`wine_poswatch2_20261111`) shows the slide is written by
   the `FUN_0070eac0` transform message, not by `FUN_0041f460`: the 230 u/s
   move projected on a 45 degree plane (162 on each axis). The port has the

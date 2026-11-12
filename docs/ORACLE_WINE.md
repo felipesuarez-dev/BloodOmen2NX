@@ -370,7 +370,13 @@ Measured:
   cast `FUN_0062d8f0` and its leaf `FUN_0062dfc0`, where the test is per
   object: query flag 2 against the class byte (`+0x38`) bit 0. The ramp and
   the 45 degree wall are both model 57, so no prim filter separates them; the
-  ramp is solid in the original too and the difference is the response. A hardware watchpoint
+  ramp is solid in the original too and the difference is the response.
+  The movement volume was tried as the traced step capsule (radius 1 and 0.4,
+  feet to +16): `collmodc` stops at x = 296.1 / 269.1 and the render hull at
+  x = 351.2, never the oracle's 326.35. The blocking surface is not in either
+  port hull at body height; the candidate is entity collision
+  (`staticcollision` +0x63 / `collisionresponse_stop` +0x64), which the port
+  does not parse. A hardware watchpoint
   on the position (`wine_poswatch2_20261111`) shows the slide is written by
   the `FUN_0070eac0` transform message, not by `FUN_0041f460`: the 230 u/s
   move projected on a 45 degree plane (162 on each axis, yaw 0). The port

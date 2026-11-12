@@ -260,4 +260,9 @@ the camera cast). The leaf test is per object (query flag 2 against the class
 byte at `+0x38`, bit 0), so no primitive filter separates the ramp from the
 wall: both are model 57, the ramp is solid in the original too, and the
 difference is the response (`FUN_0041ee60`), not a filter. The slide response
-is implemented and tested; the gate is open.
+is implemented and tested. The movement volume was also tried as the traced
+step capsule (radius 1 and 0.4, feet to +16): `collmodc` stops at x = 296.1 /
+269.1 and the render hull at 351.2, never the oracle's 326.35. The blocker is
+not in either port hull at body height; the candidate is entity collision
+(`staticcollision` / `collisionresponse_stop` flags in the `.etp`), which the
+port does not parse. The gate is open.
