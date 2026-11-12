@@ -147,14 +147,16 @@ chunk loader, not the `collmodc` loader.
 
 Measured (`sl01_basic`, `wine_20261029_0043`): the W speed matches 230 u/s
 until frame 2316; the oracle slows to 177.76 and 86.67 and stops at
-x = 326.15, while the port keeps 230 and stops at x = 351.60. Both stops are
-collision walls: the port's hull has one at x = 352.0 (model 68) and the
-oracle's at x = 326.75 (model 57). The 25.44 u difference is not the mesh
-format any more, it is the player collision volume: the oracle traces show a
-contact 10 u above the feet (a small probe at the foot cannot reach it) and a
-slide from y = 57.13 to y = 44.14 between frames 2311 and 2318. The port moves
-a sphere at the feet and stops dead, so it never reaches the model 57 wall.
-The player volume and the slide response are the next BO2NX-72 step.
+x = 326.15, while the port keeps 230 and stops at x = 351.55 on the model 68
+wall (x = 352.0). The 25.4 u difference is not the mesh format: the stop is
+the model 57 ledge/ramp edge at z = 217.4, 9.4 u above the feet (the oracle
+slides from y = 57.13 to y = 44.14 between frames 2311 and 2318 and then
+stops). A sphere at the feet cannot reach a surface 9.4 u up. The slide and
+the stop are written by the `FUN_0070eac0` "set position" message, not by the
+movement response: the message projects the 2.15 u move on a plane with
+normal (0.707, 0.707, 0) (230 cos 45 = 162 u/s at -45 degrees). The payload
+sender and the volume behind that projection are the open piece
+(`re/decomp/kain_movement/NOTES_blocker.md`).
 
 
 ## Textures and materials

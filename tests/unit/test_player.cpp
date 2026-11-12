@@ -271,9 +271,9 @@ void test_wall_blocks_the_walk() {
     bo2::game::PlayerInput input;
     input.move_y = 1.0f;
     run(player, input, 120);
-    // The run probe stops the walk 40 u before the wall.
+    // The body sphere stops the walk at the wall; the run probe only raises a flag.
     CHECK(player.state().position.x < 100.0f);
-    CHECK(player.state().position.x > 50.0f);
+    CHECK(player.state().position.x > 90.0f);
 }
 
 // A wall that runs along the path, 5 u to the side, is inside the radius-8
@@ -294,6 +294,43 @@ void test_parallel_wall_does_not_block() {
     run(player, input, 60);
     CHECK(player.state().position.x > 150.0f);
     CHECK(std::fabs(player.state().position.y) < 1.0e-3f);
+    CHECK(!player.wall_hug());
+}
+
+// A wall the run faces raises the run probe flag (FUN_0042ee60: the hit
+// normal opposes the run by more than the tunedata 0.9 threshold).
+void test_facing_wall_raises_the_wall_flag() {
+    bo2::engine::LevelGeometry level = make_floor();
+    add_wall(level, 100.0f);
+    bo2::engine::CollisionWorld collision(level);
+    bo2::game::PlayerController player(collision, {0.0f, 0.0f, 0.0f}, kain_tuning());
+    bo2::game::PlayerInput input;
+    input.move_y = 1.0f;
+    run(player, input, 60);
+    CHECK(player.wall_hug());
+    CHECK(player.wall_normal().x < -0.9f);
+}
+
+// A wall at 45 degrees in plan is under the 0.9 threshold: the original's
+// comparison is against the run direction, not "any hit".
+void test_slanted_wall_does_not_raise_the_wall_flag() {
+    bo2::engine::LevelGeometry level = make_floor();
+    const std::uint32_t base = static_cast<std::uint32_t>(level.positions.size());
+    level.positions.push_back({50.0f, 0.0f, 0.0f});
+    level.positions.push_back({0.0f, 50.0f, 0.0f});
+    level.positions.push_back({0.0f, 50.0f, 300.0f});
+    level.positions.push_back({50.0f, 0.0f, 300.0f});
+    level.triangles.push_back({base, base + 1, base + 2, 0, 0, 0xFFFFFFFFU, -1, -1});
+    level.triangles.push_back({base, base + 2, base + 3, 0, 0, 0xFFFFFFFFU, -1, -1});
+    bo2::engine::CollisionWorld collision(level);
+    bo2::game::PlayerController player(collision, {0.0f, 0.0f, 0.0f}, kain_tuning());
+    bo2::game::PlayerInput input;
+    input.move_y = 1.0f;
+    run(player, input, 60);
+    CHECK(!player.wall_hug());
+    // The body still stops at the slanted wall.
+    CHECK(player.state().position.x > 20.0f);
+    CHECK(player.state().position.x < 50.0f);
 }
 
 void test_tap_jump() {
@@ -656,9 +693,9 @@ void test_wall_stops_a_jump() {
         player.step(input, kTick);
         input.jump = false;
     }
-    // The run probe stops the ground run 40 u before the wall.
+    // The body stops the ground run at the wall; the run probe only flags it.
     CHECK(player.state().position.x < 60.0f);
-    CHECK(player.state().position.x > 20.0f);
+    CHECK(player.state().position.x > 50.0f);
     CHECK(player.state().grounded);
 }
 
@@ -819,6 +856,8 @@ int main() {
     test_speeds_follow_the_tuning();
     test_wall_blocks_the_walk();
     test_parallel_wall_does_not_block();
+    test_facing_wall_raises_the_wall_flag();
+    test_slanted_wall_does_not_raise_the_wall_flag();
     test_tap_jump();
     test_held_jump();
     test_early_release_gives_a_partial_boost();

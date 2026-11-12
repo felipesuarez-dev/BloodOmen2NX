@@ -352,38 +352,36 @@ Measured:
   `after_w` mean 13.31 u / max 29.18 u, and `run`, `jump` and `attack` reach
   about 120 u. The camera columns are empty in this capture. The W speed
   matches 230 u/s until frame 2316; the oracle slows (177.76, then 86.67)
-  and stops at x = 326.15, while the port keeps 230 and stops at x = 351.60.
-  The wall mismatch is not the mesh format: the port collides with the
-  decoded `collmodc` hull. A live gdb trace of the oracle shows the movement
-  has no body cast: a ground/step probe (r=1, vertical), the run probe (r=8,
-  32 u ahead at z+48) and the camera casts (r=10, backwards). The port now
-  filters the collision candidates by the mover's cell plus its portal
-  neighbours (the cells' `terrains` lists index the `cellmdls` models) and
-  applies the run probe. The portal fields are symbols, not cell indices;
-  resolving them links the graph (cell01 symbol 925, portal 930 <-> 931 =
-  cell02), so the move reaches the cell-1 geometry and the run probe stops
-  at x = 234.14 on a slanted surface at (274, 59, 254) that the oracle
-  ignores (`after_w` max 92.57 u, mean 44.20 u). That triangle belongs to
-  model 57 itself, so a per-object class filter cannot explain it. A live
-  narrow-phase trace (`wine_narrow_20261112`) shows the run probe does not
-  use `FUN_0062ea60` (only the camera cast does); it uses the general shape
-  cast `FUN_0062d8f0` and its leaf `FUN_0062dfc0`, where the test is per
-  object: query flag 2 against the class byte (`+0x38`) bit 0. The ramp and
-  the 45 degree wall are both model 57, so no prim filter separates them; the
-  ramp is solid in the original too and the difference is the response.
-  The movement volume was tried as the traced step capsule (radius 1 and 0.4,
-  feet to +16): `collmodc` stops at x = 296.1 / 269.1 and the render hull at
-  x = 351.2, never the oracle's 326.35. The blocking surface is not in either
-  port hull at body height. Entity collision was ruled out: `staticcollision`
-  (+0x63) and `collisionresponse_stop` (+0x64) are parsed now and `sl01` has
-  0 static collision entities. A hardware watchpoint
-  on the position (`wine_poswatch2_20261111`) shows the slide is written by
-  the `FUN_0070eac0` transform message, not by `FUN_0041f460`: the 230 u/s
-  move projected on a 45 degree plane (162 on each axis, yaw 0). The port
-  has the contact query and a tested collide-and-slide capsule. The `sl01`
-  `--collision-dump` has 660 cell collisions and decodes all of them; the W
-  wall is model 57 `default`, instance 41, with 132 points, 130 triangles
-  and 27 faces.
+  and stops at x = 326.15, while the port keeps 230 and stops at the model 68
+  wall (x = 351.55). The port follows the oracle within 0.4 u until frame
+  2308 (x = 259.6 against 260.0) and then diverges at the slide. The wall
+  mismatch is not the mesh format: the port collides with the decoded
+  `collmodc` hull. A live gdb trace of the oracle shows the movement has no
+  body cast: a ground/step probe (r=1, vertical), the run probe (r=8, 32 u
+  ahead at z+48) and the camera casts (r=10, backwards). The port filters the
+  candidates by the mover's cell plus its portal neighbours (the cells'
+  `terrains` lists index the `cellmdls` models) and keeps the run probe as the
+  original does: it only raises the wall flag `KainState+0x588` bit `0x100`
+  (the tunedata threshold 0.9 against the hit normal); it does not clamp the
+  move. The portal fields are symbols, not cell indices (cell01 symbol 925,
+  portal 930 <-> 931 = cell02). That flag was previously turned into a hard
+  stop at x = 234.14 on a slanted surface at (274, 59, 254), which is not what
+  the original does. The movement response `FUN_0041ee60` is a no-op in the W
+  run: a live trace (`wine_blocker_20261112`) shows the blocker pointers
+  `KainState+0x450/+0x454` stay 0 and are never written, and the second
+  consumer, the wall projection (`FUN_0041f460` at `0x41f54b`, mode `+0x45C`
+  and normal `+0x478`), is inactive (a second trace reads mode 0 and normal
+  (0,0,1)). The position is written by the `FUN_0070eac0` "set position"
+  message (type `DAT_009105cc`, payload `+0x30..+0x38`, type `+0x40` 4/8).
+  At the slide that message corrects the target by (-1.05, -1.05) per tick:
+  the 2.15 u move projected on a plane with normal (0.707, 0.707, 0), i.e.
+  230 cos 45 = 162 u/s along (1, -1), the gate value; the stop at x = 326.15
+  is the same path clamping the position while the target keeps advancing.
+  The sender and the source of the projection are the open piece. Entity
+  collision is ruled out (`staticcollision` / `collisionresponse_stop`: 0 in
+  `sl01`). The `sl01` `--collision-dump` has 660 cell collisions and decodes
+  all of them; the wall is model 57 `default`, instance 41, with 132 points,
+  130 triangles and 27 faces.
 - `wine_camera_1` (`sl01_camera`, 3,611 rows): the player stays within
   0.08 u through the spawn, the turns and the settles; the first divergence
   is the jump at frame 3229 (11.03 u). The spawn camera differs by up to

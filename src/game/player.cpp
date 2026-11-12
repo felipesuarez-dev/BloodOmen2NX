@@ -110,10 +110,14 @@ constexpr float kEyeHeight = 1.7f;
 constexpr float kBodyRadius = 0.4f;
 constexpr float kBodyClearance = 0.05f;
 // Run probe (FUN_0042ee60, traced live): a radius-8 sphere swept from the
-// chest 32 u forward. A hit blocks the run.
+// chest 32 u forward. On a terrain hit the original compares the hit normal
+// with the tuning threshold (A+0x614, 0.9) and sets the wall flag
+// (KainState+0x588 bit 0x100); it does not clamp the move. The port records
+// the flag only: the wall-slide state that consumes it is not ported yet.
 constexpr float kRunProbeRadius = 8.0f;
 constexpr float kRunProbeLength = 32.0f;
 constexpr float kRunProbeHeight = 48.0f;
+constexpr float kRunProbeFacing = 0.9f;  // tunedata wallhug triggerDPThresh
 constexpr float kLookSpeed = 2.0f;  // port debug aid (mouse and right stick look)
 constexpr float kAttackCooldown = 0.45f;
 constexpr float kAttackRange = 2.2f;
@@ -236,10 +240,13 @@ void PlayerController::step(const PlayerInput& input, double seconds) {
         air_jump_ ? bo2::engine::Vec3{air_velocity_.x * dt, air_velocity_.y * dt, 0.0f}
                   : heading * (speed * dt);
     const float travel = bo2::engine::length(displacement);
-    bool run_blocked = false;
+    // FUN_0042ee60: the run probe records a wall it faces (the hit normal
+    // opposes the run by more than the tunedata 0.9 threshold). It never
+    // clamps the move, and a live trace of the W run fills no blocker record
+    // (FUN_0041ee60 is a no-op), so the port only keeps the flag here.
+    wall_hug_ = false;
     if (travel > 0.0f && state_.grounded &&
         bo2::engine::dot(displacement, heading) > 0.0f) {
-        // The run probe, filtered by the mover's cell (FUN_005be8b0).
         const std::int32_t cell = collision_.cell_at(state_.position);
         const bo2::engine::Vec3 origin =
             state_.position + bo2::engine::Vec3{0.0f, 0.0f, kRunProbeHeight};
@@ -249,19 +256,14 @@ void PlayerController::step(const PlayerInput& input, double seconds) {
             if (!contact.has_value()) {
                 continue;
             }
-            // A wall parallel to the path is not a blocker: the probe only
-            // blocks on surfaces it faces. Without this test the side walls
-            // of the corridor (7 u away, normal across the run) stop it.
-            if (bo2::engine::dot(contact->normal, heading) < -1.0e-4f) {
-                run_blocked = true;
+            if (bo2::engine::dot(contact->normal, heading) < -kRunProbeFacing) {
+                wall_hug_ = true;
+                wall_normal_ = contact->normal;
                 break;
             }
         }
-        if (run_blocked) {
-            air_velocity_ = {0.0f, 0.0f};
-        }
     }
-    if (travel > 0.0f && !run_blocked) {
+    if (travel > 0.0f) {
         // The original body sphere is small next to a tick of travel, so walk
         // the move in sub-steps of at most one radius; otherwise a thin wall
         // can be skipped between two samples.

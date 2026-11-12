@@ -150,22 +150,27 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   probe passes query flag 2 and the object is tested when its class byte
   (`+0x38`) has bit 0. The ramp and the 45 degree wall are both model 57, so
   no prim filter separates them; the packed triangle's 3-bit category only
-  affects the edge/corner test. Conclusion: the ramp is solid in the original
-  too, and what differs is the response (`FUN_0041ee60`), not a filter.
-  The movement volume was then tried as the traced step capsule (radius 1 and
-  0.4, feet to +16): with `collmodc` the W stops at x = 296.1 / 269.1, with
-  the render hull at x = 351.2. None reaches the oracle's 326.35, so the
-  blocking surface is not in either port hull at body height. Entity
-  collision was ruled out: the `.etp` flags `staticcollision` (+0x63) and
-  `collisionresponse_stop` (+0x64) are now parsed and counted, and `sl01` has
-  **0** static collision entities. The remaining candidate is the placement
-  or the hull of the model that stops the oracle at 326.35. A hardware watchpoint
-  on the position (`wine_poswatch2_20261111`) shows the slide is written by
-  the `FUN_0070eac0` transform message, not by `FUN_0041f460`: the 230 u/s
-  move projected on a 45 degree plane (162 on each axis). The port has the
-  contact query and a tested collide-and-slide capsule. The spawn camera
-  pull-in differs because the port's collision lacks the helper wall. The
-  full route/state gate remains open (BO2NX-37).
+  affects the edge/corner test. The port misread the run probe as a hard
+  stop: the original only raises the wall flag (`KainState+0x588` bit
+  `0x100`, tunedata threshold 0.9). With the flag only, the port follows the
+  oracle within 0.4 u until frame 2308 (x = 259.6 against 260.0) and then
+  runs to the model 68 wall at x = 351.55; `after_w` improves from mean 44.20
+  / max 92.57 to mean 13.31 / max 29.18. The movement response
+  `FUN_0041ee60` is a **no-op** in the W run: a live trace
+  (`wine_blocker_20261112`) shows the blocker pointers `+0x450/+0x454` stay 0
+  and are never written, and the wall projection (`FUN_0041f460` at
+  `0x41f54b`, mode `+0x45C`, normal `+0x478`) is inactive (`wine_wall2_20261112`
+  reads mode 0 and normal (0,0,1)). The position is written by the
+  `FUN_0070eac0` "set position" message (type `DAT_009105cc`, payload
+  `+0x30..+0x38`, type `+0x40` 4/8). At the slide it corrects the target by
+  (-1.05, -1.05) per tick: the 2.15 u move projected on a plane with normal
+  (0.707, 0.707, 0), i.e. 230 cos 45 = 162 u/s along (1, -1), the gate value;
+  the stop at 326.35 is the same path clamping the position. The sender and
+  the projection source are the open piece. Entity collision is ruled out:
+  the `.etp` flags `staticcollision` (+0x63) and `collisionresponse_stop`
+  (+0x64) are parsed and counted, and `sl01` has **0** static collision
+  entities. The spawn camera pull-in differs because the port's collision
+  lacks the helper wall. The full route/state gate remains open (BO2NX-37).
 - The native Windows oracle harness is available: a reverse SSH server on
   the Windows host, `tools/oracle/oracle_client.py`, a capture validator and
   an input/frame aligner. `capture_20261028_0150` is the first complete

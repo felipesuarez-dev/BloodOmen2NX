@@ -209,6 +209,7 @@ These have no original source. They are development aids or placeholders.
 | Glide | Not implemented. `g_glide` (-128) and `termGlide` (160) are parsed only |
 | Ledge fall | Not implemented. Walking off an edge only applies gravity and keeps the ground speed of the held input; the original fall state (FUN_00442800, FUN_00442ae0) has the same air control as a jump but its takeoff velocity was not traced |
 | Collision size | Body radius and eye height are provisional, see above |
+| Wall slide and stop | The W slide (162 u/s at -45 degrees, frames 2311-2318) and the stop at x = 326.35 are written by the `FUN_0070eac0` "set position" message from a payload object (`+0x30..+0x38`, type `+0x40` 4/8). The sender and the source of the 45 degree projection are not traced yet |
 | Release slide | The short slide after releasing W is not modeled |
 | Camera setups | The range, pitch, pivot height and yaw limit are those of one live setup; the code or data that builds the setups (including the jump setup with delay 0.1 and blend 0.6) was not traced. The range blend itself is ported |
 
@@ -223,46 +224,54 @@ run (`wine_trace_20261111`) shows three queries per tick:
 | Run probe | sphere r=8 | chest, `z+48` | 32 u forward |
 | Camera pull-in | sphere r=10 | `z+76` | backwards |
 
-The run probe (`FUN_0042ee60`) records the blocker per direction in
-`KainState` (`+0x450`/`+0x454` flags, `+0x545`/`+0x558` records: flag,
-blocker object, contact point). `FUN_0041f460` calls `FUN_0041ee60` for each
-record, but the traced run shows it does not move the target: the slide is
-written later in the tick by the `FUN_0070eac0` "set transform" message, which
-overwrites the instance position from a matrix.
+The run probe (`FUN_0042ee60`) does **not** block the move: on a terrain hit
+it compares the hit normal with the tunedata threshold (A+0x614, 0.9) and sets
+`KainState+0x588` bit `0x100`. `FUN_0041f460` calls `FUN_0041ee60` for two
+per-direction records (`+0x545`/`+0x558`) reading the blocker pointers at
+`+0x450`/`+0x454`, but a live trace (`wine_blocker_20261112`) shows both
+pointers stay 0 and the record flag stays 0 during the whole W run: the
+response is a no-op, and the pointers are never written. The second record
+consumer, the wall projection (`FUN_0041f460` at `0x41f54b`, `FUN_0041f7d0`
+at `0x41f8f8`, guarded by the state mode `+0x45C == 1` and the normal at
+`+0x478`), is also inactive: a live trace (`wine_wall2_20261112`) reads mode 0
+and normal (0,0,1) for the whole run.
 
 A hardware watchpoint on the position (`wine_poswatch2_20261111`) gives the
 writers per tick:
 
 | Writer | Fields | Role |
 |---|---|---|
-| `FUN_0041f460` (`0x41f640`) | x, y, z | the state's target position (unblocked) |
-| `FUN_0070eac0` (`0x70ec39`) | x, z, y | the transform message; runs after and wins |
+| `FUN_0041f460` (`0x41f640`) | x, y, z | the state's target position (root delta, unblocked) |
+| `FUN_0070eac0` (`0x70ec39`) | x, z, y | the "set position" message; runs after and wins |
 | `FUN_00432030` (`0x43227a`) | z | integrator |
 | `FUN_00430820` (`0x430b4a`) | z | ground snap |
 
-During the W run `FUN_0041f460` writes x only. At the slide the transform
-message corrects the target by -1.05 in x and y, and its own delta is
-(+0.98, -1.05): the 230 u/s move projected on a 45 degree plane (230 cos 45 =
-162 along (1, -1)). The behaviour's own position (`behavior+0x190`) follows
-the same path, and the velocity at `behavior+0x19C` is a finite difference of
-that position (`FUN_00431df0`), so it adds no information.
+During the W run the target is the position plus the animation root delta
+(+2.15 in x per tick at 230 u/s). At the slide the "set position" message
+(`FUN_0070eac0`, message type `DAT_009105cc`; it copies the payload's
+`+0x30..+0x38` into the instance `+0xB4..+0xBC`) corrects the target by
+(-1.05, -1.05) per tick: the 2.15 u move projected on a plane with normal
+(0.707, 0.707, 0), i.e. 230 cos 45 = 162 u/s along (1, -1), the gate value.
+The stop at x = 326.35 is the same message path clamping the position while
+the target keeps advancing. The behaviour's own position (`behavior+0x190`)
+follows the same path, and the velocity at `behavior+0x19C` is a finite
+difference of that position (`FUN_00431df0`), so it adds no information.
 
-The port has the contact machinery for that response (`sphere_contact` and
+The port has the contact machinery for a response (`sphere_contact` and
 `capsule_contact`, plus a tested collide-and-slide body capsule). The cell
-neighbours now link the portal **symbols** (the fields are not cell indices:
+neighbours link the portal **symbols** (the fields are not cell indices:
 `sl01` cell01 has symbol 925 and its portal is 930 <-> 931 = cell02), so the
-move reaches the cell-1 geometry. The run probe then stops at x = 234.14 on
-a slanted surface at (274, 59, 254) that the oracle ignores. That triangle
-belongs to model 57 itself, so a per-object class filter cannot explain it.
+move reaches the cell-1 geometry. The run probe used to stop at x = 234.14 on
+a slanted surface at (274, 59, 254) that the oracle ignores; that was the
+port's misreading of the probe as a hard stop. It now only raises the flag
+(`PlayerController::wall_hug`) and the body sphere moves Kain, which puts the
+port within 0.4 u of the oracle until frame 2308 (x = 259.6 against 260.0) and
+then runs to the model 68 wall at x = 351.55, 25 u past the oracle's stop.
+`after_w` improves from mean 44.20 / max 92.57 to mean 13.31 / max 29.18.
 The run probe uses the general shape cast `FUN_0062d8f0` and its leaf
 `FUN_0062dfc0`, not `FUN_0062ec30` (a live trace shows the latter only sees
-the camera cast). The leaf test is per object (query flag 2 against the class
-byte at `+0x38`, bit 0), so no primitive filter separates the ramp from the
-wall: both are model 57, the ramp is solid in the original too, and the
-difference is the response (`FUN_0041ee60`), not a filter. The slide response
-is implemented and tested. The movement volume was also tried as the traced
-step capsule (radius 1 and 0.4, feet to +16): `collmodc` stops at x = 296.1 /
-269.1 and the render hull at 351.2, never the oracle's 326.35. The blocker is
-not in either port hull at body height. Entity collision is ruled out:
-`staticcollision` / `collisionresponse_stop` are parsed now and `sl01` has 0
-static collision entities. The gate is open.
+the camera cast); its leaf test is per object (query flag 2 against the class
+byte at `+0x38`, bit 0). The remaining W gap is the slide and the stop, which
+live in the "set position" payload, not in the movement response. Entity
+collision is ruled out: `staticcollision` / `collisionresponse_stop` are
+parsed and `sl01` has 0 static collision entities. The gate is open.

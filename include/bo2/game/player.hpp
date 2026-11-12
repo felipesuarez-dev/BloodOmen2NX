@@ -43,6 +43,11 @@ public:
     const PlayerState& state() const;
     // Horizontal velocity of a jump in world axes, zero on the ground and in a fall.
     bo2::engine::Vec2 air_velocity() const;
+    // Run probe flag (FUN_0042ee60): a wall the run faces by more than the
+    // tunedata 0.9 threshold. The original only raises the flag here; the
+    // wall-slide state that consumes it is not ported yet.
+    bool wall_hug() const { return wall_hug_; }
+    const bo2::engine::Vec3& wall_normal() const { return wall_normal_; }
     bo2::engine::Vec3 camera_eye() const;
     bo2::engine::Vec3 camera_target() const;
 
@@ -68,6 +73,8 @@ private:
     float air_max_back_ = 0.0f;     // behavior+0x114
     bo2::engine::Vec2 air_velocity_;
     bool side_jump_active_ = false;  // the jump launched with the sideVertJump model (kinds 3 and 4)
+    bool wall_hug_ = false;          // run probe wall flag (KainState+0x588 bit 0x100)
+    bo2::engine::Vec3 wall_normal_{};  // hit normal of the wall the run probe faces
 
     void start_jump(const PlayerInput& input);
     void end_jump();
