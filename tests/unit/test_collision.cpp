@@ -224,6 +224,59 @@ void test_collmodc_boxes() {
     CHECK(boxes_world.intersects_sphere({100.0f, 0.0f, 0.0f}, 1.0f));
 }
 
+bo2::engine::LevelGeometry make_wall() {
+    bo2::engine::LevelGeometry geometry;
+    geometry.positions = {{0.0f, -100.0f, 0.0f}, {0.0f, 100.0f, 0.0f}, {0.0f, 100.0f, 100.0f},
+                          {0.0f, -100.0f, 100.0f}};
+    for (std::uint32_t base = 0; base < 2; ++base) {
+        bo2::engine::LevelTriangle triangle;
+        triangle.a = base;
+        triangle.b = base + 1;
+        triangle.c = base + 2;
+        geometry.triangles.push_back(triangle);
+    }
+    return geometry;
+}
+
+// A wall that only exists between z = 30 and z = 40.
+bo2::engine::LevelGeometry make_low_wall() {
+    bo2::engine::LevelGeometry geometry;
+    geometry.positions = {{0.0f, -100.0f, 30.0f}, {0.0f, 100.0f, 30.0f}, {0.0f, 100.0f, 40.0f},
+                          {0.0f, -100.0f, 40.0f}};
+    for (std::uint32_t base = 0; base < 2; ++base) {
+        bo2::engine::LevelTriangle triangle;
+        triangle.a = base;
+        triangle.b = base + 1;
+        triangle.c = base + 2;
+        geometry.triangles.push_back(triangle);
+    }
+    return geometry;
+}
+
+void test_sphere_contact() {
+    const bo2::engine::CollisionWorld world(make_wall());
+    const auto contact = world.sphere_contact({0.3f, 0.0f, 50.0f}, 0.5f, -1);
+    CHECK(contact.has_value());
+    CHECK(std::fabs(contact->distance - 0.3f) < 1.0e-4f);
+    CHECK(contact->normal.x > 0.99f);
+    CHECK(std::fabs(contact->normal.y) < 1.0e-3f);
+    CHECK(!world.sphere_contact({5.0f, 0.0f, 50.0f}, 0.5f, -1).has_value());
+}
+
+void test_capsule_contact() {
+    const bo2::engine::CollisionWorld wall(make_wall());
+    const auto full = wall.capsule_contact({0.3f, 0.0f, 0.4f}, 71.2f, 0.4f, -1);
+    CHECK(full.has_value());
+    CHECK(std::fabs(full->distance - 0.3f) < 1.0e-4f);
+    CHECK(full->normal.x > 0.99f);
+
+    // The segment spans the low wall, so the capsule sees it even though its
+    // ends (z = 0.4 and 71.6) are far from the band.
+    const bo2::engine::CollisionWorld low(make_low_wall());
+    CHECK(low.capsule_contact({0.3f, 0.0f, 0.4f}, 71.2f, 0.4f, -1).has_value());
+    CHECK(!low.capsule_contact({5.0f, 0.0f, 0.4f}, 71.2f, 0.4f, -1).has_value());
+}
+
 void test_raycast() {
     const bo2::engine::CollisionWorld world(make_plane());
     CHECK(world.triangles() == 1);
@@ -246,6 +299,8 @@ void test_sphere() {
 int main() {
     test_raycast();
     test_sphere();
+    test_sphere_contact();
+    test_capsule_contact();
     test_collmodc_model();
     test_collmodc_boxes();
     if (failures != 0) {

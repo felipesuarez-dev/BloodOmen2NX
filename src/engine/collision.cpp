@@ -9,54 +9,51 @@ namespace bo2::engine {
 
 namespace {
 
-float distance_squared_to_triangle(const Vec3& point, const Vec3& a, const Vec3& b,
-                                   const Vec3& c) {
+Vec3 closest_point_on_triangle(const Vec3& point, const Vec3& a, const Vec3& b, const Vec3& c) {
     const Vec3 ab = b - a;
     const Vec3 ac = c - a;
     const Vec3 ap = point - a;
     const float d1 = dot(ab, ap);
     const float d2 = dot(ac, ap);
     if (d1 <= 0.0f && d2 <= 0.0f) {
-        return dot(ap, ap);
+        return a;
     }
     const Vec3 bp = point - b;
     const float d3 = dot(ab, bp);
     const float d4 = dot(ac, bp);
     if (d3 >= 0.0f && d4 <= d3) {
-        return dot(bp, bp);
+        return b;
     }
     const float vc = d1 * d4 - d3 * d2;
     if (vc <= 0.0f && d1 >= 0.0f && d3 <= 0.0f) {
         const float v = d1 / (d1 - d3);
-        const Vec3 closest = a + ab * v;
-        const Vec3 difference = point - closest;
-        return dot(difference, difference);
+        return a + ab * v;
     }
     const Vec3 cp = point - c;
     const float d5 = dot(ab, cp);
     const float d6 = dot(ac, cp);
     if (d6 >= 0.0f && d5 <= d6) {
-        return dot(cp, cp);
+        return c;
     }
     const float vb = d5 * d2 - d1 * d6;
     if (vb <= 0.0f && d2 >= 0.0f && d6 <= 0.0f) {
         const float w = d2 / (d2 - d6);
-        const Vec3 closest = a + ac * w;
-        const Vec3 difference = point - closest;
-        return dot(difference, difference);
+        return a + ac * w;
     }
     const float va = d3 * d6 - d5 * d4;
     if (va <= 0.0f && (d4 - d3) >= 0.0f && (d5 - d6) >= 0.0f) {
         const float w = (d4 - d3) / ((d4 - d3) + (d5 - d6));
-        const Vec3 closest = b + (c - b) * w;
-        const Vec3 difference = point - closest;
-        return dot(difference, difference);
+        return b + (c - b) * w;
     }
     const float denominator = 1.0f / (va + vb + vc);
     const float v = vb * denominator;
     const float w = vc * denominator;
-    const Vec3 closest = a + ab * v + ac * w;
-    const Vec3 difference = point - closest;
+    return a + ab * v + ac * w;
+}
+
+float distance_squared_to_triangle(const Vec3& point, const Vec3& a, const Vec3& b,
+                                   const Vec3& c) {
+    const Vec3 difference = point - closest_point_on_triangle(point, a, b, c);
     return dot(difference, difference);
 }
 
@@ -288,28 +285,29 @@ bool CollisionWorld::intersects_sphere(const Vec3& center, float radius) const {
     return intersects_sphere(center, radius, cell_at(center));
 }
 
+bool CollisionWorld::cell_allows(std::int32_t cell, std::int32_t triangle_cell) const {
+    if (!cell_filter_ || triangle_cell < 0 || cell < 0) {
+        return true;
+    }
+    if (triangle_cell == cell) {
+        return true;
+    }
+    for (const std::int32_t neighbour : cell_neighbours_[static_cast<std::size_t>(cell)]) {
+        if (neighbour == triangle_cell) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool CollisionWorld::intersects_sphere(const Vec3& center, float radius,
                                        std::int32_t cell) const {
     if (!std::isfinite(radius) || radius < 0.0f) {
         throw std::invalid_argument("sphere radius must be non-negative");
     }
     const float radius_squared = radius * radius;
-    const auto allowed = [this, cell](std::int32_t triangle_cell) {
-        if (!cell_filter_ || triangle_cell < 0 || cell < 0) {
-            return true;
-        }
-        if (triangle_cell == cell) {
-            return true;
-        }
-        for (const std::int32_t neighbour : cell_neighbours_[static_cast<std::size_t>(cell)]) {
-            if (neighbour == triangle_cell) {
-                return true;
-            }
-        }
-        return false;
-    };
     for (const Triangle& triangle : triangles_) {
-        if (!allowed(triangle.cell)) {
+        if (!cell_allows(cell, triangle.cell)) {
             continue;
         }
         const Vec3 closest{std::clamp(center.x, triangle.minimum.x, triangle.maximum.x),
@@ -334,6 +332,102 @@ bool CollisionWorld::intersects_sphere(const Vec3& center, float radius,
         }
     }
     return false;
+}
+
+std::optional<SphereContact> CollisionWorld::sphere_contact(const Vec3& center, float radius,
+                                                            std::int32_t cell) const {
+    if (!std::isfinite(radius) || radius < 0.0f) {
+        throw std::invalid_argument("sphere radius must be non-negative");
+    }
+    std::optional<SphereContact> best;
+    float best_squared = radius * radius;
+    for (const Triangle& triangle : triangles_) {
+        if (!cell_allows(cell, triangle.cell)) {
+            continue;
+        }
+        const Vec3 box_point{std::clamp(center.x, triangle.minimum.x, triangle.maximum.x),
+                             std::clamp(center.y, triangle.minimum.y, triangle.maximum.y),
+                             std::clamp(center.z, triangle.minimum.z, triangle.maximum.z)};
+        const Vec3 box_difference = center - box_point;
+        if (dot(box_difference, box_difference) > best_squared) {
+            continue;
+        }
+        const Vec3 point = closest_point_on_triangle(center, triangle.a, triangle.b, triangle.c);
+        const Vec3 difference = center - point;
+        const float squared = dot(difference, difference);
+        if (squared > best_squared) {
+            continue;
+        }
+        best_squared = squared;
+        Vec3 normal;
+        if (squared > 1.0e-6f) {
+            normal = difference * (1.0f / std::sqrt(squared));
+        } else {
+            // The centre lies on the face and `difference` is rounding noise:
+            // use the face normal, oriented toward the centre.
+            normal = normalize(cross(triangle.b - triangle.a, triangle.c - triangle.a));
+            if (dot(normal, difference) < 0.0f) {
+                normal = normal * -1.0f;
+            }
+        }
+        best = SphereContact{point, normal, std::sqrt(squared)};
+    }
+    return best;
+}
+
+std::optional<SphereContact> CollisionWorld::capsule_contact(const Vec3& base, float height,
+                                                            float radius,
+                                                            std::int32_t cell) const {
+    if (!std::isfinite(radius) || radius < 0.0f || !std::isfinite(height) || height < 0.0f) {
+        throw std::invalid_argument("capsule radius and height must be non-negative");
+    }
+    std::optional<SphereContact> best;
+    float best_squared = radius * radius;
+    const float top = base.z + height;
+    for (const Triangle& triangle : triangles_) {
+        if (!cell_allows(cell, triangle.cell)) {
+            continue;
+        }
+        if (triangle.maximum.z < base.z - radius || triangle.minimum.z > top + radius) {
+            continue;
+        }
+        // Horizontal distance from the segment axis to the triangle AABB.
+        const float dx = std::max({triangle.minimum.x - base.x, 0.0f, base.x - triangle.maximum.x});
+        const float dy = std::max({triangle.minimum.y - base.y, 0.0f, base.y - triangle.maximum.y});
+        if (dx * dx + dy * dy > radius * radius) {
+            continue;
+        }
+        const float low = std::max(base.z, triangle.minimum.z - radius);
+        const float high = std::min(top, triangle.maximum.z + radius);
+        if (low > high) {
+            continue;
+        }
+        // For a vertical segment the closest point lies at the segment ends or
+        // where the triangle's own height range starts and ends.
+        const float heights[5] = {base.z, top, low, high, 0.5f * (low + high)};
+        for (const float z : heights) {
+            const Vec3 center{base.x, base.y, z};
+            const Vec3 point =
+                closest_point_on_triangle(center, triangle.a, triangle.b, triangle.c);
+            const Vec3 difference = center - point;
+            const float squared = dot(difference, difference);
+            if (squared > best_squared) {
+                continue;
+            }
+            best_squared = squared;
+            Vec3 normal;
+            if (squared > 1.0e-6f) {
+                normal = difference * (1.0f / std::sqrt(squared));
+            } else {
+                normal = normalize(cross(triangle.b - triangle.a, triangle.c - triangle.a));
+                if (dot(normal, difference) < 0.0f) {
+                    normal = normal * -1.0f;
+                }
+            }
+            best = SphereContact{point, normal, std::sqrt(squared)};
+        }
+    }
+    return best;
 }
 
 std::optional<RayHit> CollisionWorld::raycast(const Vec3& origin, const Vec3& direction,

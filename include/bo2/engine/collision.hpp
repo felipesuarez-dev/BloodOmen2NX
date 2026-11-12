@@ -14,6 +14,15 @@ struct RayHit {
     Vec3 normal{0.0f, 0.0f, 1.0f};
 };
 
+// The nearest triangle to a sphere centre. `normal` points from the surface to
+// the centre, so it is the push-out direction; the run probe uses it to slide
+// along the blocker (FUN_0041ee60 projects the move against it).
+struct SphereContact {
+    Vec3 point{0.0f, 0.0f, 0.0f};
+    Vec3 normal{0.0f, 0.0f, 1.0f};
+    float distance = 0.0f;
+};
+
 // Which mesh the collision world queries. `Collmodc` is the original's static
 // collision hull; `Render` is the visible `rmd` mesh and `Boxes` is the
 // `collmodc` broad-phase AABB list. The last two are diagnostics; gameplay
@@ -32,6 +41,14 @@ public:
     // portal neighbours (FUN_005be8b0). Pass the mover's cell, not the
     // sample's, for the probes.
     bool intersects_sphere(const Vec3& center, float radius, std::int32_t cell) const;
+    // Nearest contact of a sphere with the hull, or nothing. The `cell`
+    // filter is the same as `intersects_sphere`.
+    std::optional<SphereContact> sphere_contact(const Vec3& center, float radius,
+                                                std::int32_t cell) const;
+    // Nearest contact of a vertical capsule: the segment runs from `base` up
+    // `height`, with `radius` around it. Used for the player body.
+    std::optional<SphereContact> capsule_contact(const Vec3& base, float height, float radius,
+                                                 std::int32_t cell) const;
     std::int32_t cell_at(const Vec3& point) const;
     std::optional<RayHit> raycast(const Vec3& origin, const Vec3& direction,
                                   float max_distance) const;
@@ -51,6 +68,8 @@ private:
     std::vector<std::vector<std::int32_t>> cell_neighbours_;
     bool cell_filter_ = false;
     std::vector<LevelCollisionBox> boxes_;
+
+    bool cell_allows(std::int32_t cell, std::int32_t triangle_cell) const;
 };
 
 }  // namespace bo2::engine
