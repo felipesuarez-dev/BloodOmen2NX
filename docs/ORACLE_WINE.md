@@ -353,7 +353,7 @@ Measured:
   about 120 u. The camera columns are empty in this capture. The W speed
   matches 230 u/s until frame 2316; the oracle slows (177.76, then 86.67)
   and stops at x = 326.15, while the port keeps 230 and stops at the model 68
-  wall (x = 351.55). The port follows the oracle within 0.4 u until frame
+  wall (x = 351.55). The port follows the oracle within about 1 u until frame
   2308 (x = 259.6 against 260.0) and then diverges at the slide. The wall
   mismatch is not the mesh format: the port collides with the decoded
   `collmodc` hull. A live gdb trace of the oracle shows the movement has no

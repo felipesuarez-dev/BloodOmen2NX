@@ -265,7 +265,7 @@ move reaches the cell-1 geometry. The run probe used to stop at x = 234.14 on
 a slanted surface at (274, 59, 254) that the oracle ignores; that was the
 port's misreading of the probe as a hard stop. It now only raises the flag
 (`PlayerController::wall_hug`) and the body sphere moves Kain, which puts the
-port within 0.4 u of the oracle until frame 2308 (x = 259.6 against 260.0) and
+port within about 1 u of the oracle until frame 2308 (x = 259.6 against 260.0) and
 then runs to the model 68 wall at x = 351.55, 25 u past the oracle's stop.
 `after_w` improves from mean 44.20 / max 92.57 to mean 13.31 / max 29.18.
 The run probe uses the general shape cast `FUN_0062d8f0` and its leaf

@@ -153,7 +153,7 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   affects the edge/corner test. The port misread the run probe as a hard
   stop: the original only raises the wall flag (`KainState+0x588` bit
   `0x100`, tunedata threshold 0.9). With the flag only, the port follows the
-  oracle within 0.4 u until frame 2308 (x = 259.6 against 260.0) and then
+  oracle within about 1 u until frame 2308 (x = 259.6 against 260.0) and then
   runs to the model 68 wall at x = 351.55; `after_w` improves from mean 44.20
   / max 92.57 to mean 13.31 / max 29.18. The movement response
   `FUN_0041ee60` is a **no-op** in the W run: a live trace
