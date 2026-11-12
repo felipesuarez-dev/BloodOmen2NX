@@ -367,7 +367,10 @@ Measured:
   model 57 itself, so a per-object class filter cannot explain it. A live
   narrow-phase trace (`wine_narrow_20261112`) shows the run probe does not
   use `FUN_0062ea60` (only the camera cast does); it uses the general shape
-  cast `FUN_0062d8f0`, where the primitive filter must be decoded. A hardware watchpoint
+  cast `FUN_0062d8f0` and its leaf `FUN_0062dfc0`, where the test is per
+  object: query flag 2 against the class byte (`+0x38`) bit 0. The ramp and
+  the 45 degree wall are both model 57, so no prim filter separates them; the
+  ramp is solid in the original too and the difference is the response. A hardware watchpoint
   on the position (`wine_poswatch2_20261111`) shows the slide is written by
   the `FUN_0070eac0` transform message, not by `FUN_0041f460`: the 230 u/s
   move projected on a 45 degree plane (162 on each axis, yaw 0). The port

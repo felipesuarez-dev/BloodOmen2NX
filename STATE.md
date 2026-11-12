@@ -145,11 +145,13 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   model 57 itself, so a per-object class filter cannot explain it. A live
   trace of the narrow phase (`wine_narrow_20261112`) shows the run probe does
   **not** go through `FUN_0062ea60`: only the camera cast (z = 284, r = 10,
-  object `0x02ad4008`) does. The probe uses the general shape cast
-  `FUN_0062d8f0`, so the primitive filter decode must target that function.
-  The attribute bit 0 (the ramp writes 0x19/0x59, the 45 degree wall
-  0x18/0x38) was tried in the slide branch: `after_w` max 18.59 u / mean
-  8.44 u, not conclusive, and it was reverted. A hardware watchpoint
+  object `0x02ad4008`) does. It uses the general shape cast `FUN_0062d8f0`
+  and its leaf `FUN_0062dfc0`, where the test is **per object**: the run
+  probe passes query flag 2 and the object is tested when its class byte
+  (`+0x38`) has bit 0. The ramp and the 45 degree wall are both model 57, so
+  no prim filter separates them; the packed triangle's 3-bit category only
+  affects the edge/corner test. Conclusion: the ramp is solid in the original
+  too, and what differs is the response (`FUN_0041ee60`), not a filter. A hardware watchpoint
   on the position (`wine_poswatch2_20261111`) shows the slide is written by
   the `FUN_0070eac0` transform message, not by `FUN_0041f460`: the 230 u/s
   move projected on a 45 degree plane (162 on each axis). The port has the

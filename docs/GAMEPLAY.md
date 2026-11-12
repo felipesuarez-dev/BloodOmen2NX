@@ -254,7 +254,10 @@ neighbours now link the portal **symbols** (the fields are not cell indices:
 move reaches the cell-1 geometry. The run probe then stops at x = 234.14 on
 a slanted surface at (274, 59, 254) that the oracle ignores. That triangle
 belongs to model 57 itself, so a per-object class filter cannot explain it.
-The run probe uses the general shape cast `FUN_0062d8f0`, not `FUN_0062ec30`
-(a live trace shows the latter only sees the camera cast), so the primitive
-filter decode must target `FUN_0062d8f0`. The slide response is implemented
-and tested; the gate is open.
+The run probe uses the general shape cast `FUN_0062d8f0` and its leaf
+`FUN_0062dfc0`, not `FUN_0062ec30` (a live trace shows the latter only sees
+the camera cast). The leaf test is per object (query flag 2 against the class
+byte at `+0x38`, bit 0), so no primitive filter separates the ramp from the
+wall: both are model 57, the ramp is solid in the original too, and the
+difference is the response (`FUN_0041ee60`), not a filter. The slide response
+is implemented and tested; the gate is open.
