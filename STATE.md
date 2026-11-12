@@ -135,19 +135,21 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   r = 19.8/19.3/15.0) that are too wide (they would stop at x = 254). The
   live trace shows the movement has no body cast: a vertical
   ground/step probe (r=1), the run probe (r=8, 32 u ahead at z+48) and the
-  camera casts. The collision candidates are now filtered by the mover's
-  cell and its portal neighbours (the cells' `terrains` lists index the
-  `cellmdls` models), and the run probe stops the W run at x = 314.80
-  against the oracle's 326.35: `after_w` max 19.28 u and mean 8.94 u
-  (was 29.18 / 13.31). A hardware watchpoint on the position
-  (`wine_poswatch2_20261111`) shows the slide is written by the
-  `FUN_0070eac0` transform message, not by `FUN_0041f460`: the 230 u/s move
-  projected on a 45 degree plane (162 on each axis). The port now has the
-  contact query and a collide-and-slide capsule, but the cell mapping hides
-  the model 57 wall from the body (the body runs to x = 351.2 with the filter
-  and stops at x = 297.4 without it). The cell-to-triangle mapping is the
-  open piece. The spawn camera pull-in differs because the port's collision
-  lacks the helper wall. The full route/state gate remains open (BO2NX-37).
+  camera casts. The collision candidates are filtered by the mover's cell
+  and its portal neighbours (the cells' `terrains` lists index the
+  `cellmdls` models). The portal fields are **symbols**, not cell indices;
+  resolving them (cell01 symbol 925, portal 930 <-> 931 = cell02) links the
+  graph, so the move now reaches the cell-1 geometry. The run probe then
+  stops at x = 234.14 on a slanted surface at (274, 59, 254) that the oracle
+  ignores: `after_w` max 92.57 u, mean 44.20 u. The next piece is the
+  primitive solid/non-solid filter (the runtime 0x14-byte attribute records,
+  not the file's per-triangle byte, which is 0 there). A hardware watchpoint
+  on the position (`wine_poswatch2_20261111`) shows the slide is written by
+  the `FUN_0070eac0` transform message, not by `FUN_0041f460`: the 230 u/s
+  move projected on a 45 degree plane (162 on each axis). The port has the
+  contact query and a tested collide-and-slide capsule. The spawn camera
+  pull-in differs because the port's collision lacks the helper wall. The
+  full route/state gate remains open (BO2NX-37).
 - The native Windows oracle harness is available: a reverse SSH server on
   the Windows host, `tools/oracle/oracle_client.py`, a capture validator and
   an input/frame aligner. `capture_20261028_0150` is the first complete

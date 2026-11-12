@@ -277,6 +277,56 @@ void test_capsule_contact() {
     CHECK(!low.capsule_contact({5.0f, 0.0f, 0.4f}, 71.2f, 0.4f, -1).has_value());
 }
 
+// Two walls, one in a neighbouring cell and one in a cell that only shares a
+// portal *symbol*, not an index. The portal fields are symbols (BO2NX-76).
+void test_portal_symbols_link_cells() {
+    bo2::engine::LevelGeometry geometry;
+    geometry.positions = {{10.0f, -10.0f, 0.0f}, {10.0f, 10.0f, 0.0f}, {10.0f, 10.0f, 10.0f},
+                          {10.0f, -10.0f, 10.0f}, {20.0f, -10.0f, 0.0f}, {20.0f, 10.0f, 0.0f},
+                          {20.0f, 10.0f, 10.0f}, {20.0f, -10.0f, 10.0f}};
+    for (std::uint32_t base = 0; base < 2; ++base) {
+        bo2::engine::LevelTriangle near;
+        near.a = base;
+        near.b = base + 1;
+        near.c = base + 2;
+        near.instance = 0;
+        geometry.triangles.push_back(near);
+        bo2::engine::LevelTriangle far;
+        far.a = base + 4;
+        far.b = base + 5;
+        far.c = base + 6;
+        far.instance = 1;
+        geometry.triangles.push_back(far);
+    }
+    geometry.instances.resize(2);
+    geometry.instance_cells = {1, 2};
+    geometry.cell_grid.cells.resize(3);
+    bo2::engine::LevelCell& first = geometry.cell_grid.cells[0];
+    first.symbol = 10;
+    first.minimum = {-100.0f, -100.0f, -100.0f};
+    first.maximum = {9.9f, 100.0f, 100.0f};
+    first.portals.push_back(bo2::engine::CellPortal{});
+    first.portals.back().version = 1;
+    first.portals.back().cell_a = 99;  // the portal's own symbol
+    first.portals.back().cell_b = 20;  // the neighbouring cell's symbol
+    bo2::engine::LevelCell& second = geometry.cell_grid.cells[1];
+    second.symbol = 20;
+    second.minimum = {9.9f, -100.0f, -100.0f};
+    second.maximum = {15.0f, 100.0f, 100.0f};
+    bo2::engine::LevelCell& third = geometry.cell_grid.cells[2];
+    third.symbol = 30;
+    third.minimum = {15.0f, -100.0f, -100.0f};
+    third.maximum = {30.0f, 100.0f, 100.0f};
+
+    const bo2::engine::CollisionWorld world(geometry);
+    // The wall in cell 1 is reachable through cell 0's portal.
+    CHECK(world.intersects_sphere({9.0f, 0.0f, 5.0f}, 2.0f, 0));
+    // The wall in cell 2 is not a neighbour and stays out of the query.
+    CHECK(!world.intersects_sphere({19.0f, 0.0f, 5.0f}, 2.0f, 0));
+    // The owner cell still sees its own wall.
+    CHECK(world.intersects_sphere({19.0f, 0.0f, 5.0f}, 2.0f, 2));
+}
+
 void test_raycast() {
     const bo2::engine::CollisionWorld world(make_plane());
     CHECK(world.triangles() == 1);
@@ -299,6 +349,7 @@ void test_sphere() {
 int main() {
     test_raycast();
     test_sphere();
+    test_portal_symbols_link_cells();
     test_sphere_contact();
     test_capsule_contact();
     test_collmodc_model();

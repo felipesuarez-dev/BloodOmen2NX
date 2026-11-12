@@ -143,20 +143,30 @@ CollisionWorld::CollisionWorld(const LevelGeometry& geometry, CollisionSource so
     cells_ = geometry.cell_grid.cells;
     cell_filter_ = !cells_.empty() && !geometry.instance_cells.empty();
     cell_neighbours_.assign(cells_.size(), {});
+    // A portal stores symbols, not cell indices: one field is the other
+    // cell's symbol and the other is the portal's own (sl01 cell01 has
+    // symbol 925 and its portal is 930 <-> 931, cell02). Resolve both
+    // through the cells' symbol table.
+    std::uint16_t highest_symbol = 0;
+    for (const LevelCell& cell : cells_) {
+        highest_symbol = std::max(highest_symbol, cell.symbol);
+    }
+    std::vector<std::int32_t> cell_of_symbol(static_cast<std::size_t>(highest_symbol) + 1, -1);
+    for (std::size_t index = 0; index < cells_.size(); ++index) {
+        cell_of_symbol[cells_[index].symbol] = static_cast<std::int32_t>(index);
+    }
     for (std::size_t index = 0; index < cells_.size(); ++index) {
         for (const CellPortal& portal : cells_[index].portals) {
-            const std::int32_t a = portal.cell_a;
-            const std::int32_t b = portal.cell_b;
             const auto link = [this, index](std::int32_t other) {
                 if (other >= 0 && static_cast<std::size_t>(other) < cells_.size() &&
                     static_cast<std::size_t>(other) != index) {
                     cell_neighbours_[index].push_back(other);
                 }
             };
-            if (static_cast<std::size_t>(a) == index) {
-                link(b);
-            } else if (static_cast<std::size_t>(b) == index) {
-                link(a);
+            for (const std::uint16_t symbol : {portal.cell_a, portal.cell_b}) {
+                if (symbol < cell_of_symbol.size()) {
+                    link(cell_of_symbol[symbol]);
+                }
             }
         }
     }

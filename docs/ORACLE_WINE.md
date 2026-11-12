@@ -359,15 +359,17 @@ Measured:
   32 u ahead at z+48) and the camera casts (r=10, backwards). The port now
   filters the collision candidates by the mover's cell plus its portal
   neighbours (the cells' `terrains` lists index the `cellmdls` models) and
-  applies the run probe: the W run stops at x = 314.80 against the oracle's
-  326.35 (`after_w` max 19.28 u, mean 8.94 u; it was 29.18 / 13.31). A
-  hardware watchpoint on the position (`wine_poswatch2_20261111`) shows the
-  slide is written by the `FUN_0070eac0` transform message, not by
-  `FUN_0041f460`: the 230 u/s move projected on a 45 degree plane (162 on
-  each axis, yaw 0). The port has the contact query and a collide-and-slide
-  capsule, but the cell mapping hides the model 57 wall from the body: with
-  the filter it runs to x = 351.2, without it it stops at x = 297.4 before
-  the slide. The cell-to-triangle mapping is the open piece. The `sl01`
+  applies the run probe. The portal fields are symbols, not cell indices;
+  resolving them links the graph (cell01 symbol 925, portal 930 <-> 931 =
+  cell02), so the move reaches the cell-1 geometry and the run probe stops
+  at x = 234.14 on a slanted surface at (274, 59, 254) that the oracle
+  ignores (`after_w` max 92.57 u, mean 44.20 u). The next piece is the
+  primitive solid/non-solid filter (the runtime 0x14-byte attribute
+  records; the file's per-triangle byte is 0 there). A hardware watchpoint
+  on the position (`wine_poswatch2_20261111`) shows the slide is written by
+  the `FUN_0070eac0` transform message, not by `FUN_0041f460`: the 230 u/s
+  move projected on a 45 degree plane (162 on each axis, yaw 0). The port
+  has the contact query and a tested collide-and-slide capsule. The `sl01`
   `--collision-dump` has 660 cell collisions and decodes all of them; the W
   wall is model 57 `default`, instance 41, with 132 points, 130 triangles
   and 27 faces.

@@ -248,8 +248,11 @@ the same path, and the velocity at `behavior+0x19C` is a finite difference of
 that position (`FUN_00431df0`), so it adds no information.
 
 The port has the contact machinery for that response (`sphere_contact` and
-`capsule_contact`, plus a tested collide-and-slide body capsule). Against
-`sl01` the body still does not see the model 57 wall: with the cell filter it
-runs to the model 68 wall at x = 351.2, and without the filter it stops at
-x = 297.4 on the diagonal wall before the slide. The cell-to-triangle mapping
-is the open piece, not the response.
+`capsule_contact`, plus a tested collide-and-slide body capsule). The cell
+neighbours now link the portal **symbols** (the fields are not cell indices:
+`sl01` cell01 has symbol 925 and its portal is 930 <-> 931 = cell02), so the
+move reaches the cell-1 geometry. The run probe then stops at x = 234.14 on
+a slanted surface at (274, 59, 254) that the oracle ignores: the missing
+piece is the primitive solid/non-solid filter (the runtime 0x14-byte
+attribute records, not the file's per-triangle byte, which is 0 there).
+The slide response is implemented and tested; the gate is open.
