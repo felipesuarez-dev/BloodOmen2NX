@@ -233,10 +233,14 @@ void test_backward_speed() {
     bo2::game::PlayerController player(collision, {0.0f, 0.0f, 0.0f}, kain_tuning());
     bo2::game::PlayerInput input;
     input.move_y = -1.0f;
-    run(player, input, 60);
+    // Measured walk-back windup: the first 100 ms do not move.
+    run(player, input, 6);
+    CHECK(player.state().position.x == 0.0f);
+    const float before = player.state().position.x;
+    run(player, input, 1);
     const float back_speed = kWalkBackRootSpeed * kWalkBackClipSpeed;
     CHECK(std::fabs(back_speed - 106.25f) < 1.0e-3f);
-    CHECK(std::fabs(player.state().position.x + back_speed) < 0.5f);
+    CHECK(std::fabs((before - player.state().position.x) - back_speed * kTick) < 1.0e-3f);
     CHECK(player.state().yaw == 0.0f);
 }
 
@@ -259,8 +263,11 @@ void test_speeds_follow_the_tuning() {
 
     bo2::game::PlayerController back(collision, {0.0f, 0.0f, 0.0f}, tuning);
     input.move_y = -1.0f;
-    run(back, input, 60);
-    CHECK(std::fabs(back.state().position.x + 40.0f * 2.5f) < 0.5f);
+    run(back, input, 7);  // past the 0.1 s walk-back windup
+    const float back_before = back.state().position.x;
+    run(back, input, 10);
+    CHECK(std::fabs((back_before - back.state().position.x) - 40.0f * 2.5f * 10.0f / 60.0f) <
+          0.5f);
 }
 
 void test_wall_blocks_the_walk() {

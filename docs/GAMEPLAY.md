@@ -67,7 +67,7 @@ a number:
 | Walk root speed | 56.3485 u/s forward | `kain/walk` animreel, node 0 translation x: 0 to 86.4010 over 47 frames (1.5333 s) |
 | Walk-back root speed | 62.5 u/s backward | `kain/walk_backwards` animreel, node 0 translation x: -2.0833 to -100 over 47 frames (1.5667 s) |
 | Partial stick | At stick magnitude s (clamped to 1): run rate `(0.5 s + 0.5) * 1.15`, walk rate `(s + 1) * 1.15`; speed = `run_rate * s * 200 + walk_rate * (1 - s) * 56.3485`. At s = 0.5 it is 134.85 u/s; at s = 1, 230 | FUN_00445ba0; the 0.18 s start phase is still the full-stick approximation |
-| S | 106.25 u/s = walk-back root speed 62.5 * clip node speed 1.7, yaw unchanged | The 1.7 is the `speed` of the only clip node on `kain/walk_backwards` in the `kain` animatio graph (docs/FORMATS/animatio.md; read by `apply_kain_clip_speeds`). Unlike the run, nothing overrides it: FUN_00723620 rewrites the rate of the run layers only. The oracle confirms 62.5 * 1.7 = 106.25 u/s |
+| S | 106.25 u/s = walk-back root speed 62.5 * clip node speed 1.7, yaw unchanged | The 1.7 is the `speed` of the only clip node on `kain/walk_backwards` in the `kain` animatio graph (docs/FORMATS/animatio.md; read by `apply_kain_clip_speeds`). Unlike the run, nothing overrides it: FUN_00723620 rewrites the rate of the run layers only. The oracle confirms 62.5 * 1.7 = 106.25 u/s. The clip starts with a measured 100 ms windup: the oracle's x stays constant for frames 2381-2385 of `sl01_basic` after the S press, and the port models it with `kBackStartTime` |
 | Release | Stops at once | measured, oracle shows a short slide that is not modeled |
 
 ### Air
@@ -192,7 +192,7 @@ These have no original source. They are development aids or placeholders.
 | Eye height 1.7 | Provisional for the camera eye and the ground raycast. The original's r=1 ground/step probe is not ported: its hit is a 3D correction inside the slide state (`FUN_00430820`), and the vertical part alone drops the body into small pits |
 | Attack range 2.2, radius 1.0, cooldown 0.45 s | Provisional, same reason |
 | Move sub-steps | A tick of travel is up to 230 / 60 = 3.8 units, ten times the body radius, so a move is walked in steps of one radius to keep thin walls solid |
-| Forward and back | Forward uses the FUN_00445ba0 partial-stick blend; back is still on or off past the deadzone. The platform layer also zeroes sticks below 0.25 before the deadzone applies |
+| Forward and back | Forward uses the FUN_00445ba0 partial-stick blend; back is still on or off past the deadzone, after the measured 0.1 s windup. The platform layer also zeroes sticks below 0.25 before the deadzone applies |
 | Step cap | A step is cut to 0.1 s (the cap the SDL loop already uses) and a move to 64 sub-steps, so a stalled frame cannot tunnel through a wall or the floor |
 | Deadzone edge | Turning starts at exactly the deadzone (FUN_0041ecf0 compares `deadzone <= ax`); the forward/back gate is not traced and the port uses past-the-deadzone |
 | Run button | `run` is Shift and gives 200 u/s, which is slower than plain W (230). That is what the oracle measured (unverified, see above); the name is kept from the input layer. In the oracle prefix Shift is the `autoface` row, not a run (`docs/ORACLE_WINE.md`, Input bindings), so this speed is probably that action |

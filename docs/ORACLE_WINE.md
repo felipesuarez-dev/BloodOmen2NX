@@ -353,9 +353,12 @@ Measured:
   is 230 u/s until the slide, then 162 u/s at -45 degrees on model 57's upper
   chamfer, back to 230 and 0 at the stop: x = 326.38, y = 44.18 against the
   oracle's 326.35 / 44.14. The camera columns are empty in this capture. The
-  oracle's post-stop drift down the wall (y 44.14 -> 42.84) is not modeled, so
-  the S/A/D phases that follow the stop still diverge (about 10 / 9 / 9 u) and
-  the run/jump/attack phases inherit it (about 120 u).
+  oracle's post-stop drift down the wall (y 44.14 -> 42.84) is modeled only
+  by the run probe flag; the S phase now matches the oracle's measured 100 ms
+  windup (after_s mean 0.812 / max 1.733 u) and A/D are 0.25 u. The run/jump/
+  attack phases still diverge (about 118 u) because the A+D net yaw is 12
+  degrees short: the input edges carry 20-30 ms of 30 fps / 50 Hz sampling
+  noise, which is the open route gate (BO2NX-37).
   The W gap closed by porting the collision manager's body sweep, not a
   movement probe. A live dump of the mover proxy (`wine_shape2_20261113`)
   shows the three `collmodc` spheres, but the manager's query only passes the

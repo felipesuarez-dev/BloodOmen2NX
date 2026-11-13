@@ -62,6 +62,7 @@ private:
     float back_speed_ = 0.0f;  // walk-back root speed * clip node speed
     PlayerState state_;
     float forward_time_ = 0.0f;  // seconds forward has been held (ground speed ramp)
+    float back_time_ = 0.0f;     // seconds back has been held (walk-back windup)
     float air_time_ = 0.0f;      // seconds since takeoff
     bool boost_armed_ = false;   // jump held since takeoff
     bool jump_was_down_ = false;  // jump input of the previous step (press edge)

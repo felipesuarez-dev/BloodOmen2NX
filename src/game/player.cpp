@@ -115,6 +115,11 @@ constexpr float kRunProbeRadius = 8.0f;
 constexpr float kRunProbeLength = 32.0f;
 constexpr float kRunProbeHeight = 48.0f;
 constexpr float kRunProbeFacing = 0.9f;  // tunedata wallhug triggerDPThresh
+// Measured in `sl01_basic` (`wine_20261029_0043`): after the S press the
+// oracle's x stays constant for 100 ms (frames 2381-2385) and only then moves
+// at the 106.25 u/s walk-back speed. The clip's own windup has no decompiled
+// source yet; the port keeps the measured pause.
+constexpr float kBackStartTime = 0.1f;
 constexpr float kLookSpeed = 2.0f;  // port debug aid (mouse and right stick look)
 constexpr float kAttackCooldown = 0.45f;
 constexpr float kAttackRange = 2.2f;
@@ -237,7 +242,8 @@ void PlayerController::step(const PlayerInput& input, double seconds) {
         forward_time_ += dt;
     } else {
         forward_time_ = 0.0f;
-        if (back_held) {
+        back_time_ = back_held ? back_time_ + dt : 0.0f;
+        if (back_held && back_time_ > kBackStartTime) {
             speed = -back_speed_;
         }
     }
@@ -481,6 +487,7 @@ void PlayerController::restore(const PlayerState& state) {
     state_ = state;
     state_.vertical_velocity = 0.0f;
     forward_time_ = 0.0f;
+    back_time_ = 0.0f;
     air_time_ = 0.0f;
     boost_armed_ = false;
     jump_was_down_ = false;

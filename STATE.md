@@ -122,9 +122,11 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   (the W start phase). The slide is 162 u/s at -45 degrees on model 57's upper
   chamfer and the stop is x = 326.38, y = 44.18 against the oracle's
   326.35 / 44.14. The oracle's post-stop drift down the wall (y 44.14 ->
-  42.84) is not modeled, so the S/A/D phases still differ by about 10 u and
-  the run/jump/attack phases inherit the gap; the full route/state gate stays
-  open (BO2NX-37). The `collmodc` payload is decoded: a 6-byte point list,
+  42.84) is not modeled. The S phase now carries the measured 100 ms walk-back
+  windup (after_s mean 0.812 / max 1.733 u) and A/D are 0.25 u; the
+  run/jump/attack phases still differ by about 118 u because the A+D net yaw
+  is 12 degrees short from the capture's 20-30 ms input-edge sampling, so the
+  full route gate stays open (BO2NX-37). The `collmodc` payload is decoded: a 6-byte point list,
   4-byte packed triangle records, 24-byte solid spheres and 20-byte face
   records closed by a 28-byte trailer. All 660 `sl01` payloads (and 76 in
   `sanctuary`) decode, including the variant that wraps the record in a
