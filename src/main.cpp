@@ -171,8 +171,8 @@ Options parse_options(int argc, char** argv) {
                 << "  --audio-seconds <n>    audio demo duration (default 5)\n"
                 << "  --play                 Kain third-person player (needs --big)\n"
                 << "  --kain <file.big>      kain tunedata for --play (default: <level dir>/../kain/kain.big)\n"
-                << "  --kain-model <file.big> append Kain's model to the level (--level at --kain-at,\n"
-                << "                         --replay and --play at the player)\n"
+                << "  --kain-model <file.big> append Kain's model to the level (--level and --sdl at\n"
+                << "                         --kain-at, --replay and --play at the player)\n"
                 << "  --kain-at x,y,z        Kain model placement for --level (default 0,0,0)\n"
                 << "  --kain-clip <name>     pose Kain with an animreel clip of --kain-model, for\n"
                 << "                         example kain/run (default: the bind pose)\n"
@@ -1159,7 +1159,12 @@ int run_sdl(const Options& options) {
     if (options.play) {
         window.kain = load_kain_tuning(options);
     }
-    const LoadedLevel level = load_level(options);
+    LoadedLevel level = load_level(options);
+    if (level.has_kain && options.play) {
+        window.kain_actor = &level.kain;
+    } else if (level.has_kain && !options.kain_clip.empty()) {
+        place_kain(level, options.kain_frame, options.kain_at, 0.0f);
+    }
     if (!options.eye_set || !options.target_set) {
         default_camera(level, window.camera.eye, window.camera.target);
     }

@@ -18,6 +18,13 @@ public:
     LevelPipeline& operator=(const LevelPipeline&) = delete;
 
     void upload(const engine::LevelGeometry& geometry);
+    // Rewrites the positions and normals of `positions.size()` vertices from
+    // `first` on; the other attributes come from `geometry`. This is how a
+    // skinned actor moves: the level stays in the buffer and only the actor's
+    // slice is sent again each frame. `normals` may be empty.
+    void update_vertices(const engine::LevelGeometry& geometry, std::uint32_t first,
+                         const std::vector<engine::Vec3>& positions,
+                         const std::vector<engine::Vec3>& normals);
     void draw(const engine::LevelGeometry& geometry, const std::vector<std::uint32_t>& textures,
               const std::vector<std::uint32_t>& lightmaps, std::size_t model_lightmap_offset,
               const engine::Mat4& view_projection, engine::MaterialMode material_mode,

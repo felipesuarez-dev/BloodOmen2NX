@@ -443,6 +443,26 @@ int run_level(const engine::LevelGeometry& geometry,
         follow = std::make_unique<game::FollowCamera>();
         follow->update(player->state(), *collision);
     }
+    // Kain's model follows the player: skin it at the clip time and send its
+    // slice of the vertex buffer again. The clip loops; choosing it from the
+    // player state is not implemented.
+    const bool actor = player != nullptr && options.kain_actor != nullptr &&
+                       geometry.actor.vertex_count != 0;
+    double clip_seconds = 0.0;
+    std::vector<engine::Vec3> actor_positions;
+    std::vector<engine::Vec3> actor_normals;
+    const auto update_actor = [&]() {
+        if (!actor) {
+            return;
+        }
+        engine::pose_actor(*options.kain_actor,
+                           engine::loop_frame(options.kain_actor->reel, clip_seconds),
+                           player->state().position, player->state().yaw, actor_positions,
+                           actor_normals);
+        pipeline.update_vertices(geometry, geometry.actor.first_vertex, actor_positions,
+                                 actor_normals);
+    };
+    update_actor();
     const auto active_camera = [&]() {
         if (follow) {
             Camera value;
@@ -574,6 +594,8 @@ int run_level(const engine::LevelGeometry& geometry,
             player_input.attack = state.action(InputAction::Attack);
             player->step(player_input, static_cast<double>(dt));
             follow->update(player->state(), *collision, static_cast<double>(dt));
+            clip_seconds += static_cast<double>(dt);
+            update_actor();
             ++play_tick;
         } else {
             const float step = std::max(0.01f, orbit.distance * 0.01f) *
@@ -609,7 +631,9 @@ int run_level(const engine::LevelGeometry& geometry,
         draw_level(geometry, texture_ids, lightmap_ids, model_lightmap_offset, pipeline,
                    active_camera(), options.width, options.height, options.material_mode,
                    options.lightmap);
-        draw_player(player ? player->state().position : orbit.target);
+        if (!actor) {
+            draw_player(player ? player->state().position : orbit.target);
+        }
         if (player) {
             draw_hud(options.width, options.height, hud);
         }

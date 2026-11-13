@@ -28,6 +28,18 @@ struct PipelineVertex {
     float lv;
 };
 
+// One vertex of the buffer: the given position and normal with the texture
+// coordinates of `geometry` at `index`.
+PipelineVertex make_vertex(const engine::LevelGeometry& geometry, std::size_t index,
+                           const engine::Vec3& position, const engine::Vec3& normal) {
+    const engine::Vec2 uv =
+        index < geometry.texcoords.size() ? geometry.texcoords[index] : engine::Vec2{};
+    const engine::Vec2 light_uv =
+        index < geometry.lightmap_texcoords.size() ? geometry.lightmap_texcoords[index] : uv;
+    return {position.x, position.y, position.z, normal.x, normal.y, normal.z,
+            uv.x,       uv.y,       light_uv.x, light_uv.y};
+}
+
 void matrix_values(const engine::Mat4& matrix, GLfloat values[16]) {
     for (int row = 0; row < 4; ++row) {
         for (int column = 0; column < 4; ++column) {
@@ -147,6 +159,7 @@ struct LevelPipeline::Impl {
     GLuint program = 0;
     GLuint vbo = 0;
     GLuint ibo = 0;
+    std::size_t vertex_count = 0;
     GLint u_mvp = -1;
     GLint u_texture = -1;
     GLint u_lightmap = -1;
@@ -192,23 +205,39 @@ void LevelPipeline::upload(const engine::LevelGeometry& geometry) {
     std::vector<PipelineVertex> vertices;
     vertices.reserve(geometry.positions.size());
     for (std::size_t index = 0; index < geometry.positions.size(); ++index) {
-        const engine::Vec3& position = geometry.positions[index];
-        const engine::Vec3 normal =
-            index < geometry.normals.size() ? geometry.normals[index] : engine::Vec3{};
-        const engine::Vec2 uv =
-            index < geometry.texcoords.size() ? geometry.texcoords[index] : engine::Vec2{};
-        const engine::Vec2 light_uv = index < geometry.lightmap_texcoords.size()
-                                          ? geometry.lightmap_texcoords[index]
-                                          : uv;
-        vertices.push_back({position.x, position.y, position.z, normal.x, normal.y, normal.z,
-                            uv.x, uv.y, light_uv.x, light_uv.y});
+        vertices.push_back(make_vertex(
+            geometry, index, geometry.positions[index],
+            index < geometry.normals.size() ? geometry.normals[index] : engine::Vec3{}));
     }
+    impl_->vertex_count = vertices.size();
     glGenBuffers(1, &impl_->vbo);
     glBindBuffer(GL_ARRAY_BUFFER, impl_->vbo);
+    // An actor's slice is rewritten every frame (update_vertices).
     glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices.size() * sizeof(PipelineVertex)),
-                 vertices.data(), GL_STATIC_DRAW);
+                 vertices.data(),
+                 geometry.actor.vertex_count != 0 ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glGenBuffers(1, &impl_->ibo);
+}
+
+void LevelPipeline::update_vertices(const engine::LevelGeometry& geometry, std::uint32_t first,
+                                    const std::vector<engine::Vec3>& positions,
+                                    const std::vector<engine::Vec3>& normals) {
+    if (impl_->vbo == 0 || positions.empty() ||
+        static_cast<std::size_t>(first) + positions.size() > impl_->vertex_count) {
+        return;
+    }
+    std::vector<PipelineVertex> vertices;
+    vertices.reserve(positions.size());
+    for (std::size_t index = 0; index < positions.size(); ++index) {
+        vertices.push_back(make_vertex(geometry, first + index, positions[index],
+                                       index < normals.size() ? normals[index] : engine::Vec3{}));
+    }
+    glBindBuffer(GL_ARRAY_BUFFER, impl_->vbo);
+    glBufferSubData(GL_ARRAY_BUFFER, static_cast<GLintptr>(first * sizeof(PipelineVertex)),
+                    static_cast<GLsizeiptr>(vertices.size() * sizeof(PipelineVertex)),
+                    vertices.data());
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 void LevelPipeline::draw(const engine::LevelGeometry& geometry,
