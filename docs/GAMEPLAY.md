@@ -209,7 +209,7 @@ These have no original source. They are development aids or placeholders.
 | Glide | Not implemented. `g_glide` (-128) and `termGlide` (160) are parsed only |
 | Ledge fall | Not implemented. Walking off an edge only applies gravity and keeps the ground speed of the held input; the original fall state (FUN_00442800, FUN_00442ae0) has the same air control as a jump but its takeoff velocity was not traced |
 | Collision size | Body radius and eye height are provisional, see above |
-| Wall slide and stop | The W slide (162 u/s at -45 degrees, frames 2311-2318) and the stop at x = 326.35 are the result of the collision manager's per-tick update `FUN_005cd2c0`: it tests the registered query objects (including the mover's proxy, whose kind-4 matrix translation `FUN_005ccb60` writes) and copies the results back. The body volume is Kain's model AABB (-20,-20,0)..(20,20,72); `box_contact` provides the query, but the manager's object runtime (shape registration, sweep, result plumbing) is not ported |
+| Wall slide and stop | The W slide (162 u/s at -45 degrees) is the velocity projection against model 57's upper chamfer (normal `(-0.697,-0.697,0.166)`); the stop is the same projection against **model 649 instance 635** at (347.00, 19.05, 269.81) (normal `(-0.991,-0.012,-0.133)`, face at x = 346..348). The geometry is in the port hull; the body's part set and the pair response (`FUN_00632fc0`, impulse via `FUN_006332c0`) are not ported |
 | Release slide | The short slide after releasing W is not modeled |
 | Camera setups | The range, pitch, pivot height and yaw limit are those of one live setup; the code or data that builds the setups (including the jump setup with delay 0.1 and blend 0.6) was not traced. The range blend itself is ported |
 
