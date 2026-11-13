@@ -1044,10 +1044,14 @@ bool parse_collmodc_at(const common::Reader& reader, std::size_t flag_offset, bo
     for (std::size_t index = 0; index < triangle_count; ++index) {
         const std::size_t offset = position + index * 4;
         CollisionTriangle triangle;
+        // Runtime packing (FUN_0062dfc0): three 9-bit vertex indices share
+        // the record. The port's byte order is a, b, c, so `c` keeps the two
+        // bits stored in the low bits of the attribute byte.
         triangle.a = reader.u8(offset);
         triangle.b = static_cast<std::uint32_t>(reader.u8(offset + 1) >> 1);
-        triangle.c = static_cast<std::uint32_t>(reader.u8(offset + 2) >> 2);
         triangle.attribute = reader.u8(offset + 3);
+        triangle.c = static_cast<std::uint32_t>(reader.u8(offset + 2) >> 2) |
+                     (static_cast<std::uint32_t>(triangle.attribute & 7) << 6);
         model.triangles.push_back(triangle);
     }
     position += index_bytes;
@@ -1286,10 +1290,11 @@ LevelGeometry parse_cell_group(const std::vector<std::uint8_t>& data,
         position = model_end;
     }
     read_cell_tail(reader, position, data.size(), symbols, names, geometry);
-    // Cell membership: each cell's `terrains` list indexes the `cellinst`
-    // entries (the terrain instances).
-    // The `terrains` values index the `cellmdls` models (the cell's geometry);
-    // an instance belongs to the cells of its model.
+    // Cell membership: each cell's `terrains` list references the `cellmdls`
+    // models it draws, so it is a hint, not a unique owner (model 649 is
+    // listed by cell 5 but its instance sits inside cell 0). Prefer the cell
+    // whose bounds contain the instance and that lists its model, then the
+    // bounds alone, and only then the list.
     std::vector<std::int32_t> model_cells(geometry.model_ranges.size(), -1);
     for (std::size_t cell_index = 0; cell_index < geometry.cell_grid.cells.size(); ++cell_index) {
         for (const std::uint32_t model : geometry.cell_grid.cells[cell_index].terrains) {
@@ -1300,9 +1305,31 @@ LevelGeometry parse_cell_group(const std::vector<std::uint8_t>& data,
     }
     geometry.instance_cells.assign(geometry.instances.size(), -1);
     for (std::size_t index = 0; index < geometry.instances.size(); ++index) {
-        const std::uint32_t model = geometry.instances[index].model;
-        if (model < model_cells.size()) {
-            geometry.instance_cells[index] = model_cells[model];
+        const LevelInstance& instance = geometry.instances[index];
+        std::int32_t spatial = -1;
+        std::int32_t listed = -1;
+        for (std::size_t cell_index = 0; cell_index < geometry.cell_grid.cells.size(); ++cell_index) {
+            const LevelCell& cell = geometry.cell_grid.cells[cell_index];
+            if (instance.position.x < cell.minimum.x || instance.position.x > cell.maximum.x ||
+                instance.position.y < cell.minimum.y || instance.position.y > cell.maximum.y ||
+                instance.position.z < cell.minimum.z || instance.position.z > cell.maximum.z) {
+                continue;
+            }
+            if (spatial < 0) {
+                spatial = static_cast<std::int32_t>(cell_index);
+            }
+            if (std::find(cell.terrains.begin(), cell.terrains.end(), instance.model) !=
+                cell.terrains.end()) {
+                listed = static_cast<std::int32_t>(cell_index);
+                break;
+            }
+        }
+        if (listed >= 0) {
+            geometry.instance_cells[index] = listed;
+        } else if (spatial >= 0) {
+            geometry.instance_cells[index] = spatial;
+        } else if (instance.model < model_cells.size()) {
+            geometry.instance_cells[index] = model_cells[instance.model];
         }
     }
     place_instances(geometry);

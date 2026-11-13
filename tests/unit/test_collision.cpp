@@ -76,8 +76,10 @@ void put_packed_triangle(std::vector<std::uint8_t>& data, std::uint8_t a, std::u
                          std::uint8_t c, std::uint8_t attribute) {
     data.push_back(a);
     data.push_back(static_cast<std::uint8_t>(b << 1));
-    data.push_back(static_cast<std::uint8_t>(c << 2));
-    data.push_back(attribute);
+    data.push_back(static_cast<std::uint8_t>((c & 0x3F) << 2));
+    // The third index keeps its top two bits in the low bits of the attribute
+    // byte (FUN_0062dfc0 packs three 9-bit indices).
+    data.push_back(static_cast<std::uint8_t>(attribute | ((c >> 6) & 7)));
 }
 
 // A complete payload shaped like the reference model 0: a 160 x 64 x 80 box
@@ -314,6 +316,117 @@ void test_box_contact() {
     CHECK(band->normal.x < -0.99f);
 }
 
+// The packed triangle record keeps the top two bits of the third index in the
+// low bits of the attribute byte (FUN_0062dfc0 packs three 9-bit indices).
+void test_collmodc_high_index() {
+    std::vector<std::uint8_t> data = {'d', 'e', 'f', 'a', 'u', 'l', 't', 0};
+    put_u32(data, 20);
+    for (int index = 0; index < 20; ++index) {
+        data.push_back(0);
+    }
+    put_u32(data, 0xFFFFFF01U);
+    put_u32(data, 70 * 6);
+    for (std::int16_t index = 0; index < 70; ++index) {
+        put_i16(data, index);
+        put_i16(data, 0);
+        put_i16(data, 0);
+    }
+    put_u32(data, 1);
+    put_u32(data, 4);
+    put_packed_triangle(data, 1, 2, 69, 0x18);
+    put_u32(data, 0);
+    put_u32(data, 0);
+    const bo2::engine::CollisionModel model = bo2::engine::parse_collmodc(data);
+    CHECK(model.valid);
+    CHECK(model.vertices.size() == 70);
+    CHECK(model.triangles.size() == 1);
+    CHECK(model.triangles[0].a == 1);
+    CHECK(model.triangles[0].b == 2);
+    CHECK(model.triangles[0].c == 69);
+    CHECK(model.triangles[0].attribute == 0x19);
+}
+
+// The swept body (FUN_005ccb60): a sphere stops at a head-on wall and slides
+// along a 45 degree one.
+void test_slide_body() {
+    const bo2::engine::CollisionWorld wall(make_wall());
+    const std::vector<bo2::engine::BodySphere> body = {{{0.0f, 0.0f, 51.98f}, 19.8f}};
+    const bo2::engine::BodyMove stopped =
+        wall.slide_body({50.0f, 0.0f, 0.0f}, body, {-60.0f, 0.0f, 0.0f}, -1);
+    CHECK(stopped.blocked);
+    CHECK(stopped.normal.x > 0.99f);
+    CHECK(std::fabs(stopped.position.x - 19.8f) < 0.5f);
+
+    bo2::engine::LevelGeometry level;
+    level.positions = {{50.0f, 0.0f, 0.0f}, {0.0f, 50.0f, 0.0f}, {0.0f, 50.0f, 300.0f},
+                       {50.0f, 0.0f, 300.0f}};
+    const std::uint32_t triangles[2][3] = {{0, 1, 2}, {0, 2, 3}};
+    for (const auto& triangle : triangles) {
+        bo2::engine::LevelTriangle value;
+        value.a = triangle[0];
+        value.b = triangle[1];
+        value.c = triangle[2];
+        level.triangles.push_back(value);
+    }
+    const bo2::engine::CollisionWorld slanted(level);
+    const bo2::engine::BodyMove slid =
+        slanted.slide_body({0.0f, 0.0f, 0.0f}, body, {40.0f, 0.0f, 0.0f}, -1);
+    CHECK(slid.blocked);
+    const float distance =
+        (slid.position.x + slid.position.y - 50.0f) / std::sqrt(2.0f);
+    CHECK(std::fabs(distance + 19.8f) < 0.5f);
+    CHECK(slid.position.x > 15.0f);
+    CHECK(slid.position.y < -5.0f);
+}
+
+// Category 2 has edges only: the narrow phase skips its face (FUN_005ddc90),
+// and the ramp at (274, 59, 254) in sl01 is one.
+void test_face_solid_category() {
+    const auto make_payload = [](std::uint8_t attribute) {
+        std::vector<std::uint8_t> data = {'d', 'e', 'f', 'a', 'u', 'l', 't', 0};
+        put_u32(data, 20);
+        for (int index = 0; index < 20; ++index) {
+            data.push_back(0);
+        }
+        put_u32(data, 0xFFFFFF01U);
+        put_u32(data, 18);
+        const std::int16_t points[3][3] = {{-10, -10, 0}, {10, -10, 0}, {0, 10, 0}};
+        for (const auto& point : points) {
+            put_i16(data, point[0]);
+            put_i16(data, point[1]);
+            put_i16(data, point[2]);
+        }
+        data.push_back(0);
+        data.push_back(0);
+        put_u32(data, 1);
+        put_u32(data, 4);
+        put_packed_triangle(data, 0, 1, 2, attribute);
+        put_u32(data, 0);
+        put_u32(data, 0);
+        return data;
+    };
+    const auto make_world = [&make_payload](std::uint8_t attribute) {
+        bo2::engine::LevelGeometry geometry;
+        bo2::engine::LevelCollision collision;
+        collision.model = 0;
+        collision.data = make_payload(attribute);
+        geometry.collisions.push_back(std::move(collision));
+        bo2::engine::LevelInstance instance;
+        instance.model = 0;
+        geometry.instances.push_back(instance);
+        return bo2::engine::CollisionWorld(geometry,
+                                           bo2::engine::CollisionSource::Collmodc);
+    };
+    const auto solid = make_world(0x18);
+    CHECK(solid.triangles() == 1);
+    CHECK(solid.swept_sphere({0.0f, 0.0f, 5.0f}, {0.0f, 0.0f, -10.0f}, 0.5f, -1)
+              .has_value());
+    const auto edges_only = make_world(0x58);
+    CHECK(edges_only.triangles() == 1);
+    CHECK(!edges_only.swept_sphere({0.0f, 0.0f, 5.0f}, {0.0f, 0.0f, -10.0f}, 0.5f, -1)
+               .has_value());
+}
+
 // Two walls, one in a neighbouring cell and one in a cell that only shares a
 // portal *symbol*, not an index. The portal fields are symbols (BO2NX-76).
 void test_portal_symbols_link_cells() {
@@ -392,7 +505,10 @@ int main() {
     test_swept_sphere();
     test_box_contact();
     test_collmodc_model();
+    test_collmodc_high_index();
     test_collmodc_boxes();
+    test_slide_body();
+    test_face_solid_category();
     if (failures != 0) {
         std::cerr << failures << " check(s) failed\n";
         return 1;

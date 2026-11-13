@@ -23,6 +23,21 @@ struct SphereContact {
     float distance = 0.0f;
 };
 
+// One sphere of a mover body, offset from the body origin (the feet). Kain's
+// proxy uses the three solid spheres of his `collmodc` (wine_shape2_20261113).
+struct BodySphere {
+    Vec3 offset{0.0f, 0.0f, 0.0f};
+    float radius = 0.0f;
+};
+
+// Result of the swept multi-sphere move (FUN_005ccb60): the resolved origin,
+// the first contact normal and whether a contact clamped the move.
+struct BodyMove {
+    Vec3 position{0.0f, 0.0f, 0.0f};
+    Vec3 normal{0.0f, 0.0f, 1.0f};
+    bool blocked = false;
+};
+
 // Which mesh the collision world queries. `Collmodc` is the original's static
 // collision hull; `Render` is the visible `rmd` mesh and `Boxes` is the
 // `collmodc` broad-phase AABB list. The last two are diagnostics; gameplay
@@ -61,6 +76,12 @@ public:
     // (-20,-20,0)..(20,20,72) of Kain's `collmodc`.
     std::optional<SphereContact> box_contact(const Vec3& center, const Vec3& half_extents,
                                              std::int32_t cell) const;
+    // Swept move of a multi-sphere body (FUN_005ccb60, the collision manager):
+    // advance to the earliest sphere contact, remove the normal component of
+    // the remaining offset and repeat, up to `passes` times. This is the
+    // collide-and-slide that turns the W run into the 45 degree slide.
+    BodyMove slide_body(const Vec3& origin, const std::vector<BodySphere>& spheres,
+                        const Vec3& offset, std::int32_t cell, int passes = 8) const;
     std::int32_t cell_at(const Vec3& point) const;
     std::optional<RayHit> raycast(const Vec3& origin, const Vec3& direction,
                                   float max_distance) const;
@@ -73,6 +94,11 @@ private:
         Vec3 minimum;
         Vec3 maximum;
         std::int32_t cell = -1;
+        // The packed `collmodc` triangle record carries a 2-bit category in
+        // the top bits of its attribute byte. Category 2 has edges only: the
+        // narrow phase skips its face, so the body and the probes pass through
+        // it (FUN_005ddc90; the ramp at (274, 59, 254) is one).
+        bool face_solid = true;
     };
 
     std::vector<Triangle> triangles_;
