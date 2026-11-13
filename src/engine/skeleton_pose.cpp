@@ -250,8 +250,14 @@ void SkinnedActor::set_clip(AnimReel clip) {
 
 void pose_actor(const SkinnedActor& actor, float frame, const Vec3& position, float yaw,
                 std::vector<Vec3>& positions, std::vector<Vec3>& normals) {
-    const std::vector<Mat4> matrices = bone_matrices(
-        actor.skeleton, sample_pose(actor.skeleton, actor.reel, actor.channels, frame));
+    pose_actor(actor, actor.reel, actor.channels, frame, position, yaw, positions, normals);
+}
+
+void pose_actor(const SkinnedActor& actor, const AnimReel& reel,
+                const std::vector<BoneChannels>& channels, float frame, const Vec3& position,
+                float yaw, std::vector<Vec3>& positions, std::vector<Vec3>& normals) {
+    const std::vector<Mat4> matrices =
+        bone_matrices(actor.skeleton, sample_pose(actor.skeleton, reel, channels, frame));
     skin_vertices(actor.skeleton, matrices, actor.bind_positions, actor.bind_normals, positions,
                   normals);
     const Mat4 turn = rotation_z(yaw);

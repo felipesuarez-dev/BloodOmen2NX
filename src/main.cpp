@@ -28,6 +28,7 @@
 #include "bo2/engine/tick.hpp"
 #include "bo2/engine/world.hpp"
 #include "bo2/game/camera.hpp"
+#include "bo2/game/kain_actor.hpp"
 #include "bo2/game/kain_animation.hpp"
 #include "bo2/game/kain_tuning.hpp"
 #include "bo2/game/player.hpp"
@@ -176,8 +177,9 @@ Options parse_options(int argc, char** argv) {
                 << "  --kain-model <file.big> append Kain's model to the level (--level and --sdl at\n"
                 << "                         --kain-at, --replay and --play at the player)\n"
                 << "  --kain-at x,y,z        Kain model placement for --level (default 0,0,0)\n"
-                << "  --kain-clip <name>     pose Kain with an animreel clip of --kain-model, for\n"
-                << "                         example kain/run (default: the bind pose)\n"
+                << "  --kain-clip <name>     pose Kain with one animreel clip of --kain-model, for\n"
+                << "                         example kain/run (default: the bind pose in --level and\n"
+                << "                         --sdl, the clip of the animation state in --replay and --play)\n"
                 << "  --kain-frame <n>       clip frame for --level, fractions allowed (default 0)\n"
                 << "  --headless             run the fixed-step loop without a window\n"
                 << "  --frames <n>           fixed-step iterations for --headless\n"
@@ -673,12 +675,9 @@ LoadedLevel load_level(const Options& options) {
     return level;
 }
 
-// Rewrites Kain's slice of the level geometry: his clip at `frame`, turned by
-// `yaw` and moved to `position`.
-void place_kain(LoadedLevel& level, float frame, const bo2::engine::Vec3& position, float yaw) {
-    std::vector<bo2::engine::Vec3> positions;
-    std::vector<bo2::engine::Vec3> normals;
-    bo2::engine::pose_actor(level.kain, frame, position, yaw, positions, normals);
+// Rewrites Kain's slice of the level geometry with a posed copy of his model.
+void store_kain(LoadedLevel& level, const std::vector<bo2::engine::Vec3>& positions,
+                const std::vector<bo2::engine::Vec3>& normals) {
     bo2::engine::LevelGeometry& geometry = level.geometry;
     const std::size_t first = geometry.actor.first_vertex;
     if (first + positions.size() > geometry.positions.size()) {
@@ -693,6 +692,34 @@ void place_kain(LoadedLevel& level, float frame, const bo2::engine::Vec3& positi
         std::copy(normals.begin(), normals.end(),
                   geometry.normals.begin() + static_cast<std::ptrdiff_t>(first));
     }
+}
+
+// Kain's own clip (--kain-clip) at `frame`, turned by `yaw` and moved to `position`.
+void place_kain(LoadedLevel& level, float frame, const bo2::engine::Vec3& position, float yaw) {
+    std::vector<bo2::engine::Vec3> positions;
+    std::vector<bo2::engine::Vec3> normals;
+    bo2::engine::pose_actor(level.kain, frame, position, yaw, positions, normals);
+    store_kain(level, positions, normals);
+}
+
+// Kain driven by the player: his animation state picks the clip. With
+// --kain-clip that one reel loops instead.
+std::unique_ptr<bo2::game::KainActor> make_kain_actor(const Options& options,
+                                                      const LoadedLevel& level,
+                                                      const bo2::game::KainTuning& tuning) {
+    if (!level.has_kain) {
+        return nullptr;
+    }
+    bo2::engine::SkinnedActor model;
+    model.skeleton = level.kain.skeleton;
+    model.bind_positions = level.kain.bind_positions;
+    model.bind_normals = level.kain.bind_normals;
+    auto actor = std::make_unique<bo2::game::KainActor>(
+        bo2::engine::BigArchive::load(options.kain_model), std::move(model), tuning);
+    if (!options.kain_clip.empty()) {
+        actor->set_fixed_clip(options.kain_clip);
+    }
+    return actor;
 }
 
 std::uint32_t collision_u32(const std::vector<std::uint8_t>& data, std::size_t offset) {
@@ -1099,8 +1126,10 @@ int run_replay(const Options& options) {
     player.restore(initial);
     bo2::game::FollowCamera camera;
     camera.update(player.state(), collision, 0.0);
+    // The animation state is replayed with or without a model to draw.
     const bo2::engine::AnimGraph kain_graph = load_kain_graph(options);
     bo2::game::KainAnimation animation(kain_graph, tuning);
+    const std::unique_ptr<bo2::game::KainActor> actor = make_kain_actor(options, level, tuning);
 
     std::ofstream state(options.state_out);
     if (!state) {
@@ -1110,9 +1139,7 @@ int run_replay(const Options& options) {
     state << "frame,phase,player_x,player_y,player_z,vel_x,vel_y,vel_z,"
              "player_yaw_deg,grounded,cam_x,cam_y,cam_z,cam_yaw_deg,cam_pitch_deg,anim\n";
     bo2::engine::Vec3 previous = player.state().position;
-    double clip_seconds = 0.0;
     for (const bo2::game::ReplayTick& tick : route.ticks) {
-        clip_seconds += tick.seconds;
         bo2::game::PlayerInput input;
         input.move_x = tick.move_x;
         input.move_y = tick.move_y;
@@ -1122,6 +1149,9 @@ int run_replay(const Options& options) {
         player.step(input, tick.seconds);
         camera.update(player.state(), collision, tick.seconds);
         animation.step(input, player.state(), tick.seconds);
+        if (actor) {
+            actor->step(input, player.state(), tick.seconds);
+        }
         const bo2::engine::Vec3 position = player.state().position;
         const bo2::engine::Vec3 velocity =
             tick.seconds > 0.0 ? (position - previous) / static_cast<float>(tick.seconds)
@@ -1140,11 +1170,14 @@ int run_replay(const Options& options) {
         previous = position;
     }
     if (!options.out.empty()) {
-        if (level.has_kain) {
-            // The clip is whatever --kain-clip names, looped over the replay;
-            // choosing the clip from the player state is BO2NX-74.
-            place_kain(level, bo2::engine::loop_frame(level.kain.reel, clip_seconds),
-                       player.state().position, player.state().yaw);
+        if (actor) {
+            std::vector<bo2::engine::Vec3> positions;
+            std::vector<bo2::engine::Vec3> normals;
+            actor->pose(player.state().position, player.state().yaw, positions, normals);
+            store_kain(level, positions, normals);
+            std::cout << "kain animation: state " << actor->animation_state() << ", clip "
+                      << (actor->clip_name().empty() ? "(bind pose)" : actor->clip_name())
+                      << '\n';
         }
         bo2::platform::headless::FrameOptions frame = options.frame_options;
         frame.camera.eye = camera.eye();
@@ -1181,8 +1214,10 @@ int run_sdl(const Options& options) {
         window.kain = load_kain_tuning(options);
     }
     LoadedLevel level = load_level(options);
-    if (level.has_kain && options.play) {
-        window.kain_actor = &level.kain;
+    std::unique_ptr<bo2::game::KainActor> actor;
+    if (options.play) {
+        actor = make_kain_actor(options, level, window.kain);
+        window.kain_actor = actor.get();
     } else if (level.has_kain && !options.kain_clip.empty()) {
         place_kain(level, options.kain_frame, options.kain_at, 0.0f);
     }

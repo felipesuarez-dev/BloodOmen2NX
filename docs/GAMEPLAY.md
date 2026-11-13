@@ -259,8 +259,10 @@ Open:
   both cases.
 - Combat mode, the attacks and the state the landing state picks, which is
   read from the captures here.
-- Which clip is drawn: the port draws the layer 0 clip without the pose blend
-  and without the walk/run cross blend of layers 1 and 2.
+- What is drawn: `KainActor` (`src/game/kain_actor.cpp`) skins the model with
+  the reel of the layer 0 clip at the machine's reel time. A change of clip
+  is a cut: the pose blend and the walk/run cross blend of layers 1 and 2 are
+  not ported.
 
 ## Movement collision (BO2NX-72, decoded live)
 

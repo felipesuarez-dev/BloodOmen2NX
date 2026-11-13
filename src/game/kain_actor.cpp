@@ -1,0 +1,93 @@
+#include "bo2/game/kain_actor.hpp"
+
+#include <stdexcept>
+#include <utility>
+
+namespace bo2::game {
+
+namespace {
+
+constexpr float kReelFramesPerSecond = 30.0f;  // the 1/30 of the reel duration (0x872498)
+
+const bo2::engine::BigEntry& graph_entry(const bo2::engine::BigArchive& archive) {
+    const bo2::engine::BigEntry* entry = archive.find("animatio", "kain");
+    if (entry == nullptr) {
+        throw std::runtime_error("the Kain container has no animatio entry named kain");
+    }
+    return *entry;
+}
+
+}  // namespace
+
+KainActor::KainActor(bo2::engine::BigArchive archive, bo2::engine::SkinnedActor model,
+                     const KainTuning& tuning)
+    : archive_(std::move(archive)),
+      graph_entry_(graph_entry(archive_)),
+      graph_(bo2::engine::parse_anim_graph(archive_.extract(graph_entry_))),
+      model_(std::move(model)),
+      animation_(graph_, tuning) {}
+
+const KainActor::Clip* KainActor::load_clip(const std::string& reel_name) {
+    const auto found = clips_.find(reel_name);
+    if (found != clips_.end()) {
+        return &found->second;
+    }
+    const bo2::engine::BigEntry* entry = archive_.find("animreel", reel_name);
+    if (entry == nullptr) {
+        return nullptr;
+    }
+    Clip clip;
+    clip.reel = bo2::engine::parse_anim_reel(archive_.extract(*entry));
+    clip.channels = bo2::engine::bind_channels(model_.skeleton, clip.reel);
+    return &clips_.emplace(reel_name, std::move(clip)).first->second;
+}
+
+void KainActor::set_fixed_clip(const std::string& reel_name) {
+    if (load_clip(reel_name) == nullptr) {
+        throw std::runtime_error("no animreel named " + reel_name + " in the Kain container");
+    }
+    fixed_clip_ = reel_name;
+    fixed_seconds_ = 0.0;
+}
+
+void KainActor::step(const PlayerInput& input, const PlayerState& state, double seconds) {
+    animation_.step(input, state, seconds);
+    fixed_seconds_ += seconds;
+}
+
+void KainActor::pose(const bo2::engine::Vec3& position, float yaw,
+                     std::vector<bo2::engine::Vec3>& positions,
+                     std::vector<bo2::engine::Vec3>& normals) {
+    const Clip* clip = nullptr;
+    float frame = 0.0f;
+    clip_name_.clear();
+    if (!fixed_clip_.empty()) {
+        clip = load_clip(fixed_clip_);
+        if (clip != nullptr) {
+            clip_name_ = fixed_clip_;
+            frame = bo2::engine::loop_frame(clip->reel, fixed_seconds_);
+        }
+    } else {
+        const bo2::engine::AnimMachine& machine = animation_.machine();
+        if (machine.clip() >= 0) {
+            const std::string name = bo2::engine::anim_clip_reel_name(
+                graph_, graph_.clips[static_cast<std::size_t>(machine.clip())], archive_,
+                graph_entry_);
+            clip = name.empty() ? nullptr : load_clip(name);
+            if (clip != nullptr) {
+                clip_name_ = name;
+                frame = machine.reel_time() * kReelFramesPerSecond;
+            }
+        }
+    }
+    if (clip == nullptr) {
+        // No clip to draw: the bind pose.
+        const bo2::engine::AnimReel rest;
+        bo2::engine::pose_actor(model_, rest, {}, 0.0f, position, yaw, positions, normals);
+        return;
+    }
+    bo2::engine::pose_actor(model_, clip->reel, clip->channels, frame, position, yaw, positions,
+                            normals);
+}
+
+}  // namespace bo2::game

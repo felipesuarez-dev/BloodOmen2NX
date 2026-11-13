@@ -41,6 +41,7 @@ target_compile_options(bo2_engine PRIVATE ${BO2NX_WARNINGS})
 
 add_library(bo2_game STATIC
     src/game/camera.cpp
+    src/game/kain_actor.cpp
     src/game/kain_animation.cpp
     src/game/kain_tuning.cpp
     src/game/player.cpp

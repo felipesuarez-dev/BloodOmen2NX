@@ -45,12 +45,14 @@ LEVELS=external/installed/media/gogames/bo2/resources/levels
   --out /tmp/kain_run.ppm
 ```
 
-`--replay` and `--play` take `--kain-model` and `--kain-clip` too. The replay
-end frame (`--out`) draws Kain at the replayed position and yaw; the player
-skins him every frame and sends his slice of the vertex buffer again
+`--replay` and `--play` take `--kain-model` too. The replay end frame
+(`--out`) draws Kain at the replayed position and yaw; the player skins him
+every frame and sends his slice of the vertex buffer again
 (`LevelPipeline::update_vertices`), in place of the position marker. In both
-the clip loops over the elapsed time. The clip is the one named on the
-command line; choosing it from the player state is not implemented.
+the clip is the one his animation state plays: the idle stance, the run, the
+walk back, the jump poses and the landings (`docs/GAMEPLAY.md`, Animation
+state). The change of clip is a cut: the pose blend is not ported. With
+`--kain-clip` that one reel loops instead, whatever the player does.
 Kain is an actor, not level geometry: his triangles and `collmodc` boxes
 stay out of the `Render` and `Boxes` collision sources, so a played or
 replayed Kain never collides with his own mesh.
@@ -152,11 +154,11 @@ LEVELS=external/installed/media/gogames/bo2/resources/levels
 ./build/linux-debug/bo2nx --play --big "$LEVELS/sanctuary/sanctuary.big" \
   --kain "$LEVELS/kain/kain.big"
 ./build/linux-debug/bo2nx --play --big "$LEVELS/slums/sl01.big" \
-  --kain-model "$LEVELS/kain/kain.big" --kain-clip kain/run
+  --kain-model "$LEVELS/kain/kain.big"
 ```
 
 With `--kain-model` the player is Kain's skinned model instead of the
-marker.
+marker, animated by his state.
 
 Controls are tank style: `W`/`S` walk forward and back, `A`/`D` turn in
 place, `Shift` (or `R`) holds the 200 u/s gait, `Space` jumps (hold it for
@@ -199,7 +201,7 @@ provisional until the original controls are recovered from `bo2.exe`.
 | `--kain <kain.big>` | `kain` tunedata for `--play` (default `<level dir>/../kain/kain.big`) |
 | `--kain-model <kain.big>` | Append Kain's model to the level: at `--kain-at` for `--level` and `--sdl`, at the player for `--replay` and `--play` |
 | `--kain-at x,y,z` | Kain's position for `--level` and `--sdl` (default 0,0,0) |
-| `--kain-clip <name>` | Pose Kain with an `animreel` clip of `--kain-model`, for example `kain/run` (default: the bind pose) |
+| `--kain-clip <name>` | Pose Kain with one `animreel` clip of `--kain-model`, for example `kain/run` (default: the bind pose in `--level` and `--sdl`, the clip of the animation state in `--replay` and `--play`) |
 | `--kain-frame <n>` | Clip frame for `--level` and `--sdl`; fractions interpolate (default 0) |
 | `--entry <substring>` | Texture entry to use (default: first texture) |
 | `--out <file.ppm>` | Frame output |

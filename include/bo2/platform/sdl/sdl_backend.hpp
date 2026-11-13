@@ -6,7 +6,7 @@
 
 #include "bo2/engine/cell_group.hpp"
 #include "bo2/engine/image.hpp"
-#include "bo2/engine/skeleton_pose.hpp"
+#include "bo2/game/kain_actor.hpp"
 #include "bo2/game/kain_tuning.hpp"
 #include "bo2/engine/math.hpp"
 
@@ -31,9 +31,9 @@ struct WindowOptions {
     bool play = false;
     game::KainTuning kain;  // required by play
     // Kain's model for play: its vertices are the geometry's `actor` slice.
-    // Each frame it is skinned with its clip and drawn at the player; without
-    // it play draws a marker. Null in the viewer.
-    const engine::SkinnedActor* kain_actor = nullptr;
+    // Each frame it steps its animation with the player, is skinned and drawn
+    // at the player; without it play draws a marker. Null in the viewer.
+    game::KainActor* kain_actor = nullptr;
     Camera camera;
 };
 

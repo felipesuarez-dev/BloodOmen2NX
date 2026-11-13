@@ -443,25 +443,24 @@ int run_level(const engine::LevelGeometry& geometry,
         follow = std::make_unique<game::FollowCamera>();
         follow->update(player->state(), *collision);
     }
-    // Kain's model follows the player: skin it at the clip time and send its
-    // slice of the vertex buffer again. The clip loops; choosing it from the
-    // player state is not implemented.
+    // Kain's model follows the player: skin it with the clip of his animation
+    // state and send its slice of the vertex buffer again.
     const bool actor = player != nullptr && options.kain_actor != nullptr &&
                        geometry.actor.vertex_count != 0;
-    double clip_seconds = 0.0;
     std::vector<engine::Vec3> actor_positions;
     std::vector<engine::Vec3> actor_normals;
     const auto update_actor = [&]() {
         if (!actor) {
             return;
         }
-        engine::pose_actor(*options.kain_actor,
-                           engine::loop_frame(options.kain_actor->reel, clip_seconds),
-                           player->state().position, player->state().yaw, actor_positions,
-                           actor_normals);
+        options.kain_actor->pose(player->state().position, player->state().yaw,
+                                 actor_positions, actor_normals);
         pipeline.update_vertices(geometry, geometry.actor.first_vertex, actor_positions,
                                  actor_normals);
     };
+    if (actor) {
+        options.kain_actor->step(game::PlayerInput{}, player->state(), 0.0);
+    }
     update_actor();
     const auto active_camera = [&]() {
         if (follow) {
@@ -594,7 +593,9 @@ int run_level(const engine::LevelGeometry& geometry,
             player_input.attack = state.action(InputAction::Attack);
             player->step(player_input, static_cast<double>(dt));
             follow->update(player->state(), *collision, static_cast<double>(dt));
-            clip_seconds += static_cast<double>(dt);
+            if (actor) {
+                options.kain_actor->step(player_input, player->state(), static_cast<double>(dt));
+            }
             update_actor();
             ++play_tick;
         } else {

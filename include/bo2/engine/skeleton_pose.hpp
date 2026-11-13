@@ -94,6 +94,13 @@ struct SkinnedActor {
 void pose_actor(const SkinnedActor& actor, float frame, const Vec3& position, float yaw,
                 std::vector<Vec3>& positions, std::vector<Vec3>& normals);
 
+// The same with a clip that is not the actor's own: `reel` and the channels
+// `bind_channels` gave for it. The host uses it to switch clips without
+// rebinding the actor.
+void pose_actor(const SkinnedActor& actor, const AnimReel& reel,
+                const std::vector<BoneChannels>& channels, float frame, const Vec3& position,
+                float yaw, std::vector<Vec3>& positions, std::vector<Vec3>& normals);
+
 // The frame of a looping clip after `seconds` at 30 frames per second (the
 // 1/30 constant of the reel duration), wrapped at the last frame. The loop is
 // the host's playback rule; the clip player's own loop and hold flags are not

@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -10,6 +11,7 @@
 #include "bo2/engine/big_archive.hpp"
 #include "bo2/engine/cell_group.hpp"
 #include "bo2/engine/skeleton_pose.hpp"
+#include "bo2/game/kain_actor.hpp"
 #include "bo2/game/kain_tuning.hpp"
 
 namespace {
@@ -176,6 +178,99 @@ void check_kain_skinning(const bo2::engine::BigArchive& archive) {
     CHECK(high.x - low.x < 90.0f && high.y - low.y < 90.0f);
 }
 
+// The actor the host draws: the animation state picks the reel.
+void check_kain_actor(const std::string& path, const bo2::game::KainTuning& tuning) {
+    bo2::engine::BigArchive archive = bo2::engine::BigArchive::load(path);
+    const bo2::engine::BigEntry* model = archive.find("model", "kain");
+    CHECK(model != nullptr);
+    if (model == nullptr) {
+        return;
+    }
+    const bo2::engine::LevelGeometry geometry = bo2::engine::parse_model_asset(
+        archive.extract(*model), model->symbols, archive.names());
+    bo2::engine::SkinnedActor skinned;
+    for (const bo2::engine::ModelSkeleton& candidate : geometry.skeletons) {
+        if (!candidate.bones.empty()) {
+            skinned.skeleton = candidate;
+        }
+    }
+    skinned.bind_positions = geometry.positions;
+    skinned.bind_normals = geometry.normals;
+    bo2::game::KainActor actor(std::move(archive), skinned, tuning);
+
+    std::vector<Vec3> positions;
+    std::vector<Vec3> normals;
+    // Before the first step there is no state: the bind pose, placed.
+    actor.pose({10.0f, 20.0f, 30.0f}, 0.0f, positions, normals);
+    CHECK(actor.clip_name().empty());
+    CHECK(positions.size() == 1988);
+    CHECK(distance(positions[0], geometry.positions[0] + Vec3{10.0f, 20.0f, 30.0f}) < 1.0e-4f);
+
+    bo2::game::PlayerInput idle;
+    bo2::game::PlayerInput forward;
+    forward.move_y = 1.0f;
+    bo2::game::PlayerState ground;
+    ground.grounded = true;
+    bo2::game::PlayerState rising;
+    rising.vertical_velocity = 300.0f;
+    bo2::game::PlayerState falling;
+    falling.vertical_velocity = -100.0f;
+
+    actor.step(idle, ground, 0.02);
+    actor.pose({0.0f, 0.0f, 0.0f}, 0.0f, positions, normals);
+    CHECK(actor.animation_state() == bo2::game::kain_anim::kReady);
+    CHECK(actor.clip_name() == "kain/normal_stance");
+    const std::vector<Vec3> stance = positions;
+    // W: the run reel, held on its first frame while st_rdy2run blends in,
+    // then moving.
+    actor.step(forward, ground, 0.02);
+    actor.pose({0.0f, 0.0f, 0.0f}, 0.0f, positions, normals);
+    CHECK(actor.animation_state() == bo2::game::kain_anim::kRun);
+    CHECK(actor.clip_name() == "kain/run");
+    const std::vector<Vec3> run_start = positions;
+    float moved = 0.0f;
+    for (std::size_t vertex = 0; vertex < positions.size(); ++vertex) {
+        moved = std::max(moved, distance(positions[vertex], stance[vertex]));
+    }
+    CHECK(moved > 5.0f);
+    for (int tick = 0; tick < 20; ++tick) {
+        actor.step(forward, ground, 0.02);
+    }
+    actor.pose({0.0f, 0.0f, 0.0f}, 0.0f, positions, normals);
+    moved = 0.0f;
+    for (std::size_t vertex = 0; vertex < positions.size(); ++vertex) {
+        moved = std::max(moved, distance(positions[vertex], run_start[vertex]));
+    }
+    CHECK(moved > 5.0f);
+    // A jump: the takeoff pose, the rising pose after the timer, the falling pose.
+    actor.step(forward, rising, 0.02);
+    actor.pose({0.0f, 0.0f, 0.0f}, 0.0f, positions, normals);
+    CHECK(actor.clip_name() == "kain/takeoff_p");
+    for (int tick = 0; tick < 12; ++tick) {
+        actor.step(forward, rising, 0.02);
+    }
+    actor.pose({0.0f, 0.0f, 0.0f}, 0.0f, positions, normals);
+    CHECK(actor.clip_name() == "kain/jump_up_p");
+    actor.step(forward, falling, 0.02);
+    actor.pose({0.0f, 0.0f, 0.0f}, 0.0f, positions, normals);
+    CHECK(actor.clip_name() == "kain/fallingdown_p");
+    actor.step(forward, ground, 0.02);
+    actor.pose({0.0f, 0.0f, 0.0f}, 0.0f, positions, normals);
+    CHECK(actor.animation_state() == bo2::game::kain_anim::kRunLanding);
+    CHECK(actor.clip_name() == "kain/run_landing");
+    // One reel in a loop, whatever the state.
+    actor.set_fixed_clip("kain/walk");
+    actor.pose({0.0f, 0.0f, 0.0f}, 0.0f, positions, normals);
+    CHECK(actor.clip_name() == "kain/walk");
+    bool thrown = false;
+    try {
+        actor.set_fixed_clip("kain/no_such_clip");
+    } catch (const std::runtime_error&) {
+        thrown = true;
+    }
+    CHECK(thrown);
+}
+
 }  // namespace
 
 int main() {
@@ -210,6 +305,7 @@ int main() {
             CHECK(tuning.jump.height_hold == 128.0f);
             CHECK(std::fabs(tuning.run_clip_rate - 1.15f) < 1.0e-6f);
             bo2::game::apply_kain_clip_speeds(tuning, archive);
+            check_kain_actor(path.string(), tuning);
             CHECK(std::fabs(tuning.run_root_speed - 200.0f) < 1.0e-3f);
             CHECK(std::fabs(tuning.walk_root_speed - 56.3485f) < 1.0e-3f);
             CHECK(std::fabs(tuning.walk_back_root_speed - 62.5f) < 1.0e-3f);
