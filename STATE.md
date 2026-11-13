@@ -117,64 +117,45 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   `after_w` at 2.5 u; on `sl01_camera` the player matches within 0.08 u
   through the turns and diverges at the jump (11 u). A ±2-row shift search
   picks 0 for both captures: the jump apex (281.35) and landing frame (3265)
-  match, but the port starts about one row late. The W run shows the
-  collision gap: the oracle stops at x = 326.15 while the port stops at
-  x = 351.60 (25.44 u). The `collmodc` payload is decoded: a 6-byte point
-  list, 4-byte packed triangle records (`v0 = b0`, `v1 = b1 >> 1`,
-  `v2 = b2 >> 2` plus the attribute byte), 24-byte solid spheres and 20-byte
-  face records closed by a 28-byte trailer. All 660 `sl01` payloads (and 76
-  in `sanctuary`) decode, including the variant that wraps the record in a
+  match, but the port starts about one row late. The W gate (BO2NX-77) is
+  closed: `after_w` is **mean 0.398 u / max 2.497 u**, the max at frame 2258
+  (the W start phase). The slide is 162 u/s at -45 degrees on model 57's upper
+  chamfer and the stop is x = 326.38, y = 44.18 against the oracle's
+  326.35 / 44.14. The oracle's post-stop drift down the wall (y 44.14 ->
+  42.84) is not modeled, so the S/A/D phases still differ by about 10 u and
+  the run/jump/attack phases inherit the gap; the full route/state gate stays
+  open (BO2NX-37). The `collmodc` payload is decoded: a 6-byte point list,
+  4-byte packed triangle records, 24-byte solid spheres and 20-byte face
+  records closed by a 28-byte trailer. All 660 `sl01` payloads (and 76 in
+  `sanctuary`) decode, including the variant that wraps the record in a
   second named header. `CollisionWorld` takes an explicit source; gameplay
   uses the `collmodc` hull (36,129 world triangles in `sl01`) and the render
-  mesh and the broad-phase boxes stay as diagnostics. The port's stop is the
-  hull's model 68 wall at x = 352.0; the oracle's is the model 57 wall at
-  x = 326.75, reached after sliding from y = 57.13 to y = 44.14 between
-  frames 2311 and 2318. The remaining gap is the player volume: the blocking
-  surface is 10 u above the feet (a sphere at the feet cannot reach it),
-  while Kain's model ships three spheres (z = 52.0/49.6/23.6,
-  r = 19.8/19.3/15.0) that are too wide (they would stop at x = 254). The
-  live trace shows the movement has no body cast: a vertical
-  ground/step probe (r=1), the run probe (r=8, 32 u ahead at z+48) and the
-  camera casts. The collision candidates are filtered by the mover's cell
-  and its portal neighbours (the cells' `terrains` lists index the
-  `cellmdls` models). The portal fields are **symbols**, not cell indices;
-  resolving them (cell01 symbol 925, portal 930 <-> 931 = cell02) links the
-  graph, so the move now reaches the cell-1 geometry. The run probe then
-  stops at x = 234.14 on a slanted surface at (274, 59, 254) that the oracle
-  ignores: `after_w` max 92.57 u, mean 44.20 u. That triangle belongs to
-  model 57 itself, so a per-object class filter cannot explain it. A live
-  trace of the narrow phase (`wine_narrow_20261112`) shows the run probe does
-  **not** go through `FUN_0062ea60`: only the camera cast (z = 284, r = 10,
-  object `0x02ad4008`) does. It uses the general shape cast `FUN_0062d8f0`
-  and its leaf `FUN_0062dfc0`, where the test is **per object**: the run
-  probe passes query flag 2 and the object is tested when its class byte
-  (`+0x38`) has bit 0. The ramp and the 45 degree wall are both model 57, so
-  no prim filter separates them; the packed triangle's 3-bit category only
-  affects the edge/corner test. The port misread the run probe as a hard
-  stop: the original only raises the wall flag (`KainState+0x588` bit
-  `0x100`, tunedata threshold 0.9). With the flag only, the port follows the
-  oracle within about 1 u until frame 2308 (x = 259.6 against 260.0) and then
-  runs to the model 68 wall at x = 351.55; `after_w` improves from mean 44.20
-  / max 92.57 to mean 13.31 / max 29.18. The movement response
-  `FUN_0041ee60` is a **no-op** in the W run: a live trace
-  (`wine_blocker_20261112`) shows the blocker pointers `+0x450/+0x454` stay 0
-  and are never written, and the wall projection (`FUN_0041f460` at
-  `0x41f54b`, mode `+0x45C`, normal `+0x478`) is inactive (`wine_wall2_20261112`
-  reads mode 0 and normal (0,0,1)). The position is written by the
-  `FUN_0070eac0` "set position" message (type `DAT_009105cc`, payload
-  `+0x30..+0x38`, type `+0x40` 4/8). At the slide it corrects the target by
-  (-1.05, -1.05) per tick: the 2.15 u move projected on a plane with normal
-  (0.707, 0.707, 0), i.e. 230 cos 45 = 162 u/s along (1, -1), the gate value;
-  the stop at 326.35 is the same path clamping the position. A live trace
-  (`wine_proxy_20261112`) closes the chain: the mover owns a persistent
-  collision proxy whose matrix translation `FUN_005ccb60` writes (the sweep
-  result), `FUN_0062ce70` builds the message from that matrix, and
-  `FUN_0070eac0` copies it into the instance. The proxy shape and the sweep
-  resolver are the next unit. Entity collision is ruled out:
-  the `.etp` flags `staticcollision` (+0x63) and `collisionresponse_stop`
-  (+0x64) are parsed and counted, and `sl01` has **0** static collision
-  entities. The spawn camera pull-in differs because the port's collision
-  lacks the helper wall. The full route/state gate remains open (BO2NX-37).
+  mesh and the broad-phase boxes stay as diagnostics.
+  The body is not a movement probe: a live dump of the mover proxy
+  (`wine_shape2_20261113`) shows its container is Kain's `collmodc` with the
+  three solid spheres, and the manager's query (`FUN_005ccb60` passes
+  `{2,1,0}`; `FUN_0062ef20` tests `flags & 1`) only passes the chest sphere
+  (r 19.8 at `z+51.98`). `CollisionWorld::slide_body` ports the manager's
+  sweep (FUN_005ccb60): earliest contact, normal projection, depenetration and
+  up to 8 passes; the 20 ms replay rows are split into 2.3 u substeps to match
+  the original's ~100 Hz integration. Two data bugs mattered: the packed
+  triangle record keeps the top two bits of the third vertex index in the low
+  bits of the attribute byte (the port kept 6 bits and invented triangles),
+  and category-2 triangles are edges only (the narrow phase skips the face;
+  the ramp at (274, 59, 254) is one). The cell broad phase now assigns an
+  instance to a cell whose bounds contain it and that lists its model, not to
+  the first cell in the `terrains` list: model 649 instance 635 (the stop) is
+  listed by cell 5 but sits inside cell 0. The portal fields stay **symbols**
+  (cell01 symbol 925, portal 930 <-> 931 = cell02). The movement response
+  `FUN_0041ee60` is a **no-op** in the W run (the blocker pointers
+  `+0x450/+0x454` are never written, `wine_blocker_20261112`) and the wall
+  projection (`FUN_0041f460`, mode `+0x45C`) is inactive
+  (`wine_wall2_20261112`), so neither is ported. The "set position" message
+  `FUN_0070eac0` only copies the proxy matrix translation. Entity collision is
+  ruled out: the `.etp` flags `staticcollision` (+0x63) and
+  `collisionresponse_stop` (+0x64) are parsed and counted, and `sl01` has
+  **0** static collision entities. The spawn camera pull-in still differs
+  because the port's collision lacks the helper wall.
 - The native Windows oracle harness is available: a reverse SSH server on
   the Windows host, `tools/oracle/oracle_client.py`, a capture validator and
   an input/frame aligner. `capture_20261028_0150` is the first complete

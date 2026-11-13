@@ -189,7 +189,7 @@ These have no original source. They are development aids or placeholders.
 | Item | Note |
 |---|---|
 | Mouse and right-stick look | Adds to yaw and to the camera pitch offset. Not part of Kain's controls |
-| Body radius 0.4, eye height 1.7, body clearance 0.05 | Provisional. They predate the Kain tuning, are in meter-like units and are about 100 times too small for game units |
+| Eye height 1.7 | Provisional for the camera eye and the ground raycast. The original's r=1 ground/step probe is not ported: its hit is a 3D correction inside the slide state (`FUN_00430820`), and the vertical part alone drops the body into small pits |
 | Attack range 2.2, radius 1.0, cooldown 0.45 s | Provisional, same reason |
 | Move sub-steps | A tick of travel is up to 230 / 60 = 3.8 units, ten times the body radius, so a move is walked in steps of one radius to keep thin walls solid |
 | Forward and back | Forward uses the FUN_00445ba0 partial-stick blend; back is still on or off past the deadzone. The platform layer also zeroes sticks below 0.25 before the deadzone applies |
@@ -208,8 +208,7 @@ These have no original source. They are development aids or placeholders.
 | Landing | A running jump lands at the run speed and a standing one goes through the start phase (inferred from the graph and `wine_air_1`); the run_landing clip's own root motion is not modeled |
 | Glide | Not implemented. `g_glide` (-128) and `termGlide` (160) are parsed only |
 | Ledge fall | Not implemented. Walking off an edge only applies gravity and keeps the ground speed of the held input; the original fall state (FUN_00442800, FUN_00442ae0) has the same air control as a jump but its takeoff velocity was not traced |
-| Collision size | Body radius and eye height are provisional, see above |
-| Wall slide and stop | The W slide (162 u/s at -45 degrees) is the velocity projection against model 57's upper chamfer (normal `(-0.697,-0.697,0.166)`); the stop is the same projection against **model 649 instance 635** at (347.00, 19.05, 269.81) (normal `(-0.991,-0.012,-0.133)`, face at x = 346..348). The geometry is in the port hull; the body's part set and the pair response (`FUN_00632fc0`, impulse via `FUN_006332c0`) are not ported |
+| Wall slide and stop | Ported: the body is Kain's chest sphere (r 19.8 at `z+51.98`), and `CollisionWorld::slide_body` (FUN_005ccb60) sweeps it, stops at the earliest contact and slides the rest of the tick. On `sl01` the W run slides at 162 u/s on model 57's upper chamfer and stops at x = 326.38, y = 44.18 (oracle 326.35 / 44.14). The post-stop drift down the wall (oracle y 44.14 -> 42.84) is not modeled |
 | Release slide | The short slide after releasing W is not modeled |
 | Camera setups | The range, pitch, pivot height and yaw limit are those of one live setup; the code or data that builds the setups (including the jump setup with delay 0.1 and blend 0.6) was not traced. The range blend itself is ported |
 
@@ -257,26 +256,52 @@ the target keeps advancing. The behaviour's own position (`behavior+0x190`)
 follows the same path, and the velocity at `behavior+0x19C` is a finite
 difference of that position (`FUN_00431df0`), so it adds no information.
 
-The port has the contact machinery for a response (`sphere_contact` and
-`capsule_contact`, plus a tested collide-and-slide body capsule). The cell
-neighbours link the portal **symbols** (the fields are not cell indices:
-`sl01` cell01 has symbol 925 and its portal is 930 <-> 931 = cell02), so the
-move reaches the cell-1 geometry. The run probe used to stop at x = 234.14 on
-a slanted surface at (274, 59, 254) that the oracle ignores; that was the
-port's misreading of the probe as a hard stop. It now only raises the flag
-(`PlayerController::wall_hug`), with the engine's swept sphere
-(`CollisionWorld::swept_sphere`, the FUN_005be9a0 cast) instead of a row of
-samples, and the body sphere moves Kain, which puts the port within about 1 u
-of the oracle until frame 2308 (x = 259.6 against 260.0) and
-then runs to the model 68 wall at x = 351.55, 25 u past the oracle's stop.
-`after_w` improves from mean 44.20 / max 92.57 to mean 13.31 / max 29.18.
-The run probe uses the general shape cast `FUN_0062d8f0` and its leaf
-`FUN_0062dfc0`, not `FUN_0062ec30` (a live trace shows the latter only sees
-the camera cast); its leaf test is per object (query flag 2 against the class
-byte at `+0x38`, bit 0). The remaining W gap is the slide and the stop: a live
-trace (`wine_proxy_20261112`) shows the mover owns a persistent collision
-proxy whose matrix translation `FUN_005ccb60` writes (the sweep result), and
-the "set position" message only copies that translation into the visual
-instance. Entity collision is ruled out: `staticcollision` /
-`collisionresponse_stop` are parsed and `sl01` has 0 static collision
-entities. The gate is open.
+The run probe (`FUN_0042ee60`) only raises the wall flag
+(`PlayerController::wall_hug`); it never clamps the move. Its shape cast is the
+engine `swept_sphere` (`FUN_005be9a0`). The run probe uses the general shape
+cast `FUN_0062d8f0` and its leaf `FUN_0062dfc0`, not `FUN_0062ec30` (a live
+trace shows the latter only sees the camera cast); its leaf test is per object
+(query flag 2 against the class byte at `+0x38`, bit 0).
+
+The body collision is the collision manager, not a movement probe. A live
+dump of the mover proxy (`wine_shape2_20261113`, object `a`) shows its
+container is Kain's `collmodc`: three solid spheres at `z 51.98 / 49.61 /
+23.60`, radii `19.8 / 19.297 / 15.0`, and the world AABB at proxy `+0x58` is
+only the broad-phase bound. The manager's query (`FUN_005ccb60` passes
+`{2,1,0}` to `FUN_005cc130`; `FUN_0062ef20` tests `sphere.flags & 1`) only
+passes the **chest sphere**: the other two records have flags 0. The resolver
+sweeps that sphere to the earliest contact, resolves it and slides the rest
+of the tick. `CollisionWorld::slide_body` ports that loop (swept sphere,
+normal projection, up to 8 passes, a 0.01 gap, and a depenetration pass for
+the next triangle of a curved bevel). The replay rows are 20 ms while the
+original integrates at about 100 Hz, so the move is split into 2.3 u
+substeps; without that the body cuts the corner of the bevel.
+
+Two filters were needed to match the oracle's contacts:
+
+- The packed `collmodc` triangle record keeps the third vertex index in 9
+  bits: its top two bits live in the low bits of the attribute byte
+  (`FUN_0062dfc0`: `v0 = (record >> 18) & 0x1ff`, `v1 = (record >> 9) &
+  0x1ff`, `v2 = record & 0x1ff`). The port kept only 6 bits, which invented
+  triangles. The parser now restores the high bits.
+- The packed record's 2-bit category (`attribute >> 5`) marks a face-only
+  triangle as edges only when it is 2 (`FUN_005ddc90` skips the face test).
+  The ramp at (274, 59, 254) in `sl01` is such a triangle; the port now skips
+  its face in the sphere and ray queries.
+
+The cell broad phase was also wrong: a cell's `terrains` list references the
+`cellmdls` models it draws, so it is a hint, not an owner. Model 649 instance
+635 (the W stop) is listed by cell 5 but sits inside cell 0, so the body
+ignored it and stopped 1.8 u late on another wall. `instance_cells` now
+prefers a cell whose bounds contain the instance and that lists its model,
+then the bounds alone, then the list. The portal **symbols** still link the
+neighbour graph (`sl01` cell01 symbol 925, portal 930 <-> 931 = cell02).
+
+On `sl01_basic` the W run is now within 0.4 u on average: the slide starts at
+the chamfer with 162 u/s at -45 degrees, and the stop is x = 326.38,
+y = 44.18 (oracle x = 326.35, y = 44.14). `after_w` goes from mean 13.31 /
+max 29.18 to **mean 0.398 / max 2.497**; the max is the W start phase at frame
+2258, not the wall. The oracle's post-stop drift down the wall (y 44.14 ->
+42.84) and the S/A/D phases that follow it are still open (BO2NX-37). Entity
+collision is ruled out: `staticcollision` / `collisionresponse_stop` are
+parsed and `sl01` has 0 static collision entities.

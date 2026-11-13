@@ -116,7 +116,7 @@ Source of truth: [`STATE.md`](STATE.md) and [`ROADMAP.md`](ROADMAP.md).
 |---|---|
 | Chapters | None is completable; there is no level flow, no menus and no front end |
 | Gameplay systems | Combat, enemies and AI, dark gifts, weapons and inventory, scripting and triggers are not translated. Glide, ledge falls and the run start phase are pending |
-| Animation and collision | The animation graph (`animatio`) is decoded, but skeleton evaluation, skinning and clip blending are not ported; the compressed collision (`collmodc`) is a list of 12-byte AABBs (a broad phase) and the exact edge/face hull is still needed. The W state comparison shows the oracle stopping at x = 326.15, the render geometry at x = 351.60 and the AABB broad phase at x = 255.3; the `sl01` dump identifies the W AABB as model 57 `default`, instance 41, at x = 256..768; the oracle passes that face and the exact hull is still missing |
+| Animation and collision | The animation graph (`animatio`) is decoded, but skeleton evaluation, skinning and clip blending are not ported. Collision is: the `collmodc` decodes (points, packed triangles, spheres and faces), `CollisionWorld` uses the exact hull and the collision manager sweeps Kain's body sphere. The W run in `sl01` slides at 162 u/s on model 57's chamfer and stops at x = 326.38, y = 44.18 (oracle: 326.35 / 44.14) |
 | Lighting and materials | The `.slm` palette is a shadow map; at the `sl01` spawn the world error is 8.69/255. Kain, the HUD, the green `bo2cinematic001` marker and the exact palette texture format remain; fog is disabled in `sl01` |
 | Audio events and video | The `sound` and `strmfile` event table is not wired to gameplay; there is no Bink playback |
 | Switch | The libnx and deko3d backend has not started |
