@@ -29,6 +29,7 @@ add_library(bo2_engine STATIC
     src/engine/navigation.cpp
     src/engine/ogg.cpp
     src/engine/region.cpp
+    src/engine/skeleton_pose.cpp
     src/engine/string_table.cpp
     src/engine/tick.cpp
     src/engine/world.cpp
@@ -139,6 +140,11 @@ if(BUILD_TESTING)
     target_link_libraries(bo2nx_anim_graph_tests PRIVATE bo2_engine)
     target_compile_options(bo2nx_anim_graph_tests PRIVATE ${BO2NX_WARNINGS})
     add_test(NAME anim_graph COMMAND bo2nx_anim_graph_tests)
+
+    add_executable(bo2nx_skeleton_pose_tests tests/unit/test_skeleton_pose.cpp)
+    target_link_libraries(bo2nx_skeleton_pose_tests PRIVATE bo2_engine)
+    target_compile_options(bo2nx_skeleton_pose_tests PRIVATE ${BO2NX_WARNINGS})
+    add_test(NAME skeleton_pose COMMAND bo2nx_skeleton_pose_tests)
 
     add_executable(bo2nx_kain_tuning_tests tests/unit/test_kain_tuning.cpp)
     target_link_libraries(bo2nx_kain_tuning_tests PRIVATE bo2_game)

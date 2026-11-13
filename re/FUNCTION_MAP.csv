@@ -5939,7 +5939,7 @@ address,name,subsystem,status,notes
 0056c460,FUN_0056c460,unknown,todo,ghidra
 0056c6d0,FUN_0056c6d0,unknown,todo,ghidra
 0056cb80,FUN_0056cb80,unknown,todo,ghidra
-0056cc20,FUN_0056cc20,unknown,todo,ghidra
+0056cc20,FUN_0056cc20,animation,wip,src/engine/skeleton_pose.cpp: skin_vertices walks the bones and skins each vertex range; the lit vertex pass and the per-bone view transform are not ported
 0056ce80,FUN_0056ce80,unknown,todo,ghidra
 0056d090,FUN_0056d090,unknown,todo,ghidra
 0056d130,FUN_0056d130,unknown,todo,ghidra
@@ -5962,7 +5962,7 @@ address,name,subsystem,status,notes
 0056eb80,FUN_0056eb80,unknown,todo,ghidra
 0056ebb0,FUN_0056ebb0,unknown,todo,ghidra
 0056ec00,FUN_0056ec00,unknown,todo,ghidra
-0056ecf0,FUN_0056ecf0,unknown,todo,ghidra
+0056ecf0,FUN_0056ecf0,animation,wip,src/engine/skeleton_pose.cpp: skin_vertices blends the position between the owner and the second joint; the vertex colour and the uv copy are not ported; test_second_joint_blend in tests/unit/test_skeleton_pose.cpp
 0056efa0,FUN_0056efa0,unknown,todo,ghidra
 0056f040,FUN_0056f040,unknown,todo,ghidra
 0056f0e0,FUN_0056f0e0,unknown,todo,ghidra
@@ -8219,6 +8219,7 @@ address,name,subsystem,status,notes
 005e3c80,FUN_005e3c80,unknown,todo,ghidra
 005e3e50,FUN_005e3e50,unknown,todo,ghidra
 005e3eb2,FUN_005e3eb2,unknown,todo,ghidra
+005e43e0,FUN_005e43e0,animation,wip,src/engine/skeleton_pose.cpp: bone_matrices multiplies the local matrix by the parent's with the parentless bone at identity; the per-bone cache and the LOD collapse and the entity matrix are not ported
 005e49b0,FUN_005e49b0,unknown,todo,ghidra
 005e4c50,FUN_005e4c50,unknown,todo,ghidra
 005e4c70,FUN_005e4c70,unknown,todo,ghidra
@@ -9763,8 +9764,8 @@ address,name,subsystem,status,notes
 00637650,FUN_00637650,unknown,todo,ghidra
 00637690,FUN_00637690,unknown,todo,ghidra
 006376d0,FUN_006376d0,unknown,todo,ghidra
-00637710,FUN_00637710,unknown,todo,ghidra
-00637900,FUN_00637900,unknown,todo,ghidra
+00637710,FUN_00637710,animation,translated,src/engine/skeleton_pose.cpp: local_matrix and inverse_bone_scale (pivot then scale then the x y z rotations then the parent inverse scale then the translation); the matrix kind tag is not kept; tests/unit/test_skeleton_pose.cpp
+00637900,FUN_00637900,animation,translated,src/engine/skeleton_pose.cpp: sample_pose reads the nine channels of a bone with the pivot and 0 and 1 defaults; the clip time is an argument; tests/unit/test_skeleton_pose.cpp
 00637b00,FUN_00637b00,unknown,todo,ghidra
 00637ba0,FUN_00637ba0,unknown,todo,ghidra
 00637da0,FUN_00637da0,unknown,todo,ghidra
@@ -9773,7 +9774,7 @@ address,name,subsystem,status,notes
 00638650,FUN_00638650,unknown,todo,ghidra
 00638690,FUN_00638690,unknown,todo,ghidra
 006388e0,FUN_006388e0,unknown,todo,ghidra
-00638920,FUN_00638920,unknown,todo,ghidra
+00638920,FUN_00638920,animation,wip,src/engine/skeleton_pose.cpp: bind_channels finds the nine channels of each bone by its id; the any-channel result that ranks the matrix sources is not ported; test_bind_uses_the_bone_id in tests/unit/test_skeleton_pose.cpp
 00638ba0,FUN_00638ba0,unknown,todo,ghidra
 00638d60,FUN_00638d60,unknown,todo,ghidra
 00639030,FUN_00639030,unknown,todo,ghidra
@@ -11291,15 +11292,15 @@ address,name,subsystem,status,notes
 006923d0,FUN_006923d0,unknown,todo,ghidra
 006924f0,FUN_006924f0,unknown,todo,ghidra
 00692a50,FUN_00692a50,unknown,todo,ghidra
-00692aa0,FUN_00692aa0,unknown,todo,ghidra
+00692aa0,FUN_00692aa0,animation,wip,src/engine/skeleton_pose.cpp: the x rotation on a plain 4x4 with the 1e-4 rad threshold; the matrix kind tag is not kept
 00692bc0,FUN_00692bc0,unknown,todo,ghidra
-00692cb0,FUN_00692cb0,unknown,todo,ghidra
+00692cb0,FUN_00692cb0,animation,wip,src/engine/skeleton_pose.cpp: the y rotation on a plain 4x4 with the 1e-4 rad threshold; the matrix kind tag is not kept
 00692dc0,FUN_00692dc0,unknown,todo,ghidra
-00692eb0,FUN_00692eb0,unknown,todo,ghidra
+00692eb0,FUN_00692eb0,animation,wip,src/engine/skeleton_pose.cpp: the z rotation on a plain 4x4 with the 1e-4 rad threshold; the matrix kind tag is not kept
 006930c0,FUN_006930c0,unknown,todo,ghidra
-00693110,FUN_00693110,unknown,todo,ghidra
+00693110,FUN_00693110,animation,wip,src/engine/skeleton_pose.cpp: the translation on a plain 4x4; the matrix kind tag is not kept
 00693220,FUN_00693220,unknown,todo,ghidra
-00693270,FUN_00693270,unknown,todo,ghidra
+00693270,FUN_00693270,animation,wip,src/engine/skeleton_pose.cpp: the scale on a plain 4x4; the matrix kind tag is not kept
 00693340,FUN_00693340,unknown,todo,ghidra
 006933e0,FUN_006933e0,unknown,todo,ghidra
 006935e0,FUN_006935e0,unknown,todo,ghidra

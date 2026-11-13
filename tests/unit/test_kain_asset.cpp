@@ -1,11 +1,15 @@
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
 #include <string>
+#include <vector>
 
 #include "bo2/engine/anim_reel.hpp"
 #include "bo2/engine/big_archive.hpp"
+#include "bo2/engine/cell_group.hpp"
+#include "bo2/engine/skeleton_pose.hpp"
 #include "bo2/game/kain_tuning.hpp"
 
 namespace {
@@ -19,6 +23,158 @@ int failures = 0;
             ++failures;                                                                        \
         }                                                                                      \
     } while (false)
+
+using bo2::engine::Mat4;
+using bo2::engine::Vec3;
+
+float distance(const Vec3& left, const Vec3& right) {
+    return bo2::engine::length(left - right);
+}
+
+// The position of a bone's joint under a pose: its pivot through its matrix.
+Vec3 joint(const bo2::engine::ModelSkeleton& skeleton, const std::vector<Mat4>& matrices,
+           std::size_t index) {
+    return bo2::engine::transform_point(matrices[index], skeleton.bones[index].pivot);
+}
+
+void check_kain_skinning(const bo2::engine::BigArchive& archive) {
+    const bo2::engine::BigEntry* model = archive.find("model", "kain");
+    const bo2::engine::BigEntry* run = archive.find("animreel", "kain/run");
+    CHECK(model != nullptr && run != nullptr);
+    if (model == nullptr || run == nullptr) {
+        return;
+    }
+    const bo2::engine::LevelGeometry geometry = bo2::engine::parse_model_asset(
+        archive.extract(*model), model->symbols, archive.names());
+    const bo2::engine::ModelSkeleton* found = nullptr;
+    for (const bo2::engine::ModelSkeleton& candidate : geometry.skeletons) {
+        if (!candidate.bones.empty()) {
+            found = &candidate;
+        }
+    }
+    CHECK(found != nullptr);
+    if (found == nullptr) {
+        return;
+    }
+    const bo2::engine::ModelSkeleton& skeleton = *found;
+    CHECK(skeleton.bones.size() == 104);
+    CHECK(skeleton.weights.size() == 1988 && skeleton.joints.size() == 1988);
+    CHECK(geometry.positions.size() == 1988);
+
+    // Every vertex belongs to exactly one bone range, a bone's matrix index is
+    // its position and a parent comes before its child.
+    std::vector<int> owners(geometry.positions.size(), 0);
+    bool ordered = true;
+    std::size_t scale_keepers = 0;
+    for (std::size_t index = 0; index < skeleton.bones.size(); ++index) {
+        const bo2::engine::SkeletonBone& bone = skeleton.bones[index];
+        ordered = ordered && bone.current_matrix == index &&
+                  (index == 0 ? bone.parent_matrix == 0xFFFFFFFFU : bone.parent_matrix < index);
+        if ((bone.channel_mask & bo2::engine::kBoneKeepsParentScale) != 0) {
+            ++scale_keepers;
+        }
+        for (std::uint32_t vertex = bone.first_vertex;
+             vertex < bone.first_vertex + bone.vertex_count && vertex < owners.size(); ++vertex) {
+            ++owners[vertex];
+        }
+    }
+    CHECK(ordered);
+    CHECK(scale_keepers == 103);  // every bone but the root
+    std::size_t owned_once = 0;
+    std::size_t leaning = 0;
+    for (std::size_t vertex = 0; vertex < owners.size(); ++vertex) {
+        owned_once += owners[vertex] == 1 ? 1 : 0;
+        leaning += skeleton.weights[vertex] != 0.0f ? 1 : 0;
+        CHECK(skeleton.weights[vertex] >= 0.0f && skeleton.weights[vertex] <= 0.5f);
+        CHECK(skeleton.joints[vertex] < skeleton.bones.size());
+    }
+    CHECK(owned_once == 1988);
+    CHECK(leaning == 870);  // the other 1,118 name their owner with weight 0
+
+    // Without channels the pose is the bind pose: no inverse bind matrix exists.
+    const bo2::engine::AnimReel rest;
+    std::vector<Vec3> positions;
+    std::vector<Vec3> normals;
+    bo2::engine::skin_vertices(
+        skeleton,
+        bo2::engine::bone_matrices(
+            skeleton, bo2::engine::sample_pose(
+                          skeleton, rest, bo2::engine::bind_channels(skeleton, rest), 0.0f)),
+        geometry.positions, geometry.normals, positions, normals);
+    float rest_error = 0.0f;
+    for (std::size_t vertex = 0; vertex < positions.size(); ++vertex) {
+        rest_error = std::max(rest_error, distance(positions[vertex], geometry.positions[vertex]));
+    }
+    CHECK(rest_error < 1.0e-4f);
+
+    const bo2::engine::AnimReel reel = bo2::engine::parse_anim_reel(archive.extract(*run));
+    const std::vector<bo2::engine::BoneChannels> channels =
+        bo2::engine::bind_channels(skeleton, reel);
+    std::size_t bound_bones = 0;
+    for (const bo2::engine::BoneChannels& bound : channels) {
+        bool any = false;
+        for (int component = 0; component < 3; ++component) {
+            any = any || bound.rotation[component] >= 0 || bound.translation[component] >= 0 ||
+                  bound.scale[component] >= 0;
+        }
+        bound_bones += any ? 1 : 0;
+    }
+    CHECK(bound_bones == 102);  // every plain node of the clip is a bone id
+    const auto matrices_at = [&](float frame) {
+        return bo2::engine::bone_matrices(
+            skeleton, bo2::engine::sample_pose(skeleton, reel, channels, frame));
+    };
+    const std::vector<Mat4> first = matrices_at(0.0f);
+    const std::vector<Mat4> middle = matrices_at(12.0f);
+    const std::vector<Mat4> last = matrices_at(static_cast<float>(reel.frames - 1));
+
+    // The run cycle closes: the last frame is the first one again, although
+    // the root has moved 160 units (the root's channels are not applied).
+    float loop_error = 0.0f;
+    float stride = 0.0f;
+    for (std::size_t index = 0; index < first.size(); ++index) {
+        for (int cell = 0; cell < 12; ++cell) {
+            loop_error = std::max(loop_error, std::fabs(first[index].m[cell] - last[index].m[cell]));
+            stride = std::max(stride, std::fabs(first[index].m[cell] - middle[index].m[cell]));
+        }
+    }
+    CHECK(loop_error < 2.0e-2f);
+    CHECK(stride > 0.5f);
+
+    // Bones 98..100 and 93..95 are the two legs (hip, knee, ankle), without
+    // scale channels: the pose keeps their lengths.
+    const std::size_t legs[2][3] = {{98, 99, 100}, {93, 94, 95}};
+    for (const auto& leg : legs) {
+        for (const std::vector<Mat4>* pose : {&first, &middle}) {
+            for (int segment = 0; segment < 2; ++segment) {
+                const float bind_length = distance(skeleton.bones[leg[segment]].pivot,
+                                                   skeleton.bones[leg[segment + 1]].pivot);
+                const float posed_length = distance(joint(skeleton, *pose, leg[segment]),
+                                                    joint(skeleton, *pose, leg[segment + 1]));
+                CHECK(std::fabs(bind_length - posed_length) < 1.0e-2f);
+            }
+        }
+    }
+    // Local x is forward. At frame 0 the first leg's thigh swings forward and
+    // half a cycle later the other one does.
+    CHECK(joint(skeleton, first, 99).x - joint(skeleton, first, 98).x > 10.0f);
+    CHECK(joint(skeleton, middle, 94).x - joint(skeleton, middle, 93).x > 10.0f);
+    CHECK(joint(skeleton, first, 94).x - joint(skeleton, first, 93).x < 5.0f);
+
+    // The posed mesh stays a body: its bounds stay close to the bind bounds.
+    bo2::engine::skin_vertices(skeleton, first, geometry.positions, geometry.normals, positions,
+                               normals);
+    Vec3 low = positions[0];
+    Vec3 high = positions[0];
+    for (const Vec3& position : positions) {
+        low = {std::min(low.x, position.x), std::min(low.y, position.y),
+               std::min(low.z, position.z)};
+        high = {std::max(high.x, position.x), std::max(high.y, position.y),
+                std::max(high.z, position.z)};
+    }
+    CHECK(low.z > -12.0f && high.z < 90.0f);
+    CHECK(high.x - low.x < 90.0f && high.y - low.y < 90.0f);
+}
 
 }  // namespace
 
@@ -137,6 +293,7 @@ int main() {
         CHECK(reels == 134);
         CHECK(unsorted_reels == 0);
         CHECK(bone_streams == 0);
+        check_kain_skinning(archive);
     } catch (const std::exception& error) {
         std::cerr << "kain asset test: " << error.what() << '\n';
         return 1;

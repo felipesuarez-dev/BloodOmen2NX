@@ -112,4 +112,19 @@ struct Mat4 {
     }
 };
 
+// An affine matrix applied to a point (w = 1) and to a direction (w = 0).
+inline Vec3 transform_point(const Mat4& matrix, const Vec3& point) {
+    const float* m = matrix.m;
+    return {m[0] * point.x + m[1] * point.y + m[2] * point.z + m[3],
+            m[4] * point.x + m[5] * point.y + m[6] * point.z + m[7],
+            m[8] * point.x + m[9] * point.y + m[10] * point.z + m[11]};
+}
+
+inline Vec3 transform_direction(const Mat4& matrix, const Vec3& direction) {
+    const float* m = matrix.m;
+    return {m[0] * direction.x + m[1] * direction.y + m[2] * direction.z,
+            m[4] * direction.x + m[5] * direction.y + m[6] * direction.z,
+            m[8] * direction.x + m[9] * direction.y + m[10] * direction.z};
+}
+
 }  // namespace bo2::engine

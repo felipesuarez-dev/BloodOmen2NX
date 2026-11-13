@@ -1,9 +1,8 @@
 # Models and animation
 
 Status: **static cell geometry, base textures, the cell grid/BSP, the
-material layer records, the D3D texture-stage equation, the skeleton
-hierarchy/weights/joints and the raw animation payloads are decoded; the
-bind pose and keyframe evaluation are open**.
+material layer records, the D3D texture-stage equation, the skeleton, its
+pose evaluation and the skinning are decoded; clip blending is open**.
 
 The static shell of a level lives in the `cellgrup` entry of its `.big`.
 The shared `model` entries (characters, props, particles) use the same
@@ -67,9 +66,9 @@ u32   2
 | `mtlctrl` | `u32 count` + `count` × 12 bytes | Three `u32` values; semantics open |
 | `texture` | `u32 start`, `u32 count` + per-material records | Texture symbol per material; bound by the host |
 | `mdlattr` | Named attribute table | Model metadata |
-| `vtxweigh` | `u32 count` + `count` floats | Per-vertex skin weights |
-| `jointidx` | `u32 count` + `count` u16 | Per-vertex joint indices |
-| `skeleton` / `modlskel` | `u32 count` + `count` × 104-byte bone records | Decoded (FUN_0067bdd0): name, state mask/value, bone/current/parent matrix indices, collision prim range, vertex range, channel mask, rotation order, pivot/rest/joint/rotation/scale vectors |
+| `vtxweigh` | `u32 count` + `count` floats | Per vertex, the weight of its second bone (0 to 0.5 in Kain); see Skeleton pose and skinning |
+| `jointidx` | `u32 count` + `count` u16 | Per vertex, the position of its second bone in the bone array |
+| `skeleton` / `modlskel` | `u32 count` + `count` × 104-byte bone records | Decoded; see Skeleton pose and skinning |
 | `collmodc` | Collision model | Points, packed triangles, spheres and faces decoded |
 
 ### `prims`
@@ -624,14 +623,130 @@ original shows no pyramid for them. What is ruled out and what is known:
 
 The port still draws those types, since no rule is proven yet.
 
-## Animation
+## Skeleton pose and skinning
 
 `vtxweigh`, `jointidx`, `animatio` and `animreel` are present in the
 containers. Static cell models carry zero weights; character models use
 the animation chunks. The `animreel` clip encoding is decoded
 ([`animreel.md`](animreel.md)) and so is the `animatio` graph
-([`animatio.md`](animatio.md)); the node hierarchy, skeleton evaluation and
-skinning are still open.
+([`animatio.md`](animatio.md)). This section is how one clip poses a
+skeleton and how the pose moves the vertices. The port is
+`src/engine/skeleton_pose.cpp`.
+
+### Bone record
+
+The character model carries the skeleton twice: as the `skeleton` subchunk
+of the `rmd` and as the sibling `modlskel` chunk. Both are `u32 count` and
+`count` records of 104 bytes. FUN_0067bdd0 prints the record with its field
+names and FUN_005e27e0 reads the same offsets:
+
+| Offset | Type | Field | Use |
+|---|---|---|---|
+| 0x00 | u32 | name | Symbol |
+| 0x04 | u32 | `stateMask` | Copied to the runtime bone |
+| 0x08 | u32 | `stateVal` | Its top three bits are the bone's LOD level |
+| 0x0C | u32 | `boneIdx` | The bone id: the `node` of a clip channel |
+| 0x10 | u32 | `currentMatrixIndex` | The bone's position in the array |
+| 0x14 | u32 | `parentMatrixIndex` | The parent's position; negative for none |
+| 0x18 | u32 | `firstCollidePrimIndex` | |
+| 0x1C | u32 | `numCollidePrim` | |
+| 0x20 | u32 | `firstVertIndex` | First vertex the bone owns |
+| 0x24 | u32 | `numVerts` | How many it owns |
+| 0x28 | u16 | `chanMask` | Bit 0x200: the bone keeps its parent's scale |
+| 0x2A | u16 | `rotOrder` | |
+| 0x2C | f32[3] | `Pivot` | The joint position in model space |
+| 0x38 | f32[3] | `RO` | |
+| 0x44 | f32[3] | `JO` | |
+| 0x50 | f32[3] | `Rot` | |
+| 0x5C | f32[3] | `Scl` | |
+
+FUN_005e27e0 turns each record into a 0x60-byte runtime bone: a pointer to
+the parent (the bone at `parentMatrixIndex`), the key
+`currentMatrixIndex << 16 | boneIdx`, the LOD level `stateVal >> 29`,
+`chanMask`, `rotOrder` and the five vectors.
+
+In Kain's model (104 bones) the matrix index is the position, every parent
+comes before its child, `rotOrder`, `RO`, `JO` and `Rot` are 0 and `Scl` is
+(-1, 1, 1) in every bone. The pose path below reads none of those four
+vectors. The ids are sparse (0..93, 200, 201, 210, 211, 230, 300, 400..403).
+
+### Pose
+
+The clip sampler (vtable 0x86f8d4, built by FUN_0063bb40) binds nine
+channels to each bone (FUN_00638920) and FUN_00637900 samples them at the
+clip time: a rotation, a translation and a scale. A missing translation
+component is the bone's pivot, a missing rotation is 0 and a missing scale
+is 1 ([`animreel.md`](animreel.md)).
+
+FUN_00637710 builds the bone's matrix in its parent's space. The engine
+works on row vectors and every step post-multiplies:
+
+```
+M = T(-pivot) * S(scale) * Rx(rx) * Ry(ry) * Rz(rz) * S(1 / parent scale) * T(translation)
+```
+
+- The angles are radians. The helpers are FUN_00692aa0 (x), FUN_00692cb0 (y)
+  and FUN_00692eb0 (z); each leaves the matrix alone below 1e-4 rad. On a
+  point they are the usual right-handed rotations: x turns (y, z) into
+  (y c - z s, y s + z c), y turns (x, z) into (x c + z s, z c - x s) and z
+  turns (x, y) into (x c - y s, y c + x s).
+- FUN_00693110 translates and FUN_00693270 scales.
+- The parent-scale step runs only when the bone has a parent and its
+  `chanMask` lacks 0x200. The inverse is stored per bone when its matrix is
+  built: 1 for a scale of exactly 1, `1 / s` from 0.01 up and 100 below.
+
+A clip stores the translation in the same model space as the pivot: in
+`kain/run` 182 of the 204 constant translations of the bones equal the
+bone's pivot, 22 are small offsets from it and 12 channels are animated.
+With every channel at its default the matrix of every bone is the identity,
+so the bind pose needs no inverse bind matrix.
+
+The model-space matrix is the local matrix times the parent's
+(FUN_005e43e0, which recurses to the parent and caches the result per bone;
+FUN_00691030 is the product). A bone without a parent takes the entity's
+world matrix, and the sampler gives the bone of index 0 an identity matrix
+(0x639160): the root's channels, root motion included, never move the
+skeleton. The entity moves instead ([`animreel.md`](animreel.md), Root
+motion).
+
+### Skinning
+
+FUN_0056d130 prepares the mesh: per bone its vertex range, per vertex a
+weight and a joint. Each frame FUN_0056cc20 fetches one matrix per bone and
+calls the skinning routine once per bone on that bone's range. FUN_0056ec00
+installs the routine from two global flags: FUN_0056ecf0 by default,
+FUN_00573a40 or FUN_00573ec0 otherwise (not decompiled; *inferred*: CPU
+variants of the same loop).
+
+```
+a  = v * M[owner]            owner: the bone whose range holds the vertex
+b  = v * M[jointidx[v]]
+v' = a + (b - a) * vtxweigh[v]
+```
+
+So `jointidx` is a second bone and `vtxweigh` its share. In Kain every one
+of the 1,988 vertices is in exactly one range; 1,118 name their owner with
+weight 0 and the other 870 lean on a neighbour with a weight up to 0.5.
+
+The routine writes a position, a colour and the UV: the original lights the
+vertex on the CPU and emits no normal. The port has no such pass, so
+`skin_vertices` blends the normal with the same two matrices and weight for
+its own shading. That is a port choice, not a translation.
+
+### What the port leaves out
+
+- The LOD collapse: FUN_005e43e0 gives a bone its parent's matrix when the
+  bone's LOD level is below a threshold of the instance.
+- The other matrix sources. The sampler with vtable 0x86f91c blends two
+  poses through quaternions (FUN_00638310) and FUN_00638690 ranks up to 16
+  sources per bone. The code at 0x5d1b50 is another source that ends in
+  FUN_00637710 (*inferred* from the RTTI names next to it: the
+  `goe::*MatrixMap` classes). Clip blending is BO2NX-74.
+- The vertex colour of the skinning routine.
+
+Over the 134 Kain clips 15 bones (hands and face) carry a scale other than
+1, and every bone but the root has 0x200, so Kain's fingers inherit the
+hand's scale.
 
 ## Model coverage
 
@@ -664,8 +779,9 @@ interior, while the default isometric frame shows the level.
 - `cellight` type-specific parameters and the marker symbol semantics.
 - `cellanim`.
 - `model 74` has no `rmd`; its role is unknown.
-- Skeleton pose evaluation, skinning and animation playback.
-- Blending of the `animatio` layers on the skeleton ([`animatio.md`](animatio.md)) and the remaining `animreel` channel types ([`animreel.md`](animreel.md)).
+- The `RO`, `JO`, `Rot` and `Scl` vectors of the bone record, `rotOrder`, the
+  state mask/value and the other `chanMask` bits.
+- Blending of the `animatio` layers on the skeleton ([`animatio.md`](animatio.md)) and the auxiliary `animreel` records ([`animreel.md`](animreel.md)).
 - Shared-model light-map selection by model name and the remaining entity
   properties.
 
@@ -674,4 +790,4 @@ interior, while the default isometric frame shows the level.
 1. Use the cell grid and BSP for culling and cell visibility.
 2. Select shared-model light maps and decode `cellanim`.
 3. Match the light-map group to the cell/object and combine it with the material layers.
-4. Evaluate `animreel` channels on the skeleton and blend them as the `animatio` layers describe.
+4. Blend the `animreel` clips on the skeleton as the `animatio` layers describe.
