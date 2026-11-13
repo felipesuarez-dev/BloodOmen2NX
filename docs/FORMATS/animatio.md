@@ -6,11 +6,13 @@ An `animatio` BIG entry is a state machine over animation clips. A graph holds
 the tables they point at. Kain's graph is the `kain` entry of
 `resources/levels/kain/kain.big`.
 
-Status: **decoded** (container, clip nodes, states, transitions and actions).
+Status: **decoded** (container, clip nodes, states, transitions and actions);
+the state machine runs on one layer in the port.
 Verified on all 4,081 `animatio` entries of the installed game: every one
 parses and consumes its payload exactly (2,156 graphs with 86,920 clip nodes,
 1,925 version 1 aliases). Reader: `tools/bo2fmt/animatio.py`; C++ port:
-`src/engine/anim_graph.cpp` (clip nodes and reel references).
+`src/engine/anim_graph.cpp` (the reader) and `src/engine/anim_machine.cpp`
+(the state machine).
 
 Sources are `bo2.exe` functions; dumps are in `re/decomp/animatio_graph/`
 (local, not committed). Facts not read from the code are marked *inferred*.
@@ -194,6 +196,65 @@ layer)` (FUN_005e3bf0), and layer `i` is the state machine at `+0x20 + i * 4`
 (FUN_005e3aa0). The state names map to indexes through the symbol table
 (section 13): in Kain's graph all 188 symbols match `st_<symbol>`.
 
+## State machine runtime
+
+One machine per layer. Its fields, as offsets of the machine object:
+
+| Offset | Content |
+|---:|---|
+| +0x00 | clip clock, in seconds of reel time |
+| +0x04 | boundary: below it the clock runs in real time (the blend) |
+| +0x08 | the nine dwords of the clip node in play: `in`, `out`, rate, reel, ... |
+| +0x90 | sequence in play |
+| +0x94 | chain link in play |
+| +0x9c | current state |
+| +0xa0 | requested state |
+| +0xa4 | layer entity |
+
+**Starting a state** (FUN_00642c00). The requested state goes to +0xa0. The
+transitions of the state are tried in order and the actions of the first true
+one run. A play action (kind 1) takes its own blend, else the blend of the
+state at +0x9c. A continue action (kind 2) makes the loop start over with the
+target state, unless the target is the state itself, which ends the call.
++0x9c is written only when the call ends, so every condition 1 of the chain
+("the state being left is state N", FUN_006135e0) sees the state the machine
+was in before the call.
+
+**Starting a clip** (FUN_00643f10, FUN_005e1d80). A sequence starts its first
+chain link. The blend is the one given, else the link's, else the clip
+node's; a time of 0 or less is no blend. The clock starts at `in - blend` and
+the boundary at `in` (mirrored on `out` for a negative rate).
+
+**Advancing** (FUN_00643030, FUN_00643f80, FUN_005e1f80). Below the boundary
+the clock moves by the frame time; from the boundary on it moves by the frame
+time multiplied by the rate, and it is clamped at `out`. A clip that reaches
+its end starts the next chain link with that link's blend; after the last
+link the chain pointer rests on the terminator and the call reports the end
+(bit 4 of the result). On the next call, a machine whose clock is at the end
+and whose link is the terminator starts the requested state again.
+
+That restart is how a clip loops and how one state follows another:
+
+| Input | What the machine does |
+|---|---|
+| `st_run` while in `st_ready` | `st_run` continues with `st_rdy2run`, which holds frame 0 of the run reel behind a 0.2 s blend. After 0.2 s the sequence ends and the requested state, `st_run`, starts again: the state being left is now `st_rdy2run`, so it plays `sq_run` |
+| `st_run`, later | `cl_run` ends, the restart finds `st_run` being left and plays `sq_run` again |
+| `st_ready` while in `st_run` | continues with `st_run2rdy` (the idle clip behind a 0.2 s blend) |
+| `st_normal_landing` | `cl_normal_landing` lasts 0.5333 s; the Wine oracle holds the state for 25 to 27 samples of 20 ms |
+| `st_run_landing` | `cl_run_landing` lasts 0.4667 s at speed 1.5, 0.311 s; the oracle holds it for 13 to 14 samples |
+
+FUN_00723620 writes the rate at +0x10 from outside (the run state does it
+every frame, see below); a clip that starts later takes its node speed again.
+
+The port (`AnimMachine`) runs this for one layer: kinds 1 and 2, conditions
+0, 1, 7 and the three combinators. The other layers (kinds 3 and 4), the layer
+entity (kind 5), the callbacks (kind 6), the clip events and the pose blend
+are not ported; a blend still takes its time. The game conditions (ids 8 and
+up, for example id 9 on the combat-mode transitions) evaluate to false. The
+time a finished clip leaves over is spent in the same call, on the restarted
+state; the original hands it back to its caller, whose loop is not
+decompiled.
+
 ## Kain's run state
 
 `FUN_004458e0` (run state enter) calls `StartState(1, ...)`; state 1 is
@@ -290,9 +351,11 @@ tag. Callback 2 (FUN_00613450) stores a value in the instance; callback 3
 ## Port
 
 `tools/bo2fmt/animatio.py` reads the whole stream and keeps unknown fields raw.
-The C++ reader (`include/bo2/engine/anim_graph.hpp`) walks the states,
-sequences and chain only to reach the clip nodes and the reel table, and stops
-there; `anim_clip_reel_name` resolves a node's reel through the entry symbols.
+The C++ reader (`include/bo2/engine/anim_graph.hpp`) reads the whole stream
+too and keeps what the state machine uses: states with their transitions and
+actions, bindings, sequences, the chain, clip nodes, reels, blend times and
+variants. Bytes after the graph are rejected. `anim_clip_reel_name` resolves
+a node's reel through the entry symbols.
 Port-only limits in both: an element count that cannot fit in the remaining
 bytes is rejected, and counts above 4M are rejected. The asset-gated test
 `tests/unit/test_anim_graph.cpp` checks that the `kain/walk_backwards` node has
@@ -301,12 +364,14 @@ speed 1.7 (`BO2NX_ASSETS_DIR` set; skipped otherwise).
 ## Open questions
 
 - The W start phase: oracle ground speed is 100 u/s (200 * 0.5) for the first
-  0.18 s and then 230. The graph gives the sequence (`st_run` to `st_rdy2run`
-  to `st_run`, with a 0.2 s blend into a held frame of the run reel), but
-  nothing in it explains the factor 0.5. Next step: decompile the machine
-  advance (FUN_00643030), the blend start (FUN_005cecf0, FUN_0063bb40) and the
-  cross blend entity (vtable 0x86eaa4) to see how root motion is weighted, or
-  sample the layer rates (`machine+0x10`) in the oracle.
+  0.18 s and then 230. The machine explains the duration: `st_rdy2run` lasts
+  its 0.2 s blend and then `st_run` starts (State machine runtime). The
+  factor 0.5 is still open: it needs the root motion output of the clip
+  advance (FUN_005e1f80) during a blend and the cross blend entity (vtable
+  0x86eaa4).
+- `st_startjump` plays a 0.0333 s sequence, but the oracle holds the state
+  for 3 to 5 samples from a standstill and 8 to 12 from a run: the takeoff
+  delay is in the jump state of the game, not in the graph.
 - Shift+W (200 u/s, unverified). FUN_00445ba0 gives 230 at full stick; the
   value 200 needs a smaller stick magnitude `s` and the cross blend weights.
   Where the input layer sets `s` for Shift is not decoded.

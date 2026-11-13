@@ -19,7 +19,8 @@ Status: initial modules.
 |---|---|---|
 | `big_archive` | `goefile` container reader | Validated on the installed tree |
 | `anim_reel` | `animreel` clip channels and root motion | Validated on the 134 Kain clips |
-| `anim_graph` | `animatio` graph clip nodes and reel table | Validated on the `kain` graph: the walk-back clip node speed (1.7) feeds the Kain tuning |
+| `anim_graph` | `animatio` graph: states, transitions, sequences, clip nodes and reel table | Validated on the `kain` graph: the walk-back clip node speed (1.7) feeds the Kain tuning |
+| `anim_machine` | One layer of the `animatio` state machine: start a state, play its sequence, loop | Validated on the `kain` graph: `st_run` goes through the 0.2 s `st_rdy2run` and the landing clips last what the oracle shows |
 | `skeleton_pose` | Bone channels, local and model-space matrices, two-bone skinning | Validated on the `kain` model: the rest pose is the bind pose and the `kain/run` cycle closes |
 | `cell_group` | `cellgrup` static level geometry and textures | Validated on `sanctuary` |
 | `dds` | DDS/BC texture decoder | DXT1, DXT3, DXT5, A8R8G8B8; top mip |

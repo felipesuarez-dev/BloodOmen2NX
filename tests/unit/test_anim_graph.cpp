@@ -69,9 +69,9 @@ std::int32_t tag(std::int32_t index) {
 
 // A graph with two states (the first has a transition with a five-int and a
 // four-int action), one binding, one sequence, a two-link chain, two clip
-// nodes, a second reel table and two reels. `tail` is appended after the reels
-// to show that the reader stops there.
-Bytes make_graph(std::int32_t version = 0, std::size_t tail = 8) {
+// nodes, a second reel table, two reels and the tables after them. `tail` is
+// appended after the graph: the reader must reject it.
+Bytes make_graph(std::int32_t version = 0, std::size_t tail = 0) {
     Writer w;
     w.i32(0);
     w.i32(version);
@@ -128,6 +128,64 @@ Bytes make_graph(std::int32_t version = 0, std::size_t tail = 8) {
     for (std::uint16_t value : std::vector<std::uint16_t>{0, 1, 2, 1}) {
         w.u16(value);
     }
+    w.i32(1);  // masks: two bytes, a u16 and an int
+    w.out.push_back(1);
+    w.out.push_back(2);
+    w.u16(3);
+    w.i32(4);
+    w.i32(3);  // byte table
+    w.out.insert(w.out.end(), {9, 8, 7});
+    w.i32(1);  // layer types
+    w.i32(5);
+    w.i32(0);
+    w.i32(1);  // symbol map: a u16 and an int
+    w.u16(111);
+    w.i32(1);
+    w.i32(2);  // int table
+    w.i32(7);
+    w.i32(8);
+    // Name offsets 0, 5 and 10, which the tags above use.
+    const std::string names = std::string("st_a") + '\0' + "st_b" + '\0' + "sq_y";
+    w.i32(static_cast<std::int32_t>(names.size() + 1));  // name pool
+    w.out.insert(w.out.end(), names.begin(), names.end());
+    w.out.push_back(0);
+    w.i32(3);  // objects: none, ClipAndBoneID, ClipAndBoneID2
+    w.i32(-1);
+    w.i32(1);
+    w.i32(4);
+    w.i32(tag(0));
+    w.i32(2);
+    w.i32(4);
+    w.i32(5);
+    w.i32(tag(1));
+    w.i32(2);  // blends
+    w.f32(0.2f);
+    w.i32(7);
+    w.i32(1);
+    w.i32(0);
+    w.f32(0.5f);
+    w.i32(0);
+    w.i32(0);
+    w.i32(0);
+    w.i32(1);  // transforms: nine floats
+    for (int index = 0; index < 9; ++index) {
+        w.f32(static_cast<float>(index));
+    }
+    w.i32(2);  // event lists: one with an event, one empty
+    w.i32(1);
+    w.f32(0.5f);
+    w.i32(0);
+    w.i32(26);
+    w.i32(0);
+    w.i32(0);
+    w.i32(3);  // variants: an int, a float and a symbol
+    w.i32(2);
+    w.i32(1);
+    w.i32(1);
+    w.f32(0.01f);
+    w.i32(9);
+    w.u16(300);
+    w.i32(0);  // final int
     w.out.insert(w.out.end(), tail, 0xAB);
     return w.out;
 }
@@ -156,12 +214,41 @@ void test_clip_nodes_and_reels() {
     CHECK(graph.reels[1].name_symbol == 2 && graph.reels[1].type_symbol == 1);
 }
 
+void test_states_and_tables() {
+    const bo2::engine::AnimGraph graph = bo2::engine::parse_anim_graph(make_graph());
+    CHECK(graph.states.size() == 2);
+    CHECK(graph.states[0].name == "st_a" && graph.states[1].name == "st_b");
+    CHECK(graph.states[0].transitions.size() == 1 && graph.states[1].transitions.empty());
+    const bo2::engine::AnimTransition& transition = graph.states[0].transitions[0];
+    CHECK(transition.variant_tag == static_cast<std::uint32_t>(tag(0)));
+    CHECK(transition.condition == 0x402);
+    CHECK(transition.actions.size() == 2);
+    CHECK(transition.actions[0].kind == 1 && transition.actions[0].arg == 0x5C0073);
+    CHECK(transition.actions[1].kind == 7 && transition.actions[1].target == 3 &&
+          transition.actions[1].arg == 0);
+    CHECK(graph.bindings.size() == 1 && graph.bindings[0].value_tag == 5 &&
+          graph.bindings[0].condition == 8);
+    CHECK(graph.sequences.size() == 1 && graph.sequences[0].head_tag == 1);
+    CHECK(graph.sequences[0].name == "sq_y");
+    CHECK(graph.chain.size() == 2 && graph.chain[0].clip == 1 && graph.chain[1].clip == -1);
+    CHECK(graph.clips[0].name == "st_a" && graph.clips[1].name == "st_b");
+    CHECK(graph.blends.size() == 2);
+    CHECK(graph.blend_seconds(static_cast<std::uint32_t>(tag(0))) == 0.2f);
+    CHECK(graph.blend_seconds(static_cast<std::uint32_t>(tag(1))) == 0.5f);
+    CHECK(graph.blend_seconds(0) == 0.0f && graph.blend_seconds(99) == 0.0f);
+    CHECK(graph.variants.size() == 3);
+    CHECK(graph.variants[0].type == 2 && graph.variants[0].value == 1);
+    CHECK(graph.variants[2].type == 9 && graph.variants[2].value == 300);
+    CHECK(graph.find_state("st_b") == 1 && graph.find_state("st_none") == -1);
+}
+
 void test_rejections() {
     CHECK(throws_parse_error(make_graph(1)));  // alias list
     CHECK(throws_parse_error(make_graph(2)));
     Bytes bad_format = make_graph();
     bad_format[0] = 1;
     CHECK(throws_parse_error(bad_format));
+    CHECK(throws_parse_error(make_graph(0, 8)));  // bytes after the graph
     const Bytes whole = make_graph(0, 0);
     for (std::size_t cut : {std::size_t{3}, std::size_t{20}, std::size_t{60}, whole.size() / 2,
                             whole.size() - 1}) {
@@ -320,6 +407,7 @@ void test_kain_graph() {
 int main() {
     try {
         test_clip_nodes_and_reels();
+        test_states_and_tables();
         test_rejections();
         test_reel_names();
         test_kain_graph();

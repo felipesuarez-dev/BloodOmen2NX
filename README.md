@@ -23,8 +23,8 @@ English version: [README.en.md](README.en.md)
 
 <!-- badges:start -->
 [status-badge]: https://img.shields.io/badge/fase-M3%20en%20curso-orange
-[overall-badge]: https://img.shields.io/badge/global-8.1%25-yellow
-[fn-badge]: https://img.shields.io/badge/funciones-13%20%2F%2016921-lightgrey
+[overall-badge]: https://img.shields.io/badge/global-8.2%25-yellow
+[fn-badge]: https://img.shields.io/badge/funciones-21%20%2F%2016921-lightgrey
 [levels-badge]: https://img.shields.io/badge/niveles-0%20%2F%2011-lightgrey
 <!-- badges:end -->
 [cpp-badge]: https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white
@@ -71,15 +71,15 @@ El original se usa como referencia; no se distribuye.
 **Dónde está el proyecto: M0, M1 y M2 están completos y M3 está en curso.** La canalización de datos, el renderizador de niveles y el oráculo funcionan. Kain camina, corre y salta (con control en el aire) con los ajustes de movimiento originales y el port elige el español como el original, pero el combate, los enemigos y los scripts no están traducidos, así que **no se puede completar ningún capítulo**. Los números de abajo se generan y miden lo que el port traduce, no qué tan jugable se siente (consulta [qué miden los porcentajes](#qué-miden-los-porcentajes)).
 
 <!-- progress:start -->
-**Progreso global: 8.1%**
+**Progreso global: 8.2%**
 
 | Componente | Peso | Avance | Puntaje |
 |---|---:|---:|---:|
-| Funciones traducidas / en alcance | 60% | 13 / 16 921 | 0.08% |
+| Funciones traducidas / en alcance | 60% | 21 / 16 921 | 0.12% |
 | Niveles completables (capítulos de la campaña) | 30% | 0 / 11 | 0.00% |
 | Características de plataforma | 10% | 10 / 13 + 1 parcial | 80.77% |
 
-Mapa de funciones: 35 523 filas: 13 traducidas, 64 en curso, 16 844 pendientes, 18 602 externas (no son código del juego).
+Mapa de funciones: 35 523 filas: 21 traducidas, 67 en curso, 16 833 pendientes, 18 602 externas (no son código del juego).
 
 La lista de capítulos está en [`docs/LEVELS.md`](docs/LEVELS.md). Los capítulos completables y las características de plataforma se definen en [`tools/gen/progress_data.py`](tools/gen/progress_data.py).
 <!-- progress:end -->

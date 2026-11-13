@@ -18,6 +18,7 @@ set_source_files_properties(third_party/stb_vorbis.c PROPERTIES COMPILE_OPTIONS 
 
 add_library(bo2_engine STATIC
     src/engine/anim_graph.cpp
+    src/engine/anim_machine.cpp
     src/engine/anim_reel.cpp
     src/engine/audio.cpp
     src/engine/big_archive.cpp
@@ -140,6 +141,11 @@ if(BUILD_TESTING)
     target_link_libraries(bo2nx_anim_graph_tests PRIVATE bo2_engine)
     target_compile_options(bo2nx_anim_graph_tests PRIVATE ${BO2NX_WARNINGS})
     add_test(NAME anim_graph COMMAND bo2nx_anim_graph_tests)
+
+    add_executable(bo2nx_anim_machine_tests tests/unit/test_anim_machine.cpp)
+    target_link_libraries(bo2nx_anim_machine_tests PRIVATE bo2_engine)
+    target_compile_options(bo2nx_anim_machine_tests PRIVATE ${BO2NX_WARNINGS})
+    add_test(NAME anim_machine COMMAND bo2nx_anim_machine_tests)
 
     add_executable(bo2nx_skeleton_pose_tests tests/unit/test_skeleton_pose.cpp)
     target_link_libraries(bo2nx_skeleton_pose_tests PRIVATE bo2_engine)

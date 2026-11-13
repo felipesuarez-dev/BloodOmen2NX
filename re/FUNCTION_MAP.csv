@@ -8175,8 +8175,8 @@ address,name,subsystem,status,notes
 005e1750,FUN_005e1750,unknown,todo,ghidra
 005e1a10,FUN_005e1a10,unknown,todo,ghidra
 005e1b60,FUN_005e1b60,unknown,todo,ghidra
-005e1d80,FUN_005e1d80,unknown,todo,ghidra
-005e1f80,FUN_005e1f80,unknown,todo,ghidra
+005e1d80,FUN_005e1d80,animation,wip,src/engine/anim_machine.cpp: AnimMachine::start_clip starts the clock the blend time before the clip; the blend sampler and the resume flags and the root channel slots are not ported
+005e1f80,FUN_005e1f80,animation,wip,src/engine/anim_machine.cpp: AnimMachine::advance_clip moves the clock in real time during the blend and at the clip rate after it and clamps at the end; the root motion output and the events are not ported
 005e26a0,FUN_005e26a0,unknown,todo,ghidra
 005e26c0,FUN_005e26c0,unknown,todo,ghidra
 005e2750,FUN_005e2750,unknown,todo,ghidra
@@ -8315,8 +8315,8 @@ address,name,subsystem,status,notes
 005e8590,FUN_005e8590,unknown,todo,ghidra
 005e8970,FUN_005e8970,unknown,todo,ghidra
 005e8ab0,FUN_005e8ab0,unknown,todo,ghidra
-005e8e00,FUN_005e8e00,animation,wip,src/engine/anim_graph.cpp: state actions are walked and not kept
-005e8ee0,FUN_005e8ee0,animation,wip,src/engine/anim_graph.cpp: reads up to the reel table; the later sections are not read (tools/bo2fmt/animatio.py reads them all)
+005e8e00,FUN_005e8e00,animation,translated,src/engine/anim_graph.cpp: an action is four ints plus a fifth for kinds 1 to 6 (AnimAction); test_states_and_tables in tests/unit/test_anim_graph.cpp
+005e8ee0,FUN_005e8ee0,animation,wip,src/engine/anim_graph.cpp: the whole version 0 stream is read and must end with the graph; masks and layer types and the symbol map and objects and transforms and event lists are read and dropped (tools/bo2fmt/animatio.py keeps them)
 005e9170,FUN_005e9170,unknown,todo,ghidra
 005e9180,FUN_005e9180,animation,wip,src/engine/anim_graph.cpp: the second reel table is walked and not resolved
 005e9460,FUN_005e9460,unknown,todo,ghidra
@@ -8358,23 +8358,23 @@ address,name,subsystem,status,notes
 005ea6b0,FUN_005ea6b0,unknown,todo,ghidra
 005ea700,FUN_005ea700,unknown,todo,ghidra
 005ea730,FUN_005ea730,unknown,todo,ghidra
-005ea770,FUN_005ea770,animation,wip,src/engine/anim_graph.cpp: state transitions are walked and not kept
+005ea770,FUN_005ea770,animation,translated,src/engine/anim_graph.cpp: a transition is a variant tag and a condition id and its actions (AnimTransition); test_states_and_tables in tests/unit/test_anim_graph.cpp
 005ea940,FUN_005ea940,unknown,todo,ghidra
 005eaa00,FUN_005eaa00,unknown,todo,ghidra
 005eaa20,FUN_005eaa20,unknown,todo,ghidra
-005eab00,FUN_005eab00,animation,wip,src/engine/anim_graph.cpp: states are walked to reach the clip nodes and not kept
+005eab00,FUN_005eab00,animation,wip,src/engine/anim_graph.cpp: a state keeps its transitions and blend and name; the variant and factory and child and object fields are read and dropped
 005eacc0,FUN_005eacc0,unknown,todo,ghidra
 005eadf0,FUN_005eadf0,unknown,todo,ghidra
-005eaea0,FUN_005eaea0,animation,wip,src/engine/anim_graph.cpp: bindings are walked and not kept
+005eaea0,FUN_005eaea0,animation,translated,src/engine/anim_graph.cpp: a binding is a value tag and a condition id (AnimBinding); test_states_and_tables in tests/unit/test_anim_graph.cpp
 005eaf80,FUN_005eaf80,unknown,todo,ghidra
 005eafc0,FUN_005eafc0,unknown,todo,ghidra
-005eb000,FUN_005eb000,animation,wip,src/engine/anim_graph.cpp: sequences are walked and not kept
+005eb000,FUN_005eb000,animation,wip,src/engine/anim_graph.cpp: a sequence keeps its head link and name; the event list tag is dropped
 005eb100,FUN_005eb100,unknown,todo,ghidra
 005eb140,FUN_005eb140,unknown,todo,ghidra
-005eb180,FUN_005eb180,animation,wip,src/engine/anim_graph.cpp: the chain is walked and not kept
+005eb180,FUN_005eb180,animation,translated,src/engine/anim_graph.cpp: a chain link is a clip index and a blend tag (AnimChainLink); test_states_and_tables in tests/unit/test_anim_graph.cpp
 005eb260,FUN_005eb260,unknown,todo,ghidra
 005eb2a0,FUN_005eb2a0,unknown,todo,ghidra
-005eb2e0,FUN_005eb2e0,animation,wip,src/engine/anim_graph.cpp: clip node in out speed and reel tag are kept; name events offset and blend tags are not
+005eb2e0,FUN_005eb2e0,animation,wip,src/engine/anim_graph.cpp: clip node in out speed and the reel and blend tags and the name are kept; the events and transform and mask tags are not
 005eb470,FUN_005eb470,unknown,todo,ghidra
 005eb4b0,FUN_005eb4b0,unknown,todo,ghidra
 005eb4f0,FUN_005eb4f0,unknown,todo,ghidra
@@ -8385,13 +8385,13 @@ address,name,subsystem,status,notes
 005eb8c0,FUN_005eb8c0,unknown,todo,ghidra
 005eb900,FUN_005eb900,unknown,todo,ghidra
 005eba10,FUN_005eba10,unknown,todo,ghidra
-005eba40,FUN_005eba40,unknown,todo,ghidra
+005eba40,FUN_005eba40,animation,wip,src/engine/anim_graph.cpp: a blend record keeps its time in seconds; the three ints are dropped
 005ebb60,FUN_005ebb60,unknown,todo,ghidra
 005ebba0,FUN_005ebba0,unknown,todo,ghidra
 005ebbf0,FUN_005ebbf0,unknown,todo,ghidra
 005ebdf0,FUN_005ebdf0,unknown,todo,ghidra
 005ebeb0,FUN_005ebeb0,unknown,todo,ghidra
-005ebed0,FUN_005ebed0,unknown,todo,ghidra
+005ebed0,FUN_005ebed0,animation,translated,src/engine/anim_graph.cpp: a variant is a type and a value read as a float bit pattern for types 1 4 5 and a u16 for types 9 10 and an int otherwise (AnimVariant); test_states_and_tables in tests/unit/test_anim_graph.cpp
 005ec030,FUN_005ec030,unknown,todo,ghidra
 005ec080,FUN_005ec080,unknown,todo,ghidra
 005ec0c0,FUN_005ec0c0,unknown,todo,ghidra
@@ -9248,8 +9248,8 @@ address,name,subsystem,status,notes
 00613320,FUN_00613320,unknown,todo,ghidra
 00613380,FUN_00613380,unknown,todo,ghidra
 006133b0,FUN_006133b0,unknown,todo,ghidra
-00613510,FUN_00613510,unknown,todo,ghidra
-00613570,FUN_00613570,unknown,todo,ghidra
+00613510,FUN_00613510,animation,translated,src/engine/anim_machine.cpp: condition 0x401 is the OR of two bindings (AnimMachine::condition); test_conditions in tests/unit/test_anim_machine.cpp
+00613570,FUN_00613570,animation,translated,src/engine/anim_machine.cpp: condition 0x402 is the AND of two bindings (AnimMachine::condition); test_conditions in tests/unit/test_anim_machine.cpp
 00613670,FUN_00613670,unknown,todo,ghidra
 006137e0,FUN_006137e0,unknown,todo,ghidra
 00613a50,FUN_00613a50,unknown,todo,ghidra
@@ -9938,11 +9938,11 @@ address,name,subsystem,status,notes
 006429b0,FUN_006429b0,unknown,todo,ghidra
 00642a80,FUN_00642a80,unknown,todo,ghidra
 00642bc0,FUN_00642bc0,unknown,todo,ghidra
-00642c00,FUN_00642c00,unknown,todo,ghidra
+00642c00,FUN_00642c00,animation,wip,src/engine/anim_machine.cpp: AnimMachine::start_state runs the first true transition with its play-sequence and continue-with-state actions on one layer; the other layers (kinds 3 and 4) and the layer entity (5) and the callbacks (6) are not ported
 00642e30,FUN_00642e30,unknown,todo,ghidra
 00642e50,FUN_00642e50,unknown,todo,ghidra
 00642ea0,FUN_00642ea0,unknown,todo,ghidra
-00643030,FUN_00643030,unknown,todo,ghidra
+00643030,FUN_00643030,animation,wip,src/engine/anim_machine.cpp: AnimMachine::advance restarts the requested state when the sequence has finished and reports the finish; the state function with its child state and the layer entity are not ported
 00643170,FUN_00643170,unknown,todo,ghidra
 006431b0,FUN_006431b0,unknown,todo,ghidra
 00643200,FUN_00643200,unknown,todo,ghidra
@@ -9953,8 +9953,8 @@ address,name,subsystem,status,notes
 00643800,FUN_00643800,unknown,todo,ghidra
 00643820,FUN_00643820,unknown,todo,ghidra
 00643d60,FUN_00643d60,unknown,todo,ghidra
-00643f10,FUN_00643f10,unknown,todo,ghidra
-00643f80,FUN_00643f80,unknown,todo,ghidra
+00643f10,FUN_00643f10,animation,wip,src/engine/anim_machine.cpp: AnimMachine::play_sequence starts the first chain link with the given blend or its own; the event flush is not ported
+00643f80,FUN_00643f80,animation,wip,src/engine/anim_machine.cpp: AnimMachine::advance moves to the next chain link or its terminator when a clip ends; the sequence clock and the events are not ported
 006440b0,FUN_006440b0,unknown,todo,ghidra
 006440c0,FUN_006440c0,unknown,todo,ghidra
 00644110,FUN_00644110,unknown,todo,ghidra
@@ -14056,7 +14056,7 @@ address,name,subsystem,status,notes
 007231d0,FUN_007231d0,unknown,todo,ghidra
 00723460,FUN_00723460,unknown,todo,ghidra
 00723610,FUN_00723610,unknown,todo,ghidra
-00723620,FUN_00723620,unknown,todo,ghidra
+00723620,FUN_00723620,animation,translated,src/engine/anim_machine.cpp: AnimMachine::set_rate replaces the rate of the clip in play; test_clip_runs_at_its_rate_and_loops in tests/unit/test_anim_machine.cpp
 00723680,FUN_00723680,unknown,todo,ghidra
 007236c0,FUN_007236c0,unknown,todo,ghidra
 007237a0,FUN_007237a0,unknown,todo,ghidra
