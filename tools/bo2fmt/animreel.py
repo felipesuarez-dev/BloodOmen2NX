@@ -41,7 +41,7 @@ CODEC_LC = 12  # AnimChanLC, FUN_0068aca0
 CODEC_STREAM = 16  # AnimChanStream, FUN_006712c0
 
 ROOT_NODE = 0
-TRANSLATION = 1  # inferred: matches the oracle, see docs/FORMATS/animreel.md
+TRANSLATION = 1  # FUN_00638920: type 0 rotation, 1 translation, 2 scale
 
 
 class AnimReelError(ValueError):

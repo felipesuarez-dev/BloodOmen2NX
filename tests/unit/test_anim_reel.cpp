@@ -253,9 +253,63 @@ void test_root_displacement() {
     CHECK(displacement.z == 0.0f);
 }
 
+void test_fractional_sample() {
+    const std::vector<Channel> channels = {
+        {4, 0, 0, 0, uc({1.0f, 3.0f, -1.0f})},
+        {4, 0, 1, 12, lc(10.0f, 0.5f, {0, 2, 4})},
+        {4, 1, 0, constant_value(7.0f), {}},
+        {4, 1, 1, 16, {0, 0, 0, 0}},
+        // Start 5; a 1-frame segment adds 7 and a 2-frame segment adds 11.
+        {4, 1, 2, 8, lsc(1.0f, 2.0f, 5.0f, {static_cast<std::uint16_t>((1 << 11) | 3),
+                                            static_cast<std::uint16_t>((2 << 11) | 5)})},
+    };
+    const auto reel = bo2::engine::parse_anim_reel(make_reel(3, channels));
+    // Inside a segment the LSC value is the same line (FUN_0068aed0).
+    CHECK(near(reel.channels[4].sample(0.5f), 8.5f));
+    CHECK(near(reel.channels[4].sample(1.5f), 14.75f));
+    // Whole frames return the stored sample.
+    CHECK(reel.channels[0].sample(0.0f) == 1.0f);
+    CHECK(reel.channels[0].sample(2.0f) == -1.0f);
+    // Between frames the value is linear (FUN_0067aaf0, FUN_0068aa90).
+    CHECK(near(reel.channels[0].sample(0.25f), 1.5f));
+    CHECK(near(reel.channels[0].sample(1.5f), 1.0f));
+    CHECK(near(reel.channels[1].sample(0.5f), 10.5f));
+    // The frame is clamped to the clip.
+    CHECK(reel.channels[0].sample(-3.0f) == 1.0f);
+    CHECK(reel.channels[0].sample(9.0f) == -1.0f);
+    // A constant ignores the frame; a stream channel has no data.
+    CHECK(reel.channels[2].sample(1.3f) == reel.channels[2].value);
+    CHECK(reel.channels[3].sample(1.0f) == 0.0f);
+}
+
+void test_find_channel() {
+    const std::vector<Channel> channels = {
+        {0, 1, 0, constant_value(1.0f), {}},
+        {4, 0, 0, constant_value(2.0f), {}},
+        {4, 0, 2, constant_value(3.0f), {}},
+        {4, 1, 0, constant_value(4.0f), {}},
+        {300, 2, 1, constant_value(5.0f), {}},
+        // A flagged auxiliary node repeats a key: the first one wins.
+        {0x1000, 7, 0, constant_value(6.0f), {}},
+        {0x1000, 7, 0, constant_value(8.0f), {}},
+    };
+    const auto reel = bo2::engine::parse_anim_reel(make_reel(2, channels));
+    CHECK(bo2::engine::find_channel(reel, 0, 1, 0) == 0);
+    CHECK(bo2::engine::find_channel(reel, 4, 0, 2) == 2);
+    CHECK(bo2::engine::find_channel(reel, 4, 1, 0) == 3);
+    CHECK(bo2::engine::find_channel(reel, 300, 2, 1) == 4);
+    CHECK(bo2::engine::find_channel(reel, 0x1000, 7, 0) == 5);
+    // Missing component, type and node.
+    CHECK(bo2::engine::find_channel(reel, 4, 0, 1) == -1);
+    CHECK(bo2::engine::find_channel(reel, 4, 2, 0) == -1);
+    CHECK(bo2::engine::find_channel(reel, 5, 0, 0) == -1);
+}
+
 }  // namespace
 
 int main() {
+    test_fractional_sample();
+    test_find_channel();
     test_header_and_duration();
     test_constant_keeps_the_tag_bit();
     test_uc_lc_lsc_decode();

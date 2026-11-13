@@ -22,7 +22,7 @@ constexpr std::uint32_t kCodecLC = 12;      // AnimChanLC, FUN_0068aca0
 constexpr std::uint32_t kCodecStream = 16;  // AnimChanStream, FUN_006712c0
 
 constexpr std::uint8_t kRootNode = 0;
-constexpr std::uint8_t kTranslation = 1;  // inferred, docs/FORMATS/animreel.md
+constexpr std::uint8_t kTranslation = 1;  // FUN_00638920, docs/FORMATS/animreel.md
 
 // The codec constructors (FUN_0067ad20, FUN_0068aca0, FUN_0068b1f0) take the
 // frame count as a ushort and the reel keeps it as a short (the reel+0x12 copy
@@ -211,6 +211,17 @@ Vec3 root_displacement(const AnimReel& reel) {
         (channel.component == 0 ? out.x : channel.component == 1 ? out.y : out.z) = delta;
     }
     return out;
+}
+
+int find_channel(const AnimReel& reel, std::uint16_t node, std::uint8_t type,
+                 std::uint8_t component) {
+    for (std::size_t index = 0; index < reel.channels.size(); ++index) {
+        const AnimChannel& channel = reel.channels[index];
+        if (channel.node == node && channel.type == type && channel.component == component) {
+            return static_cast<int>(index);
+        }
+    }
+    return -1;
 }
 
 }  // namespace bo2::engine

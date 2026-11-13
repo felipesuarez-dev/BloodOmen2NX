@@ -54,9 +54,13 @@ path, FUN_0066a6d0, FUN_0066a680):
 Any other even value is invalid. The blob must be consumed exactly; this
 holds for every Kain clip.
 
-Evaluation at integer frames:
+Evaluation. The time is a frame index; between two frames every codec is
+linear, so the port decodes one float per frame and `AnimChannel::sample`
+interpolates the two neighbours (FUN_0067aaf0 for UC, FUN_0068aa90 for LC; the
+LSC segments are linear over whole frames, so the rule is exact there too).
+The port clamps the frame to the clip. At whole frames:
 
-- UC: the sample for that frame (linear between frames at fractional times).
+- UC: the sample for that frame.
 - LC: `byte * scale + offset`.
 - LSC: segment `s` covers `len = s >> 11` frames and adds
   `delta = (s & 0x7FF) * scale + offset` linearly over them. The value at a
@@ -79,11 +83,50 @@ floats so small LSC channels cannot amplify a file; that cap is port-only.
 `(frames - 1) * (1 / 30)`. FUN_0068ada0 and FUN_0068a9b0 use the double
 constant 1/30 at 0x872498, not the fps field.
 
+## Descriptor keys
+
+A descriptor is addressed by the key `node << 16 | type << 8 | component`.
+The compiled reel keeps the descriptors in file order with the three fields
+swapped into that key (FUN_0063c480), and FUN_0063ce20 bisects them, then
+walks forward from the last hit.
+
+The clip sampler binds nine channels per bone (FUN_00638920), in this order:
+
+| Type | Components | Meaning | Value without a channel |
+|---|---|---|---|
+| 0 | 0, 1, 2 | Rotation about x, y, z, in radians | 0 |
+| 1 | 0, 1, 2 | Translation x, y, z | The bone pivot (FUN_00637900, FUN_005e26c0) |
+| 2 | 0, 1, 2 | Scale x, y, z | 1 |
+
+`node` is the bone id (`boneIdx` of the `modlskel` record), not the bone's
+position in the array: the runtime bone record keeps `index << 16 | id` as its
+key (FUN_005e27e0). In `kain/run` the 102 plain nodes are 102 of the model's
+104 bone ids. A clip may name a bone the model does not have (nodes 95 and 96
+in some Kain clips); nothing looks it up, so it is ignored. How the values
+become bone matrices is in [`models.md`](models.md).
+
+Nodes with the high bits set are auxiliary records, not bones:
+
+| Node | Types | Reader |
+|---|---|---|
+| `0x1000 \| n` | 7 and 8, components 0..2 | FUN_00639230 |
+| `0x2000 \| n` | 10, 12 and 18, components 0..2 | FUN_006393c0 |
+| `0x3000 \| n` | 14, 15, 16 and 17 | FUN_006395f0 |
+| plain | 20, components 0, 1, 2, 4, 5, 6 | FUN_006397a0 |
+
+Their meaning is open. Over the 134 Kain clips the bone keys are sorted and
+unique, so the port's first-match scan (`find_channel`) returns what the
+bisection returns. Twelve clips (`kain/walk`, `kain/walk_backwards`, the
+`claw_block_*` and `combat_jump_*` clips) repeat a key, always on a `0x1000`
+node. No bone key uses the stream codec.
+
 ## Root motion
 
 Node 0, type 1, components 0, 1, 2 are the local x, y, z translation of the
-root. *Inferred*: type 1 means translation; it reproduces the oracle speeds
-exactly. Missing components are 0. Local x is forward. FUN_0041f7d0 takes the
+root. Missing components are 0. Local x is forward. The skeleton does not
+apply the root's channels: the bone of index 0 gets an identity matrix
+([`models.md`](models.md)), so this translation only moves the entity.
+FUN_0041f7d0 takes the
 root delta from the animation system (FUN_0041fb00), rotates it by the
 instance rotation and adds it to the position.
 
@@ -97,9 +140,9 @@ root speed is the displacement over the duration.
 | `kain/walk_backwards` | 48 | 1.5667 s | -97.9167 | -62.5 u/s |
 
 The root is matched as node == 0 exactly. FUN_0063c480 tests bit 0x1000 of
-the descriptor's u16 node (2916 Kain channels have node >= 0x1000); the port
-does not mask it because its meaning is unknown, so flagged nodes are not
-treated as the root. No Kain clip has a flagged root translation.
+the descriptor's u16 node; the 2916 Kain channels with node >= 0x1000 are all
+auxiliary records of types 7 and 8 (above), so a flagged node is never the
+root.
 
 How the game turns these into ground speed is in
 [`../GAMEPLAY.md`](../GAMEPLAY.md): run speed is the root speed times the run
@@ -113,15 +156,13 @@ multiplying it).
 - The event symbol ids (footsteps in Kain's clips: four events at frames 5
   and 17 of `kain/run`).
 - The u32 at reel+0x08.
-- The meaning of the node flag 0x1000 (FUN_0063c480).
-- Descriptor types other than 1. Across the Kain clips the types in use are
-  0, 1, 2, 7, 8, 19 and 20; the root (node 0) also carries types 0, 19 and
-  20 (type 19 and 20 on components 0, 1, 2, 4, 5, 6). Their meaning is not
-  decoded.
+- What the auxiliary records carry: the flagged nodes (types 7, 8, 10, 12,
+  14..18) and types 19 and 20 on the root (components 0, 1, 2, 4, 5, 6).
+  Across the Kain clips the types in use are 0, 1, 2, 7, 8, 19 and 20.
 - What AnimChanStream carries.
 - Inner versions other than 6 and chunk versions other than 4.
-- Linear interpolation at fractional frames is read from the evaluators but
-  only integer frames are ported.
+- The UC evaluator skips the interpolation when its sampler cache carries a
+  flag (FUN_0067aaf0, cache `+0x1c == 1`); the port always interpolates.
 - The `animatio` graph that references the reels is decoded; see
-  [`animatio.md`](animatio.md). How the engine blends the clips on the
-  skeleton is not.
+  [`animatio.md`](animatio.md). How the engine blends two clips on the
+  skeleton (the sampler with vtable 0x86f91c) is not ported.

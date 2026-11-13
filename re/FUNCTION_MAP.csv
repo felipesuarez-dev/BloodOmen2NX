@@ -9815,7 +9815,7 @@ address,name,subsystem,status,notes
 0063cbf0,FUN_0063cbf0,unknown,todo,ghidra
 0063cc00,FUN_0063cc00,unknown,todo,ghidra
 0063cd60,FUN_0063cd60,unknown,todo,ghidra
-0063ce20,FUN_0063ce20,unknown,todo,ghidra
+0063ce20,FUN_0063ce20,animation,wip,src/engine/anim_reel.cpp: find_channel returns the descriptor of a key; the bisection and its forward cursor are replaced by a first-match scan which differs on the repeated keys of the 0x1000 nodes; test_find_channel in tests/unit/test_anim_reel.cpp
 0063cf70,FUN_0063cf70,unknown,todo,ghidra
 0063cfe0,FUN_0063cfe0,unknown,todo,ghidra
 0063d080,FUN_0063d080,unknown,todo,ghidra
@@ -10889,7 +10889,7 @@ address,name,subsystem,status,notes
 0067a9f0,FUN_0067a9f0,unknown,todo,ghidra
 0067aa10,FUN_0067aa10,unknown,todo,ghidra
 0067aa40,FUN_0067aa40,unknown,todo,ghidra
-0067aaf0,FUN_0067aaf0,animation,wip,src/engine/anim_reel.cpp: UC evaluated at whole frames only; fractional time is not ported
+0067aaf0,FUN_0067aaf0,animation,wip,include/bo2/engine/anim_reel.hpp: UC at whole and fractional frames (AnimChannel::sample); the sampler cache flag that skips the interpolation is not ported; test_fractional_sample in tests/unit/test_anim_reel.cpp
 0067aca0,FUN_0067aca0,unknown,todo,ghidra
 0067acb0,FUN_0067acb0,unknown,todo,ghidra
 0067ad20,FUN_0067ad20,animation,translated,src/engine/anim_reel.cpp: UC channel layout and size (frames*4); the runtime object is replaced by decoded samples; tests/unit/test_anim_reel.cpp
@@ -11122,13 +11122,13 @@ address,name,subsystem,status,notes
 0068a970,FUN_0068a970,unknown,todo,ghidra
 0068a9a0,FUN_0068a9a0,unknown,todo,ghidra
 0068a9b0,FUN_0068a9b0,animation,translated,include/bo2/engine/anim_reel.hpp: reel duration (frames - 1) / 30 (LC getter); test_header_and_duration in tests/unit/test_anim_reel.cpp
-0068aa90,FUN_0068aa90,animation,wip,src/engine/anim_reel.cpp: LC evaluated at whole frames only; fractional time is not ported
+0068aa90,FUN_0068aa90,animation,translated,include/bo2/engine/anim_reel.hpp: LC at whole and fractional frames (AnimChannel::sample interpolates the decoded samples and clamps the frame to the clip); test_fractional_sample in tests/unit/test_anim_reel.cpp
 0068ac40,FUN_0068ac40,unknown,todo,ghidra
 0068aca0,FUN_0068aca0,animation,translated,src/engine/anim_reel.cpp: LC channel layout and size align4(frames+8); the runtime object is replaced by decoded samples; tests/unit/test_anim_reel.cpp
 0068ad60,FUN_0068ad60,unknown,todo,ghidra
 0068ad90,FUN_0068ad90,unknown,todo,ghidra
 0068ada0,FUN_0068ada0,animation,translated,include/bo2/engine/anim_reel.hpp: reel duration (frames - 1) / 30 (LSC getter); test_header_and_duration in tests/unit/test_anim_reel.cpp
-0068aed0,FUN_0068aed0,animation,wip,src/engine/anim_reel.cpp: LSC evaluated at whole frames only; fractional time is not ported
+0068aed0,FUN_0068aed0,animation,translated,src/engine/anim_reel.cpp: LSC at whole frames (expand_lsc) and fractional frames (AnimChannel::sample; the segments are linear over whole frames); past the last segment the port clamps and a zero-length segment returns the running value; test_fractional_sample and test_lsc_clamps_to_the_last_segment in tests/unit/test_anim_reel.cpp
 0068b180,FUN_0068b180,unknown,todo,ghidra
 0068b1f0,FUN_0068b1f0,animation,translated,src/engine/anim_reel.cpp: LSC channel layout and size align4(K*2+2)+12; the runtime object is replaced by decoded samples; tests/unit/test_anim_reel.cpp
 0068b270,FUN_0068b270,level,wip,src/engine/cell_group.cpp: read_bsp_node; tests/unit/test_engine.cpp covers a tree and an invalid node type but not the depth limit or a truncated chunk

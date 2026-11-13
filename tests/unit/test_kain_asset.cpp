@@ -99,6 +99,44 @@ int main() {
             CHECK(std::fabs(bo2::engine::root_displacement(reel).x / reel.duration - 56.3485f) <
                   1.0e-3f);
         }
+        // The channel lookup (find_channel) relies on the bone keys being
+        // sorted and unique, as the original's bisection does (FUN_0063ce20).
+        std::size_t reels = 0;
+        std::size_t unsorted_reels = 0;
+        std::size_t bone_streams = 0;
+        for (const bo2::engine::BigEntry& candidate : archive.entries()) {
+            if (candidate.type != "animreel") {
+                continue;
+            }
+            ++reels;
+            const bo2::engine::AnimReel reel =
+                bo2::engine::parse_anim_reel(archive.extract(candidate));
+            std::uint32_t previous = 0;
+            bool first = true;
+            bool sorted = true;
+            for (const bo2::engine::AnimChannel& channel : reel.channels) {
+                if (channel.node >= 0x1000) {
+                    continue;
+                }
+                const std::uint32_t key = (static_cast<std::uint32_t>(channel.node) << 16) |
+                                          (static_cast<std::uint32_t>(channel.type) << 8) |
+                                          channel.component;
+                if (!first && key <= previous) {
+                    sorted = false;
+                }
+                first = false;
+                previous = key;
+                if (channel.opaque && channel.type <= 2) {
+                    ++bone_streams;
+                }
+            }
+            if (!sorted) {
+                ++unsorted_reels;
+            }
+        }
+        CHECK(reels == 134);
+        CHECK(unsorted_reels == 0);
+        CHECK(bone_streams == 0);
     } catch (const std::exception& error) {
         std::cerr << "kain asset test: " << error.what() << '\n';
         return 1;
