@@ -332,7 +332,10 @@ input row per `state.csv` sample. `bo2nx --replay` loads the level and the
 Kain tuning, steps the port's `PlayerController` and `FollowCamera` with the
 oracle timeline, and writes the player, velocity, yaw, grounded and camera
 columns per frame. `tools/oracle/compare_state.py` matches rows by frame and
-reports the per-phase player, yaw, camera and velocity errors.
+reports the per-phase player, yaw, camera and velocity errors. The replay
+also writes `anim`, the animation state the port's player starts, and the
+tool counts the rows where it equals the oracle's (`-` for a capture that did
+not sample it); the numbers are in [`GAMEPLAY.md`](GAMEPLAY.md#animation-state).
 
 ```sh
 python3 tools/oracle/prepare_replay.py external/captures/wine_20261029_0043 \

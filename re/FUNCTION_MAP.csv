@@ -1186,7 +1186,7 @@ address,name,subsystem,status,notes
 004427d0,FUN_004427d0,unknown,todo,ghidra
 004429a0,FUN_004429a0,unknown,todo,ghidra
 00442aa0,FUN_00442aa0,unknown,todo,ghidra
-00442ae0,FUN_00442ae0,player,wip,src/game/player.cpp: gravity picked by the sign of vz (g_up or g_down) only; state selection glide and animation are not ported
+00442ae0,FUN_00442ae0,player,wip,src/game/player.cpp: gravity picked by the sign of vz (g_up or g_down); src/game/kain_animation.cpp starts st_fallingup or st_fallingdn by the same sign; the landing and glide state selection are not ported
 00443020,FUN_00443020,unknown,todo,ghidra
 004430c0,FUN_004430c0,unknown,todo,ghidra
 004430f0,FUN_004430f0,unknown,todo,ghidra
@@ -1194,7 +1194,7 @@ address,name,subsystem,status,notes
 00443560,FUN_00443560,unknown,todo,ghidra
 00443620,FUN_00443620,unknown,todo,ghidra
 00443650,FUN_00443650,unknown,todo,ghidra
-004436e0,FUN_004436e0,player,wip,src/game/player.cpp: install_air_kind launch per direction; the run flag the 0.25 stick scale and the platform velocity are not ported
+004436e0,FUN_004436e0,player,wip,src/game/player.cpp: install_air_kind launch per direction; src/game/kain_animation.cpp starts st_startjump with the 0.2 s timer; the run flag the 0.25 stick scale and the platform velocity are not ported
 00443a50,FUN_00443a50,player,wip,src/game/player.cpp: hold boost window and the release rule only; timers states and animation are not ported
 00443c60,FUN_00443c60,unknown,todo,ghidra
 00443d20,FUN_00443d20,unknown,todo,ghidra
@@ -1223,7 +1223,7 @@ address,name,subsystem,status,notes
 00445800,FUN_00445800,unknown,todo,ghidra
 004458a0,FUN_004458a0,unknown,todo,ghidra
 004458d0,FUN_004458d0,unknown,todo,ghidra
-00445ba0,FUN_00445ba0,player,wip,src/game/player.cpp: partial-stick run/walk blend ported; the 0.18 s start ramp and Shift speed are measured approximations
+00445ba0,FUN_00445ba0,player,wip,src/game/player.cpp: partial-stick run/walk blend ported; src/game/kain_animation.cpp writes the run clip rate every frame; the 0.18 s start ramp and Shift speed are measured approximations
 00445d10,FUN_00445d10,unknown,todo,ghidra
 00445db0,FUN_00445db0,unknown,todo,ghidra
 00445e00,FUN_00445e00,unknown,todo,ghidra

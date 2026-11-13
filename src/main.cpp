@@ -13,6 +13,7 @@
 #include <thread>
 #include <vector>
 
+#include "bo2/engine/anim_graph.hpp"
 #include "bo2/engine/anim_reel.hpp"
 #include "bo2/engine/big_archive.hpp"
 #include "bo2/engine/cell_group.hpp"
@@ -27,6 +28,7 @@
 #include "bo2/engine/tick.hpp"
 #include "bo2/engine/world.hpp"
 #include "bo2/game/camera.hpp"
+#include "bo2/game/kain_animation.hpp"
 #include "bo2/game/kain_tuning.hpp"
 #include "bo2/game/player.hpp"
 #include "bo2/game/replay.hpp"
@@ -1041,7 +1043,7 @@ int render_level_frame(const Options& options) {
 
 // The Kain movement constants live in the `kain` tunedata entry of kain.big;
 // the ground speeds come from its `kain/run` and `kain/walk_backwards` clips.
-bo2::game::KainTuning load_kain_tuning(const Options& options) {
+std::string kain_container_path(const Options& options) {
     std::string path = options.kain;
     if (path.empty()) {
         const std::string level_dir = bo2::platform::FileSystem::parent(options.big);
@@ -1052,6 +1054,22 @@ bo2::game::KainTuning load_kain_tuning(const Options& options) {
         throw std::runtime_error("kain tunedata not found: " + path +
                                  "\nPass --kain <kain.big> (resources/levels/kain/kain.big).");
     }
+    return path;
+}
+
+// Kain's `animatio` graph, the state machine his movement states drive.
+bo2::engine::AnimGraph load_kain_graph(const Options& options) {
+    const std::string path = kain_container_path(options);
+    const bo2::engine::BigArchive archive = bo2::engine::BigArchive::load(path);
+    const bo2::engine::BigEntry* entry = archive.find("animatio", "kain");
+    if (entry == nullptr) {
+        throw std::runtime_error("no animatio entry named kain in " + path);
+    }
+    return bo2::engine::parse_anim_graph(archive.extract(*entry));
+}
+
+bo2::game::KainTuning load_kain_tuning(const Options& options) {
+    const std::string path = kain_container_path(options);
     const bo2::engine::BigArchive archive = bo2::engine::BigArchive::load(path);
     const bo2::engine::BigEntry* entry = archive.find("tunedata", "kain");
     if (entry == nullptr) {
@@ -1081,6 +1099,8 @@ int run_replay(const Options& options) {
     player.restore(initial);
     bo2::game::FollowCamera camera;
     camera.update(player.state(), collision, 0.0);
+    const bo2::engine::AnimGraph kain_graph = load_kain_graph(options);
+    bo2::game::KainAnimation animation(kain_graph, tuning);
 
     std::ofstream state(options.state_out);
     if (!state) {
@@ -1088,7 +1108,7 @@ int run_replay(const Options& options) {
     }
     state << std::fixed << std::setprecision(6);
     state << "frame,phase,player_x,player_y,player_z,vel_x,vel_y,vel_z,"
-             "player_yaw_deg,grounded,cam_x,cam_y,cam_z,cam_yaw_deg,cam_pitch_deg\n";
+             "player_yaw_deg,grounded,cam_x,cam_y,cam_z,cam_yaw_deg,cam_pitch_deg,anim\n";
     bo2::engine::Vec3 previous = player.state().position;
     double clip_seconds = 0.0;
     for (const bo2::game::ReplayTick& tick : route.ticks) {
@@ -1101,6 +1121,7 @@ int run_replay(const Options& options) {
         input.attack = tick.attack;
         player.step(input, tick.seconds);
         camera.update(player.state(), collision, tick.seconds);
+        animation.step(input, player.state(), tick.seconds);
         const bo2::engine::Vec3 position = player.state().position;
         const bo2::engine::Vec3 velocity =
             tick.seconds > 0.0 ? (position - previous) / static_cast<float>(tick.seconds)
@@ -1115,7 +1136,7 @@ int run_replay(const Options& options) {
               << velocity.x << ',' << velocity.y << ',' << velocity.z << ','
               << player_yaw << ',' << (player.state().grounded ? 1 : 0) << ','
               << camera.eye().x << ',' << camera.eye().y << ',' << camera.eye().z << ','
-              << camera_yaw << ',' << camera_pitch << '\n';
+              << camera_yaw << ',' << camera_pitch << ',' << animation.state() << '\n';
         previous = position;
     }
     if (!options.out.empty()) {

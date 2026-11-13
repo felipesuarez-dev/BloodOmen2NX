@@ -484,6 +484,22 @@ class CompareStateTest(unittest.TestCase):
         self.assertEqual(report["first_divergence"]["frame"], "0")
         self.assertEqual(report["first_divergence"]["error"], 2.0)
 
+    def test_animation_state_is_scored_only_where_both_sides_have_it(self):
+        oracle = self.rows()
+        port = [dict(row) for row in oracle]
+        report = compare_state.compare_states(oracle, port)
+        self.assertEqual(report["phases"]["after_w"]["anim_rows"], 0)
+        oracle[0]["anim"], oracle[1]["anim"] = "0", "1"
+        port[0]["anim"], port[1]["anim"] = "0", "59"
+        report = compare_state.compare_states(oracle, port)
+        self.assertEqual(report["phases"]["spawn_idle"]["anim_rows"], 1)
+        self.assertEqual(report["phases"]["spawn_idle"]["anim_match"], 1)
+        self.assertEqual(report["phases"]["after_w"]["anim_rows"], 1)
+        self.assertEqual(report["phases"]["after_w"]["anim_match"], 0)
+        oracle[1]["anim"] = ""  # a capture that did not sample it
+        report = compare_state.compare_states(oracle, port)
+        self.assertEqual(report["phases"]["after_w"]["anim_rows"], 0)
+
     def test_best_shift_removes_a_one_row_timing_offset(self):
         oracle = self.rows()
         port = [dict(row) for row in oracle[1:]] + [dict(oracle[-1])]

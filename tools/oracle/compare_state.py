@@ -68,6 +68,8 @@ def compare_states(
                 "camera_rows": 0,
                 "velocity_max": 0.0,
                 "velocity_rows": 0,
+                "anim_rows": 0,
+                "anim_match": 0,
                 "player_start": None,
                 "player_end": None,
             },
@@ -108,6 +110,14 @@ def compare_states(
         if velocity_distance is not None:
             item["velocity_max"] = max(item["velocity_max"], velocity_distance)
             item["velocity_rows"] += 1
+        # `anim` is the animation state index (KainState+0x458); a capture
+        # without it leaves the column empty and the phase is not scored.
+        oracle_anim = number(oracle, "anim")
+        port_anim = number(port, "anim")
+        if oracle_anim is not None and port_anim is not None:
+            item["anim_rows"] += 1
+            if oracle_anim == port_anim:
+                item["anim_match"] += 1
     for item in phases.values():
         if item["rows"]:
             item["player_mean"] = round(item["player_sum"] / item["rows"], 3)
@@ -165,15 +175,23 @@ def print_report(report: dict) -> None:
         f"matched {report['matched_rows']}; best shift {report['best_shift']} rows"
     )
     print(f"{'phase':14} {'rows':>5} {'player max':>11} {'player mean':>12} "
-          f"{'yaw max':>8} {'cam max':>9} {'vel max':>9}")
+          f"{'yaw max':>8} {'cam max':>9} {'vel max':>9} {'anim':>10}")
+    anim_rows = 0
+    anim_match = 0
     for phase, item in report["phases"].items():
         camera = f"{item['camera_max']:.3f}" if item["camera_rows"] else "-"
         velocity = f"{item['velocity_max']:.3f}" if item["velocity_rows"] else "-"
+        anim = f"{item['anim_match']}/{item['anim_rows']}" if item["anim_rows"] else "-"
+        anim_rows += item["anim_rows"]
+        anim_match += item["anim_match"]
         print(
             f"{phase:14} {item['rows']:5d} {item['player_max']:11.3f} "
             f"{item['player_mean']:12.3f} {item['yaw_max']:8.3f} "
-            f"{camera:>9} {velocity:>9}"
+            f"{camera:>9} {velocity:>9} {anim:>10}"
         )
+    if anim_rows:
+        print(f"animation state: {anim_match}/{anim_rows} rows match "
+              f"({100.0 * anim_match / anim_rows:.1f}%)")
     divergence = report["first_divergence"]
     if divergence is None:
         print(f"no player divergence above {report['tolerance']} u")

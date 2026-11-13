@@ -212,6 +212,56 @@ These have no original source. They are development aids or placeholders.
 | Release slide | The short slide after releasing W is not modeled |
 | Camera setups | The range, pitch, pivot height and yaw limit are those of one live setup; the code or data that builds the setups (including the jump setup with delay 0.1 and blend 0.6) was not traced. The range blend itself is ported |
 
+## Animation state
+
+Every movement state of Kain stores the index of an `animatio` graph state at
+`KainState+0x458` and starts it on layer 0 of the animation instance
+(`StartState`, vtable slot `+0x14`). The Wine oracle samples that field as
+`anim`. The graph and its state machine are in
+[`FORMATS/animatio.md`](FORMATS/animatio.md); the port is
+`src/game/kain_animation.cpp` over `src/engine/anim_machine.cpp`.
+
+| Index | State | Who starts it |
+|---:|---|---|
+| 0 | `st_ready` | the ready state (stored at 0x445e8f) |
+| 1 | `st_run` | the run state enter, FUN_004458e0 |
+| 59 | `st_back` | the walk-back state (stored at 0x446240) |
+| 76 | `st_startjump` | the jump state enter, FUN_004436e0, which also sets a 0.2 s timer |
+| 78 | `st_fallingup` | the falling state while the vertical velocity is not negative (FUN_00442800, FUN_00442ae0) |
+| 79 | `st_fallingdn` | the falling state once it is negative |
+| 86 | `st_normal_landing` | the landing state |
+| 87 | `st_run_landing` | the landing state |
+| 13, 14 | `st_ready_cm`, `st_walk_cm` | combat mode: this is what Shift and Shift+W start |
+
+Read from the oracle, not from the code: a landing with forward held is
+`st_run_landing` and any other is `st_normal_landing`; the state lasts until
+its sequence ends (0.5333 s and 0.311 s in the graph, 25 to 27 and 13 to 14
+samples of 20 ms in the captures); turning in place keeps `st_ready`.
+
+The run state writes the run clip rate every frame (FUN_00445ba0), so
+`cl_run` plays at 1.15 instead of its node speed 1.5.
+
+Gate: `bo2nx --replay` writes the port's index as the `anim` column and
+`tools/oracle/compare_state.py` counts the rows where it equals the oracle's.
+
+| Capture | Rows that match | Where it differs |
+|---|---:|---|
+| `wine_probe_20261111` | 2,993 / 3,109 (96.3%) | `run` 31/139: Shift is combat mode, which the port does not model; `jump` 154/161 |
+| `wine_camera_1` | 3,602 / 3,611 (99.8%) | `jump` 146/155 |
+| `wine_air_1`, first five jump phases | 820 / 981 (83.6%) | the takeoff and the landing choice; from `air_w` on the port's position has left the route, so the later phases say nothing about the animation |
+
+W is 137/137, S 50/51 and A/D 51/51 in `wine_probe_20261111`.
+
+Open:
+
+- The length of `st_startjump`. The oracle holds it for 3 to 5 samples from a
+  standstill and 8 to 12 from a run; the port holds it for the 0.2 s timer in
+  both cases.
+- Combat mode, the attacks and the state the landing state picks, which is
+  read from the captures here.
+- Which clip is drawn: the port draws the layer 0 clip without the pose blend
+  and without the walk/run cross blend of layers 1 and 2.
+
 ## Movement collision (BO2NX-72, decoded live)
 
 The original has no body cast against the level. A live gdb trace of the W
