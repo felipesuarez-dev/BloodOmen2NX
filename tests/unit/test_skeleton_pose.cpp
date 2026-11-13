@@ -285,9 +285,41 @@ void test_malformed_skeletons() {
     CHECK(near(bo2::engine::transform_point(ordered[1], {0.0f, 0.0f, 25.0f}), 0.0f, 0.0f, 28.0f));
 }
 
+void test_actor_is_posed_and_placed() {
+    bo2::engine::SkinnedActor actor;
+    actor.skeleton = chain();
+    actor.bind_positions = kBind;
+    actor.bind_normals.assign(kBind.size(), Vec3{1.0f, 0.0f, 0.0f});
+    std::vector<Vec3> positions;
+    std::vector<Vec3> normals;
+    // No clip: the bind pose, moved to the position.
+    bo2::engine::pose_actor(actor, 0.0f, {100.0f, 200.0f, 300.0f}, 0.0f, positions, normals);
+    CHECK(near(positions[3], 100.0f, 200.0f, 325.0f));
+    CHECK(near(normals[3], 1.0f, 0.0f, 0.0f));
+    // A quarter turn of yaw takes local x (forward) to y; the clip bends the
+    // chain forward first.
+    actor.set_clip(reel_of({constant(10, 0, 1, kHalfPi)}));
+    CHECK(actor.channels.size() == 3 && actor.channels[1].rotation[1] == 0);
+    bo2::engine::pose_actor(actor, 0.0f, {100.0f, 200.0f, 300.0f}, kHalfPi, positions, normals);
+    CHECK(near(positions[3], 100.0f, 215.0f, 310.0f));
+    CHECK(near(positions[0], 100.0f, 200.0f, 310.0f));
+}
+
+void test_loop_frame() {
+    AnimReel reel = reel_of({}, 25);  // 24 frame steps: 0.8 s
+    CHECK(bo2::engine::loop_frame(reel, 0.0) == 0.0f);
+    CHECK(std::fabs(bo2::engine::loop_frame(reel, 0.1) - 3.0f) < 1.0e-4f);
+    CHECK(std::fabs(bo2::engine::loop_frame(reel, 0.9) - 3.0f) < 1.0e-4f);  // wrapped
+    CHECK(std::fabs(bo2::engine::loop_frame(reel, -0.1) - 21.0f) < 1.0e-4f);
+    reel.frames = 1;
+    CHECK(bo2::engine::loop_frame(reel, 5.0) == 0.0f);
+}
+
 }  // namespace
 
 int main() {
+    test_actor_is_posed_and_placed();
+    test_loop_frame();
     test_bind_uses_the_bone_id();
     test_missing_channels_give_the_rest_pose();
     test_rotation_turns_about_the_pivot_and_carries_the_child();

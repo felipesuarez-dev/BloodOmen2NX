@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <utility>
 
 #include "bo2/common/reader.hpp"
 
@@ -240,6 +241,38 @@ void skin_vertices(const ModelSkeleton& skeleton, const std::vector<Mat4>& matri
             }
         }
     }
+}
+
+void SkinnedActor::set_clip(AnimReel clip) {
+    reel = std::move(clip);
+    channels = bind_channels(skeleton, reel);
+}
+
+void pose_actor(const SkinnedActor& actor, float frame, const Vec3& position, float yaw,
+                std::vector<Vec3>& positions, std::vector<Vec3>& normals) {
+    const std::vector<Mat4> matrices = bone_matrices(
+        actor.skeleton, sample_pose(actor.skeleton, actor.reel, actor.channels, frame));
+    skin_vertices(actor.skeleton, matrices, actor.bind_positions, actor.bind_normals, positions,
+                  normals);
+    const Mat4 turn = rotation_z(yaw);
+    for (Vec3& value : positions) {
+        value = transform_direction(turn, value) + position;
+    }
+    for (Vec3& value : normals) {
+        value = transform_direction(turn, value);
+    }
+}
+
+float loop_frame(const AnimReel& reel, double seconds) {
+    if (reel.frames <= 1) {
+        return 0.0f;
+    }
+    const double last = static_cast<double>(reel.frames - 1);
+    double frame = std::fmod(seconds * 30.0, last);
+    if (frame < 0.0) {
+        frame += last;
+    }
+    return static_cast<float>(frame);
 }
 
 }  // namespace bo2::engine

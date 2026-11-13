@@ -13,6 +13,7 @@
 #include <thread>
 #include <vector>
 
+#include "bo2/engine/anim_reel.hpp"
 #include "bo2/engine/big_archive.hpp"
 #include "bo2/engine/cell_group.hpp"
 #include "bo2/engine/collision.hpp"
@@ -22,6 +23,7 @@
 #include "bo2/engine/navigation.hpp"
 #include "bo2/engine/ogg.hpp"
 #include "bo2/engine/region.hpp"
+#include "bo2/engine/skeleton_pose.hpp"
 #include "bo2/engine/tick.hpp"
 #include "bo2/engine/world.hpp"
 #include "bo2/game/camera.hpp"
@@ -55,6 +57,8 @@ struct Options {
     std::string big;
     std::string kain;
     std::string kain_model;
+    std::string kain_clip;
+    float kain_frame = 0.0f;
     bo2::engine::Vec3 kain_at{0.0f, 0.0f, 0.0f};
     std::string entry;
     std::string out;
@@ -167,8 +171,12 @@ Options parse_options(int argc, char** argv) {
                 << "  --audio-seconds <n>    audio demo duration (default 5)\n"
                 << "  --play                 Kain third-person player (needs --big)\n"
                 << "  --kain <file.big>      kain tunedata for --play (default: <level dir>/../kain/kain.big)\n"
-                << "  --kain-model <file.big> append Kain's model to --level at --kain-at\n"
+                << "  --kain-model <file.big> append Kain's model to the level (--level at --kain-at,\n"
+                << "                         --replay and --play at the player)\n"
                 << "  --kain-at x,y,z        Kain model placement for --level (default 0,0,0)\n"
+                << "  --kain-clip <name>     pose Kain with an animreel clip of --kain-model, for\n"
+                << "                         example kain/run (default: the bind pose)\n"
+                << "  --kain-frame <n>       clip frame for --level, fractions allowed (default 0)\n"
                 << "  --headless             run the fixed-step loop without a window\n"
                 << "  --frames <n>           fixed-step iterations for --headless\n"
                 << "  --tick-rate <hz>       logic ticks per second (default 60)\n"
@@ -219,6 +227,13 @@ Options parse_options(int argc, char** argv) {
             options.kain_model = next_argument(index, argc, argv);
         } else if (argument == "--kain-at") {
             options.kain_at = parse_vec3(next_argument(index, argc, argv), "kain-at");
+        } else if (argument == "--kain-clip") {
+            options.kain_clip = next_argument(index, argc, argv);
+        } else if (argument == "--kain-frame") {
+            options.kain_frame = parse_float(next_argument(index, argc, argv), "kain-frame");
+            if (!(options.kain_frame >= 0.0f)) {
+                usage_error("kain-frame must be non-negative");
+            }
         } else if (argument == "--entry") {
             options.entry = next_argument(index, argc, argv);
         } else if (argument == "--out") {
@@ -278,6 +293,12 @@ Options parse_options(int argc, char** argv) {
     }
     if (!options.kain.empty() && !options.play && options.replay.empty()) {
         usage_error("--kain requires --play or --replay");
+    }
+    if (!options.kain_clip.empty() && options.kain_model.empty()) {
+        usage_error("--kain-clip requires --kain-model");
+    }
+    if (options.kain_frame != 0.0f && options.kain_clip.empty()) {
+        usage_error("--kain-frame requires --kain-clip");
     }
     if (!options.replay.empty() && options.state_out.empty()) {
         usage_error("--replay requires --state-out");
@@ -344,6 +365,10 @@ struct LoadedLevel {
     std::size_t static_collision_entities = 0;
     std::vector<bo2::engine::RegionEntity> region_entities;
     std::vector<EntityAsset> entity_assets;
+    // Kain's model when --kain-model is given: its slice of `geometry` is
+    // `geometry.actor` and `kain` holds the bind pose, the skeleton and the clip.
+    bool has_kain = false;
+    bo2::engine::SkinnedActor kain;
     std::string name;
     double load_ms = 0.0;
     double archive_ms = 0.0;
@@ -596,9 +621,30 @@ LoadedLevel load_level(const Options& options) {
             static_cast<std::uint32_t>(level.geometry.triangles.size());
         level.geometry.actor.triangle_count = static_cast<std::uint32_t>(asset.triangles.size());
         append_entity_geometry(level.geometry, asset, options.kain_at, texture_base, false);
+        level.has_kain = true;
+        for (const bo2::engine::ModelSkeleton& skeleton : asset.skeletons) {
+            if (!skeleton.bones.empty()) {
+                level.kain.skeleton = skeleton;
+            }
+        }
+        level.kain.bind_positions = asset.positions;
+        level.kain.bind_normals = asset.normals;
         std::cout << "kain model: " << asset.triangles.size() << " triangles, "
-                  << asset.texture_names.size() << " textures at " << options.kain_at.x << ' '
-                  << options.kain_at.y << ' ' << options.kain_at.z << '\n';
+                  << asset.texture_names.size() << " textures, "
+                  << level.kain.skeleton.bones.size() << " bones, "
+                  << level.kain.skeleton.weights.size() << " weights at " << options.kain_at.x
+                  << ' ' << options.kain_at.y << ' ' << options.kain_at.z << '\n';
+        if (!options.kain_clip.empty()) {
+            const bo2::engine::BigEntry* clip_entry =
+                kain_archive.find("animreel", options.kain_clip);
+            if (clip_entry == nullptr) {
+                throw std::runtime_error("no animreel named " + options.kain_clip + " in " +
+                                         options.kain_model);
+            }
+            level.kain.set_clip(bo2::engine::parse_anim_reel(kain_archive.extract(*clip_entry)));
+            std::cout << "kain clip: " << options.kain_clip << ", " << level.kain.reel.frames
+                      << " frames (" << level.kain.reel.duration << " s)\n";
+        }
     }
     level.geometry.lightmaps.reserve(level.geometry.texture_names.size());
     for (const std::string& name : level.geometry.texture_names) {
@@ -623,6 +669,28 @@ LoadedLevel load_level(const Options& options) {
     level.lightmaps_ms = elapsed_ms(lightmaps_start);
     level.load_ms = elapsed_ms(load_start);
     return level;
+}
+
+// Rewrites Kain's slice of the level geometry: his clip at `frame`, turned by
+// `yaw` and moved to `position`.
+void place_kain(LoadedLevel& level, float frame, const bo2::engine::Vec3& position, float yaw) {
+    std::vector<bo2::engine::Vec3> positions;
+    std::vector<bo2::engine::Vec3> normals;
+    bo2::engine::pose_actor(level.kain, frame, position, yaw, positions, normals);
+    bo2::engine::LevelGeometry& geometry = level.geometry;
+    const std::size_t first = geometry.actor.first_vertex;
+    if (first + positions.size() > geometry.positions.size()) {
+        return;
+    }
+    std::copy(positions.begin(), positions.end(),
+              geometry.positions.begin() + static_cast<std::ptrdiff_t>(first));
+    // The normal array runs parallel to the positions only when every model
+    // before Kain carried normals.
+    if (normals.size() == positions.size() &&
+        geometry.normals.size() == geometry.positions.size()) {
+        std::copy(normals.begin(), normals.end(),
+                  geometry.normals.begin() + static_cast<std::ptrdiff_t>(first));
+    }
 }
 
 std::uint32_t collision_u32(const std::vector<std::uint8_t>& data, std::size_t offset) {
@@ -947,7 +1015,10 @@ int render_level_frame(const Options& options) {
     if (options.out.empty()) {
         usage_error("--level requires --out");
     }
-    const LoadedLevel level = load_level(options);
+    LoadedLevel level = load_level(options);
+    if (level.has_kain && !options.kain_clip.empty()) {
+        place_kain(level, options.kain_frame, options.kain_at, 0.0f);
+    }
     bo2::platform::headless::FrameOptions frame = options.frame_options;
     if (!options.eye_set || !options.target_set) {
         default_camera(level, frame.camera.eye, frame.camera.target);
@@ -998,7 +1069,7 @@ int run_replay(const Options& options) {
     }
     const bo2::game::ReplayRoute route = bo2::game::parse_replay_csv(
         bo2::platform::FileSystem::read_text(options.replay));
-    const LoadedLevel level = load_level(options);
+    LoadedLevel level = load_level(options);
     const bo2::game::KainTuning tuning = load_kain_tuning(options);
     bo2::engine::CollisionWorld collision(level.geometry,
                                           bo2::engine::CollisionSource::Collmodc);
@@ -1019,7 +1090,9 @@ int run_replay(const Options& options) {
     state << "frame,phase,player_x,player_y,player_z,vel_x,vel_y,vel_z,"
              "player_yaw_deg,grounded,cam_x,cam_y,cam_z,cam_yaw_deg,cam_pitch_deg\n";
     bo2::engine::Vec3 previous = player.state().position;
+    double clip_seconds = 0.0;
     for (const bo2::game::ReplayTick& tick : route.ticks) {
+        clip_seconds += tick.seconds;
         bo2::game::PlayerInput input;
         input.move_x = tick.move_x;
         input.move_y = tick.move_y;
@@ -1046,6 +1119,12 @@ int run_replay(const Options& options) {
         previous = position;
     }
     if (!options.out.empty()) {
+        if (level.has_kain) {
+            // The clip is whatever --kain-clip names, looped over the replay;
+            // choosing the clip from the player state is BO2NX-74.
+            place_kain(level, bo2::engine::loop_frame(level.kain.reel, clip_seconds),
+                       player.state().position, player.state().yaw);
+        }
         bo2::platform::headless::FrameOptions frame = options.frame_options;
         frame.camera.eye = camera.eye();
         frame.camera.target = camera.target();

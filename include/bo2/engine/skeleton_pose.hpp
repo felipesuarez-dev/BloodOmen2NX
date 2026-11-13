@@ -75,4 +75,29 @@ void skin_vertices(const ModelSkeleton& skeleton, const std::vector<Mat4>& matri
                    const std::vector<Vec3>& bind_normals, std::vector<Vec3>& positions,
                    std::vector<Vec3>& normals);
 
+// A skinned model and the clip that poses it, for the host: the bind pose in
+// model space, the skeleton and the clip bound to it. Without a clip the
+// actor stays in its bind pose.
+struct SkinnedActor {
+    ModelSkeleton skeleton;
+    std::vector<Vec3> bind_positions;
+    std::vector<Vec3> bind_normals;
+    AnimReel reel;
+    std::vector<BoneChannels> channels;
+
+    void set_clip(AnimReel clip);
+};
+
+// Skins the actor at a frame and places it in the world: a yaw about z (local
+// x is forward), then `position`. This stands in for the entity matrix that
+// the original gives the parentless bone.
+void pose_actor(const SkinnedActor& actor, float frame, const Vec3& position, float yaw,
+                std::vector<Vec3>& positions, std::vector<Vec3>& normals);
+
+// The frame of a looping clip after `seconds` at 30 frames per second (the
+// 1/30 constant of the reel duration), wrapped at the last frame. The loop is
+// the host's playback rule; the clip player's own loop and hold flags are not
+// ported.
+float loop_frame(const AnimReel& reel, double seconds);
+
 }  // namespace bo2::engine

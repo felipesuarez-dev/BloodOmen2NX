@@ -29,9 +29,26 @@ The frame is a PPM; no display is needed. The camera is `--eye` and
 ## Level frame
 
 `--level` reads the `cellgrup` entry and renders the static level shell.
-`--kain-model <kain.big> --kain-at x,y,z` appends Kain's model (bind pose,
-2,846 triangles and 3 textures in the reference `kain.big`) at the given
-position, which is how the spawn comparison frame draws him.
+`--kain-model <kain.big> --kain-at x,y,z` appends Kain's model (2,846
+triangles, 3 textures, 104 bones and 1,988 skin weights in the reference
+`kain.big`) at the given position, which is how the spawn comparison frame
+draws him. He stands in the bind pose unless `--kain-clip <name>` names one
+of the container's `animreel` clips; `--kain-frame <n>` picks the frame
+(fractions interpolate). The clip poses the skeleton and skins the mesh
+(`docs/FORMATS/models.md`, Skeleton pose and skinning):
+
+```sh
+LEVELS=external/installed/media/gogames/bo2/resources/levels
+./build/linux-debug/bo2nx --level --big "$LEVELS/slums/sl01.big" \
+  --kain-model "$LEVELS/kain/kain.big" --kain-clip kain/run --kain-frame 6 \
+  --kain-at -8.8,57.1,208 --eye -8.8,-62.9,248 --target -8.8,57.1,244 \
+  --out /tmp/kain_run.ppm
+```
+
+`--replay` takes the same two options: with `--out` the end frame draws Kain
+at the replayed position and yaw, with the clip looped over the replay time.
+The clip is the one named on the command line; choosing it from the player
+state is not implemented.
 Kain is an actor, not level geometry: his triangles and `collmodc` boxes
 stay out of the `Render` and `Boxes` collision sources, so a played or
 replayed Kain never collides with his own mesh.
@@ -173,6 +190,10 @@ provisional until the original controls are recovered from `bo2.exe`.
 | `--sdl [--big <file>]` | SDL2 + OpenGL window; no `--big` draws a triangle |
 | `--play --big <level.big>` | Kain third-person player in the SDL window |
 | `--kain <kain.big>` | `kain` tunedata for `--play` (default `<level dir>/../kain/kain.big`) |
+| `--kain-model <kain.big>` | Append Kain's model to the level: at `--kain-at` for `--level`, at the player for `--replay` |
+| `--kain-at x,y,z` | Kain's position for `--level` (default 0,0,0) |
+| `--kain-clip <name>` | Pose Kain with an `animreel` clip of `--kain-model`, for example `kain/run` (default: the bind pose) |
+| `--kain-frame <n>` | Clip frame for `--level`; fractions interpolate (default 0) |
 | `--entry <substring>` | Texture entry to use (default: first texture) |
 | `--out <file.ppm>` | Frame output |
 | `--eye x,y,z`, `--target x,y,z` | Free camera |
