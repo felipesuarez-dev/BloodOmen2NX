@@ -440,6 +440,117 @@ std::optional<SphereContact> CollisionWorld::capsule_contact(const Vec3& base, f
     return best;
 }
 
+std::optional<SphereContact> CollisionWorld::box_contact(const Vec3& center,
+                                                          const Vec3& half_extents,
+                                                          std::int32_t cell) const {
+    if (!(half_extents.x >= 0.0f && half_extents.y >= 0.0f && half_extents.z >= 0.0f) ||
+        !std::isfinite(half_extents.x) || !std::isfinite(half_extents.y) ||
+        !std::isfinite(half_extents.z)) {
+        throw std::invalid_argument("box half extents must be finite and non-negative");
+    }
+    std::optional<SphereContact> best;
+    float best_depth = 0.0f;
+    const Vec3 box_axes[3] = {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}};
+    const auto radius_along = [&half_extents](const Vec3& axis) {
+        return half_extents.x * std::fabs(axis.x) + half_extents.y * std::fabs(axis.y) +
+               half_extents.z * std::fabs(axis.z);
+    };
+    for (const Triangle& triangle : triangles_) {
+        if (!cell_allows(cell, triangle.cell)) {
+            continue;
+        }
+        // AABB reject before the separating-axis test.
+        if (center.x + half_extents.x < triangle.minimum.x ||
+            center.x - half_extents.x > triangle.maximum.x ||
+            center.y + half_extents.y < triangle.minimum.y ||
+            center.y - half_extents.y > triangle.maximum.y ||
+            center.z + half_extents.z < triangle.minimum.z ||
+            center.z - half_extents.z > triangle.maximum.z) {
+            continue;
+        }
+        // The triangle is a surface, not a solid: the normal axis uses the
+        // straddle depth (radius minus the centre distance), and the axes on
+        // which the triangle has no extent cannot separate.
+        float overlap = std::numeric_limits<float>::infinity();
+        Vec3 axis{0.0f, 0.0f, 1.0f};
+        bool separated = false;
+        const auto interval = [&](const Vec3& candidate) {
+            const float length_squared = dot(candidate, candidate);
+            if (length_squared < 1.0e-12f) {
+                return true;
+            }
+            const Vec3 unit = candidate * (1.0f / std::sqrt(length_squared));
+            const float p0 = dot(triangle.a, unit);
+            const float p1 = dot(triangle.b, unit);
+            const float p2 = dot(triangle.c, unit);
+            const float triangle_min = std::min({p0, p1, p2});
+            const float triangle_max = std::max({p0, p1, p2});
+            if (triangle_max - triangle_min < 1.0e-6f) {
+                return true;  // No extent on this axis: it cannot separate.
+            }
+            const float radius = radius_along(unit);
+            const float projected = dot(center, unit);
+            const float current =
+                std::min(triangle_max, projected + radius) -
+                std::max(triangle_min, projected - radius);
+            if (current <= 0.0f) {
+                return false;
+            }
+            if (current < overlap) {
+                overlap = current;
+                axis = unit;
+            }
+            return true;
+        };
+        const Vec3 normal = cross(triangle.b - triangle.a, triangle.c - triangle.a);
+        const float normal_squared = dot(normal, normal);
+        if (normal_squared < 1.0e-12f) {
+            continue;
+        }
+        const Vec3 unit_normal = normal * (1.0f / std::sqrt(normal_squared));
+        const float distance = dot(unit_normal, center - triangle.a);
+        const float radius = radius_along(unit_normal);
+        if (std::fabs(distance) >= radius) {
+            continue;
+        }
+        overlap = radius - std::fabs(distance);
+        axis = distance < 0.0f ? unit_normal * -1.0f : unit_normal;
+        for (const Vec3& box_axis : box_axes) {
+            if (!interval(box_axis)) {
+                separated = true;
+                break;
+            }
+        }
+        if (separated) {
+            continue;
+        }
+        const Vec3 edges[3] = {triangle.b - triangle.a, triangle.c - triangle.b,
+                               triangle.a - triangle.c};
+        for (const Vec3& edge : edges) {
+            for (const Vec3& box_axis : box_axes) {
+                if (!interval(cross(edge, box_axis))) {
+                    separated = true;
+                    break;
+                }
+            }
+            if (separated) {
+                break;
+            }
+        }
+        if (separated || overlap <= 0.0f || overlap <= best_depth) {
+            continue;
+        }
+        const Vec3 point =
+            closest_point_on_triangle(center, triangle.a, triangle.b, triangle.c);
+        if (dot(axis, center - point) < 0.0f) {
+            axis = axis * -1.0f;
+        }
+        best_depth = overlap;
+        best = SphereContact{point, axis, overlap};
+    }
+    return best;
+}
+
 std::optional<RayHit> CollisionWorld::raycast(const Vec3& origin, const Vec3& direction,
                                               float max_distance) const {
     if (!std::isfinite(max_distance) || max_distance < 0.0f) {

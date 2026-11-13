@@ -116,7 +116,10 @@ lower than the previous field, so the loader reads `v0 = b0`, `v1 = b1 >> 1`,
 `0x38`/`0x58`/`0x59` in model 57). A sphere is 24 bytes: centre `f32[3]`,
 radius `f32`, bone index `u32`, flags `u32`. Kain's model has three:
 `(0, 0, 51.98) r 19.8`, `(0, 0, 49.62) r 19.3` and `(0, 0, 23.60) r 15.0`, over
-the body AABB `(-20, -20, 0)..(20, 20, 72)`.
+the body AABB `(-20, -20, 0)..(20, 20, 72)`. Its `collmodc` holds exactly that
+AABB as two points, **no triangles**, the three spheres and one face; the live
+mover's collision proxy is that box, and the movement resolver sweeps it (the
+three spheres alone slide on the first ramp, `after_w` at x = 262).
 
 A face record is `{u16 anchor_a, u16 anchor_b, u32 adjacent[2], u16 flag,
 u16 triangle_count, u32 triangle_byte_offset}`. The anchor pair is the face's

@@ -277,6 +277,26 @@ void test_capsule_contact() {
     CHECK(!low.capsule_contact({5.0f, 0.0f, 0.4f}, 71.2f, 0.4f, -1).has_value());
 }
 
+// The body is the model AABB (-20,-20,0)..(20,20,72): the box contact gives
+// the minimum-translation axis and the penetration depth.
+void test_box_contact() {
+    const bo2::engine::CollisionWorld wall(make_wall());
+    const auto contact = wall.box_contact({-0.5f, 0.0f, 50.0f}, {1.0f, 1.0f, 1.0f}, -1);
+    CHECK(contact.has_value());
+    CHECK(contact->normal.x < -0.99f);
+    CHECK(std::fabs(contact->normal.y) < 1.0e-3f);
+    CHECK(std::fabs(contact->distance - 0.5f) < 1.0e-3f);
+    // Touching faces do not overlap.
+    CHECK(!wall.box_contact({-1.0f, 0.0f, 50.0f}, {1.0f, 1.0f, 1.0f}, -1).has_value());
+    CHECK(!wall.box_contact({5.0f, 0.0f, 50.0f}, {1.0f, 1.0f, 1.0f}, -1).has_value());
+
+    // A box that spans the low wall's band reports the wall, not the gap.
+    const bo2::engine::CollisionWorld low(make_low_wall());
+    const auto band = low.box_contact({-0.5f, 0.0f, 35.0f}, {1.0f, 1.0f, 20.0f}, -1);
+    CHECK(band.has_value());
+    CHECK(band->normal.x < -0.99f);
+}
+
 // Two walls, one in a neighbouring cell and one in a cell that only shares a
 // portal *symbol*, not an index. The portal fields are symbols (BO2NX-76).
 void test_portal_symbols_link_cells() {
@@ -352,6 +372,7 @@ int main() {
     test_portal_symbols_link_cells();
     test_sphere_contact();
     test_capsule_contact();
+    test_box_contact();
     test_collmodc_model();
     test_collmodc_boxes();
     if (failures != 0) {

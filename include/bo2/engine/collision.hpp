@@ -49,6 +49,13 @@ public:
     // `height`, with `radius` around it. Used for the player body.
     std::optional<SphereContact> capsule_contact(const Vec3& base, float height, float radius,
                                                  std::int32_t cell) const;
+    // Deepest overlap of an axis-aligned box with the hull. For a box `point`
+    // is the closest point on the triangle, `normal` the minimum-translation
+    // axis oriented toward the box centre and `distance` the penetration
+    // depth (0 when the faces only touch). The bot's body is the model AABB
+    // (-20,-20,0)..(20,20,72) of Kain's `collmodc`.
+    std::optional<SphereContact> box_contact(const Vec3& center, const Vec3& half_extents,
+                                             std::int32_t cell) const;
     std::int32_t cell_at(const Vec3& point) const;
     std::optional<RayHit> raycast(const Vec3& origin, const Vec3& direction,
                                   float max_distance) const;
