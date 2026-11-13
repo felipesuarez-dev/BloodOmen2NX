@@ -192,7 +192,14 @@ CollisionWorld::CollisionWorld(const LevelGeometry& geometry, CollisionSource so
     };
     if (source == CollisionSource::Render) {
         triangles_.reserve(geometry.triangles.size());
-        for (const LevelTriangle& triangle : geometry.triangles) {
+        // A posed actor moves every frame: it is drawn, not collided with.
+        const std::size_t actor_first = geometry.actor.first_triangle;
+        const std::size_t actor_last = actor_first + geometry.actor.triangle_count;
+        for (std::size_t index = 0; index < geometry.triangles.size(); ++index) {
+            if (index >= actor_first && index < actor_last) {
+                continue;
+            }
+            const LevelTriangle& triangle = geometry.triangles[index];
             if (triangle.a >= geometry.positions.size() ||
                 triangle.b >= geometry.positions.size() ||
                 triangle.c >= geometry.positions.size()) {

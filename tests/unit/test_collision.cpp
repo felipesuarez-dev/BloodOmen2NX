@@ -487,6 +487,36 @@ void test_raycast() {
     CHECK(!world.raycast({0.2f, 0.2f, 1.0f}, {0.0f, 0.0f, 1.0f}, 10.0f).has_value());
 }
 
+void test_render_source_skips_the_actor() {
+    // A level floor at z = 0 and an actor's triangle above it at z = 5.
+    bo2::engine::LevelGeometry geometry = make_plane();
+    geometry.positions.push_back({0.0f, 0.0f, 5.0f});
+    geometry.positions.push_back({1.0f, 0.0f, 5.0f});
+    geometry.positions.push_back({0.0f, 1.0f, 5.0f});
+    bo2::engine::LevelTriangle triangle;
+    triangle.a = 3;
+    triangle.b = 4;
+    triangle.c = 5;
+    geometry.triangles.push_back(triangle);
+    const bo2::engine::Vec3 origin{0.2f, 0.2f, 9.0f};
+    const bo2::engine::Vec3 down{0.0f, 0.0f, -1.0f};
+
+    const bo2::engine::CollisionWorld solid(geometry);
+    CHECK(solid.triangles() == 2);
+    const auto blocked = solid.raycast(origin, down, 20.0f);
+    CHECK(blocked.has_value() && std::fabs(blocked->distance - 4.0f) < 1.0e-4f);
+
+    geometry.actor.first_vertex = 3;
+    geometry.actor.vertex_count = 3;
+    geometry.actor.first_triangle = 1;
+    geometry.actor.triangle_count = 1;
+    const bo2::engine::CollisionWorld world(geometry);
+    CHECK(world.triangles() == 1);
+    const auto floor = world.raycast(origin, down, 20.0f);
+    CHECK(floor.has_value() && std::fabs(floor->distance - 9.0f) < 1.0e-4f);
+    CHECK(!world.intersects_sphere({0.2f, 0.2f, 5.0f}, 0.5f));
+}
+
 void test_sphere() {
     const bo2::engine::CollisionWorld world(make_plane());
     CHECK(world.intersects_sphere({0.2f, 0.2f, 0.1f}, 0.2f));
@@ -498,6 +528,7 @@ void test_sphere() {
 
 int main() {
     test_raycast();
+    test_render_source_skips_the_actor();
     test_sphere();
     test_portal_symbols_link_cells();
     test_sphere_contact();

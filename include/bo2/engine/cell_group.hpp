@@ -176,6 +176,16 @@ struct ModelSkeleton {
     std::vector<std::uint16_t> joints;
 };
 
+// The slice of a LevelGeometry that an animated model occupies once the host
+// appends it to the level (the player). Its vertices are rewritten every
+// frame, so the slice is not level collision geometry. Empty by default.
+struct ActorRange {
+    std::uint32_t first_vertex = 0;
+    std::uint32_t vertex_count = 0;
+    std::uint32_t first_triangle = 0;
+    std::uint32_t triangle_count = 0;
+};
+
 struct LevelLight {
     std::uint32_t version = 0;
     std::uint32_t handle = 0;
@@ -252,6 +262,7 @@ struct LevelGeometry {
     // World-space collision boxes from entity models (append_entity_geometry).
     std::vector<LevelCollisionBox> collision_boxes;
     std::vector<ModelSkeleton> skeletons;
+    ActorRange actor;
     std::vector<LevelInstance> instances;
     // Cell index of each instance, from the cells' `terrains` lists; -1 unknown.
     std::vector<std::int32_t> instance_cells;

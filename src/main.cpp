@@ -393,9 +393,12 @@ const bo2::engine::BigEntry* find_model_entry(const bo2::engine::BigArchive& arc
     return nullptr;
 }
 
+// `collides` is false for an actor: its `collmodc` boxes move with it, so
+// they are not level collision.
 void append_entity_geometry(bo2::engine::LevelGeometry& target,
                             const bo2::engine::LevelGeometry& source,
-                            const bo2::engine::Vec3& offset, std::uint32_t texture_base) {
+                            const bo2::engine::Vec3& offset, std::uint32_t texture_base,
+                            bool collides = true) {
     const std::uint32_t vertex_base = static_cast<std::uint32_t>(target.positions.size());
     const std::uint32_t lightmap_base =
         static_cast<std::uint32_t>(target.model_lightmaps.size());
@@ -403,6 +406,9 @@ void append_entity_geometry(bo2::engine::LevelGeometry& target,
         target.positions.push_back(position + offset);
     }
     for (const bo2::engine::LevelCollision& collision : source.collisions) {
+        if (!collides) {
+            break;
+        }
         for (const bo2::engine::LevelCollisionBox& box :
              bo2::engine::parse_collmodc_boxes(collision.data)) {
             target.collision_boxes.push_back(
@@ -581,7 +587,15 @@ LoadedLevel load_level(const Options& options) {
                 level.textures.emplace_back();
             }
         }
-        append_entity_geometry(level.geometry, asset, options.kain_at, texture_base);
+        // Kain is an actor: the render collision source and the box source
+        // must not treat his mesh as part of the level.
+        level.geometry.actor.first_vertex =
+            static_cast<std::uint32_t>(level.geometry.positions.size());
+        level.geometry.actor.vertex_count = static_cast<std::uint32_t>(asset.positions.size());
+        level.geometry.actor.first_triangle =
+            static_cast<std::uint32_t>(level.geometry.triangles.size());
+        level.geometry.actor.triangle_count = static_cast<std::uint32_t>(asset.triangles.size());
+        append_entity_geometry(level.geometry, asset, options.kain_at, texture_base, false);
         std::cout << "kain model: " << asset.triangles.size() << " triangles, "
                   << asset.texture_names.size() << " textures at " << options.kain_at.x << ' '
                   << options.kain_at.y << ' ' << options.kain_at.z << '\n';
