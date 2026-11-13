@@ -49,6 +49,11 @@ public:
     // `height`, with `radius` around it. Used for the player body.
     std::optional<SphereContact> capsule_contact(const Vec3& base, float height, float radius,
                                                  std::int32_t cell) const;
+    // First contact of a sphere swept along `offset` (FUN_005be9a0: the engine
+    // shape cast). `RayHit::distance` is the distance travelled along `offset`;
+    // the normal points from the surface to the sphere.
+    std::optional<RayHit> swept_sphere(const Vec3& origin, const Vec3& offset, float radius,
+                                       std::int32_t cell) const;
     // Deepest overlap of an axis-aligned box with the hull. For a box `point`
     // is the closest point on the triangle, `normal` the minimum-translation
     // axis oriented toward the box centre and `distance` the penetration

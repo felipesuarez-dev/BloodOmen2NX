@@ -240,7 +240,8 @@ void PlayerController::step(const PlayerInput& input, double seconds) {
         air_jump_ ? bo2::engine::Vec3{air_velocity_.x * dt, air_velocity_.y * dt, 0.0f}
                   : heading * (speed * dt);
     const float travel = bo2::engine::length(displacement);
-    // FUN_0042ee60: the run probe records a wall it faces (the hit normal
+    // FUN_0042ee60: the run probe is a sphere swept from the chest 32 u
+    // forward (FUN_005be9a0) and it records a wall it faces (the hit normal
     // opposes the run by more than the tunedata 0.9 threshold). It never
     // clamps the move, and a live trace of the W run fills no blocker record
     // (FUN_0041ee60 is a no-op), so the port only keeps the flag here.
@@ -250,17 +251,12 @@ void PlayerController::step(const PlayerInput& input, double seconds) {
         const std::int32_t cell = collision_.cell_at(state_.position);
         const bo2::engine::Vec3 origin =
             state_.position + bo2::engine::Vec3{0.0f, 0.0f, kRunProbeHeight};
-        for (float along = 0.0f; along <= kRunProbeLength; along += 8.0f) {
-            const bo2::engine::Vec3 sample = origin + heading * along;
-            const auto contact = collision_.sphere_contact(sample, kRunProbeRadius, cell);
-            if (!contact.has_value()) {
-                continue;
-            }
-            if (bo2::engine::dot(contact->normal, heading) < -kRunProbeFacing) {
-                wall_hug_ = true;
-                wall_normal_ = contact->normal;
-                break;
-            }
+        const auto hit = collision_.swept_sphere(origin, heading * kRunProbeLength,
+                                                 kRunProbeRadius, cell);
+        if (hit.has_value() &&
+            bo2::engine::dot(hit->normal, heading) < -kRunProbeFacing) {
+            wall_hug_ = true;
+            wall_normal_ = hit->normal;
         }
     }
     if (travel > 0.0f) {

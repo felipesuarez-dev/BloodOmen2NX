@@ -440,6 +440,68 @@ std::optional<SphereContact> CollisionWorld::capsule_contact(const Vec3& base, f
     return best;
 }
 
+std::optional<RayHit> CollisionWorld::swept_sphere(const Vec3& origin, const Vec3& offset,
+                                                   float radius, std::int32_t cell) const {
+    if (!std::isfinite(radius) || radius < 0.0f) {
+        throw std::invalid_argument("sphere radius must be non-negative");
+    }
+    const float length = bo2::engine::length(offset);
+    if (length < 1.0e-6f) {
+        return std::nullopt;
+    }
+    const Vec3 direction = offset * (1.0f / length);
+    // Conservative advancement: at each step the sphere centre is at
+    // origin + offset * t, the gap to the nearest triangle closes at
+    // -dot(offset, normal) per unit t, so the contact is at most gap / close
+    // ahead. A flat soup of triangles makes the step an upper bound.
+    float t = 0.0f;
+    for (int iteration = 0; iteration < 16; ++iteration) {
+        const Vec3 center = origin + offset * t;
+        float nearest = std::numeric_limits<float>::infinity();
+        Vec3 point{0.0f, 0.0f, 0.0f};
+        Vec3 normal{0.0f, 0.0f, 1.0f};
+        for (const Triangle& triangle : triangles_) {
+            if (!cell_allows(cell, triangle.cell)) {
+                continue;
+            }
+            const Vec3 candidate =
+                closest_point_on_triangle(center, triangle.a, triangle.b, triangle.c);
+            const Vec3 difference = center - candidate;
+            const float distance = bo2::engine::length(difference);
+            if (distance >= nearest) {
+                continue;
+            }
+            nearest = distance;
+            point = candidate;
+            if (distance > 1.0e-6f) {
+                normal = difference * (1.0f / distance);
+            } else {
+                normal = normalize(cross(triangle.b - triangle.a, triangle.c - triangle.a));
+            }
+        }
+        if (!std::isfinite(nearest)) {
+            return std::nullopt;
+        }
+        const float gap = nearest - radius;
+        if (gap <= 1.0e-4f) {
+            RayHit hit;
+            hit.distance = t * length;
+            hit.point = point;
+            hit.normal = normal;
+            return hit;
+        }
+        const float closing = -dot(offset, normal);
+        if (closing <= 1.0e-6f) {
+            return std::nullopt;  // Parallel to the surface or moving away.
+        }
+        t += gap / closing;
+        if (t > 1.0f) {
+            return std::nullopt;
+        }
+    }
+    return std::nullopt;
+}
+
 std::optional<SphereContact> CollisionWorld::box_contact(const Vec3& center,
                                                           const Vec3& half_extents,
                                                           std::int32_t cell) const {

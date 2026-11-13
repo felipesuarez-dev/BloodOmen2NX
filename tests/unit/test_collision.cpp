@@ -277,6 +277,23 @@ void test_capsule_contact() {
     CHECK(!low.capsule_contact({5.0f, 0.0f, 0.4f}, 71.2f, 0.4f, -1).has_value());
 }
 
+// The run probe and the ground probe are swept spheres (FUN_005be9a0), not a
+// row of samples: the first contact along the offset wins.
+void test_swept_sphere() {
+    const bo2::engine::CollisionWorld wall(make_wall());
+    const auto hit = wall.swept_sphere({5.0f, 0.0f, 50.0f}, {-10.0f, 0.0f, 0.0f}, 0.5f, -1);
+    CHECK(hit.has_value());
+    CHECK(std::fabs(hit->distance - 4.5f) < 1.0e-3f);
+    CHECK(hit->normal.x > 0.99f);
+    CHECK(!wall.swept_sphere({5.0f, 0.0f, 50.0f}, {0.0f, 10.0f, 0.0f}, 0.5f, -1).has_value());
+    CHECK(!wall.swept_sphere({5.0f, 0.0f, 50.0f}, {10.0f, 0.0f, 0.0f}, 0.5f, -1).has_value());
+    CHECK(!wall.swept_sphere({5.0f, 0.0f, 50.0f}, {-4.0f, 0.0f, 0.0f}, 0.5f, -1).has_value());
+    const auto touching =
+        wall.swept_sphere({5.0f, 0.0f, 50.0f}, {-4.5f, 0.0f, 0.0f}, 0.5f, -1);
+    CHECK(touching.has_value());
+    CHECK(std::fabs(touching->distance - 4.5f) < 1.0e-2f);
+}
+
 // The body is the model AABB (-20,-20,0)..(20,20,72): the box contact gives
 // the minimum-translation axis and the penetration depth.
 void test_box_contact() {
@@ -372,6 +389,7 @@ int main() {
     test_portal_symbols_link_cells();
     test_sphere_contact();
     test_capsule_contact();
+    test_swept_sphere();
     test_box_contact();
     test_collmodc_model();
     test_collmodc_boxes();
