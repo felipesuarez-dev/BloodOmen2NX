@@ -954,6 +954,55 @@ void test_cell_group() {
     CHECK(textured.triangles[0].texture == 0);
 }
 
+// The modlskel record is 104 bytes (FUN_0067bdd0), not the old guessed
+// count + pairs + 96 bytes layout.
+void test_skeleton_bones() {
+    std::vector<std::uint8_t> data;
+    put32(data, 2);
+    for (int index = 0; index < 2; ++index) {
+        put32(data, 0x100U + static_cast<unsigned>(index));
+        put32(data, 0x10U + static_cast<unsigned>(index));
+        put32(data, 0x20U + static_cast<unsigned>(index));
+        put32(data, static_cast<unsigned>(index));
+        put32(data, static_cast<unsigned>(index + 1));
+        put32(data, static_cast<unsigned>(index + 2));
+        put32(data, static_cast<unsigned>(index + 3));
+        put32(data, static_cast<unsigned>(index + 4));
+        put32(data, static_cast<unsigned>(index + 5));
+        put32(data, static_cast<unsigned>(index + 6));
+        put16(data, static_cast<std::uint16_t>(0x40 + index));
+        put16(data, static_cast<std::uint16_t>(index + 1));
+        for (int value = 0; value < 15; ++value) {
+            put_float(data, static_cast<float>(index * 100 + value));
+        }
+    }
+    const std::vector<bo2::engine::SkeletonBone> bones = bo2::engine::parse_skeleton(data);
+    CHECK(bones.size() == 2);
+    CHECK(bones[0].name_symbol == 0x100);
+    CHECK(bones[0].state_mask == 0x10);
+    CHECK(bones[0].state_value == 0x20);
+    CHECK(bones[0].bone_index == 0);
+    CHECK(bones[0].current_matrix == 1);
+    CHECK(bones[0].parent_matrix == 2);
+    CHECK(bones[0].first_collision_prim == 3);
+    CHECK(bones[0].collision_prim_count == 4);
+    CHECK(bones[0].first_vertex == 5);
+    CHECK(bones[0].vertex_count == 6);
+    CHECK(bones[0].channel_mask == 0x40);
+    CHECK(bones[0].rotation_order == 1);
+    CHECK(bones[0].pivot.z == 2.0f);
+    CHECK(bones[0].rest_orientation.x == 3.0f);
+    CHECK(bones[0].joint_orientation.x == 6.0f);
+    CHECK(bones[0].rotation.x == 9.0f);
+    CHECK(bones[0].scale.x == 12.0f);
+    CHECK(bones[0].scale.z == 14.0f);
+    CHECK(bones[1].scale.x == 112.0f);
+    CHECK(throws([&] { bo2::engine::parse_skeleton({1, 2, 3}); }));
+    std::vector<std::uint8_t> truncated = data;
+    truncated.pop_back();
+    CHECK(throws([&] { bo2::engine::parse_skeleton(truncated); }));
+}
+
 }  // namespace
 
 int main() {
@@ -962,6 +1011,7 @@ int main() {
     test_dds();
     test_math();
     test_cell_group();
+    test_skeleton_bones();
     test_collision_chunk();
     test_cell_instances();
     test_lightmaps();

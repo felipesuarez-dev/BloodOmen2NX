@@ -799,6 +799,17 @@ void parse_prims(const common::Reader& reader, const Chunk& chunk, std::uint32_t
     }
 }
 
+ModelSkeleton& skeleton_for(LevelGeometry& geometry, std::uint32_t model) {
+    for (ModelSkeleton& skeleton : geometry.skeletons) {
+        if (skeleton.model == model) {
+            return skeleton;
+        }
+    }
+    geometry.skeletons.push_back(ModelSkeleton{});
+    geometry.skeletons.back().model = model;
+    return geometry.skeletons.back();
+}
+
 void parse_model(const common::Reader& reader, const Chunk& rmd, std::uint32_t model,
                  const std::vector<std::uint16_t>& symbols,
                  const std::vector<std::string>& names, LevelGeometry& geometry) {
@@ -875,6 +886,32 @@ void parse_model(const common::Reader& reader, const Chunk& rmd, std::uint32_t m
         read_material_textures(reader, find_chunk(chunks, "texture"), symbols, names, geometry);
     parse_prims(reader, *prims, base, static_cast<std::uint32_t>(vertices.size()), model,
                 material_base, material_texture, geometry);
+    // The skin weights and joint indices live inside the rmd on character
+    // models (the cell group also carries a top-level fallback).
+    const Chunk* weights = find_chunk(chunks, "vtxweigh");
+    const Chunk* joints = find_chunk(chunks, "jointidx");
+    if (weights != nullptr || joints != nullptr) {
+        ModelSkeleton& skeleton = skeleton_for(geometry, model);
+        if (weights != nullptr && weights->data_size >= 4) {
+            const std::uint32_t count = reader.u32(weights->data_offset);
+            if (4 + static_cast<std::size_t>(count) * 4 <= weights->data_size) {
+                skeleton.weights.reserve(count);
+                for (std::uint32_t index = 0; index < count; ++index) {
+                    skeleton.weights.push_back(
+                        read_float(reader, weights->data_offset + 4 + index * 4));
+                }
+            }
+        }
+        if (joints != nullptr && joints->data_size >= 4) {
+            const std::uint32_t count = reader.u32(joints->data_offset);
+            if (4 + static_cast<std::size_t>(count) * 2 <= joints->data_size) {
+                skeleton.joints.reserve(count);
+                for (std::uint32_t index = 0; index < count; ++index) {
+                    skeleton.joints.push_back(reader.u16(joints->data_offset + 4 + index * 2));
+                }
+            }
+        }
+    }
 }
 
 void compute_bounds(LevelGeometry& geometry) {
@@ -1163,6 +1200,50 @@ CollisionModel parse_collmodc(const std::vector<std::uint8_t>& data) {
     return model;
 }
 
+std::vector<SkeletonBone> parse_skeleton(const std::vector<std::uint8_t>& data) {
+    const common::Reader reader(data);
+    if (data.size() < 4) {
+        throw common::ParseError("skeleton chunk is shorter than its count");
+    }
+    const std::uint32_t count = reader.u32(0);
+    constexpr std::size_t kRecordBytes = 104;
+    if (count > (data.size() - 4) / kRecordBytes) {
+        throw common::ParseError("skeleton bone array overruns the chunk");
+    }
+    std::vector<SkeletonBone> bones;
+    bones.reserve(count);
+    for (std::uint32_t index = 0; index < count; ++index) {
+        const std::size_t offset = 4 + static_cast<std::size_t>(index) * kRecordBytes;
+        SkeletonBone bone;
+        bone.name_symbol = reader.u32(offset);
+        bone.state_mask = reader.u32(offset + 0x04);
+        bone.state_value = reader.u32(offset + 0x08);
+        bone.bone_index = reader.u32(offset + 0x0c);
+        bone.current_matrix = reader.u32(offset + 0x10);
+        bone.parent_matrix = reader.u32(offset + 0x14);
+        bone.first_collision_prim = reader.u32(offset + 0x18);
+        bone.collision_prim_count = reader.u32(offset + 0x1c);
+        bone.first_vertex = reader.u32(offset + 0x20);
+        bone.vertex_count = reader.u32(offset + 0x24);
+        bone.channel_mask = reader.u16(offset + 0x28);
+        bone.rotation_order = reader.u16(offset + 0x2a);
+        bone.pivot = {read_float(reader, offset + 0x2c), read_float(reader, offset + 0x30),
+                      read_float(reader, offset + 0x34)};
+        bone.rest_orientation = {read_float(reader, offset + 0x38),
+                                 read_float(reader, offset + 0x3c),
+                                 read_float(reader, offset + 0x40)};
+        bone.joint_orientation = {read_float(reader, offset + 0x44),
+                                  read_float(reader, offset + 0x48),
+                                  read_float(reader, offset + 0x4c)};
+        bone.rotation = {read_float(reader, offset + 0x50), read_float(reader, offset + 0x54),
+                         read_float(reader, offset + 0x58)};
+        bone.scale = {read_float(reader, offset + 0x5c), read_float(reader, offset + 0x60),
+                      read_float(reader, offset + 0x64)};
+        bones.push_back(bone);
+    }
+    return bones;
+}
+
 std::vector<LevelCollisionBox> parse_collmodc_boxes(const std::vector<std::uint8_t>& data) {
     const CollisionModel model = parse_collmodc(data);
     std::vector<LevelCollisionBox> boxes;
@@ -1229,28 +1310,24 @@ LevelGeometry parse_cell_group(const std::vector<std::uint8_t>& data,
             geometry.collisions.push_back(std::move(entry));
         }
         const Chunk* skeleton = find_chunk(chunks, "skel");
+        if (skeleton == nullptr) {
+            skeleton = find_chunk(chunks, "modlskel");
+        }
         const Chunk* weights = find_chunk(chunks, "vtxweigh");
         const Chunk* joints = find_chunk(chunks, "jointidx");
         if (skeleton != nullptr || weights != nullptr || joints != nullptr) {
-            ModelSkeleton entry;
-            entry.model = model;
+            ModelSkeleton& entry = skeleton_for(geometry, model);
             if (skeleton != nullptr && skeleton->data_size >= 4) {
                 const std::uint32_t count = reader.u32(skeleton->data_offset);
-                const std::size_t bone_bytes = static_cast<std::size_t>(count) * 8;
-                if (4 + bone_bytes <= skeleton->data_size) {
-                    for (std::uint32_t index = 0; index < count; ++index) {
-                        const std::size_t offset =
-                            skeleton->data_offset + 4 + static_cast<std::size_t>(index) * 8;
-                        entry.bones.emplace_back(reader.u32(offset), reader.u32(offset + 4));
-                    }
-                    const std::size_t used = 4 + bone_bytes;
-                    entry.bind_pose.assign(
-                        data.begin() + static_cast<std::ptrdiff_t>(skeleton->data_offset + used),
-                        data.begin() + static_cast<std::ptrdiff_t>(skeleton->data_offset +
-                                                                   skeleton->data_size));
+                if (count <= (skeleton->data_size - 4) / 104) {
+                    const auto begin = data.begin() + static_cast<std::ptrdiff_t>(skeleton->data_offset);
+                    entry.bones = parse_skeleton(
+                        std::vector<std::uint8_t>(begin, begin + skeleton->data_size));
                 }
             }
-            if (weights != nullptr && weights->data_size >= 4) {
+            // The rmd parser already filled the weights and joints when they
+            // are subchunks; these top-level copies are the cell group variant.
+            if (weights != nullptr && weights->data_size >= 4 && entry.weights.empty()) {
                 const std::uint32_t count = reader.u32(weights->data_offset);
                 if (4 + static_cast<std::size_t>(count) * 4 <= weights->data_size) {
                     entry.weights.reserve(count);
@@ -1260,7 +1337,7 @@ LevelGeometry parse_cell_group(const std::vector<std::uint8_t>& data,
                     }
                 }
             }
-            if (joints != nullptr && joints->data_size >= 4) {
+            if (joints != nullptr && joints->data_size >= 4 && entry.joints.empty()) {
                 const std::uint32_t count = reader.u32(joints->data_offset);
                 if (4 + static_cast<std::size_t>(count) * 2 <= joints->data_size) {
                     entry.joints.reserve(count);
@@ -1270,7 +1347,6 @@ LevelGeometry parse_cell_group(const std::vector<std::uint8_t>& data,
                     }
                 }
             }
-            geometry.skeletons.push_back(std::move(entry));
         }
         const std::size_t first_vertex = geometry.positions.size();
         const std::size_t first_triangle = geometry.triangles.size();
@@ -1372,6 +1448,20 @@ LevelGeometry parse_model_asset(const std::vector<std::uint8_t>& data,
     LevelGeometry geometry;
     geometry.model_ranges.assign(1, ModelRange{});
     parse_model(reader, *rmd, 0, symbols, names, geometry);
+    // The bone records are a top-level chunk on the character model asset
+    // (the `rmd` parser only fills the weights and joints).
+    const Chunk* skeleton = find_chunk(chunks, "modlskel");
+    if (skeleton == nullptr) {
+        skeleton = find_chunk(chunks, "skel");
+    }
+    if (skeleton != nullptr && skeleton->data_size >= 4) {
+        const std::uint32_t count = reader.u32(skeleton->data_offset);
+        if (count <= (skeleton->data_size - 4) / 104) {
+            const auto begin = data.begin() + static_cast<std::ptrdiff_t>(skeleton->data_offset);
+            skeleton_for(geometry, 0).bones = parse_skeleton(
+                std::vector<std::uint8_t>(begin, begin + skeleton->data_size));
+        }
+    }
     ModelRange& range = geometry.model_ranges[0];
     range.first_vertex = 0;
     range.vertex_count = static_cast<std::uint32_t>(geometry.positions.size());

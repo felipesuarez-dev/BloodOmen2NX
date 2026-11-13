@@ -409,6 +409,10 @@ void append_entity_geometry(bo2::engine::LevelGeometry& target,
                 {box.minimum + offset, box.maximum + offset});
         }
     }
+    for (bo2::engine::ModelSkeleton skeleton : source.skeletons) {
+        skeleton.model = static_cast<std::uint32_t>(target.skeletons.size());
+        target.skeletons.push_back(std::move(skeleton));
+    }
     target.normals.insert(target.normals.end(), source.normals.begin(), source.normals.end());
     target.texcoords.insert(target.texcoords.end(), source.texcoords.begin(),
                            source.texcoords.end());

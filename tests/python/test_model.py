@@ -27,9 +27,30 @@ def model_entry(chunks):
     return struct.pack("<I", 105) + b"default\0" + struct.pack("<I", 16 + len(body)) + struct.pack("<I", 0) + body
 
 
-def skel(bones):
-    pairs = b"".join(struct.pack("<II", parent, child) for parent, child in bones)
-    return struct.pack("<I", len(bones)) + pairs + b"\x7f" * (96 * len(bones))
+def bone(**fields):
+    values = {
+        "name": 0, "state_mask": 0, "state_value": 0, "bone_index": 0,
+        "current_matrix": 0, "parent_matrix": 0, "first_collision_prim": 0,
+        "collision_prim_count": 0, "first_vertex": 0, "vertex_count": 0,
+        "channel_mask": 0, "rotation_order": 0,
+        "pivot": (0.0, 0.0, 0.0), "rest_orientation": (0.0, 0.0, 0.0),
+        "joint_orientation": (0.0, 0.0, 0.0), "rotation": (0.0, 0.0, 0.0),
+        "scale": (1.0, 1.0, 1.0),
+    }
+    values.update(fields)
+    record = struct.pack(
+        "<10I", values["name"], values["state_mask"], values["state_value"],
+        values["bone_index"], values["current_matrix"], values["parent_matrix"],
+        values["first_collision_prim"], values["collision_prim_count"],
+        values["first_vertex"], values["vertex_count"])
+    record += struct.pack("<HH", values["channel_mask"], values["rotation_order"])
+    for key in ("pivot", "rest_orientation", "joint_orientation", "rotation", "scale"):
+        record += struct.pack("<3f", *values[key])
+    return record
+
+
+def skel(records):
+    return struct.pack("<I", len(records)) + b"".join(records)
 
 
 class ModelTest(unittest.TestCase):
@@ -40,16 +61,18 @@ class ModelTest(unittest.TestCase):
                     ("vtxweigh", struct.pack("<I2f", 2, 0.25, 0.75)),
                     ("jointidx", struct.pack("<I2H", 2, 1, 3)),
                 ])),
-                ("modlskel", skel([(0xFFFFFFFF, 0xFFFFFFFF), (0, 1)])),
+                ("modlskel", skel([bone(name=0xFFFFFFFF, state_mask=0xFFFFFFFF),
+                                  bone(bone_index=1, parent_matrix=2)])),
             ]
         )
         parsed = model.parse_model(data)
         self.assertEqual(parsed["name"], "default")
         self.assertEqual(len(parsed["skeleton"]["bones"]), 2)
-        self.assertEqual(parsed["skeleton"]["bones"][1], [0, 1])
+        self.assertEqual(parsed["skeleton"]["bones"][1]["bone_index"], 1)
+        self.assertEqual(parsed["skeleton"]["bones"][1]["parent_matrix"], 2)
+        self.assertEqual(parsed["skeleton"]["bones"][1]["scale"], [1.0, 1.0, 1.0])
         self.assertEqual(parsed["skeleton"]["weights"], [0.25, 0.75])
         self.assertEqual(parsed["skeleton"]["joints"], [1, 3])
-        self.assertEqual(parsed["skeleton"]["bind_pose_bytes"], 192)
 
     def test_extract_copies_models_and_animations(self):
         data = big.build(

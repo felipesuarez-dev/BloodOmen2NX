@@ -144,12 +144,36 @@ struct CollisionModel {
     bool valid = false;
 };
 
+// One `modlskel`/`skel` bone record. FUN_0067bdd0 reads 104 bytes per bone:
+// name, state mask/value, bone and matrix indices, the collision prim and
+// vertex ranges, the channel mask and rotation order, and the pivot, rest,
+// joint, rotation and scale vectors. The old `count + pairs + 96 bytes`
+// layout was a guess; the records are 104 bytes and start at offset 4.
+struct SkeletonBone {
+    std::uint32_t name_symbol = 0;
+    std::uint32_t state_mask = 0;
+    std::uint32_t state_value = 0;
+    std::uint32_t bone_index = 0;
+    std::uint32_t current_matrix = 0;
+    std::uint32_t parent_matrix = 0;
+    std::uint32_t first_collision_prim = 0;
+    std::uint32_t collision_prim_count = 0;
+    std::uint32_t first_vertex = 0;
+    std::uint32_t vertex_count = 0;
+    std::uint16_t channel_mask = 0;
+    std::uint16_t rotation_order = 0;
+    Vec3 pivot{0.0f, 0.0f, 0.0f};
+    Vec3 rest_orientation{0.0f, 0.0f, 0.0f};
+    Vec3 joint_orientation{0.0f, 0.0f, 0.0f};
+    Vec3 rotation{0.0f, 0.0f, 0.0f};
+    Vec3 scale{1.0f, 1.0f, 1.0f};
+};
+
 struct ModelSkeleton {
     std::uint32_t model = 0;
-    std::vector<std::pair<std::uint32_t, std::uint32_t>> bones;
+    std::vector<SkeletonBone> bones;
     std::vector<float> weights;
     std::vector<std::uint16_t> joints;
-    std::vector<std::uint8_t> bind_pose;
 };
 
 struct LevelLight {
@@ -269,6 +293,11 @@ CollisionModel parse_collmodc(const std::vector<std::uint8_t>& data);
 // whole-model AABB, deduplicated. These are not the collision hull; use
 // parse_collmodc for the triangles.
 std::vector<LevelCollisionBox> parse_collmodc_boxes(const std::vector<std::uint8_t>& data);
+
+// Parses a `modlskel`/`skel` chunk: `u32 count` followed by `count` 104-byte
+// bone records (FUN_0067bdd0). Throws ParseError on a truncated or oversized
+// array.
+std::vector<SkeletonBone> parse_skeleton(const std::vector<std::uint8_t>& data);
 Vec3 rotate_euler(const Vec3& value, const Vec3& rotation);
 void assign_model_lightmaps(LevelGeometry& geometry,
                             const std::vector<LevelLightMap>& lightmaps);

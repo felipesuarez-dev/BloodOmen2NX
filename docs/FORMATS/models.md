@@ -69,7 +69,7 @@ u32   2
 | `mdlattr` | Named attribute table | Model metadata |
 | `vtxweigh` | `u32 count` + `count` floats | Per-vertex skin weights |
 | `jointidx` | `u32 count` + `count` u16 | Per-vertex joint indices |
-| `skeleton` / `modlskel` | `u32 count` + `count` × (u32, u32) + 96 × count bytes | Bone hierarchy and bind pose |
+| `skeleton` / `modlskel` | `u32 count` + `count` × 104-byte bone records | Decoded (FUN_0067bdd0): name, state mask/value, bone/current/parent matrix indices, collision prim range, vertex range, channel mask, rotation order, pivot/rest/joint/rotation/scale vectors |
 | `collmodc` | Collision model | Points, packed triangles, spheres and faces decoded |
 
 ### `prims`

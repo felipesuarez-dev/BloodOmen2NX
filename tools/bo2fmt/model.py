@@ -65,20 +65,43 @@ def parse_rmd_subchunks(data: bytes) -> dict[str, bytes]:
     return _chunks(data, offset + 8, end)
 
 
+BONE_BYTES = 104
+
+
 def parse_skeleton(chunks: dict[str, bytes]) -> dict:
-    result = {"bones": [], "bind_pose": b"", "weights": [], "joints": []}
+    """Parse the 104-byte bone records (FUN_0067bdd0), not the old guess.
+
+    Each record stores the name, the state mask/value, the bone/current/parent
+    matrix indices, the collision prim and vertex ranges, the channel mask and
+    rotation order, and the pivot/rest/joint/rotation/scale vectors.
+    """
+    result = {"bones": [], "weights": [], "joints": []}
     skel = chunks.get("skel") or chunks.get("skeleton") or chunks.get("modlskel")
     if skel:
         if len(skel) < 4:
             raise ModelError("skel chunk is shorter than its count")
         count = _u32(skel, 0)
-        used = 4 + count * 8
-        if used > len(skel):
+        if 4 + count * BONE_BYTES > len(skel):
             raise ModelError("skel bone array overruns the chunk")
-        result["bones"] = [
-            list(struct.unpack_from("<II", skel, 4 + index * 8)) for index in range(count)
-        ]
-        result["bind_pose"] = skel[used:]
+        for index in range(count):
+            offset = 4 + index * BONE_BYTES
+            (name, state_mask, state_value, bone_index, current_matrix, parent_matrix,
+             first_prim, num_prim, first_vertex, num_vertex) = struct.unpack_from(
+                "<10I", skel, offset)
+            channel_mask, rotation_order = struct.unpack_from("<HH", skel, offset + 0x28)
+            result["bones"].append({
+                "name": name, "state_mask": state_mask, "state_value": state_value,
+                "bone_index": bone_index, "current_matrix": current_matrix,
+                "parent_matrix": parent_matrix, "first_collision_prim": first_prim,
+                "collision_prim_count": num_prim, "first_vertex": first_vertex,
+                "vertex_count": num_vertex, "channel_mask": channel_mask,
+                "rotation_order": rotation_order,
+                "pivot": list(struct.unpack_from("<3f", skel, offset + 0x2c)),
+                "rest_orientation": list(struct.unpack_from("<3f", skel, offset + 0x38)),
+                "joint_orientation": list(struct.unpack_from("<3f", skel, offset + 0x44)),
+                "rotation": list(struct.unpack_from("<3f", skel, offset + 0x50)),
+                "scale": list(struct.unpack_from("<3f", skel, offset + 0x5c)),
+            })
     weights = chunks.get("vtxweigh")
     if weights:
         if len(weights) < 4:
@@ -120,7 +143,6 @@ def parse_model(data: bytes) -> dict:
         "chunks": list(chunks),
         "skeleton": {
             "bones": skeleton["bones"],
-            "bind_pose_bytes": len(skeleton["bind_pose"]),
             "weights": skeleton["weights"],
             "joints": skeleton["joints"],
         },
