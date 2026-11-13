@@ -215,11 +215,17 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
 
 - Shared-model instance light maps, the per-vertex data, the
   material/light-map combination and the vertex diffuse equation.
-- Skeleton pose evaluation and skinning: the hierarchy, weights and joint
-  indices are extracted, but the bind-pose and animation keyframe
-  evaluation are open. `animreel` clips and the `animatio` graph are decoded
-  (`docs/FORMATS/animreel.md`, `docs/FORMATS/animatio.md`); clip blending
-  and the graph state machine are not ported.
+- Animation beyond one clip. The skeleton pose and the skinning are ported
+  (`src/engine/skeleton_pose.cpp`, `docs/FORMATS/models.md`): a clip binds
+  nine channels per bone by the bone id (FUN_00638920), the local matrix is
+  FUN_00637710, the hierarchy FUN_005e43e0 and the vertex blend
+  FUN_0056ecf0. Kain's rest pose reproduces the bind pose and `kain/run`
+  closes its cycle. Not ported: clip blending (the sampler with vtable
+  0x86f91c), the `animatio` state machine that chooses the clip, the bone
+  LOD collapse and the vertex colour of the skinning routine. The clip is
+  named on the command line (`--kain-clip`) and loops. There is no pose
+  state from the oracle yet, so the pose is checked against the asset and
+  by eye, not against the original frame by frame.
 - Collision semantics: the raw `collmodc` payload is extracted for every
   model, but the compressed vertices, edges/faces and the collision
   runtime are not decoded. Entity/player logic is also open.
@@ -233,10 +239,11 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
 - The `sl01` port frame: helper objects are hidden and the `.slm` palette is
   inverted as a shadow map; the world MAE is 8.69/255 with luma correlation
   0.37. Kain's model is loaded and placed in the level viewer
-  (`--kain-model kain.big --kain-at x,y,z`: 2,846 triangles and 3 DDS
-  textures) but drawn in the bind pose; skeleton evaluation/skinning, the
-  HUD, the green `bo2cinematic001` marker and the exact palette texture
-  format remain (BO2NX-68).
+  (`--kain-model kain.big --kain-at x,y,z`: 2,846 triangles, 3 DDS
+  textures, 104 bones and 1,988 skin weights) and a clip can pose it
+  (`--kain-clip`), but the gate frame does not yet draw him in the oracle's
+  pose; that, the HUD, the green `bo2cinematic001` marker and the exact
+  palette texture format remain (BO2NX-68).
 - Gameplay parity beyond turning, ground speeds, partial stick, jumping,
   air control and the camera range blend: the start phase and Shift speed,
   glide, ledge falls, combat (it needs combat mode; map in BO2NX-34) and
@@ -259,7 +266,8 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
 ## Next steps
 
 1. Map the shared-model instances and combine the light map with the material layers.
-2. Bind the shared `model` entries and decode animation/skinning.
+2. Bind the shared `model` entries; port the `animatio` state machine and
+   clip blending so the player state chooses Kain's clip (BO2NX-74).
 3. Port the first claw combo with combat mode, the cone test and the damage
    table (BO2NX-34), and find what hides the remaining pyramid-model helpers
    and lights `sl01` (BO2NX-68).
