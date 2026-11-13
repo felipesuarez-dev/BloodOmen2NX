@@ -215,17 +215,19 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
 
 - Shared-model instance light maps, the per-vertex data, the
   material/light-map combination and the vertex diffuse equation.
-- Animation beyond one clip. The skeleton pose and the skinning are ported
-  (`src/engine/skeleton_pose.cpp`, `docs/FORMATS/models.md`): a clip binds
-  nine channels per bone by the bone id (FUN_00638920), the local matrix is
-  FUN_00637710, the hierarchy FUN_005e43e0 and the vertex blend
-  FUN_0056ecf0. Kain's rest pose reproduces the bind pose and `kain/run`
-  closes its cycle. Not ported: clip blending (the sampler with vtable
-  0x86f91c), the `animatio` state machine that chooses the clip, the bone
-  LOD collapse and the vertex colour of the skinning routine. The clip is
-  named on the command line (`--kain-clip`) and loops. There is no pose
-  state from the oracle yet, so the pose is checked against the asset and
-  by eye, not against the original frame by frame.
+- Animation beyond one layer. Ported: the skeleton pose and the skinning
+  (`src/engine/skeleton_pose.cpp`, `docs/FORMATS/models.md`), one layer of
+  the `animatio` state machine (`src/engine/anim_machine.cpp`:
+  FUN_00642c00, FUN_00643030, FUN_005e1f80) and the state Kain's movement
+  starts (`src/game/kain_animation.cpp`, `docs/GAMEPLAY.md`). The replay
+  writes that state and it equals the oracle's `anim` in 96.3% of
+  `wine_probe_20261111` and 99.8% of `wine_camera_1`; Kain is drawn with the
+  clip of the state in `--replay` and `--play`. Not ported: the pose blend
+  between clips (the sampler with vtable 0x86f91c), layers 1 to 3 (the
+  walk/run cross blend and the lean), clip events, combat mode, the attacks,
+  the length of `st_startjump`, the bone LOD collapse and the vertex colour
+  of the skinning routine. There is no pose state from the oracle yet: the
+  pose is checked against the asset and by eye.
 - Collision semantics: the raw `collmodc` payload is extracted for every
   model, but the compressed vertices, edges/faces and the collision
   runtime are not decoded. Entity/player logic is also open.
@@ -266,8 +268,8 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
 ## Next steps
 
 1. Map the shared-model instances and combine the light map with the material layers.
-2. Bind the shared `model` entries; port the `animatio` state machine and
-   clip blending so the player state chooses Kain's clip (BO2NX-74).
+2. Bind the shared `model` entries; port the pose blend and the other layers
+   of the `animatio` state machine (BO2NX-74).
 3. Port the first claw combo with combat mode, the cone test and the damage
    table (BO2NX-34), and find what hides the remaining pyramid-model helpers
    and lights `sl01` (BO2NX-68).
