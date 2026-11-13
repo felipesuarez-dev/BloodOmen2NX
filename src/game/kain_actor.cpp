@@ -58,36 +58,49 @@ void KainActor::step(const PlayerInput& input, const PlayerState& state, double 
 void KainActor::pose(const bo2::engine::Vec3& position, float yaw,
                      std::vector<bo2::engine::Vec3>& positions,
                      std::vector<bo2::engine::Vec3>& normals) {
-    const Clip* clip = nullptr;
-    float frame = 0.0f;
     clip_name_.clear();
     if (!fixed_clip_.empty()) {
-        clip = load_clip(fixed_clip_);
+        const Clip* clip = load_clip(fixed_clip_);
         if (clip != nullptr) {
             clip_name_ = fixed_clip_;
-            frame = bo2::engine::loop_frame(clip->reel, fixed_seconds_);
+            shown_pose_ = bo2::engine::sample_pose(
+                model_.skeleton, clip->reel, clip->channels,
+                bo2::engine::loop_frame(clip->reel, fixed_seconds_));
+            bo2::engine::place_pose(model_, shown_pose_, position, yaw, positions, normals);
+            return;
         }
-    } else {
-        const bo2::engine::AnimMachine& machine = animation_.machine();
-        if (machine.clip() >= 0) {
-            const std::string name = bo2::engine::anim_clip_reel_name(
-                graph_, graph_.clips[static_cast<std::size_t>(machine.clip())], archive_,
-                graph_entry_);
-            clip = name.empty() ? nullptr : load_clip(name);
-            if (clip != nullptr) {
-                clip_name_ = name;
-                frame = machine.reel_time() * kReelFramesPerSecond;
-            }
+    }
+    const bo2::engine::AnimMachine& machine = animation_.machine();
+    const Clip* clip = nullptr;
+    if (fixed_clip_.empty() && machine.clip() >= 0) {
+        const std::string name = bo2::engine::anim_clip_reel_name(
+            graph_, graph_.clips[static_cast<std::size_t>(machine.clip())], archive_,
+            graph_entry_);
+        clip = name.empty() ? nullptr : load_clip(name);
+        if (clip != nullptr) {
+            clip_name_ = name;
         }
     }
     if (clip == nullptr) {
         // No clip to draw: the bind pose.
         const bo2::engine::AnimReel rest;
+        shown_pose_.clear();
         bo2::engine::pose_actor(model_, rest, {}, 0.0f, position, yaw, positions, normals);
         return;
     }
-    bo2::engine::pose_actor(model_, clip->reel, clip->channels, frame, position, yaw, positions,
-                            normals);
+    std::vector<bo2::engine::BoneTransform> pose = bo2::engine::sample_pose(
+        model_.skeleton, clip->reel, clip->channels, machine.reel_time() * kReelFramesPerSecond);
+    if (machine.clip_starts() != shown_clip_start_) {
+        // A clip started since the last drawn pose: that pose is where its
+        // blend begins (the snapshot the blend sampler takes).
+        shown_clip_start_ = machine.clip_starts();
+        blend_from_ = shown_pose_;
+    }
+    if (machine.blending() && !blend_from_.empty()) {
+        pose = bo2::engine::blend_poses(blend_from_, pose, machine.blend_factor());
+    }
+    shown_pose_ = pose;
+    bo2::engine::place_pose(model_, pose, position, yaw, positions, normals);
 }
 
 }  // namespace bo2::game

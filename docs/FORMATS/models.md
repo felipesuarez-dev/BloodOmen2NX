@@ -733,15 +733,42 @@ vertex on the CPU and emits no normal. The port has no such pass, so
 `skin_vertices` blends the normal with the same two matrices and weight for
 its own shading. That is a port choice, not a translation.
 
+### Pose blend
+
+A clip that starts with a blend does not cut to its first frame. The machine
+swaps the plain sampler for the blend sampler (vtable 0x86f91c, built by
+FUN_00639990 from FUN_0063bb40) for the blend time, and back when it ends
+(FUN_005e1f80). The blend sampler keeps two poses per bone in a 0x60-byte
+record: the pose that was on screen and the pose of the new clip, each as a
+quaternion, a translation and a scale, plus the dot product and the angle
+between the two quaternions (FUN_0069b5b0). A quaternion comes from the three
+angles through the rotation matrix (FUN_0069aa30).
+
+The factor is `1 - remaining / blend time`, where the remaining time is how
+far the clip clock is from `in` (FUN_00639de0); it is clamped to 0..1. A blend
+record may name a transition filter that reshapes the factor.
+
+FUN_00638310 builds the bone matrix from the record: the translation and the
+scale are linear in the factor and the rotation is FUN_0069b640. That blend
+takes the shorter arc (FUN_0069b5b0 negates the second quaternion when the dot
+product is negative), uses the weights `1 - f` and `f` from a dot product of
+0.99999 up and `sin((1 - f) a) / sin a` and `sin(f a) / sin a` below, and
+normalises the result. The matrix is then the one of FUN_00637710 with that
+rotation: `T(-pivot) * S * R * S(1 / parent scale) * T(t)`.
+
+The port keeps the two poses as `BoneTransform` lists and blends them with
+`blend_poses`; `local_matrix` takes the quaternion. The transition filter is
+not decoded: the factor is linear.
+
 ### What the port leaves out
 
 - The LOD collapse: FUN_005e43e0 gives a bone its parent's matrix when the
   bone's LOD level is below a threshold of the instance.
-- The other matrix sources. The sampler with vtable 0x86f91c blends two
-  poses through quaternions (FUN_00638310) and FUN_00638690 ranks up to 16
-  sources per bone. The code at 0x5d1b50 is another source that ends in
-  FUN_00637710 (*inferred* from the RTTI names next to it: the
-  `goe::*MatrixMap` classes). Clip blending is BO2NX-74.
+- The other matrix sources. FUN_00638690 ranks up to 16 sources per bone,
+  and the code at 0x5d1b50 is another source that ends in FUN_00637710
+  (*inferred* from the RTTI names next to it: the `goe::*MatrixMap` classes).
+  The layers that feed them are BO2NX-74.
+- The transition filter of a blend record.
 - The vertex colour of the skinning routine.
 
 Over the 134 Kain clips 15 bones (hands and face) carry a scale other than

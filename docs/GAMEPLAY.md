@@ -260,9 +260,10 @@ Open:
 - Combat mode, the attacks and the state the landing state picks, which is
   read from the captures here.
 - What is drawn: `KainActor` (`src/game/kain_actor.cpp`) skins the model with
-  the reel of the layer 0 clip at the machine's reel time. A change of clip
-  is a cut: the pose blend and the walk/run cross blend of layers 1 and 2 are
-  not ported.
+  the reel of the layer 0 clip at the machine's reel time, and while a clip
+  blends in it goes from the pose drawn last to the clip's first frame
+  (`FORMATS/models.md`, Pose blend). The transition filters and the walk/run
+  cross blend of layers 1 and 2 are not ported.
 
 ## Movement collision (BO2NX-72, decoded live)
 

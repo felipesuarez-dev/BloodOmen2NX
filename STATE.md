@@ -222,9 +222,10 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   starts (`src/game/kain_animation.cpp`, `docs/GAMEPLAY.md`). The replay
   writes that state and it equals the oracle's `anim` in 96.3% of
   `wine_probe_20261111` and 99.8% of `wine_camera_1`; Kain is drawn with the
-  clip of the state in `--replay` and `--play`. Not ported: the pose blend
-  between clips (the sampler with vtable 0x86f91c), layers 1 to 3 (the
-  walk/run cross blend and the lean), clip events, combat mode, the attacks,
+  clip of the state in `--replay` and `--play`, with the pose blend between
+  clips (FUN_00639990, FUN_00638310, FUN_0069b640). Not ported: the
+  transition filters of the blends, layers 1 to 3 (the walk/run cross blend
+  and the lean), clip events, combat mode, the attacks,
   the length of `st_startjump`, the bone LOD collapse and the vertex colour
   of the skinning routine. There is no pose state from the oracle yet: the
   pose is checked against the asset and by eye.
@@ -268,8 +269,8 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
 ## Next steps
 
 1. Map the shared-model instances and combine the light map with the material layers.
-2. Bind the shared `model` entries; port the pose blend and the other layers
-   of the `animatio` state machine (BO2NX-74).
+2. Bind the shared `model` entries; port the other layers of the `animatio`
+   state machine (BO2NX-74).
 3. Port the first claw combo with combat mode, the cone test and the damage
    table (BO2NX-34), and find what hides the remaining pyramid-model helpers
    and lights `sl01` (BO2NX-68).

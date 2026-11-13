@@ -18,8 +18,9 @@ namespace bo2::game {
 // Kain as the host draws him: his skinned model posed by the clip his
 // animation state plays. The state machine is `KainAnimation`; the clip is the
 // reel of the clip node on layer 0, at the machine's reel time (30 frames per
-// second). The pose blend between two clips and the other layers are not
-// drawn (docs/GAMEPLAY.md, "Animation state").
+// second). While a clip blends in, the pose goes from the one drawn last to
+// the first frame of the new clip, as the blend sampler does (FUN_00639990).
+// The other layers are not drawn (docs/GAMEPLAY.md, "Animation state").
 class KainActor {
 public:
     // `archive` is the Kain container: it holds the `kain` animation graph and
@@ -61,6 +62,11 @@ private:
     std::string fixed_clip_;
     double fixed_seconds_ = 0.0;
     std::string clip_name_;
+    // The blend: the pose drawn last, the pose the clip in play started from
+    // and the clip start it belongs to.
+    std::vector<bo2::engine::BoneTransform> shown_pose_;
+    std::vector<bo2::engine::BoneTransform> blend_from_;
+    std::uint32_t shown_clip_start_ = 0;
 
     const Clip* load_clip(const std::string& reel_name);
 };

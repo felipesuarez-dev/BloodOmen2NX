@@ -46,7 +46,13 @@ public:
     // The reel time to draw: the clock held at `in` during the blend.
     float reel_time() const;
     float rate() const { return rate_; }
-    bool blending() const { return clip_ >= 0 && time_ < boundary_; }
+    bool blending() const { return clip_ >= 0 && blend_ > 0.0f && remaining_blend() > 0.0f; }
+    // FUN_00639de0: how far the blend into the clip has gone, 0 at its start
+    // and 1 at its end (1 without a blend). The transition filter a blend
+    // record may name is not decoded: the factor is linear.
+    float blend_factor() const;
+    // How many clips have started; it changes whenever a new pose begins.
+    std::uint32_t clip_starts() const { return clip_starts_; }
     // The sequence has played its last clip to the end; the next advance
     // restarts the requested state.
     bool finished() const;
@@ -65,7 +71,11 @@ private:
     float in_ = 0.0f;        // machine+0x08
     float out_ = 0.0f;       // machine+0x0c
     float rate_ = 1.0f;      // machine+0x10
+    float blend_ = 0.0f;     // the blend time of the clip in play
     std::uint32_t starts_ = 0;
+    std::uint32_t clip_starts_ = 0;
+
+    float remaining_blend() const;
 
     bool condition(std::int32_t id, std::uint32_t variant_tag, int depth) const;
     void play_sequence(std::int32_t sequence, std::uint32_t blend_tag);

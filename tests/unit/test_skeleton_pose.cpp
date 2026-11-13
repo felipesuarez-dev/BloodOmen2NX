@@ -305,6 +305,59 @@ void test_actor_is_posed_and_placed() {
     CHECK(near(positions[0], 100.0f, 200.0f, 310.0f));
 }
 
+void test_blend_poses() {
+    const SkeletonBone joint = bone(10, 1, 0, {0.0f, 0.0f, 0.0f}, 0, 1);
+    std::vector<BoneTransform> from(1);
+    std::vector<BoneTransform> to(1);
+    from[0].translation = {0.0f, 0.0f, 0.0f};
+    to[0].translation = {4.0f, 0.0f, 8.0f};
+    to[0].scale = {3.0f, 1.0f, 1.0f};
+    to[0].rotation = {0.0f, 0.0f, kHalfPi};
+    // The ends are the two poses; the translation and the scale are linear.
+    std::vector<BoneTransform> pose = bo2::engine::blend_poses(from, to, 0.0f);
+    CHECK(near(pose[0].translation, 0.0f, 0.0f, 0.0f) && near(pose[0].scale, 1.0f, 1.0f, 1.0f));
+    CHECK(near(bo2::engine::transform_point(bo2::engine::local_matrix(joint, pose[0], nullptr),
+                                            {1.0f, 0.0f, 0.0f}),
+               1.0f, 0.0f, 0.0f));
+    pose = bo2::engine::blend_poses(from, to, 1.0f);
+    CHECK(near(pose[0].translation, 4.0f, 0.0f, 8.0f) && near(pose[0].scale, 3.0f, 1.0f, 1.0f));
+    pose = bo2::engine::blend_poses(from, to, 0.5f);
+    CHECK(near(pose[0].translation, 2.0f, 0.0f, 4.0f) && near(pose[0].scale, 2.0f, 1.0f, 1.0f));
+    CHECK(pose[0].has_orientation);
+    // Half of a quarter turn about z: (1, 0, 0) scaled by 2, turned 45 degrees.
+    const float half = std::sqrt(0.5f);
+    CHECK(near(bo2::engine::transform_point(bo2::engine::local_matrix(joint, pose[0], nullptr),
+                                            {1.0f, 0.0f, 0.0f}),
+               2.0f * half + 2.0f, 2.0f * half, 4.0f));
+    // A quaternion pose gives the matrix the three angles give.
+    BoneTransform angles;
+    angles.rotation = {0.3f, -0.5f, 1.1f};
+    const std::vector<BoneTransform> same =
+        bo2::engine::blend_poses({angles}, {angles}, 0.37f);
+    const Vec3 by_angles = bo2::engine::transform_point(
+        bo2::engine::local_matrix(joint, angles, nullptr), {1.0f, 2.0f, 3.0f});
+    const Vec3 by_quaternion = bo2::engine::transform_point(
+        bo2::engine::local_matrix(joint, same[0], nullptr), {1.0f, 2.0f, 3.0f});
+    CHECK(near(by_quaternion, by_angles.x, by_angles.y, by_angles.z, 1.0e-4f));
+    // The shorter arc (FUN_0069b5b0): from 170 to -170 degrees about z the
+    // middle is 180 degrees, not 0.
+    BoneTransform left;
+    BoneTransform right;
+    left.rotation = {0.0f, 0.0f, 170.0f * kHalfPi / 90.0f};
+    right.rotation = {0.0f, 0.0f, -170.0f * kHalfPi / 90.0f};
+    const std::vector<BoneTransform> middle = bo2::engine::blend_poses({left}, {right}, 0.5f);
+    CHECK(near(bo2::engine::transform_point(bo2::engine::local_matrix(joint, middle[0], nullptr),
+                                            {1.0f, 0.0f, 0.0f}),
+               -1.0f, 0.0f, 0.0f, 1.0e-3f));
+    // A blended pose can be the start of the next blend, and a bone the first
+    // pose lacks takes the second.
+    const std::vector<BoneTransform> again = bo2::engine::blend_poses(pose, to, 1.0f);
+    CHECK(near(again[0].translation, 4.0f, 0.0f, 8.0f));
+    const std::vector<BoneTransform> longer(2, to[0]);
+    CHECK(bo2::engine::blend_poses(from, longer, 0.5f).size() == 2);
+    CHECK(near(bo2::engine::blend_poses(from, longer, 0.5f)[1].translation, 4.0f, 0.0f, 8.0f));
+}
+
 void test_loop_frame() {
     AnimReel reel = reel_of({}, 25);  // 24 frame steps: 0.8 s
     CHECK(bo2::engine::loop_frame(reel, 0.0) == 0.0f);
@@ -319,6 +372,7 @@ void test_loop_frame() {
 
 int main() {
     test_actor_is_posed_and_placed();
+    test_blend_poses();
     test_loop_frame();
     test_bind_uses_the_bone_id();
     test_missing_channels_give_the_rest_pose();

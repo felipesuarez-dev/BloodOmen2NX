@@ -140,15 +140,20 @@ void test_goto_sees_the_state_being_left() {
     // The held frame blends in for 0.2 s: the clock starts before `in`.
     CHECK(near(machine.time(), -0.2f) && machine.blending());
     CHECK(machine.reel_time() == 0.0f);
+    // FUN_00639de0: the factor goes from 0 to 1 over the blend time.
+    CHECK(near(machine.blend_factor(), 0.0f));
+    const std::uint32_t clips = machine.clip_starts();
     machine.advance(0.1);
     CHECK(machine.state() == 2 && near(machine.time(), -0.1f));
+    CHECK(near(machine.blend_factor(), 0.5f) && machine.clip_starts() == clips);
     // The blend ends, the sequence is over and the requested state restarts:
     // now the state being left is "ready to run", so run plays its clip.
     machine.advance(0.15);
     CHECK(machine.state() == 1 && machine.clip() == 1);
     // 0.05 s were left: at speed 2 the run clip is at 0.1.
     CHECK(near(machine.time(), 0.1f));
-    CHECK(!machine.blending());
+    CHECK(!machine.blending() && machine.blend_factor() == 1.0f);
+    CHECK(machine.clip_starts() == clips + 1);
 }
 
 void test_clip_runs_at_its_rate_and_loops() {

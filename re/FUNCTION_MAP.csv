@@ -9770,7 +9770,7 @@ address,name,subsystem,status,notes
 00637ba0,FUN_00637ba0,unknown,todo,ghidra
 00637da0,FUN_00637da0,unknown,todo,ghidra
 00637de0,FUN_00637de0,unknown,todo,ghidra
-00638310,FUN_00638310,unknown,todo,ghidra
+00638310,FUN_00638310,animation,translated,src/engine/skeleton_pose.cpp: blend_poses and local_matrix build the blended bone matrix (linear translation and scale and the quaternion blend then the FUN_00637710 order); test_blend_poses in tests/unit/test_skeleton_pose.cpp
 00638650,FUN_00638650,unknown,todo,ghidra
 00638690,FUN_00638690,unknown,todo,ghidra
 006388e0,FUN_006388e0,unknown,todo,ghidra
@@ -9783,7 +9783,7 @@ address,name,subsystem,status,notes
 00639230,FUN_00639230,unknown,todo,ghidra
 006393c0,FUN_006393c0,unknown,todo,ghidra
 006395f0,FUN_006395f0,unknown,todo,ghidra
-00639990,FUN_00639990,unknown,todo,ghidra
+00639990,FUN_00639990,animation,wip,src/game/kain_actor.cpp: the pose drawn last and the new clip's pose are kept as the two ends of the blend; the per-bone record with its precomputed quaternions and the temporary sampler are not ported
 00639d20,FUN_00639d20,unknown,todo,ghidra
 00639d50,FUN_00639d50,unknown,todo,ghidra
 0063a750,FUN_0063a750,unknown,todo,ghidra
@@ -11279,7 +11279,7 @@ address,name,subsystem,status,notes
 00690bb0,FUN_00690bb0,unknown,todo,ghidra
 00690c00,FUN_00690c00,unknown,todo,ghidra
 00690cc0,FUN_00690cc0,unknown,todo,ghidra
-00690d20,FUN_00690d20,unknown,todo,ghidra
+00690d20,FUN_00690d20,animation,wip,src/engine/skeleton_pose.cpp: matrix_from_quat on a plain 4x4; the matrix kind tag is not kept
 00690e50,FUN_00690e50,unknown,todo,ghidra
 00690ec0,FUN_00690ec0,unknown,todo,ghidra
 00690f50,FUN_00690f50,unknown,todo,ghidra
@@ -11411,15 +11411,15 @@ address,name,subsystem,status,notes
 0069a8c0,FUN_0069a8c0,unknown,todo,ghidra
 0069a8e0,FUN_0069a8e0,unknown,todo,ghidra
 0069a970,FUN_0069a970,unknown,todo,ghidra
-0069aa30,FUN_0069aa30,unknown,todo,ghidra
+0069aa30,FUN_0069aa30,animation,wip,src/engine/skeleton_pose.cpp: quat_from_matrix (the trace else the largest diagonal term); the clamp of w is not ported
 0069acc0,FUN_0069acc0,unknown,todo,ghidra
 0069afc0,FUN_0069afc0,unknown,todo,ghidra
 0069b140,FUN_0069b140,unknown,todo,ghidra
 0069b360,FUN_0069b360,unknown,todo,ghidra
 0069b3c0,FUN_0069b3c0,unknown,todo,ghidra
 0069b430,FUN_0069b430,unknown,todo,ghidra
-0069b5b0,FUN_0069b5b0,unknown,todo,ghidra
-0069b640,FUN_0069b640,unknown,todo,ghidra
+0069b5b0,FUN_0069b5b0,animation,translated,src/engine/skeleton_pose.cpp: blend_poses takes the shorter arc and the angle between the two quaternions (1e-5 minimum); test_blend_poses in tests/unit/test_skeleton_pose.cpp
+0069b640,FUN_0069b640,animation,translated,src/engine/skeleton_pose.cpp: blend_poses weights the two quaternions linearly from a dot product of 0.99999 up and spherically below and normalises; test_blend_poses in tests/unit/test_skeleton_pose.cpp
 0069b730,FUN_0069b730,unknown,todo,ghidra
 0069ba00,FUN_0069ba00,unknown,todo,ghidra
 0069ba30,FUN_0069ba30,unknown,todo,ghidra

@@ -50,6 +50,20 @@ void AnimMachine::set_rate(float rate) {
     rate_ = rate;
 }
 
+float AnimMachine::remaining_blend() const {
+    // The clock is `blend` away from `in` when the clip starts (from `out`
+    // for a negative rate).
+    return rate_ >= 0.0f ? in_ - time_ : time_ - out_;
+}
+
+float AnimMachine::blend_factor() const {
+    if (clip_ < 0 || !(blend_ > 0.0f)) {
+        return 1.0f;
+    }
+    const float factor = 1.0f - remaining_blend() / blend_;
+    return factor < 0.0f ? 0.0f : (factor > 1.0f ? 1.0f : factor);
+}
+
 bool AnimMachine::condition(std::int32_t id, std::uint32_t variant_tag, int depth) const {
     if (id == kAlways) {
         return true;
@@ -170,6 +184,8 @@ void AnimMachine::start_clip(std::int32_t clip, std::uint32_t blend_tag) {
         blend = 0.0f;
     }
     clip_ = clip;
+    ++clip_starts_;
+    blend_ = blend;
     in_ = node.in_time;
     out_ = node.out_time;
     rate_ = node.speed;

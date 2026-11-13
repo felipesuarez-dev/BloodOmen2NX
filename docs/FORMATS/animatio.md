@@ -248,8 +248,10 @@ every frame, see below); a clip that starts later takes its node speed again.
 
 The port (`AnimMachine`) runs this for one layer: kinds 1 and 2, conditions
 0, 1, 7 and the three combinators. The other layers (kinds 3 and 4), the layer
-entity (kind 5), the callbacks (kind 6), the clip events and the pose blend
-are not ported; a blend still takes its time. The game conditions (ids 8 and
+entity (kind 5), the callbacks (kind 6) and the clip events are not ported.
+The pose blend is drawn from the machine's blend factor
+([`models.md`](models.md), Pose blend), without the transition filter a blend
+record may name. The game conditions (ids 8 and
 up, for example id 9 on the combat-mode transitions) evaluate to false. The
 time a finished clip leaves over is spent in the same call, on the restarted
 state; the original hands it back to its caller, whose loop is not

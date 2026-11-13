@@ -75,6 +75,65 @@ Mat4 rotation_z(float angle) {
     return result;
 }
 
+struct Quat {
+    float x = 0.0f;
+    float y = 0.0f;
+    float z = 0.0f;
+    float w = 1.0f;
+};
+
+constexpr float kSlerpMinimum = 1.0e-5f;    // float at 0x84a92c (FUN_0069b5b0)
+constexpr float kLinearBlendDot = 0.99999f;  // float at 0x87625c (FUN_0069b640)
+
+// The quaternion of a rotation matrix (FUN_0069aa30: the trace, else the
+// largest diagonal term).
+Quat quat_from_matrix(const Mat4& matrix) {
+    const float* m = matrix.m;
+    Quat q;
+    const float trace = m[0] + m[5] + m[10];
+    if (trace > 0.0f) {
+        const float s = std::sqrt(trace + 1.0f) * 2.0f;
+        q.w = 0.25f * s;
+        q.x = (m[9] - m[6]) / s;
+        q.y = (m[2] - m[8]) / s;
+        q.z = (m[4] - m[1]) / s;
+    } else if (m[0] > m[5] && m[0] > m[10]) {
+        const float s = std::sqrt(1.0f + m[0] - m[5] - m[10]) * 2.0f;
+        q.w = (m[9] - m[6]) / s;
+        q.x = 0.25f * s;
+        q.y = (m[1] + m[4]) / s;
+        q.z = (m[2] + m[8]) / s;
+    } else if (m[5] > m[10]) {
+        const float s = std::sqrt(1.0f + m[5] - m[0] - m[10]) * 2.0f;
+        q.w = (m[2] - m[8]) / s;
+        q.x = (m[1] + m[4]) / s;
+        q.y = 0.25f * s;
+        q.z = (m[6] + m[9]) / s;
+    } else {
+        const float s = std::sqrt(1.0f + m[10] - m[0] - m[5]) * 2.0f;
+        q.w = (m[4] - m[1]) / s;
+        q.x = (m[2] + m[8]) / s;
+        q.y = (m[6] + m[9]) / s;
+        q.z = 0.25f * s;
+    }
+    return q;
+}
+
+// FUN_00690d20: the rotation matrix of a quaternion.
+Mat4 matrix_from_quat(const Quat& q) {
+    Mat4 result = Mat4::identity();
+    result.m[0] = 1.0f - 2.0f * (q.y * q.y + q.z * q.z);
+    result.m[1] = 2.0f * (q.x * q.y - q.z * q.w);
+    result.m[2] = 2.0f * (q.x * q.z + q.y * q.w);
+    result.m[4] = 2.0f * (q.x * q.y + q.z * q.w);
+    result.m[5] = 1.0f - 2.0f * (q.x * q.x + q.z * q.z);
+    result.m[6] = 2.0f * (q.y * q.z - q.x * q.w);
+    result.m[8] = 2.0f * (q.x * q.z - q.y * q.w);
+    result.m[9] = 2.0f * (q.y * q.z + q.x * q.w);
+    result.m[10] = 1.0f - 2.0f * (q.x * q.x + q.y * q.y);
+    return result;
+}
+
 bool is_unit(const Vec3& value) {
     return value.x == 1.0f && value.y == 1.0f && value.z == 1.0f;
 }
@@ -140,6 +199,82 @@ Vec3 inverse_bone_scale(const Vec3& scale) {
     return {inverse_component(scale.x), inverse_component(scale.y), inverse_component(scale.z)};
 }
 
+namespace {
+
+// The rotation of a transform as a quaternion: the blend sampler turns the
+// three angles into a matrix (x, then y, then z) and that into a quaternion.
+Quat orientation_of(const BoneTransform& transform) {
+    if (transform.has_orientation) {
+        return {transform.orientation[0], transform.orientation[1], transform.orientation[2],
+                transform.orientation[3]};
+    }
+    Mat4 turn = Mat4::identity();
+    if (rotates(transform.rotation.x)) {
+        turn = rotation_x(transform.rotation.x) * turn;
+    }
+    if (rotates(transform.rotation.y)) {
+        turn = rotation_y(transform.rotation.y) * turn;
+    }
+    if (rotates(transform.rotation.z)) {
+        turn = rotation_z(transform.rotation.z) * turn;
+    }
+    return quat_from_matrix(turn);
+}
+
+Vec3 mix(const Vec3& from, const Vec3& to, float factor) {
+    return from + (to - from) * factor;
+}
+
+}  // namespace
+
+std::vector<BoneTransform> blend_poses(const std::vector<BoneTransform>& from,
+                                       const std::vector<BoneTransform>& to, float factor) {
+    std::vector<BoneTransform> result(to.size());
+    for (std::size_t index = 0; index < to.size(); ++index) {
+        if (index >= from.size()) {
+            result[index] = to[index];
+            continue;
+        }
+        BoneTransform& blended = result[index];
+        blended.translation = mix(from[index].translation, to[index].translation, factor);
+        blended.scale = mix(from[index].scale, to[index].scale, factor);
+        const Quat first = orientation_of(from[index]);
+        Quat second = orientation_of(to[index]);
+        // FUN_0069b5b0: take the shorter arc.
+        float cosine =
+            first.x * second.x + first.y * second.y + first.z * second.z + first.w * second.w;
+        if (cosine < 0.0f) {
+            second = {-second.x, -second.y, -second.z, -second.w};
+            cosine = -cosine;
+        }
+        // FUN_0069b640: linear weights near a dot product of 1, spherical below.
+        float first_weight = 1.0f - factor;
+        float second_weight = factor;
+        if (cosine < kLinearBlendDot && 1.0f - cosine > kSlerpMinimum) {
+            const float angle = std::acos(cosine);
+            const float inverse_sine = 1.0f / std::sin(angle);
+            first_weight = std::sin((1.0f - factor) * angle) * inverse_sine;
+            second_weight = std::sin(factor * angle) * inverse_sine;
+        }
+        Quat out{first_weight * first.x + second_weight * second.x,
+                 first_weight * first.y + second_weight * second.y,
+                 first_weight * first.z + second_weight * second.z,
+                 first_weight * first.w + second_weight * second.w};
+        const float norm = std::sqrt(out.x * out.x + out.y * out.y + out.z * out.z + out.w * out.w);
+        if (norm > 0.0f) {
+            out = {out.x / norm, out.y / norm, out.z / norm, out.w / norm};
+        } else {
+            out = second;
+        }
+        blended.has_orientation = true;
+        blended.orientation[0] = out.x;
+        blended.orientation[1] = out.y;
+        blended.orientation[2] = out.z;
+        blended.orientation[3] = out.w;
+    }
+    return result;
+}
+
 Mat4 local_matrix(const SkeletonBone& bone, const BoneTransform& transform,
                   const Vec3* parent_inverse_scale) {
     // Row order of FUN_00637710, applied right to left on a column vector.
@@ -147,14 +282,21 @@ Mat4 local_matrix(const SkeletonBone& bone, const BoneTransform& transform,
     if (!is_unit(transform.scale)) {
         result = scaling(transform.scale) * result;
     }
-    if (rotates(transform.rotation.x)) {
-        result = rotation_x(transform.rotation.x) * result;
-    }
-    if (rotates(transform.rotation.y)) {
-        result = rotation_y(transform.rotation.y) * result;
-    }
-    if (rotates(transform.rotation.z)) {
-        result = rotation_z(transform.rotation.z) * result;
+    if (transform.has_orientation) {
+        // FUN_00638310: the same order with the blended quaternion as the rotation.
+        result = matrix_from_quat({transform.orientation[0], transform.orientation[1],
+                                   transform.orientation[2], transform.orientation[3]}) *
+                 result;
+    } else {
+        if (rotates(transform.rotation.x)) {
+            result = rotation_x(transform.rotation.x) * result;
+        }
+        if (rotates(transform.rotation.y)) {
+            result = rotation_y(transform.rotation.y) * result;
+        }
+        if (rotates(transform.rotation.z)) {
+            result = rotation_z(transform.rotation.z) * result;
+        }
     }
     if (parent_inverse_scale != nullptr && !is_unit(*parent_inverse_scale)) {
         result = scaling(*parent_inverse_scale) * result;
@@ -256,8 +398,14 @@ void pose_actor(const SkinnedActor& actor, float frame, const Vec3& position, fl
 void pose_actor(const SkinnedActor& actor, const AnimReel& reel,
                 const std::vector<BoneChannels>& channels, float frame, const Vec3& position,
                 float yaw, std::vector<Vec3>& positions, std::vector<Vec3>& normals) {
-    const std::vector<Mat4> matrices =
-        bone_matrices(actor.skeleton, sample_pose(actor.skeleton, reel, channels, frame));
+    place_pose(actor, sample_pose(actor.skeleton, reel, channels, frame), position, yaw,
+               positions, normals);
+}
+
+void place_pose(const SkinnedActor& actor, const std::vector<BoneTransform>& pose,
+                const Vec3& position, float yaw, std::vector<Vec3>& positions,
+                std::vector<Vec3>& normals) {
+    const std::vector<Mat4> matrices = bone_matrices(actor.skeleton, pose);
     skin_vertices(actor.skeleton, matrices, actor.bind_positions, actor.bind_normals, positions,
                   normals);
     const Mat4 turn = rotation_z(yaw);

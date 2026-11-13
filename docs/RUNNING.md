@@ -51,7 +51,8 @@ every frame and sends his slice of the vertex buffer again
 (`LevelPipeline::update_vertices`), in place of the position marker. In both
 the clip is the one his animation state plays: the idle stance, the run, the
 walk back, the jump poses and the landings (`docs/GAMEPLAY.md`, Animation
-state). The change of clip is a cut: the pose blend is not ported. With
+state). In the player a change of clip blends over the time the graph gives
+it; the replay draws one frame, so it shows the clip without a blend. With
 `--kain-clip` that one reel loops instead, whatever the player does.
 Kain is an actor, not level geometry: his triangles and `collmodc` boxes
 stay out of the `Render` and `Boxes` collision sources, so a played or

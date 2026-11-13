@@ -26,11 +26,15 @@ struct BoneChannels {
     std::int32_t scale[3] = {-1, -1, -1};        // descriptor type 2
 };
 
-// One bone's sampled values (FUN_00637900). The rotation is in radians.
+// One bone's sampled values (FUN_00637900). The rotation is in radians. A
+// blended pose carries its rotation as a quaternion instead (x, y, z, w), as
+// the blend sampler keeps it (FUN_00639990); `rotation` is then unused.
 struct BoneTransform {
     Vec3 translation{0.0f, 0.0f, 0.0f};
     Vec3 rotation{0.0f, 0.0f, 0.0f};
     Vec3 scale{1.0f, 1.0f, 1.0f};
+    bool has_orientation = false;
+    float orientation[4] = {0.0f, 0.0f, 0.0f, 1.0f};
 };
 
 // Binds the clip to the skeleton, one entry per bone in file order. A channel
@@ -43,6 +47,15 @@ std::vector<BoneChannels> bind_channels(const ModelSkeleton& skeleton, const Ani
 // rotation and 1 for a scale, so a clip without channels gives the rest pose.
 std::vector<BoneTransform> sample_pose(const ModelSkeleton& skeleton, const AnimReel& reel,
                                        const std::vector<BoneChannels>& channels, float frame);
+
+// The pose between two poses, as the blend sampler builds it while a clip
+// blends in (FUN_00639990, FUN_00638310): the translation and the scale are
+// linear and the rotation is the quaternion blend of FUN_0069b640 (the shorter
+// arc; spherical below a dot product of 0.99999, linear above). Factor 0 is
+// `from` and 1 is `to`. The result has one entry per bone of `to`; a bone
+// `from` lacks takes `to`.
+std::vector<BoneTransform> blend_poses(const std::vector<BoneTransform>& from,
+                                       const std::vector<BoneTransform>& to, float factor);
 
 // The inverse scale FUN_00637710 stores for a bone's children: 1 for a scale
 // of exactly 1, 1 / s from 0.01 up and 100 below that.
@@ -93,6 +106,11 @@ struct SkinnedActor {
 // the original gives the parentless bone.
 void pose_actor(const SkinnedActor& actor, float frame, const Vec3& position, float yaw,
                 std::vector<Vec3>& positions, std::vector<Vec3>& normals);
+
+// Skins the actor with a pose that is already sampled or blended and places it.
+void place_pose(const SkinnedActor& actor, const std::vector<BoneTransform>& pose,
+                const Vec3& position, float yaw, std::vector<Vec3>& positions,
+                std::vector<Vec3>& normals);
 
 // The same with a clip that is not the actor's own: `reel` and the channels
 // `bind_channels` gave for it. The host uses it to switch clips without

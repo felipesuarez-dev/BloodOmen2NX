@@ -223,25 +223,38 @@ void check_kain_actor(const std::string& path, const bo2::game::KainTuning& tuni
     const std::vector<Vec3> stance = positions;
     // W: the run reel, held on its first frame while st_rdy2run blends in,
     // then moving.
+    // W: st_rdy2run blends from the stance into frame 0 of the run reel over
+    // 0.2 s, so the first drawn pose has barely left the stance.
     actor.step(forward, ground, 0.02);
     actor.pose({0.0f, 0.0f, 0.0f}, 0.0f, positions, normals);
     CHECK(actor.animation_state() == bo2::game::kain_anim::kRun);
     CHECK(actor.clip_name() == "kain/run");
-    const std::vector<Vec3> run_start = positions;
-    float moved = 0.0f;
-    for (std::size_t vertex = 0; vertex < positions.size(); ++vertex) {
-        moved = std::max(moved, distance(positions[vertex], stance[vertex]));
-    }
-    CHECK(moved > 5.0f);
-    for (int tick = 0; tick < 20; ++tick) {
+    const auto farthest = [&](const std::vector<Vec3>& other) {
+        float value = 0.0f;
+        for (std::size_t vertex = 0; vertex < positions.size(); ++vertex) {
+            value = std::max(value, distance(positions[vertex], other[vertex]));
+        }
+        return value;
+    };
+    const float blend_start = farthest(stance);
+    for (int tick = 0; tick < 5; ++tick) {
         actor.step(forward, ground, 0.02);
+        actor.pose({0.0f, 0.0f, 0.0f}, 0.0f, positions, normals);
     }
-    actor.pose({0.0f, 0.0f, 0.0f}, 0.0f, positions, normals);
-    moved = 0.0f;
-    for (std::size_t vertex = 0; vertex < positions.size(); ++vertex) {
-        moved = std::max(moved, distance(positions[vertex], run_start[vertex]));
+    const float blend_middle = farthest(stance);
+    CHECK(blend_start < blend_middle);
+    for (int tick = 0; tick < 6; ++tick) {
+        actor.step(forward, ground, 0.02);
+        actor.pose({0.0f, 0.0f, 0.0f}, 0.0f, positions, normals);
     }
-    CHECK(moved > 5.0f);
+    // The blend is over and the run clip moves.
+    CHECK(farthest(stance) > blend_middle && farthest(stance) > 5.0f);
+    const std::vector<Vec3> run_start = positions;
+    for (int tick = 0; tick < 10; ++tick) {
+        actor.step(forward, ground, 0.02);
+        actor.pose({0.0f, 0.0f, 0.0f}, 0.0f, positions, normals);
+    }
+    CHECK(farthest(run_start) > 5.0f);
     // A jump: the takeoff pose, the rising pose after the timer, the falling pose.
     actor.step(forward, rising, 0.02);
     actor.pose({0.0f, 0.0f, 0.0f}, 0.0f, positions, normals);
