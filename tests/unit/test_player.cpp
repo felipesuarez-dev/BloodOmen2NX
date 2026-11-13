@@ -271,13 +271,15 @@ void test_wall_blocks_the_walk() {
     bo2::game::PlayerInput input;
     input.move_y = 1.0f;
     run(player, input, 120);
-    // The body sphere stops the walk at the wall; the run probe only raises a flag.
+    // The chest sphere (r 19.8) stops the walk at the wall; the run probe only
+    // raises a flag.
     CHECK(player.state().position.x < 100.0f);
-    CHECK(player.state().position.x > 90.0f);
+    CHECK(player.state().position.x > 100.0f - 21.0f);
 }
 
-// A wall that runs along the path, 5 u to the side, is inside the radius-8
-// run probe but its normal is across the run, so it must not block.
+// A wall that runs along the path, 5 u to the side, is inside the body and
+// the run probe. Its normal is across the run, so it must not block, and the
+// body slides away from it.
 void test_parallel_wall_does_not_block() {
     bo2::engine::LevelGeometry level = make_floor();
     const std::uint32_t base = static_cast<std::uint32_t>(level.positions.size());
@@ -293,7 +295,8 @@ void test_parallel_wall_does_not_block() {
     input.move_y = 1.0f;
     run(player, input, 60);
     CHECK(player.state().position.x > 150.0f);
-    CHECK(std::fabs(player.state().position.y) < 1.0e-3f);
+    // The chest sphere is pushed out of the wall (y = 5 - 19.8).
+    CHECK(player.state().position.y < -10.0f);
     CHECK(!player.wall_hug());
 }
 
@@ -316,10 +319,10 @@ void test_facing_wall_raises_the_wall_flag() {
 void test_slanted_wall_does_not_raise_the_wall_flag() {
     bo2::engine::LevelGeometry level = make_floor();
     const std::uint32_t base = static_cast<std::uint32_t>(level.positions.size());
-    level.positions.push_back({50.0f, 0.0f, 0.0f});
-    level.positions.push_back({0.0f, 50.0f, 0.0f});
-    level.positions.push_back({0.0f, 50.0f, 300.0f});
-    level.positions.push_back({50.0f, 0.0f, 300.0f});
+    level.positions.push_back({550.0f, -500.0f, 0.0f});
+    level.positions.push_back({-450.0f, 500.0f, 0.0f});
+    level.positions.push_back({-450.0f, 500.0f, 300.0f});
+    level.positions.push_back({550.0f, -500.0f, 300.0f});
     level.triangles.push_back({base, base + 1, base + 2, 0, 0, 0xFFFFFFFFU, -1, -1});
     level.triangles.push_back({base, base + 2, base + 3, 0, 0, 0xFFFFFFFFU, -1, -1});
     bo2::engine::CollisionWorld collision(level);
@@ -328,9 +331,13 @@ void test_slanted_wall_does_not_raise_the_wall_flag() {
     input.move_y = 1.0f;
     run(player, input, 60);
     CHECK(!player.wall_hug());
-    // The body still stops at the slanted wall.
+    // The body keeps the chest sphere 19.8 from the 45 degree wall and slides
+    // along it, so x grows while y falls.
     CHECK(player.state().position.x > 20.0f);
-    CHECK(player.state().position.x < 50.0f);
+    CHECK(player.state().position.y < -20.0f);
+    const float plane = (player.state().position.x + player.state().position.y - 50.0f) /
+                        std::sqrt(2.0f);
+    CHECK(std::fabs(plane + 19.8f) < 0.5f);
 }
 
 void test_tap_jump() {
@@ -695,7 +702,7 @@ void test_wall_stops_a_jump() {
     }
     // The body stops the ground run at the wall; the run probe only flags it.
     CHECK(player.state().position.x < 60.0f);
-    CHECK(player.state().position.x > 50.0f);
+    CHECK(player.state().position.x > 60.0f - 21.0f);
     CHECK(player.state().grounded);
 }
 
@@ -727,14 +734,14 @@ void test_restore_clears_the_jump() {
 void test_huge_step_is_capped() {
     // A stalled frame must not throw Kain through a wall or the floor.
     bo2::engine::LevelGeometry level = make_floor();
-    add_wall(level, 5.0f);
+    add_wall(level, 50.0f);
     bo2::engine::CollisionWorld collision(level);
     bo2::game::PlayerController walker(collision, {0.0f, 0.0f, 0.0f}, kain_tuning());
     bo2::game::PlayerInput input;
     input.move_y = 1.0f;
     walker.step(input, 1.0e9);
     CHECK(walker.state().position.x >= 0.0f);
-    CHECK(walker.state().position.x < 5.0f);
+    CHECK(walker.state().position.x < 50.0f);
 
     const bo2::engine::LevelGeometry floor = make_floor();
     bo2::engine::CollisionWorld open(floor);

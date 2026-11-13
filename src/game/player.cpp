@@ -102,13 +102,10 @@ bo2::engine::Vec2 rotate(const bo2::engine::Vec2& value, float angle) {
 // A step longer than this is cut short, the same cap the SDL loop applies, so
 // a stalled frame cannot throw Kain through a wall or the floor.
 constexpr double kMaxStepSeconds = 0.1;
-constexpr int kMaxSubSteps = 64;  // 0.1 s at 230 u/s needs 58
 
 // Provisional: these predate the Kain tuning, are in meter-like units (Kain's
 // units are about 100x larger) and still have to be recovered.
 constexpr float kEyeHeight = 1.7f;
-constexpr float kBodyRadius = 0.4f;
-constexpr float kBodyClearance = 0.05f;
 // Run probe (FUN_0042ee60, traced live): a radius-8 sphere swept from the
 // chest 32 u forward. On a terrain hit the original compares the hit normal
 // with the tuning threshold (A+0x614, 0.9) and sets the wall flag
@@ -122,6 +119,19 @@ constexpr float kLookSpeed = 2.0f;  // port debug aid (mouse and right stick loo
 constexpr float kAttackCooldown = 0.45f;
 constexpr float kAttackRange = 2.2f;
 constexpr float kAttackRadius = 1.0f;
+
+// Kain's body collision proxy is the chest sphere of his `collmodc`
+// (kain.big), offset from the feet. The live dump of the movement proxy
+// (`wine_shape2_20261113`) shows three spheres, but only the first one has
+// the flag bit the body query passes (FUN_0062ef20 tests `flags & 1` against
+// the manager's query flag 2; the other two spheres have flags 0). The model
+// AABB at proxy+0x58 is only the broad-phase bound.
+const std::vector<bo2::engine::BodySphere>& kain_body() {
+    static const std::vector<bo2::engine::BodySphere> body = {
+        {{0.0f, 0.0f, 51.98f}, 19.800f},
+    };
+    return body;
+}
 
 // Seconds of [begin, begin + dt) that fall inside [window_begin, window_end).
 float window_overlap(float begin, float dt, float window_begin, float window_end) {
@@ -260,22 +270,28 @@ void PlayerController::step(const PlayerInput& input, double seconds) {
         }
     }
     if (travel > 0.0f) {
-        // The original body sphere is small next to a tick of travel, so walk
-        // the move in sub-steps of at most one radius; otherwise a thin wall
-        // can be skipped between two samples.
-        const int steps = std::clamp(static_cast<int>(std::ceil(travel / kBodyRadius)), 1, kMaxSubSteps);
+        // FUN_005ccb60: the collision manager sweeps the body sphere,
+        // advances to the earliest contact and slides the rest of the tick
+        // along the surface. The ground snap owns z, so only the horizontal
+        // part of the resolved position is applied here.
+        // The original integrates at about 100 Hz, so a tick moves ~2.15 u
+        // and follows a curved bevel closely. The replay rows are 20 ms
+        // (4.6 u); splitting the move below that tick keeps the slide on the
+        // same path instead of cutting the corner into the next surface.
+        int steps = static_cast<int>(std::ceil(travel / 1.15f));
+        steps = std::clamp(steps, 1, 8);
         const bo2::engine::Vec3 sub_step = displacement / static_cast<float>(steps);
         for (int index = 0; index < steps; ++index) {
-            const bo2::engine::Vec3 next = state_.position + sub_step;
-            const bo2::engine::Vec3 body_center =
-                next + bo2::engine::Vec3{0.0f, 0.0f, kBodyRadius + kBodyClearance};
-            if (collision_.intersects_sphere(body_center, kBodyRadius)) {
+            const bo2::engine::BodyMove move =
+                collision_.slide_body(state_.position, kain_body(), sub_step,
+                                      collision_.cell_at(state_.position));
+            state_.position.x = move.position.x;
+            state_.position.y = move.position.y;
+            if (move.blocked) {
                 // The original zeroes the forward or back velocity when a
                 // probe is blocked (KainState+0x450/0x454); the port stops the jump.
                 air_velocity_ = {0.0f, 0.0f};
-                break;
             }
-            state_.position = next;
         }
     }
 
@@ -321,7 +337,11 @@ void PlayerController::step(const PlayerInput& input, double seconds) {
     next_velocity = std::max(next_velocity, -tuning_.jump.terminal_fall);
 
     // The probe covers the distance fallen this tick so a fast fall cannot
-    // skip the floor.
+    // skip the floor. The original's ground/step probe is a radius-1 sphere
+    // cast (FUN_00430820: `FUN_005be9a0` from `z+16` to `z-24`) whose hit is
+    // applied as a 3D correction inside the slide state machine; porting the
+    // vertical part alone drops the body into small pits, so the port keeps
+    // the vertical raycast until that state is decoded.
     const float fall = std::max(0.0f, -climb);
     const bo2::engine::Vec3 ray_origin =
         state_.position + bo2::engine::Vec3{0.0f, 0.0f, kEyeHeight};
