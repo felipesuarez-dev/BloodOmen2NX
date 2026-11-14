@@ -68,10 +68,9 @@ const std::string* StringTable::find(const std::string& key) const {
     return nullptr;
 }
 
-std::string display_text(const std::string& stored, const std::string& locale) {
-    const bool spanish = iequals(locale, "spanish");
+std::string display_text(const std::string& stored, const std::string&) {
     std::string text;
-    text.reserve(stored.size());
+    text.reserve(stored.size() * 2);
     for (const char character : stored) {
         const auto byte = static_cast<unsigned char>(character);
         if (byte >= 0x80) {
@@ -80,18 +79,33 @@ std::string display_text(const std::string& stored, const std::string& locale) {
             text.push_back(static_cast<char>(0x80 | (byte & 0x3F)));
             continue;
         }
-        if (!spanish) {
-            text.push_back(character);
-            continue;
-        }
         switch (character) {
-            case 'T': text += "\xC3\xA1"; break;  // a-acute
+            case 'A': text += "\xC3\xA7"; break;  // c-cedilla
+            case 'B': text += "\xC3\xBC"; break;  // u-diaeresis
             case 'C': text += "\xC3\xA9"; break;  // e-acute
+            case 'D': text += "\xC3\xA2"; break;  // a-circumflex
+            case 'E': text += "\xC3\xA4"; break;  // a-diaeresis
+            case 'F': text += "\xC3\xA0"; break;  // a-grave
+            case 'G': text += "\xC3\x9F"; break;  // sharp s
+            case 'H': text += "\xC3\xAA"; break;  // e-circumflex
+            case 'I': text += "\xC3\xAB"; break;  // e-diaeresis
+            case 'J': text += "\xC3\xA8"; break;  // e-grave
+            case 'K': text += "\xC3\xAF"; break;  // i-diaeresis
+            case 'L': text += "\xC3\xAE"; break;  // i-circumflex
+            case 'M': text += "\xC3\xAC"; break;  // i-grave
+            case 'N': text += "\xC3\xB4"; break;  // o-circumflex
+            case 'O': text += "\xC3\xB6"; break;  // o-diaeresis
+            case 'P': text += "\xC3\xB2"; break;  // o-grave
+            case 'Q': text += "\xC3\xBB"; break;  // u-circumflex
+            case 'R': text += "\xC3\xB9"; break;  // u-grave
+            case 'S': text += "?"; break;         // question mark
+            case 'T': text += "\xC3\xA1"; break;  // a-acute
             case 'U': text += "\xC3\xAD"; break;  // i-acute
             case 'V': text += "\xC3\xB3"; break;  // o-acute
             case 'W': text += "\xC3\xBA"; break;  // u-acute
             case 'X': text += "\xC3\xB1"; break;  // n-tilde
             case 'Y': text += "\xC2\xBF"; break;  // inverted question mark
+            case 'Z': text += "\xC2\xA1"; break;  // inverted exclamation mark
             default: text.push_back(character); break;
         }
     }

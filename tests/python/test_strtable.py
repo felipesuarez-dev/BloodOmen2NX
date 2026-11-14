@@ -83,19 +83,20 @@ class ParseStrtableTest(unittest.TestCase):
 
 
 class DisplayTextTest(unittest.TestCase):
-    def test_spanish_accent_placeholders(self):
-        self.assertEqual(strtable.display_text("TCUVWXY", "spanish"), "áéíóúñ¿")
-        self.assertEqual(strtable.display_text("TCUVWXY", "SPANISH"), strtable.display_text("TCUVWXY", "spanish"))
+    FULL = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    SHOWN = "çüéâäàßêëèïîìôöòûù?áíóúñ¿¡"
+
+    def test_full_table_in_every_language(self):
+        for locale in ("spanish", "english", "french", "german", "italian", "default",
+                       "SPANISH"):
+            self.assertEqual(strtable.display_text(self.FULL, locale), self.SHOWN)
 
     def test_other_text_is_untouched(self):
-        for text in ("", "a-z (1).?", "@c\\x %d: q"):
-            self.assertEqual(strtable.display_text(text, "spanish"), text)
+        for locale in ("spanish", "french", "default"):
+            for text in ("", "a-z (1).?", "@c\\x %d: q"):
+                self.assertEqual(strtable.display_text(text, locale), text)
 
-    def test_locales_without_a_table_return_the_stored_text(self):
-        self.assertEqual(strtable.display_text("TCUVWXY", "english"), "TCUVWXY")
-        self.assertEqual(strtable.display_text("TCUVWXY", "default"), "TCUVWXY")
-
-    def test_default_locale_is_spanish(self):
+    def test_default_locale(self):
         self.assertEqual(strtable.display_text("W"), "ú")
 
 

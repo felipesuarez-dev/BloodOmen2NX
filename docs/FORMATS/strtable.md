@@ -110,10 +110,9 @@ Three stored bytes have no glyph: a raw 0xE9 in one Spanish value of `ui/UI`,
 and a raw 0xFC and a `[` in German values. Every other byte of every value in
 the five languages, outside the control codes and the space, has one.
 
-`display_text` / `display_text()` apply the seven Spanish codes for the
-`spanish` locale only and return the text unchanged for the others; they
-also turn the raw Latin-1 bytes into UTF-8. They do not have the full table
-yet.
+`display_text` / `display_text()` apply the full table in every locale and
+return the accented letters in lower case; they also turn the raw Latin-1
+bytes into UTF-8.
 
 Control codes appear in the text. All the ones seen are lower case, so the
 accent mapping leaves them alone (no upper-case letter follows `@`, `\` or `%` in

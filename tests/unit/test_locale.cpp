@@ -353,17 +353,16 @@ void test_string_table_by_locale() {
 }
 
 void test_display_text() {
-    // Inferred mapping: T C U V W X Y -> a e i o u n-tilde inverted-question (UTF-8).
-    CHECK(bo2::engine::display_text("TCUVWXY", "spanish") ==
-          "\xC3\xA1\xC3\xA9\xC3\xAD\xC3\xB3\xC3\xBA\xC3\xB1\xC2\xBF");
-    CHECK(bo2::engine::display_text("TCUVWXY", "SPANISH") ==
-          bo2::engine::display_text("TCUVWXY", "spanish"));
+    // The table read from the glyph art, applied in every language.
+    const std::string stored = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const std::string shown = "çüéâäàßêëèïîìôöòûù?áíóúñ¿¡";
+    for (const char* locale :
+         {"spanish", "english", "french", "german", "italian", "default", "SPANISH"}) {
+        CHECK(bo2::engine::display_text(stored, locale) == shown);
+    }
     // Lower case, digits, punctuation and the lower-case control codes are untouched.
-    CHECK(bo2::engine::display_text("@c\\x %d: a-z (1).?", "spanish") == "@c\\x %d: a-z (1).?");
-    CHECK(bo2::engine::display_text("", "spanish").empty());
-    // Locales without a mapping return the stored text.
-    CHECK(bo2::engine::display_text("TCUVWXY", "english") == "TCUVWXY");
-    CHECK(bo2::engine::display_text("TCUVWXY", "default") == "TCUVWXY");
+    CHECK(bo2::engine::display_text("@c\\x %d: a-z (1).?", "french") == "@c\\x %d: a-z (1).?");
+    CHECK(bo2::engine::display_text("", "german").empty());
     // Raw Latin-1 bytes become UTF-8 in every locale.
     CHECK(bo2::engine::display_text("a\xE9" "z", "spanish") == "a\xC3\xA9" "z");
     CHECK(bo2::engine::display_text("\xFC", "german") == "\xC3\xBC");

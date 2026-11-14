@@ -106,7 +106,7 @@ Requirements:
 | `model.py` | model, skeleton and raw animation extraction | Verified: 5,168 models, 1,586 skinned |
 | `region.py` | entity table extraction | Verified: 15,632 entities, 533 models, 0 errors |
 | `textures.py` | `texture` entries to PNG (Pillow) with `index.json` | Verified on `slums/sl01`: 239/239 |
-| `strtable.py` | `strtable` reader: `dump <container.big> --entry <name> [--locale spanish] [--raw]` | Verified: 92/92 tables parse, 1 irregular record (Italian `ui/UI`); accent mapping inferred |
+| `strtable.py` | `strtable` reader: `dump <container.big> --entry <name> [--locale spanish] [--raw]` | Verified: 92/92 tables parse, 1 irregular record (Italian `ui/UI`); full accent table from the font art |
 | `font.py` | `texfont` reader: `dump <container.big> [--entry main/main]` | Verified: `main/main` of `code.big`, 87 glyphs |
 | `animreel.py` | `animreel` clip reader: `info <entry>`, `root <container.big> [--match text]` | Verified: 134/134 Kain clips parse; root speed of `kain/run` is 200 u/s |
 | `animatio.py` | `animatio` graph reader: `nodes`, `states` (`--big <container.big> --entry <name>` or an extracted entry) | Verified: all 4,081 `animatio` entries of the installed tree parse to the last byte (2,156 graphs, 1,925 alias lists) |

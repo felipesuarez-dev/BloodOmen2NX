@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
@@ -182,6 +183,61 @@ void test_game_font(const bo2::engine::BigArchive& archive) {
     }
 }
 
+// The upper-case codes each language's table uses, outside the control codes
+// (the lone backslash included) and spaces, without the savedgame_ps2icon
+// values. Only counts and letter sets: the game text stays out of the repo.
+void test_marker_use_per_language(const bo2::engine::BigArchive& archive) {
+    struct Expected {
+        const char* locale;
+        const char* letters;
+        int count;
+        std::size_t bytes;
+    };
+    const Expected expected[] = {
+        {"english", "", 0, 1692},      {"french", "CFHJLQ", 38, 1999},
+        {"italian", "FM", 9, 1906},    {"german", "BEO", 18, 1944},
+        {"spanish", "CTUVWXY", 37, 2053},
+    };
+    for (const Expected& item : expected) {
+        const bo2::engine::BigEntry* entry = archive.find("strtable", "ui/UI", item.locale);
+        CHECK(entry != nullptr);
+        if (entry == nullptr) {
+            continue;
+        }
+        const bo2::engine::StringTable table = bo2::engine::StringTable::parse(archive, *entry);
+        std::string used;
+        std::size_t bytes = 0;
+        int count = 0;
+        for (const bo2::engine::StringTableRecord& record : table.records()) {
+            if (record.key.rfind("savedgame_ps2icon_", 0) == 0) {
+                continue;
+            }
+            std::string text = record.value;
+            for (const std::string& code : {std::string("@c"), std::string("@n"),
+                                            std::string("%d"), std::string("\\")}) {
+                std::size_t at = 0;
+                while ((at = text.find(code, at)) != std::string::npos) {
+                    text.erase(at, code.size());
+                }
+            }
+            text.erase(std::remove(text.begin(), text.end(), ' '), text.end());
+            bytes += text.size();
+            for (const char character : text) {
+                if (character >= 'A' && character <= 'Z') {
+                    ++count;
+                    if (used.find(character) == std::string::npos) {
+                        used.push_back(character);
+                    }
+                }
+            }
+        }
+        std::sort(used.begin(), used.end());
+        CHECK(used == item.letters);
+        CHECK(count == item.count);
+        CHECK(bytes == item.bytes);
+    }
+}
+
 }  // namespace
 
 int main() {
@@ -205,6 +261,7 @@ int main() {
     try {
         const bo2::engine::BigArchive archive = bo2::engine::BigArchive::load(path.string());
         test_game_font(archive);
+        test_marker_use_per_language(archive);
         // Every installed container starts its name table with the language names.
         const std::vector<std::string> expected = {"default", "english", "french",
                                                    "italian", "german",  "spanish"};

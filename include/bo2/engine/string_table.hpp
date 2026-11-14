@@ -43,13 +43,15 @@ private:
     std::vector<std::vector<std::uint16_t>> irregular_;
 };
 
-// Maps the stored text to UTF-8 for display. INFERRED, not decoded: the
-// glyph art of `fonts/revised` was not read, the letters come from word
-// evidence over every Spanish record (the only upper-case letters used
-// outside control codes are T C U V W X Y). For `spanish`:
-// T=a-acute C=e-acute U=i-acute V=o-acute W=u-acute X=n-tilde Y=inverted
-// question mark. Other locales have no table yet and keep their letters.
-// Raw Latin-1 bytes (0x80-0xFF) become their UTF-8 form in every locale.
+// Maps the stored text to UTF-8 for display, in every locale. The table comes
+// from the glyph art of `fonts/revised` (docs/FORMATS/strtable.md): each
+// upper-case code is an accented capital, and display_text returns the
+// lower-case letter: A=c-cedilla B=u-diaeresis C=e-acute D=a-circumflex
+// E=a-diaeresis F=a-grave G=sharp-s H=e-circumflex I=e-diaeresis J=e-grave
+// K=i-diaeresis L=i-circumflex M=i-grave N=o-circumflex O=o-diaeresis
+// P=o-grave Q=u-circumflex R=u-grave S=question-mark T=a-acute U=i-acute
+// V=o-acute W=u-acute X=n-tilde Y=inverted-question Z=inverted-exclamation.
+// Raw Latin-1 bytes (0x80-0xFF) become their UTF-8 form.
 // Control codes (`@c`, `@n`, `\x`, `\q`, `%d`) are lower case and pass through.
 std::string display_text(const std::string& stored, const std::string& locale);
 

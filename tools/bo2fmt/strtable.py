@@ -16,8 +16,9 @@ index into the container name table: the key and the text are both names.
 A record that is not `[7, key, value]` is kept raw and skipped by lookups.
 
 The stored text is lower case; upper-case letters stand for accented glyphs
-of the game font. display_text() maps them to Unicode. That mapping is
-INFERRED from word evidence (the glyph art was not decoded).
+of the game font. display_text() maps them to the lower-case accented letter
+with the table read from the glyph art of `fonts/revised`, which is the same
+for the five languages.
 """
 
 from __future__ import annotations
@@ -33,17 +34,35 @@ HEADER_SIZE = 20
 RECORD_TAG = 7
 TERMINATOR = 0xFFFF
 
-# Stored letter -> displayed character. Inferred; only Spanish has a table.
+# Stored upper-case code -> displayed lower-case letter. The table comes from
+# the glyph art of fonts/revised and is the same for the five languages.
 GLYPHS = {
-    "spanish": {
-        "T": "á",  # a-acute
-        "C": "é",  # e-acute
-        "U": "í",  # i-acute
-        "V": "ó",  # o-acute
-        "W": "ú",  # u-acute
-        "X": "ñ",  # n-tilde
-        "Y": "¿",  # inverted question mark
-    },
+    "A": "ç",
+    "B": "ü",
+    "C": "é",
+    "D": "â",
+    "E": "ä",
+    "F": "à",
+    "G": "ß",
+    "H": "ê",
+    "I": "ë",
+    "J": "è",
+    "K": "ï",
+    "L": "î",
+    "M": "ì",
+    "N": "ô",
+    "O": "ö",
+    "P": "ò",
+    "Q": "û",
+    "R": "ù",
+    "S": "?",
+    "T": "á",
+    "U": "í",
+    "V": "ó",
+    "W": "ú",
+    "X": "ñ",
+    "Y": "¿",
+    "Z": "¡",
 }
 
 
@@ -93,11 +112,8 @@ def parse_strtable(names: list[str], entry: big.Entry):
 
 
 def display_text(stored: str, locale: str = big.DEFAULT_LOCALE) -> str:
-    """Map the stored accent placeholders to Unicode for `locale` (inferred)."""
-    table = GLYPHS.get(locale.lower())
-    if table is None:
-        return stored
-    return "".join(table.get(character, character) for character in stored)
+    """Map the stored accent placeholders to lower-case Unicode, in every locale."""
+    return "".join(GLYPHS.get(character, character) for character in stored)
 
 
 def cmd_dump(args) -> int:
