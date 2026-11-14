@@ -24,7 +24,7 @@ Lee esto en español: [README.md](README.md)
 <!-- badges:start -->
 [status-badge]: https://img.shields.io/badge/phase-M3%20in%20progress-orange
 [overall-badge]: https://img.shields.io/badge/overall-8.2%25-yellow
-[fn-badge]: https://img.shields.io/badge/functions-36%20%2F%2016927-lightgrey
+[fn-badge]: https://img.shields.io/badge/functions-37%20%2F%2016929-lightgrey
 [levels-badge]: https://img.shields.io/badge/levels-0%20%2F%2011-lightgrey
 <!-- badges:end -->
 [cpp-badge]: https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white
@@ -76,11 +76,11 @@ The original is used as a reference, not shipped.
 
 | Component | Weight | Progress | Score |
 |---|---:|---:|---:|
-| Functions translated / in scope | 60% | 36 / 16,927 | 0.21% |
+| Functions translated / in scope | 60% | 37 / 16,929 | 0.22% |
 | Levels completable (campaign chapters) | 30% | 0 / 11 | 0.00% |
 | Platform features | 10% | 10 / 13 + 1 partial | 80.77% |
 
-Function map: 35,529 rows: 36 translated, 106 in progress, 16,785 to do, 18,602 external (not game code).
+Function map: 35,531 rows: 37 translated, 111 in progress, 16,781 to do, 18,602 external (not game code).
 
 The chapter list is in [`docs/LEVELS.md`](docs/LEVELS.md). Chapter flags and platform features are in [`tools/gen/progress_data.py`](tools/gen/progress_data.py).
 <!-- progress:end -->

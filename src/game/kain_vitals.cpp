@@ -52,9 +52,45 @@ float top_max_lore(const KainTuning& tuning) {
 }
 
 void reset_gifts(KainVitals& vitals, const KainTuning& tuning) {
-    vitals.selected_gift = DarkGift::None;
+    // FUN_00435b60 leaves the gift object without rage; FUN_00428fe0 sets the
+    // maximum; FUN_00428780 marks stealth as owned and selects it.
+    vitals.selected_gift = DarkGift::Stealth;
     vitals.rage = 0.0f;
     vitals.max_rage = tuning.max_rage;
+}
+
+std::int32_t gift_icon_texture(DarkGift gift) {
+    switch (gift) {
+    case DarkGift::Charm:
+        return 1;
+    case DarkGift::SuperJump:
+        return 2;
+    case DarkGift::Speed:
+        return 3;
+    case DarkGift::Telekinesis:
+        return 4;
+    case DarkGift::Stealth:
+        return 5;
+    case DarkGift::Rupture:
+        return 6;
+    case DarkGift::Fury:
+        return 7;
+    default:
+        return 0;
+    }
+}
+
+bool gift_usable(const KainVitals& vitals, const KainTuning& tuning) {
+    switch (vitals.selected_gift) {
+    case DarkGift::None:
+        return false;
+    case DarkGift::Stealth:
+        return true;
+    case DarkGift::Fury:
+        return tuning.fury.cost <= vitals.rage;
+    default:
+        throw std::invalid_argument("the usability rule of this dark gift is not ported");
+    }
 }
 
 namespace {

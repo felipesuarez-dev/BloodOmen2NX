@@ -819,7 +819,7 @@ address,name,subsystem,status,notes
 004283c0,FUN_004283c0,unknown,todo,ghidra
 00428640,FUN_00428640,unknown,todo,ghidra
 00428720,FUN_00428720,unknown,todo,ghidra
-00428780,FUN_00428780,player,wip,src/game/kain_tuning.cpp: reads the cost and the two rage bar colours of fury rupture and speed; the scripts the effects and the first gift selection are not ported
+00428780,FUN_00428780,player,wip,src/game/kain_tuning.cpp: reads the cost and the two rage bar colours of fury rupture and speed; reset_gifts selects the stealth gift it marks as owned; the scripts and the effects are not ported
 00428f80,FUN_00428f80,unknown,todo,ghidra
 00428fe0,FUN_00428fe0,player,wip,src/game/kain_tuning.cpp: reads the turn rates the run clip rate the jump block and the maximum rage from the tunedata; the other copied fields are not ported
 0042a150,FUN_0042a150,unknown,todo,ghidra
@@ -985,7 +985,7 @@ address,name,subsystem,status,notes
 004359f0,FUN_004359f0,unknown,todo,ghidra
 00435ac0,FUN_00435ac0,unknown,todo,ghidra
 00435af0,FUN_00435af0,unknown,todo,ghidra
-00435b60,FUN_00435b60,player,wip,src/game/kain_vitals.cpp: reset_gifts: no gift selected and no rage; the seven gift objects are not ported
+00435b60,FUN_00435b60,player,wip,src/game/kain_vitals.cpp: reset_gifts starts with no rage and the maximum; FUN_00428780 then selects stealth; the seven gift objects are not ported
 00436080,FUN_00436080,unknown,todo,ghidra
 00436110,FUN_00436110,unknown,todo,ghidra
 004361a0,FUN_004361a0,unknown,todo,ghidra
@@ -1015,6 +1015,7 @@ address,name,subsystem,status,notes
 00436ec0,FUN_00436ec0,unknown,todo,ghidra
 00436f30,FUN_00436f30,unknown,todo,ghidra
 00436fa0,FUN_00436fa0,unknown,todo,ghidra
+00437040,FUN_00437040,player,wip,src/game/kain_vitals.cpp: gift_usable returns whether the fury cost is not above the rage
 004370a0,FUN_004370a0,unknown,todo,ghidra
 00437100,FUN_00437100,unknown,todo,ghidra
 00437170,FUN_00437170,unknown,todo,ghidra
@@ -1027,6 +1028,7 @@ address,name,subsystem,status,notes
 00437440,FUN_00437440,unknown,todo,ghidra
 004374b0,FUN_004374b0,unknown,todo,ghidra
 00437500,FUN_00437500,unknown,todo,ghidra
+00437540,FUN_00437540,player,wip,src/game/kain_vitals.cpp: stealth is usable while its timer is not ported and has no value to check
 004375b0,FUN_004375b0,unknown,todo,ghidra
 00437600,FUN_00437600,unknown,todo,ghidra
 00437660,FUN_00437660,unknown,todo,ghidra
@@ -4755,7 +4757,7 @@ address,name,subsystem,status,notes
 00524a20,FUN_00524a20,unknown,todo,ghidra
 00524b20,FUN_00524b20,unknown,todo,ghidra
 00524c80,FUN_00524c80,unknown,todo,ghidra
-00524cd0,FUN_00524cd0,unknown,todo,ghidra
+00524cd0,FUN_00524cd0,player,translated,src/game/kain_vitals.cpp: gift_icon_texture maps the selected gift to the index of its icon inside the nine textures of the icon model
 00524d40,FUN_00524d40,unknown,todo,ghidra
 00524e00,FUN_00524e00,unknown,todo,ghidra
 005257c0,FUN_005257c0,unknown,todo,ghidra
@@ -5115,8 +5117,8 @@ address,name,subsystem,status,notes
 00535ca0,FUN_00535ca0,unknown,todo,ghidra
 00535cbf,FUN_00535cbf,unknown,todo,ghidra
 00535dd0,FUN_00535dd0,unknown,todo,ghidra
-00535e40,FUN_00535e40,unknown,todo,ghidra
-00535f10,FUN_00535f10,unknown,todo,ghidra
+00535e40,FUN_00535e40,player,wip,src/game/hud_scene.cpp: items adds the dark gift icon with the selected gift texture; the spin when the gift changes is not ported
+00535f10,FUN_00535f10,player,wip,src/game/kain_vitals.cpp: gift_usable covers none stealth and fury; the rules of the other five gifts are not ported
 005360d0,FUN_005360d0,unknown,todo,ghidra
 00536130,FUN_00536130,unknown,todo,ghidra
 00536290,FUN_00536290,unknown,todo,ghidra
@@ -8095,7 +8097,7 @@ address,name,subsystem,status,notes
 005dcde0,FUN_005dcde0,unknown,todo,ghidra
 005dcdf0,FUN_005dcdf0,unknown,todo,ghidra
 005dce00,FUN_005dce00,unknown,todo,ghidra
-005dce40,FUN_005dce40,unknown,todo,ghidra
+005dce40,FUN_005dce40,render,wip,src/platform/headless/software_renderer.cpp: draw_screen_items and the SDL draw_hud pick material_textures[material][texture_frame]; texture animation is not ported
 005dce60,FUN_005dce60,unknown,todo,ghidra
 005dcf00,FUN_005dcf00,unknown,todo,ghidra
 005dd150,FUN_005dd150,unknown,todo,ghidra

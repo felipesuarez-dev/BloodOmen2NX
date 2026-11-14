@@ -77,6 +77,7 @@ HudScene::HudScene(const engine::LevelGeometry& scene) {
     lore_.clip = marker_clip(scene, lore_.bar);
     rage_bar_ = find_marker(scene, "ui_hud_rage_bar");
     rage_clip_ = marker_clip(scene, rage_bar_);
+    dark_gift_icon_ = find_marker(scene, "ui_hud_darkgift_icon");
     for (std::size_t index = 0; index < scene.markers.size(); ++index) {
         const std::uint32_t marker = static_cast<std::uint32_t>(index);
         if (scene.markers[index].entity_class == "KainModeHUDComponent" &&
@@ -150,6 +151,15 @@ std::vector<HudItem> HudScene::items(const KainVitals& vitals, const KainTuning&
     rage_bar.colour = {colour[0], colour[1], colour[2]};
     rage_bar.alpha = colour[3];
     items.push_back(rage_bar);
+    // FUN_00535e40: the dark gift icon takes the texture of the selected gift
+    // and is grey while that gift cannot be used (FUN_00535f10).
+    HudItem icon;
+    icon.model = dark_gift_icon_;
+    icon.position = positions_[dark_gift_icon_];
+    icon.texture_frame = gift_icon_texture(vitals.selected_gift);
+    const float tint = gift_usable(vitals, tuning) ? 1.0f : 0.5f;
+    icon.colour = {tint, tint, tint};
+    items.push_back(icon);
     std::sort(items.begin(), items.end(),
               [](const HudItem& a, const HudItem& b) { return a.model < b.model; });
     return items;

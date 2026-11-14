@@ -1130,6 +1130,7 @@ void draw_hud(const Options& options, std::vector<std::uint8_t>& pixels, std::ui
         out.scale = item.scale;
         out.colour = item.colour;
         out.alpha = item.alpha;
+        out.texture_frame = item.texture_frame;
         items.push_back(out);
     }
     bo2::platform::headless::draw_screen_items(pixels, width, height, scene.geometry,

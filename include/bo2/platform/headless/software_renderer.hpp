@@ -51,6 +51,9 @@ struct ScreenItem {
     engine::Vec3 scale{1.0f, 1.0f, 1.0f};
     engine::Vec3 colour{1.0f, 1.0f, 1.0f};
     float alpha = 1.0f;
+    // Index inside the texture list of each material of the model
+    // (FUN_005dce40); 0 is the first.
+    std::int32_t texture_frame = 0;
 };
 
 // Draws `items` of `scene` over the frame `rgba`. The screen is orthographic,

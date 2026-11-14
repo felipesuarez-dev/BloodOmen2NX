@@ -618,11 +618,20 @@ void draw_screen_items(std::vector<std::uint8_t>& rgba, std::uint32_t width, std
                     continue;
                 }
             }
+            std::int32_t texture_index = triangle.texture;
+            if (triangle.material < scene.material_textures.size()) {
+                const std::vector<std::int32_t>& list =
+                    scene.material_textures[triangle.material];
+                if (item->texture_frame >= 0 &&
+                    static_cast<std::size_t>(item->texture_frame) < list.size()) {
+                    texture_index = list[static_cast<std::size_t>(item->texture_frame)];
+                }
+            }
             const engine::Image* texture = nullptr;
-            if (triangle.texture >= 0 &&
-                static_cast<std::size_t>(triangle.texture) < textures.size() &&
-                textures[static_cast<std::size_t>(triangle.texture)].width != 0) {
-                texture = &textures[static_cast<std::size_t>(triangle.texture)];
+            if (texture_index >= 0 &&
+                static_cast<std::size_t>(texture_index) < textures.size() &&
+                textures[static_cast<std::size_t>(texture_index)].width != 0) {
+                texture = &textures[static_cast<std::size_t>(texture_index)];
             }
             const float area = edge(v0.x, v0.y, v1.x, v1.y, v2.x, v2.y);
             if (std::fabs(area) < 1.0e-6f) {

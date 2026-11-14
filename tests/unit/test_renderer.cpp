@@ -294,6 +294,35 @@ int main() {
     CHECK(both[pixel_at(33, 22) + 0] == 255);
     CHECK(both[pixel_at(20, 36) + 0] == 255);
 
+    // The texture list of a material: texture_frame picks the entry; a frame
+    // outside the list falls back to the triangle's own texture.
+    bo2::engine::Image blue = red_image();
+    for (std::size_t pixel = 0; pixel < 16; ++pixel) {
+        blue.rgba[pixel * 4 + 0] = 0;
+        blue.rgba[pixel * 4 + 2] = 255;
+    }
+    bo2::engine::LevelGeometry texture_list_scene = screen;
+    texture_list_scene.material_textures = {{0, 1}};
+    const auto draw_icon = [&](std::int32_t frame) {
+        bo2::platform::headless::ScreenItem item;
+        item.position = {-320.0f, 0.0f, 0.0f};
+        item.scale = {320.0f, 240.0f, 1.0f};
+        item.texture_frame = frame;
+        std::vector<std::uint8_t> pixels(64U * 48U * 4U, 0);
+        bo2::platform::headless::draw_screen_items(pixels, 64, 48, texture_list_scene,
+                                                   {image, blue}, {item}, 320.0f, 240.0f);
+        return pixels;
+    };
+    const std::vector<std::uint8_t> frame0 = draw_icon(0);
+    CHECK(frame0[pixel_at(10, 10) + 0] == 255);
+    CHECK(frame0[pixel_at(10, 10) + 2] == 0);
+    const std::vector<std::uint8_t> frame1 = draw_icon(1);
+    CHECK(frame1[pixel_at(10, 10) + 0] == 0);
+    CHECK(frame1[pixel_at(10, 10) + 2] == 255);
+    const std::vector<std::uint8_t> out_of_range = draw_icon(5);
+    CHECK(out_of_range[pixel_at(10, 10) + 0] == 255);
+    CHECK(out_of_range[pixel_at(10, 10) + 2] == 0);
+
     if (failures != 0) {
         std::cerr << failures << " check(s) failed\n";
         return 1;

@@ -84,6 +84,8 @@ bo2::engine::LevelGeometry make_scene() {
     scene.cell_animations.push_back(make_fill_clip(28, 133.0f));
     // The rage bar's clip scales X from 1 to 28 over 101 frames.
     scene.cell_animations.push_back(make_fill_clip(101, 28.0f, 0));
+    add_marker(scene, "ui_hud_darkgift_icon", "HUDDarkGiftIcon", -1,
+               {-275.2f, 197.1f, -400.0f});
     return scene;
 }
 
@@ -119,8 +121,9 @@ void test_mode_decides_what_is_visible() {
     CHECK(hud.items(vitals, tuning, bo2::game::HudMode::Kain, true).empty());
     const std::vector<bo2::game::HudItem> items =
         hud.items(vitals, tuning, bo2::game::HudMode::Kain, false);
-    // The frame glass, three pieces for each of the two bars and the rage bar.
-    CHECK(items.size() == 8);
+    // The frame glass, three pieces for each of the two bars, the rage bar and
+    // the dark gift icon.
+    CHECK(items.size() == 9);
     for (std::size_t index = 1; index < items.size(); ++index) {
         CHECK(items[index - 1].model < items[index].model);
     }
@@ -133,7 +136,7 @@ void test_mode_decides_what_is_visible() {
         CHECK(near(glass->position, {-272.0f, 196.0f, -360.0f}));
         CHECK(near(glass->scale, {1.0f, 1.0f, 1.0f}));
     }
-    CHECK(hud.items(vitals, tuning, bo2::game::HudMode::KainAndEnemy, false).size() == 8);
+    CHECK(hud.items(vitals, tuning, bo2::game::HudMode::KainAndEnemy, false).size() == 9);
 }
 
 void test_health_bar_rule() {
@@ -233,10 +236,11 @@ void test_rage_bar_rule() {
     bo2::game::KainVitals vitals;
     bo2::game::set_lore_level(vitals, tuning, 0, 0.0f);
     bo2::game::reset_gifts(vitals, tuning);
-    // The player starts with no rage and no gift selected (FUN_00435b60).
+    // The player starts with no rage and stealth selected: FUN_00435b60
+    // leaves no gift, FUN_00428780 marks stealth as owned and selects it.
     CHECK(vitals.rage == 0.0f);
     CHECK(vitals.max_rage == 100.0f);
-    CHECK(vitals.selected_gift == bo2::game::DarkGift::None);
+    CHECK(vitals.selected_gift == bo2::game::DarkGift::Stealth);
     const auto bar = [&]() {
         const std::vector<bo2::game::HudItem> items =
             hud.items(vitals, tuning, bo2::game::HudMode::Kain, false);
@@ -265,20 +269,19 @@ void test_rage_bar_rule() {
     item = bar();
     CHECK(near(item.colour, {1.0f, 0.0f, 0.0f}));
     CHECK(near(item.alpha, 1.0f));
-    // Speed costs 50.
+    // Speed costs 50 and spends rage; its usability rule is not ported, so
+    // the colours are read from the rule instead of through items().
     vitals.selected_gift = bo2::game::DarkGift::Speed;
-    vitals.rage = 49.0f;
-    CHECK(near(bar().colour, {0.0f, 0.0f, 0.5f}));
-    vitals.rage = 50.0f;
-    CHECK(near(bar().colour, {0.0f, 0.0f, 1.0f}));
+    CHECK(near(bo2::game::rage_threshold(vitals, tuning), 50.0f));
+    CHECK(near(bo2::game::rage_bar_colours(vitals, tuning).cant_use[2], 0.5f));
+    CHECK(near(bo2::game::rage_bar_colours(vitals, tuning).can_use[2], 1.0f));
     // Rupture has colours but FUN_00425f50 does not ask for its cost: the
-    // threshold is the maximum rage.
+    // threshold is the maximum rage. Its usability rule is not ported, so
+    // the colours are read from the rule instead of through items().
     vitals.selected_gift = bo2::game::DarkGift::Rupture;
     CHECK(near(bo2::game::rage_threshold(vitals, tuning), 100.0f));
-    vitals.rage = 99.0f;
-    CHECK(near(bar().colour, {0.0f, 0.5f, 0.0f}));
-    vitals.rage = 100.0f;
-    CHECK(near(bar().colour, {0.0f, 1.0f, 0.0f}));
+    CHECK(near(bo2::game::rage_bar_colours(vitals, tuning).cant_use[1], 0.5f));
+    CHECK(near(bo2::game::rage_bar_colours(vitals, tuning).can_use[1], 1.0f));
     // A gift that spends no rage: one colour, full or not.
     vitals.selected_gift = bo2::game::DarkGift::Stealth;
     CHECK(near(bar().colour, {0.5f, 0.5f, 0.5f}));
@@ -288,6 +291,81 @@ void test_rage_bar_rule() {
     vitals.max_rage = 0.0f;
     CHECK(throws<std::invalid_argument>(
         [&] { hud.items(vitals, tuning, bo2::game::HudMode::Kain, false); }));
+}
+
+// FUN_00524cd0: the index of the icon texture of each gift.
+void test_gift_icon_texture() {
+    using bo2::game::DarkGift;
+    CHECK(bo2::game::gift_icon_texture(DarkGift::None) == 0);
+    CHECK(bo2::game::gift_icon_texture(DarkGift::Charm) == 1);
+    CHECK(bo2::game::gift_icon_texture(DarkGift::SuperJump) == 2);
+    CHECK(bo2::game::gift_icon_texture(DarkGift::Speed) == 3);
+    CHECK(bo2::game::gift_icon_texture(DarkGift::Telekinesis) == 4);
+    CHECK(bo2::game::gift_icon_texture(DarkGift::Stealth) == 5);
+    CHECK(bo2::game::gift_icon_texture(DarkGift::Rupture) == 6);
+    CHECK(bo2::game::gift_icon_texture(DarkGift::Fury) == 7);
+    CHECK(bo2::game::gift_icon_texture(static_cast<DarkGift>(-1)) == 0);
+    CHECK(bo2::game::gift_icon_texture(static_cast<DarkGift>(42)) == 0);
+}
+
+// FUN_00535f10 with FUN_00437540 and FUN_00437040.
+void test_gift_usable() {
+    const bo2::game::KainTuning tuning = make_tuning();
+    bo2::game::KainVitals vitals;
+    vitals.selected_gift = bo2::game::DarkGift::None;
+    CHECK(!bo2::game::gift_usable(vitals, tuning));
+    vitals.selected_gift = bo2::game::DarkGift::Stealth;
+    CHECK(bo2::game::gift_usable(vitals, tuning));
+    bo2::game::KainTuning fury = tuning;
+    fury.fury.cost = 270.0f;
+    vitals.selected_gift = bo2::game::DarkGift::Fury;
+    vitals.rage = 269.0f;
+    CHECK(!bo2::game::gift_usable(vitals, fury));
+    vitals.rage = 270.0f;
+    CHECK(bo2::game::gift_usable(vitals, fury));
+    vitals.selected_gift = bo2::game::DarkGift::Rupture;
+    CHECK(throws<std::invalid_argument>([&] { bo2::game::gift_usable(vitals, fury); }));
+}
+
+// FUN_00535e40: the icon of the selected gift inside the orb, in the Kain
+// mode only.
+void test_dark_gift_icon_rule() {
+    const bo2::game::HudScene hud(make_scene());
+    const bo2::game::KainTuning tuning = make_tuning();
+    bo2::game::KainVitals vitals;
+    bo2::game::set_lore_level(vitals, tuning, 0, 0.0f);
+    bo2::game::reset_gifts(vitals, tuning);
+    std::vector<bo2::game::HudItem> items =
+        hud.items(vitals, tuning, bo2::game::HudMode::Kain, false);
+    const bo2::game::HudItem* icon = find_item(items, 10);
+    CHECK(icon != nullptr);
+    if (icon != nullptr) {
+        CHECK(near(icon->position, {-275.2f, 197.1f, -400.0f}));
+        CHECK(near(icon->scale, {1.0f, 1.0f, 1.0f}));
+        CHECK(icon->texture_frame == 5);
+        CHECK(near(icon->colour, {1.0f, 1.0f, 1.0f}));
+        CHECK(near(icon->alpha, 1.0f));
+    }
+    CHECK(find_item(hud.items(vitals, tuning, bo2::game::HudMode::Hidden, false), 10) ==
+          nullptr);
+    CHECK(find_item(hud.items(vitals, tuning, bo2::game::HudMode::Kain, true), 10) == nullptr);
+    // Fury below its cost: its icon, grey.
+    vitals.selected_gift = bo2::game::DarkGift::Fury;
+    vitals.rage = 29.0f;
+    items = hud.items(vitals, tuning, bo2::game::HudMode::Kain, false);
+    icon = find_item(items, 10);
+    CHECK(icon != nullptr && icon->texture_frame == 7 &&
+          near(icon->colour, {0.5f, 0.5f, 0.5f}));
+    vitals.rage = 30.0f;
+    items = hud.items(vitals, tuning, bo2::game::HudMode::Kain, false);
+    icon = find_item(items, 10);
+    CHECK(icon != nullptr && near(icon->colour, {1.0f, 1.0f, 1.0f}));
+    // None: the empty icon, grey.
+    vitals.selected_gift = bo2::game::DarkGift::None;
+    items = hud.items(vitals, tuning, bo2::game::HudMode::Kain, false);
+    icon = find_item(items, 10);
+    CHECK(icon != nullptr && icon->texture_frame == 0 &&
+          near(icon->colour, {0.5f, 0.5f, 0.5f}));
 }
 
 void test_rejects_what_it_cannot_draw() {
@@ -351,8 +429,9 @@ bool test_game_data() {
     const bo2::game::HudScene hud(scene);
     const std::vector<bo2::game::HudItem> items =
         hud.items(vitals, tuning, bo2::game::HudMode::Kain, false);
-    // `_main`, `_glass`, three pieces per bar and the rage bar.
-    CHECK(items.size() == 9);
+    // `_main`, `_glass`, three pieces per bar, the rage bar and the dark
+    // gift icon.
+    CHECK(items.size() == 10);
     std::size_t named = 0;
     for (const bo2::game::HudItem& item : items) {
         const bo2::engine::LevelMarker& marker = scene.markers[item.model];
@@ -371,18 +450,24 @@ bool test_game_data() {
             CHECK(near(item.scale.y, 0.06f));
         } else if (marker.name == "ui_hud_rage_bar") {
             ++named;
-            // No rage and no gift selected: the clip at its start and the
+            // No rage and stealth selected: the clip at its start and the
             // `nonRageGiftBar` colour of the tuning.
             CHECK(near(item.position, {-236.0f, 217.65f, -475.0f}, 1.0e-2f));
             CHECK(near(item.scale, {1.0f, 1.0f, 1.0f}));
             CHECK(near(item.colour, {0.2f, 0.2f, 0.8f}));
             CHECK(near(item.alpha, 0.5f));
+        } else if (marker.name == "ui_hud_darkgift_icon") {
+            ++named;
+            // Stealth selected: its icon and its usable colour.
+            CHECK(near(item.position, {-275.23f, 197.08f, -400.0f}, 1.0e-2f));
+            CHECK(item.texture_frame == 5);
+            CHECK(near(item.colour, {1.0f, 1.0f, 1.0f}));
         } else if (marker.name == "_main") {
             ++named;
             CHECK(near(item.position, {-192.0f, 176.0f, -440.0f}));
         }
     }
-    CHECK(named == 5);
+    CHECK(named == 6);
     return true;
 }
 
@@ -393,6 +478,9 @@ int main() {
     test_health_bar_rule();
     test_lore_bar_rule();
     test_rage_bar_rule();
+    test_gift_icon_texture();
+    test_gift_usable();
+    test_dark_gift_icon_rule();
     test_rejects_what_it_cannot_draw();
     try {
         if (!test_game_data()) {

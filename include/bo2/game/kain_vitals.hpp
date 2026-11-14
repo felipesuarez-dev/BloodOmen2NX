@@ -64,10 +64,21 @@ float top_max_health(const KainTuning& tuning);
 // when the table is empty.
 float top_max_lore(const KainTuning& tuning);
 
-// FUN_00435b60 and the rage line of FUN_00428fe0, the state of the gift
-// object when the player is created: no gift selected, no rage, and
-// `rageParams.maxPoints` as the maximum rage.
+// FUN_00435b60 (no rage), FUN_00428fe0 (the maximum rage) and FUN_00428780
+// (stealth owned and selected): the state of the gift object when the player
+// is created.
 void reset_gifts(KainVitals& vitals, const KainTuning& tuning);
+
+// FUN_00524cd0: the index of the icon texture of `gift` inside the nine of
+// the icon's first material: charm 1, superJump 2, speed 3, telekinesis 4,
+// stealth 5, rupture 6, fury 7, anything else (none included) 0.
+std::int32_t gift_icon_texture(DarkGift gift);
+
+// FUN_00535f10 with FUN_00437540 (stealth) and FUN_00437040 (fury): whether
+// the selected gift can be used. None cannot; stealth always can, because
+// its timer is not ported; fury when its cost is not above the rage. Throws
+// std::invalid_argument for the gifts whose rule is not ported.
+bool gift_usable(const KainVitals& vitals, const KainTuning& tuning);
 
 // FUN_00425f50: the rage the rage bar compares with. The cost of the
 // selected gift when it is fury or speed; the maximum rage otherwise.

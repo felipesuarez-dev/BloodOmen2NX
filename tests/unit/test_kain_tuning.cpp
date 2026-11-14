@@ -283,10 +283,11 @@ void test_gift_state() {
     vitals.rage = 12.0f;
     vitals.selected_gift = bo2::game::DarkGift::Fury;
     bo2::game::reset_gifts(vitals, tuning);
-    CHECK(vitals.selected_gift == bo2::game::DarkGift::None);
+    CHECK(vitals.selected_gift == bo2::game::DarkGift::Stealth);
     CHECK(vitals.rage == 0.0f);
     CHECK(vitals.max_rage == 450.0f);
-    // No gift: the threshold is the maximum and both colours are the bar's.
+    // Stealth (the gift a level starts with): the threshold is the maximum
+    // and both colours are the bar's.
     CHECK(bo2::game::rage_threshold(vitals, tuning) == 450.0f);
     CHECK(bo2::game::rage_bar_colours(vitals, tuning).can_use == tuning.non_rage_gift_bar);
     CHECK(bo2::game::rage_bar_colours(vitals, tuning).cant_use == tuning.non_rage_gift_bar);

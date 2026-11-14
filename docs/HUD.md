@@ -248,11 +248,14 @@ priority 50) against `_main` (z -440, priority 60).
 `HudScene` (`src/game/hud_scene.cpp`) takes the scene, Kain's counters
 (`KainVitals`), the tuning and the mode, and returns the objects to draw with
 their position, scale and colour: `_main`, `_glass`, the three pieces of
-each of the two bars and the rage bar. The port starts the gift object as its
-constructor leaves it, with no gift selected, which is not what the original
-has when a level starts (stealth). The rage bar is the same either way: no
-rage, so its clip is at its start, and `nonRageGiftBar` as its colour, which
-is also the colour of a gift that spends no rage.
+each of the two bars, the rage bar and the dark gift icon. The port starts the
+gift object with stealth owned and selected, as `FUN_00428780` leaves it; the
+icon takes the texture of the selected gift (`FUN_00524cd0`) and is white
+while the gift can be used and grey while it cannot (`FUN_00535f10`; stealth
+has no timer in the port, `FUN_00437540`, so it is always usable). The rage
+bar is the same as before: no rage, so its clip is at its start, and
+`nonRageGiftBar` as its colour, which is also the colour of a gift that
+spends no rage.
 
 `bo2nx --level ... --hud <code.big>` draws them over the level frame
 (`draw_screen_items` in the software renderer): each texel is multiplied by
@@ -281,8 +284,9 @@ Not ported:
 - The draw order by `RenderPriority`: the port orders by z, which gives the
   same sequence for the objects it draws (see "Draw order and blending").
   The blend is the original's.
-- The dark gift icon. Its rule is read (see "Rage and dark gifts"); the
-  port lacks the stealth start state.
+- The dark gift icon: the spin when the selected gift changes, the timer of
+  stealth and the gifts a level owns. The texture of the selected gift and
+  the colour of a gift that cannot be used are ported.
 - What changes the rage (blocks, dodges, the drain of `FUN_004300d0`) and
   the selection and ownership of the gifts.
 - The enemy health bar and the enemy icon (mode 3 only), the pause fade

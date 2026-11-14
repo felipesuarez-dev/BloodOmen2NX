@@ -198,8 +198,8 @@ How to read it:
 
 ## HUD of the `sl01` spawn frame (BO2NX-75)
 
-**Status: the frame, the health vial, the lore vial and the rage bar are in
-place; the dark gift icon is not drawn.**
+**Status: the frame, the health vial, the lore vial, the rage bar and the
+dark gift icon are in place.**
 
 Same reference frame and camera as the spawn gate above
 (`wine_20261029_0110`, `frames_ppm/01_spawn.ppm`, 800x600). `--hud` draws the
@@ -220,7 +220,7 @@ MAE / RMSE of each box, of 255 (2026-11-14):
 
 | Box | Without `--hud` | With `--hud` |
 |---|---|---|
-| `ui` (the HUD box of the spawn gate, x 0..289, y 0..174) | 37.07 / 45.05 | 31.98 / 39.60 |
+| `ui` (the HUD box of the spawn gate, x 0..289, y 0..174) | 37.07 / 45.05 | 30.72 / 37.69 |
 | `vials` (the two vials, x 28..89, y 82..171) | 38.28 / 50.44 | 19.50 / 25.94 |
 | `frame` (the bar of the frame, x 90..275, y 8..39) | 43.29 / 51.28 | 34.85 / 40.71 |
 
@@ -233,13 +233,13 @@ What the numbers hold:
 - The health vial has the oracle's length and fill, and the lore vial is
   empty in both.
 - The boxes keep the error of the world behind the glass (the frame is drawn
-  with `--material off`, whose world error is about 35) and of the dark gift
-  icon inside the orb, which the port does not draw.
+  with `--material off`, whose world error is about 35); the dark gift icon
+  is the oracle's stealth icon in both frames.
 - The rage bar is empty in both frames: the rage is 0. Drawing it (BO2NX-90)
   leaves the three numbers as they are.
-- The capture route loads a saved game, so the icon in the oracle frame is
-  the gift that save names, not the one a level starts with
-  ([`HUD.md`](HUD.md#rage-and-dark-gifts)).
+- The capture route loads a saved game; that save names gift 0 (stealth),
+  which is also the gift a level starts with, so both frames show the stealth
+  icon ([`HUD.md`](HUD.md#rage-and-dark-gifts)).
 
 ### SDL backend against the software renderer (BO2NX-89)
 
@@ -271,7 +271,7 @@ MAE / RMSE of each box, of 255, SDL against software (2026-11-14):
 
 | Box | Without `--hud` | With `--hud` |
 |---|---|---|
-| `ui` | 1.25 / 5.06 | 0.85 / 4.15 |
+| `ui` | 1.25 / 5.06 | 0.86 / 4.15 |
 | `vials` | 0.59 / 0.93 | 0.27 / 0.59 |
 | `frame` | 1.85 / 6.19 | 1.27 / 4.94 |
 

@@ -37,12 +37,15 @@ struct HudItem {
     // for a class that sets none.
     engine::Vec3 colour{1.0f, 1.0f, 1.0f};
     float alpha = 1.0f;
+    // Index inside the texture list of each material of the model
+    // (FUN_005dce40); 0 is the first.
+    std::int32_t texture_frame = 0;
 };
 
 // The rules of the HUD objects whose state the port has. Drawn: the frame
 // and its glass, the health bar with its glass and vial, the lore bar with
-// its glass and bottom, and the rage bar. Not drawn: the dark gift icon (its
-// texture is the selected gift's), the weapon icons (hidden without a weapon,
+// its glass and bottom, the rage bar and the dark gift icon (its texture is
+// the selected gift's). Not drawn: the weapon icons (hidden without a weapon,
 // FUN_0053f1a0), the enemy mode objects (mode 3 only, FUN_00524d40) and the
 // classes whose rule is not ported (screen cut, pause fade, charm haze,
 // awareness glow, the highlights, the blood drip).
@@ -78,6 +81,7 @@ private:
     Bar lore_;
     std::uint32_t rage_bar_ = 0;
     engine::AnimReel rage_clip_;
+    std::uint32_t dark_gift_icon_ = 0;
 };
 
 }  // namespace bo2::game
