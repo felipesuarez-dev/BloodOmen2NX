@@ -800,6 +800,37 @@ std::vector<MaterialLayer> read_material_layers(const common::Reader& reader,
     return layers;
 }
 
+// Word 1 of a `mtlctrl` record with 0x4000 makes the material discard back
+// faces: FUN_00571bf0 sets the flag 0x2000 and FUN_00565b50 turns it into
+// cull mode 2 (clockwise).
+void read_material_cull(const common::Reader& reader, const std::vector<Chunk>& chunks,
+                        std::uint32_t material_base, LevelGeometry& geometry) {
+    const Chunk* controls = find_chunk(chunks, "mtlctrl");
+    if (controls == nullptr || controls->data_size < 4) {
+        return;
+    }
+    const std::uint32_t count = reader.u32(controls->data_offset);
+    if (count > 4096) {
+        throw common::ParseError("material cull count is out of bounds");
+    }
+    if (4 + static_cast<std::size_t>(count) * 12 > controls->data_size) {
+        throw common::ParseError("material cull record is short");
+    }
+    const std::size_t first = static_cast<std::size_t>(material_base);
+    if (geometry.material_cull.size() < first + count) {
+        geometry.material_cull.resize(first + count);
+    }
+    if (geometry.material_cull.size() < geometry.materials.size()) {
+        geometry.material_cull.resize(geometry.materials.size());
+    }
+    for (std::uint32_t index = 0; index < count; ++index) {
+        const std::size_t record =
+            controls->data_offset + 4 + static_cast<std::size_t>(index) * 12;
+        geometry.material_cull[first + index] =
+            (reader.u32(record + 4) & 0x4000U) != 0U ? 1 : 0;
+    }
+}
+
 void parse_prims(const common::Reader& reader, const Chunk& chunk, std::uint32_t vertex_base,
                  std::uint32_t vertex_count, std::uint32_t model, std::uint32_t material_base,
                  const std::vector<std::int32_t>& material_texture, LevelGeometry& geometry) {
@@ -837,6 +868,9 @@ void parse_prims(const common::Reader& reader, const Chunk& chunk, std::uint32_t
                 geometry.materials.resize(static_cast<std::size_t>(global_material) + 1);
                 if (geometry.material_textures.size() < geometry.materials.size()) {
                     geometry.material_textures.resize(geometry.materials.size());
+                }
+                if (geometry.material_cull.size() < geometry.materials.size()) {
+                    geometry.material_cull.resize(geometry.materials.size());
                 }
             }
             geometry.triangles.push_back({vertex_base + a, vertex_base + b, vertex_base + c,
@@ -943,6 +977,7 @@ void parse_model(const common::Reader& reader, const Chunk& rmd, std::uint32_t m
                               material_layers.end());
     const std::vector<std::int32_t> material_texture = read_material_textures(
         reader, find_chunk(chunks, "texture"), symbols, names, material_base, geometry);
+    read_material_cull(reader, chunks, material_base, geometry);
     parse_prims(reader, *prims, base, static_cast<std::uint32_t>(vertices.size()), model,
                 material_base, material_texture, geometry);
     // The skin weights and joint indices live inside the rmd on character

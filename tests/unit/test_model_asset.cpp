@@ -105,6 +105,49 @@ void test_texture_lists_of_the_game_data(const std::filesystem::path& root) {
     CHECK(total == 1112);
 }
 
+void check_hud_cull(const bo2::engine::LevelGeometry& scene, const std::string& name,
+                    std::uint8_t expected) {
+    const bo2::engine::LevelMarker* marker = nullptr;
+    for (const bo2::engine::LevelMarker& candidate : scene.markers) {
+        if (candidate.name == name) {
+            marker = &candidate;
+            break;
+        }
+    }
+    CHECK(marker != nullptr);
+    if (marker == nullptr) {
+        return;
+    }
+    bool found = false;
+    for (const bo2::engine::LevelTriangle& triangle : scene.triangles) {
+        if (triangle.model != static_cast<std::uint32_t>(marker->model)) {
+            continue;
+        }
+        found = true;
+        CHECK(triangle.material < scene.material_cull.size());
+        if (triangle.material < scene.material_cull.size()) {
+            CHECK(scene.material_cull[triangle.material] == expected);
+        }
+    }
+    CHECK(found);
+}
+
+// The six pieces that discard back faces and the pieces that keep both, read
+// from word 1 of the mtlctrl records of ui/hud (0x4c00 and 0x8c00).
+void test_hud_cull_flags(const bo2::engine::LevelGeometry& scene) {
+    for (const char* name :
+         {"ui_hud_darkgift_icon", "ui_hud_enemy_icon", "ui_hud_screen_cut",
+          "ui_hud_letterbox", "ui_hud_anim_charm_haze", "ui_hud_pause_fade"}) {
+        check_hud_cull(scene, name, 1);
+    }
+    for (const char* name :
+         {"_main", "_glass", "ui_hud_health_bar", "ui_hud_lore_bar", "ui_hud_rage_bar",
+          "ui_hud_health_glass", "ui_hud_lore_glass", "ui_hud_health_vial",
+          "ui_hud_lore_bottom"}) {
+        check_hud_cull(scene, name, 0);
+    }
+}
+
 int main() {
     const char* root = std::getenv("BO2NX_ASSETS_DIR");
     if (root == nullptr) {
@@ -178,6 +221,7 @@ int main() {
                 for (const int count : named) {
                     CHECK(count == 1);  // every clip belongs to one object
                 }
+                test_hud_cull_flags(scene);
             }
         }
         test_texture_lists_of_the_game_data(root);

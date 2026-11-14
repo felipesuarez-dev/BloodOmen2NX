@@ -258,6 +258,42 @@ int main() {
                                                    320.0f, 240.0f);
     }));
 
+    // Back-face culling: two triangles of the same colour at different
+    // places, the first counter-clockwise in the HUD space (y up) and the
+    // second clockwise. A material that discards draws only the first.
+    bo2::engine::LevelGeometry culled;
+    culled.positions = {{0.0f, 0.0f, 0.0f},   {10.0f, 0.0f, 0.0f},  {0.0f, 10.0f, 0.0f},
+                        {-10.0f, -10.0f, 0.0f}, {-10.0f, -20.0f, 0.0f}, {-20.0f, -10.0f, 0.0f}};
+    bo2::engine::LevelTriangle front;
+    front.a = 0;
+    front.b = 1;
+    front.c = 2;
+    front.material = 0;
+    front.texture = -1;
+    bo2::engine::LevelTriangle back = front;
+    back.a = 3;
+    back.b = 4;
+    back.c = 5;
+    culled.triangles = {front, back};
+    bo2::engine::ModelRange culled_range;
+    culled_range.vertex_count = 6;
+    culled_range.triangle_count = 2;
+    culled_range.present = true;
+    culled.model_ranges = {culled_range};
+    bo2::platform::headless::ScreenItem culled_item;
+    culled.material_cull = {1};
+    std::vector<std::uint8_t> only_front(64U * 48U * 4U, 0);
+    bo2::platform::headless::draw_screen_items(only_front, 64, 48, culled, {}, {culled_item},
+                                               32.0f, 24.0f);
+    CHECK(only_front[pixel_at(33, 22) + 0] == 255);
+    CHECK(only_front[pixel_at(20, 36) + 0] == 0);
+    culled.material_cull = {0};
+    std::vector<std::uint8_t> both(64U * 48U * 4U, 0);
+    bo2::platform::headless::draw_screen_items(both, 64, 48, culled, {}, {culled_item}, 32.0f,
+                                               24.0f);
+    CHECK(both[pixel_at(33, 22) + 0] == 255);
+    CHECK(both[pixel_at(20, 36) + 0] == 255);
+
     if (failures != 0) {
         std::cerr << failures << " check(s) failed\n";
         return 1;

@@ -252,7 +252,8 @@ void append_cell_bsp(std::vector<std::uint8_t>& out) {
 
 std::vector<std::uint8_t> build_cell_group(
     bool with_instances = false, bool with_collision = false,
-    const std::vector<std::uint8_t>& texture_payload = {}) {
+    const std::vector<std::uint8_t>& texture_payload = {},
+    const std::vector<std::uint8_t>& cull_payload = {}) {
     std::vector<std::uint8_t> positions;
     put32(positions, 4);
     for (const auto& point : std::vector<std::array<float, 3>>{{0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0}}) {
@@ -354,6 +355,9 @@ std::vector<std::uint8_t> build_cell_group(
     append_chunk(record, "uvs", uvs);
     append_chunk(record, "uvs", lightmap_uvs);
     append_chunk(record, "texture", material_texture);
+    if (!cull_payload.empty()) {
+        append_chunk(record, "mtlctrl", cull_payload);
+    }
     append_chunk(record, "mlyrcolr", layer_colors);
     append_chunk(record, "mlyrctrl", layer_controls);
 
@@ -1052,6 +1056,33 @@ void test_material_texture_lists() {
     }));
 }
 
+// Word 1 of a `mtlctrl` record with 0x4000 marks a material that discards
+// back faces (1); a record without the bit keeps both (0).
+void test_material_cull() {
+    std::vector<std::uint8_t> cull;
+    put32(cull, 2);
+    put32(cull, 0);
+    put32(cull, 0x4c00);
+    put32(cull, 1);
+    put32(cull, 0);
+    put32(cull, 0x8c00);
+    put32(cull, 1);
+    const std::vector<std::uint8_t> data = build_cell_group(false, false, {}, cull);
+    const bo2::engine::LevelGeometry geometry = bo2::engine::parse_cell_group(data);
+    CHECK(geometry.material_cull.size() == 2);
+    CHECK(geometry.material_cull[0] == 1);
+    CHECK(geometry.material_cull[1] == 0);
+
+    std::vector<std::uint8_t> short_chunk;
+    put32(short_chunk, 2);
+    put32(short_chunk, 0);
+    put32(short_chunk, 0x4c00);
+    put32(short_chunk, 1);
+    CHECK(throws([&] {
+        bo2::engine::parse_cell_group(build_cell_group(false, false, {}, short_chunk));
+    }));
+}
+
 // The modlskel record is 104 bytes (FUN_0067bdd0), not the old guessed
 // count + pairs + 96 bytes layout.
 void test_skeleton_bones() {
@@ -1110,6 +1141,7 @@ int main() {
     test_math();
     test_cell_group();
     test_material_texture_lists();
+    test_material_cull();
     test_skeleton_bones();
     test_collision_chunk();
     test_cell_animations();

@@ -272,14 +272,17 @@ enters the level with: nothing changes them yet. The two renderers agree
 within 1.3 of 255 (MAE) in the HUD boxes
 ([`ORACLE_COMPARE.md`](ORACLE_COMPARE.md#sdl-backend-against-the-software-renderer-bo2nx-89)).
 
+Both drawings discard the back faces of the materials whose `mtlctrl` record
+asks for it (`FUN_00571bf0`); the other materials draw both sides
+(`FUN_00565b50`).
+
 Not ported:
 
 - The draw order by `RenderPriority`: the port orders by z, which gives the
   same sequence for the objects it draws (see "Draw order and blending").
   The blend is the original's.
 - The dark gift icon. Its rule is read (see "Rage and dark gifts"); the
-  port lacks the stealth start state, the texture list of a material and the
-  culling of back faces.
+  port lacks the stealth start state.
 - What changes the rage (blocks, dodges, the drain of `FUN_004300d0`) and
   the selection and ownership of the gifts.
 - The enemy health bar and the enemy icon (mode 3 only), the pause fade
@@ -290,6 +293,6 @@ Not ported:
 - How a model uses the colour its class sets (the port multiplies the
   texture by it). `FUN_005dce00` hands parameter 8 to an object of the model
   whose class is not read.
-- The depth test between pieces and the culling of back faces.
+- The depth test between pieces.
 - The growth of the shown health and lore toward their targets
   (`FUN_004210b0`).

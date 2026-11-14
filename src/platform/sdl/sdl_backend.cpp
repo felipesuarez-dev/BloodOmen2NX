@@ -360,6 +360,24 @@ void draw_hud(const engine::LevelGeometry& scene, const std::vector<GLuint>& tex
         for (std::uint32_t offset = 0; offset < range.triangle_count; ++offset) {
             const engine::LevelTriangle& triangle =
                 scene.triangles.at(range.first_triangle + offset);
+            const engine::Vec3& a = scene.positions.at(triangle.a);
+            const engine::Vec3& b = scene.positions.at(triangle.b);
+            const engine::Vec3& c = scene.positions.at(triangle.c);
+            const float ax = a.x * item->scale.x + item->position.x;
+            const float ay = a.y * item->scale.y + item->position.y;
+            const float bx = b.x * item->scale.x + item->position.x;
+            const float by = b.y * item->scale.y + item->position.y;
+            const float cx = c.x * item->scale.x + item->position.x;
+            const float cy = c.y * item->scale.y + item->position.y;
+            // A material with the mtlctrl bit discards the triangles whose
+            // vertices run clockwise on screen, with y up (FUN_00565b50).
+            if (triangle.material < scene.material_cull.size() &&
+                scene.material_cull[triangle.material] != 0) {
+                const float winding = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
+                if (winding < 0.0f) {
+                    continue;
+                }
+            }
             // A triangle without a texture is white, as in the software renderer.
             GLuint texture = 0;
             if (triangle.texture >= 0 &&
@@ -373,13 +391,15 @@ void draw_hud(const engine::LevelGeometry& scene, const std::vector<GLuint>& tex
                 glDisable(GL_TEXTURE_2D);
             }
             glBegin(GL_TRIANGLES);
-            for (const std::uint32_t index : {triangle.a, triangle.b, triangle.c}) {
-                const engine::Vec3& vertex = scene.positions.at(index);
+            const float xs[3] = {ax, bx, cx};
+            const float ys[3] = {ay, by, cy};
+            const std::uint32_t indices[3] = {triangle.a, triangle.b, triangle.c};
+            for (int corner = 0; corner < 3; ++corner) {
+                const std::uint32_t index = indices[corner];
                 const engine::Vec2 uv =
                     index < scene.texcoords.size() ? scene.texcoords[index] : engine::Vec2{};
                 glTexCoord2f(uv.x, uv.y);
-                glVertex2f(vertex.x * item->scale.x + item->position.x,
-                           vertex.y * item->scale.y + item->position.y);
+                glVertex2f(xs[corner], ys[corner]);
             }
             glEnd();
         }

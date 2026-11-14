@@ -5995,7 +5995,7 @@ address,name,subsystem,status,notes
 00571170,FUN_00571170,unknown,todo,ghidra
 005711e0,FUN_005711e0,unknown,todo,ghidra
 00571a70,FUN_00571a70,unknown,todo,ghidra
-00571bf0,FUN_00571bf0,unknown,todo,ghidra
+00571bf0,FUN_00571bf0,level,wip,src/engine/cell_group.cpp: read_material_cull reads bit 0x4000 of word 1 of the mtlctrl record into LevelGeometry::material_cull; the other flags of the record are not ported
 00571df0,FUN_00571df0,unknown,todo,ghidra
 00571e00,FUN_00571e00,unknown,todo,ghidra
 00571ff0,FUN_00571ff0,unknown,todo,ghidra

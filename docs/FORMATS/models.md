@@ -411,6 +411,10 @@ blend factor `SRCALPHA` (set by the flush).
 Not read: the alpha test reference and function, and how the colour a class
 sets on its model (`FUN_005dce00`, parameter 8) reaches the vertices.
 
+The host reads the `mtlctrl` records into `LevelGeometry::material_cull` and
+skips the clockwise triangles of a material that asks for culling, in both
+HUD drawings.
+
 ## Cell grid and visibility
 
 The chunks after `cellmdls` are a second chunk stream inside the same

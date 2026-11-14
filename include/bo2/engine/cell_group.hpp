@@ -276,6 +276,10 @@ struct LevelGeometry {
     // indices of texture_names; indexed like LevelTriangle::material. Empty
     // for a material without a texture.
     std::vector<std::vector<std::int32_t>> material_textures;
+    // 1 when the material discards back faces: word 1 of its `mtlctrl`
+    // record has 0x4000 (FUN_00571bf0). Indexed like LevelTriangle::material;
+    // 0 for a material without a record.
+    std::vector<std::uint8_t> material_cull;
     std::vector<CellAttributeTable> level_attributes;
     std::vector<ModelRange> model_ranges;
     std::vector<LevelCollision> collisions;

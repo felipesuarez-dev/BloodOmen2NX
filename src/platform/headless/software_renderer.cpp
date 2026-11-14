@@ -585,6 +585,7 @@ void draw_screen_items(std::vector<std::uint8_t>& rgba, std::uint32_t width, std
     struct Corner {
         float x = 0.0f;
         float y = 0.0f;
+        float y_up = 0.0f;
         float u = 0.0f;
         float v = 0.0f;
     };
@@ -594,7 +595,8 @@ void draw_screen_items(std::vector<std::uint8_t>& rgba, std::uint32_t width, std
             const engine::Vec3& vertex = scene.positions.at(index);
             Corner out;
             out.x = (vertex.x * item->scale.x + item->position.x + half_width) * scale_x;
-            out.y = (half_height - (vertex.y * item->scale.y + item->position.y)) * scale_y;
+            out.y_up = vertex.y * item->scale.y + item->position.y;
+            out.y = (half_height - out.y_up) * scale_y;
             if (index < scene.texcoords.size()) {
                 out.u = scene.texcoords[index].x;
                 out.v = scene.texcoords[index].y;
@@ -606,6 +608,16 @@ void draw_screen_items(std::vector<std::uint8_t>& rgba, std::uint32_t width, std
             const Corner v0 = corner(triangle.a);
             const Corner v1 = corner(triangle.b);
             const Corner v2 = corner(triangle.c);
+            // A material with the mtlctrl bit discards the triangles whose
+            // vertices run clockwise on screen, with y up (FUN_00565b50).
+            if (triangle.material < scene.material_cull.size() &&
+                scene.material_cull[triangle.material] != 0) {
+                const float winding = (v1.x - v0.x) * (v2.y_up - v0.y_up) -
+                                      (v1.y_up - v0.y_up) * (v2.x - v0.x);
+                if (winding < 0.0f) {
+                    continue;
+                }
+            }
             const engine::Image* texture = nullptr;
             if (triangle.texture >= 0 &&
                 static_cast<std::size_t>(triangle.texture) < textures.size() &&
