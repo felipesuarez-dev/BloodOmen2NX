@@ -218,8 +218,13 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   `RenderPriority` (`docs/HUD.md`); its counters do not change yet. The game
   font and the accent codes of the five languages are read
   (`docs/FORMATS/textures.md`, `docs/FORMATS/strtable.md`) and the text
-  commands and the placing of glyphs are documented (`docs/TEXT.md`); no
-  text is drawn yet. Combat has attack cooldown,
+  commands and the placing of glyphs are documented (`docs/TEXT.md`), and
+  so is how the main menu sizes, lays out and colours its five items,
+  checked against the running game; no text is drawn yet. The scripts are
+  read (`docs/SCRIPTS.md`: the compiled packages, the machine and its 97
+  instructions, the binding of the 505 native functions, the classes of
+  every region) and the port's script machine is decided
+  (`docs/ARCHITECTURE.md`); none of it is ported yet. Combat has attack cooldown,
   combo state, entity health/damage and a forward hit-sphere query; the
   faithful original values and animation/weapon effects are still pending.
   The compressed `collmodc` runtime and game-specific entities remain
