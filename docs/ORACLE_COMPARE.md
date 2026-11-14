@@ -196,6 +196,46 @@ How to read it:
   exact palette texture format. Fog is disabled in `sl01`; the static
   lighting now matches the gate within 8.69/255.
 
+## HUD of the `sl01` spawn frame (BO2NX-75)
+
+**Status: the frame, the health vial and the lore vial are in place; the
+dark gift icon and the rage bar are not drawn.**
+
+Same reference frame and camera as the spawn gate above
+(`wine_20261029_0110`, `frames_ppm/01_spawn.ppm`, 800x600). `--hud` draws the
+HUD scene of `code.big` over the level frame with the health and lore Kain
+enters the slums with (30 / 30 hit points, 0 / 6 lore, see
+[`HUD.md`](HUD.md)):
+
+```sh
+bo2nx --level --big external/installed/media/gogames/bo2/resources/levels/slums/sl01.big \
+  --material off --width 800 --height 600 \
+  --eye "-199.751,57.129,304.069" --target "-198.7565,57.129,303.9645" \
+  --hud external/installed/media/gogames/bo2/code.big --out port.ppm
+python3 tools/compare_frames.py port.ppm wine_20261029_0110/frames_ppm/01_spawn.ppm \
+  --out /tmp/gate --region ui:0,0,290,175 --region vials:28,82,62,90 --region frame:90,8,186,32
+```
+
+MAE / RMSE of each box, of 255 (2026-11-14):
+
+| Box | Without `--hud` | With `--hud` |
+|---|---|---|
+| `ui` (the HUD box of the spawn gate, x 0..289, y 0..174) | 37.07 / 45.05 | 31.98 / 39.60 |
+| `vials` (the two vials, x 28..89, y 82..171) | 38.28 / 50.44 | 19.50 / 25.94 |
+| `frame` (the bar of the frame, x 90..275, y 8..39) | 43.29 / 51.28 | 34.85 / 40.71 |
+
+What the numbers hold:
+
+- The port's HUD covers 12,523 pixels (x 7..275, y 8..180). Shifting it
+  against the oracle frame, the error on those pixels is lowest at 1 pixel
+  right and 1 pixel down (22.78 against 23.52 in place): the layout matches
+  the original within a pixel at 800x600.
+- The health vial has the oracle's length and fill, and the lore vial is
+  empty in both.
+- The boxes keep the error of the world behind the glass (the frame is drawn
+  with `--material off`, whose world error is about 35) and of the dark gift
+  icon inside the orb, which the port does not draw.
+
 ## Rules
 
 - A screenshot comparison is a gate, not a demo. Do not show a level until

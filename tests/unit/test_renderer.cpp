@@ -186,6 +186,78 @@ int main() {
         bo2::platform::headless::render_level(vertex_lit, white_texture, light_options);
     CHECK(raw_frame[center + 0] < 30);  // 255 * 0.5 * 32/255 = 16
 
+    // A screen-space scene: one unit quad model (x and y from 0 to 1) drawn
+    // over a 64x48 black frame with a 640x480 screen centred on the origin.
+    bo2::engine::LevelGeometry screen;
+    screen.positions = {{0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 0.0f}, {0.0f, 1.0f, 0.0f}};
+    screen.texcoords = {{0.0f, 0.0f}, {1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f}};
+    bo2::engine::LevelTriangle first;
+    first.a = 0;
+    first.b = 1;
+    first.c = 2;
+    first.texture = 0;
+    bo2::engine::LevelTriangle second = first;
+    second.b = 2;
+    second.c = 3;
+    screen.triangles = {first, second};
+    bo2::engine::ModelRange range;
+    range.vertex_count = 4;
+    range.triangle_count = 2;
+    range.present = true;
+    screen.model_ranges = {range};
+    bo2::engine::Image half;  // an opaque-white half-transparent texel
+    half.width = 1;
+    half.height = 1;
+    half.rgba = {255, 255, 255, 128};
+    const auto pixel_at = [](std::uint32_t x, std::uint32_t y) {
+        return (static_cast<std::size_t>(y) * 64U + x) * 4U;
+    };
+    std::vector<std::uint8_t> overlay(64U * 48U * 4U, 0);
+    bo2::platform::headless::ScreenItem far_item;
+    far_item.position = {-320.0f, 0.0f, -470.0f};  // the top left quarter of the screen
+    far_item.scale = {320.0f, 240.0f, 1.0f};
+    far_item.colour = {1.0f, 0.5f, 0.0f};
+    bo2::platform::headless::draw_screen_items(overlay, 64, 48, screen, {half}, {far_item}, 320.0f,
+                                               240.0f);
+    // Blended by the texture alpha (128 / 255) and tinted: 255 * 0.502 = 128.
+    CHECK(overlay[pixel_at(10, 10) + 0] == 128);
+    CHECK(overlay[pixel_at(10, 10) + 1] == 64);
+    CHECK(overlay[pixel_at(10, 10) + 2] == 0);
+    // y is up: the lower half and the right half stay untouched.
+    CHECK(overlay[pixel_at(10, 30) + 0] == 0);
+    CHECK(overlay[pixel_at(40, 10) + 0] == 0);
+    // Two items on the same pixels: the nearer one (less negative z) is
+    // drawn last whatever the order of the list.
+    bo2::platform::headless::ScreenItem near_item = far_item;
+    near_item.position.z = -360.0f;
+    near_item.colour = {0.0f, 0.0f, 1.0f};
+    std::vector<std::uint8_t> ordered(64U * 48U * 4U, 0);
+    bo2::platform::headless::draw_screen_items(ordered, 64, 48, screen, {half},
+                                               {near_item, far_item}, 320.0f, 240.0f);
+    // far: (128, 64, 0); near over it: far * (1 - 0.502) + (0, 0, 255) * 0.502.
+    CHECK(ordered[pixel_at(10, 10) + 0] == 64);
+    CHECK(ordered[pixel_at(10, 10) + 2] == 128);
+    // The item's own alpha scales the texture's.
+    bo2::platform::headless::ScreenItem faint = far_item;
+    faint.alpha = 0.5f;
+    faint.colour = {1.0f, 1.0f, 1.0f};
+    std::vector<std::uint8_t> faded(64U * 48U * 4U, 0);
+    bo2::platform::headless::draw_screen_items(faded, 64, 48, screen, {half}, {faint}, 320.0f,
+                                               240.0f);
+    CHECK(faded[pixel_at(10, 10) + 0] == 64);
+    CHECK(throws([&] {
+        bo2::platform::headless::ScreenItem missing;
+        missing.model = 3;
+        std::vector<std::uint8_t> pixels(64U * 48U * 4U, 0);
+        bo2::platform::headless::draw_screen_items(pixels, 64, 48, screen, {half}, {missing},
+                                                   320.0f, 240.0f);
+    }));
+    CHECK(throws([&] {
+        std::vector<std::uint8_t> pixels(16, 0);
+        bo2::platform::headless::draw_screen_items(pixels, 64, 48, screen, {half}, {far_item},
+                                                   320.0f, 240.0f);
+    }));
+
     if (failures != 0) {
         std::cerr << failures << " check(s) failed\n";
         return 1;

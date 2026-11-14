@@ -560,6 +560,102 @@ std::vector<std::uint8_t> render_level(const engine::LevelGeometry& geometry,
     return render_level(geometry, std::vector<engine::Image>{}, options);
 }
 
+void draw_screen_items(std::vector<std::uint8_t>& rgba, std::uint32_t width, std::uint32_t height,
+                       const engine::LevelGeometry& scene,
+                       const std::vector<engine::Image>& textures,
+                       const std::vector<ScreenItem>& items, float half_width, float half_height) {
+    if (rgba.size() != static_cast<std::size_t>(width) * height * 4) {
+        throw std::invalid_argument("the frame does not match its size");
+    }
+    if (!(half_width > 0.0f) || !(half_height > 0.0f)) {
+        throw std::invalid_argument("the screen size must be positive");
+    }
+    std::vector<const ScreenItem*> order;
+    for (const ScreenItem& item : items) {
+        if (item.model >= scene.model_ranges.size()) {
+            throw std::invalid_argument("a screen item names a model the scene does not have");
+        }
+        order.push_back(&item);
+    }
+    std::stable_sort(order.begin(), order.end(), [](const ScreenItem* a, const ScreenItem* b) {
+        return a->position.z < b->position.z;
+    });
+    const float scale_x = static_cast<float>(width) / (2.0f * half_width);
+    const float scale_y = static_cast<float>(height) / (2.0f * half_height);
+    struct Corner {
+        float x = 0.0f;
+        float y = 0.0f;
+        float u = 0.0f;
+        float v = 0.0f;
+    };
+    for (const ScreenItem* item : order) {
+        const engine::ModelRange& range = scene.model_ranges[item->model];
+        const auto corner = [&](std::uint32_t index) {
+            const engine::Vec3& vertex = scene.positions.at(index);
+            Corner out;
+            out.x = (vertex.x * item->scale.x + item->position.x + half_width) * scale_x;
+            out.y = (half_height - (vertex.y * item->scale.y + item->position.y)) * scale_y;
+            if (index < scene.texcoords.size()) {
+                out.u = scene.texcoords[index].x;
+                out.v = scene.texcoords[index].y;
+            }
+            return out;
+        };
+        for (std::uint32_t offset = 0; offset < range.triangle_count; ++offset) {
+            const engine::LevelTriangle& triangle = scene.triangles.at(range.first_triangle + offset);
+            const Corner v0 = corner(triangle.a);
+            const Corner v1 = corner(triangle.b);
+            const Corner v2 = corner(triangle.c);
+            const engine::Image* texture = nullptr;
+            if (triangle.texture >= 0 &&
+                static_cast<std::size_t>(triangle.texture) < textures.size() &&
+                textures[static_cast<std::size_t>(triangle.texture)].width != 0) {
+                texture = &textures[static_cast<std::size_t>(triangle.texture)];
+            }
+            const float area = edge(v0.x, v0.y, v1.x, v1.y, v2.x, v2.y);
+            if (std::fabs(area) < 1.0e-6f) {
+                continue;
+            }
+            const int min_x = std::max(0, static_cast<int>(std::floor(std::min({v0.x, v1.x, v2.x}))));
+            const int max_x = std::min(static_cast<int>(width) - 1,
+                                       static_cast<int>(std::ceil(std::max({v0.x, v1.x, v2.x}))));
+            const int min_y = std::max(0, static_cast<int>(std::floor(std::min({v0.y, v1.y, v2.y}))));
+            const int max_y = std::min(static_cast<int>(height) - 1,
+                                       static_cast<int>(std::ceil(std::max({v0.y, v1.y, v2.y}))));
+            for (int y = min_y; y <= max_y; ++y) {
+                for (int x = min_x; x <= max_x; ++x) {
+                    const float px = static_cast<float>(x) + 0.5f;
+                    const float py = static_cast<float>(y) + 0.5f;
+                    const float w0 = edge(v1.x, v1.y, v2.x, v2.y, px, py) / area;
+                    const float w1 = edge(v2.x, v2.y, v0.x, v0.y, px, py) / area;
+                    const float w2 = edge(v0.x, v0.y, v1.x, v1.y, px, py) / area;
+                    if (w0 < 0.0f || w1 < 0.0f || w2 < 0.0f) {
+                        continue;
+                    }
+                    Texel texel{255, 255, 255, 255};
+                    if (texture != nullptr) {
+                        texel = sample_bilinear(*texture, w0 * v0.u + w1 * v1.u + w2 * v2.u,
+                                                w0 * v0.v + w1 * v1.v + w2 * v2.v);
+                    }
+                    const float alpha =
+                        std::clamp(static_cast<float>(texel.a) / 255.0f * item->alpha, 0.0f, 1.0f);
+                    const std::size_t out =
+                        (static_cast<std::size_t>(y) * width + static_cast<std::size_t>(x)) * 4;
+                    const float source[3] = {static_cast<float>(texel.r) * item->colour.x,
+                                             static_cast<float>(texel.g) * item->colour.y,
+                                             static_cast<float>(texel.b) * item->colour.z};
+                    for (std::size_t channel = 0; channel < 3; ++channel) {
+                        const float destination = static_cast<float>(rgba[out + channel]);
+                        const float blended = source[channel] * alpha + destination * (1.0f - alpha);
+                        rgba[out + channel] =
+                            static_cast<std::uint8_t>(std::clamp(blended + 0.5f, 0.0f, 255.0f));
+                    }
+                }
+            }
+        }
+    }
+}
+
 void write_ppm(const std::string& path, std::uint32_t width, std::uint32_t height,
                const std::vector<std::uint8_t>& rgba) {
     if (rgba.size() < static_cast<std::size_t>(width) * height * 4) {

@@ -1,9 +1,10 @@
 # HUD
 
 Status: **partially ported**. The projection, the visibility rule and the
-health and lore bars are decompiled and ported (`src/game/hud_scene.cpp`).
-The port does not draw the scene yet. Every rule below names the function it
-was read from; the dumps are local (`re/decomp/hud/`).
+health and lore bars are decompiled and ported (`src/game/hud_scene.cpp`),
+and the software renderer draws them over a level frame (`--hud`). Every
+rule below names the function it was read from; the dumps are local
+(`re/decomp/hud/`).
 
 The scene data (the `ui/hud` region and cell group of `code.big`, its
 markers and its clips) is described in
@@ -103,15 +104,25 @@ dims it when the gift cannot be used.
 their position, scale and colour: `_main`, `_glass` and the three pieces of
 each of the two bars.
 
+`bo2nx --level ... --hud <code.big>` draws them over the level frame
+(`draw_screen_items` in the software renderer): each texel is multiplied by
+the object's colour and blended by its alpha, and the objects are drawn from
+the farthest z to the nearest. Kain's counters are the ones he enters the
+level with: the port passes the folder of the level archive (`slums`) as the
+level name of `FUN_004256c0`. The result against the original is in
+[`ORACLE_COMPARE.md`](ORACLE_COMPARE.md#hud-of-the-sl01-spawn-frame-bo2nx-75).
+
 Not ported:
 
-- Drawing the scene (the software renderer and the SDL backend).
+- The HUD in the SDL backend: `--play` still draws its two placeholder bars.
+- The blend mode and the draw order of the original (the two above are the
+  port's).
 - The rage bar and the dark gift icon: the port has no rage and no dark gift
   selection.
 - The objects whose visibility is not read (screen cut, letterbox, pause
   fade, charm haze, highlights, enemy bar and icon), the blood drip of the
   health vial (`FUN_00532f30`) and the awareness glow.
-- How a model uses the colour its class sets, and the order the scene's
-  objects are drawn in.
+- How a model uses the colour its class sets (the port multiplies the
+  texture by it).
 - The growth of the shown health and lore toward their targets
   (`FUN_004210b0`).

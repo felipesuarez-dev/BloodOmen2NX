@@ -5882,7 +5882,7 @@ address,name,subsystem,status,notes
 00566b10,FUN_00566b10,unknown,todo,ghidra
 00566cf0,FUN_00566cf0,unknown,todo,ghidra
 00566f90,FUN_00566f90,unknown,todo,ghidra
-00567090,FUN_00567090,unknown,todo,ghidra
+00567090,FUN_00567090,level,wip,include/bo2/game/hud_scene.hpp: the orthographic frustum of a camera with field of view 0 (kHudHalfWidth and kHudHalfHeight) used by draw_screen_items; the perspective branch and the matrices are not ported
 00567b60,FUN_00567b60,unknown,todo,ghidra
 00567d20,FUN_00567d20,unknown,todo,ghidra
 00567dd0,FUN_00567dd0,unknown,todo,ghidra
@@ -15096,7 +15096,7 @@ address,name,subsystem,status,notes
 00752e90,FUN_00752e90,unknown,todo,ghidra
 00752eb0,FUN_00752eb0,unknown,todo,ghidra
 00752f30,FUN_00752f30,unknown,todo,ghidra
-00752fd0,FUN_00752fd0,unknown,todo,ghidra
+00752fd0,FUN_00752fd0,level,wip,include/bo2/game/hud_scene.hpp: the UI camera of the view (field of view 0 and far plane 1000); the world camera and the viewports are not ported
 007534a0,FUN_007534a0,unknown,todo,ghidra
 007534d0,FUN_007534d0,unknown,todo,ghidra
 007534f0,FUN_007534f0,unknown,todo,ghidra

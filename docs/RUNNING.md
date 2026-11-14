@@ -45,6 +45,11 @@ LEVELS=external/installed/media/gogames/bo2/resources/levels
   --out /tmp/kain_run.ppm
 ```
 
+`--hud <code.big>` draws the HUD scene (`ui/hud`) over the `--level` frame:
+the frame, the health vial and the lore vial, with the health and lore Kain
+enters the level with ([`HUD.md`](HUD.md)). It reads the Kain tuning from
+`--kain` or `<level dir>/../kain/kain.big`.
+
 `--replay` and `--play` take `--kain-model` too. The replay end frame
 (`--out`) draws Kain at the replayed position and yaw; the player skins him
 every frame and sends his slice of the vertex buffer again

@@ -43,6 +43,27 @@ std::vector<std::uint8_t> render_level(const engine::LevelGeometry& geometry,
 std::vector<std::uint8_t> render_level(const engine::LevelGeometry& geometry,
                                        const std::vector<engine::Image>& textures,
                                        const FrameOptions& options);
+// One object of a screen-space scene: the vertices of `model` scaled per
+// axis and then moved to `position`.
+struct ScreenItem {
+    std::uint32_t model = 0;
+    engine::Vec3 position;
+    engine::Vec3 scale{1.0f, 1.0f, 1.0f};
+    engine::Vec3 colour{1.0f, 1.0f, 1.0f};
+    float alpha = 1.0f;
+};
+
+// Draws `items` of `scene` over the frame `rgba`. The screen is orthographic,
+// `2 * half_width` by `2 * half_height` units, centred on the origin with y
+// up (the frustum the original builds for a UI scene, docs/HUD.md). Each
+// texel is multiplied by the item's colour and blended by its alpha. The
+// items are drawn from the most negative z to the least; the original's draw
+// order and blend mode for a UI scene are not decompiled.
+void draw_screen_items(std::vector<std::uint8_t>& rgba, std::uint32_t width, std::uint32_t height,
+                       const engine::LevelGeometry& scene,
+                       const std::vector<engine::Image>& textures,
+                       const std::vector<ScreenItem>& items, float half_width, float half_height);
+
 void write_ppm(const std::string& path, std::uint32_t width, std::uint32_t height,
                const std::vector<std::uint8_t>& rgba);
 
