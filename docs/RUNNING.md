@@ -275,3 +275,22 @@ BO2NX_ASSETS_DIR=/path/to/game ctest --preset linux-debug
 ```
 
 Tests that need assets skip cleanly when the variable is unset.
+
+## Release package
+
+GitHub Actions is disabled (the account has a billing lock), so a release is
+built and packed on this host:
+
+```sh
+BO2NX_ASSETS_DIR="$PWD/external/installed" ./scripts/release.sh v0.1.0
+```
+
+The script runs `scripts/ci.sh`, configures and builds the `linux-release`
+preset, and writes `build/release/bo2nx-<tag>-linux-x86_64.tar.gz` with
+`bo2nx` and the two READMEs. It prints the path and the SHA-256 and stops if a
+name of the package matches the asset pattern of
+`scripts/check_no_assets.sh`.
+
+Publishing is the user's call: only `--publish` runs
+`gh release create <tag> <package>`. The script never creates a tag and never
+pushes. Without a tag it prints the usage and exits with an error.
