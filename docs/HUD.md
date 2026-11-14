@@ -155,6 +155,47 @@ Which gift is selected when a level starts (`FUN_0042af90`):
   gift without testing for none, so something selects one before the HUD is
   first drawn. What does it is not found.
 
+## Draw order and blending
+
+The HUD is drawn by the same queue as the world
+([`FORMATS/models.md`](FORMATS/models.md#render-state-and-draw-order)). Every
+model of the scene has a `RenderPriority` above 0 in its `mdlattr`, so
+(`FUN_0056d130`, `FUN_0056ce80`, `FUN_005611c0`):
+
+- every piece is in the sorted pass, alpha blended (`SRCALPHA`,
+  `INVSRCALPHA`), whatever the format of its texture;
+- the pieces are drawn in rising order of priority, not by their z. Pieces
+  with the same priority keep the order of the scene's object list.
+
+| Priority | Objects |
+|---|---|
+| 8 | screen cut |
+| 9 | letterbox |
+| 15 | pause fade |
+| 20 | charm haze |
+| 30 | health, lore and rage bars, enemy health bar, blood drop |
+| 40 | the glass of the health, lore and enemy vials |
+| 50 | the bottom of the three vials, blood drip |
+| 60 | `_main`, `_main_enemy` |
+| 70 | dark gift icon, enemy icon, the weapon icons |
+| 80 | `_glass`, `_enemy_glass` |
+| 90 | intent glow |
+| 100 | the four highlights |
+
+A piece writes depth unless its texture is DXT5 (`FUN_0056f320`): the glass
+pieces, the charm haze, the intent glow and the highlights do not. The frame,
+the icons and the vial bottoms are DXT3; the bars are DXT1. The icons, the
+screen cut, the letterbox, the charm haze and the pause fade cull their back
+faces (`mtlctrl`); the other pieces do not.
+
+For the ten objects the port draws, rising priority and far-to-near z are the
+same sequence: rage bar (z -475), health and lore bars (-470), vial glasses
+(-460), vial bottoms (-450), `_main` (-440), dark gift icon (-400), `_glass`
+(-360). They differ for objects the port does not draw yet: the intent glow
+(z -430, priority 90, so over `_glass`), the pause fade (z -490, priority 15)
+against the letterbox (z -484.1, priority 9), and the blood drip (z -440,
+priority 50) against `_main` (z -440, priority 60).
+
 ## Port
 
 `HudScene` (`src/game/hud_scene.cpp`) takes the scene, Kain's counters
@@ -184,8 +225,9 @@ within 1.3 of 255 (MAE) in the HUD boxes
 
 Not ported:
 
-- The blend mode and the draw order of the original (the two above are the
-  port's).
+- The draw order by `RenderPriority`: the port orders by z, which gives the
+  same sequence for the objects it draws (see "Draw order and blending").
+  The blend is the original's.
 - The dark gift icon: its texture is the selected gift's, and the port does
   not know which gift a level starts with (see "Rage and dark gifts"). The
   oracle captures load a saved game, so the icon in their frames is the gift
@@ -197,6 +239,8 @@ Not ported:
   the highlights (not read to the end), the blood drip of the health vial
   (`FUN_00532f30`) and the awareness glow.
 - How a model uses the colour its class sets (the port multiplies the
-  texture by it).
+  texture by it). `FUN_005dce00` hands parameter 8 to an object of the model
+  whose class is not read.
+- The depth test between pieces and the culling of back faces.
 - The growth of the shown health and lore toward their targets
   (`FUN_004210b0`).

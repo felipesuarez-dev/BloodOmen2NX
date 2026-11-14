@@ -63,9 +63,9 @@ u32   2
 | `uvs` | `u32 set`, `u32 count` + `count` × 2 floats | One chunk per UV set |
 | `mlyrcolr` | `u32 start`, `u32 count` + `count` × 48 bytes | Three RGBA colors; see Material layers |
 | `mlyrctrl` | `u32 start`, `u32 count` + `count` × 12 bytes | Three controls; see Material layers |
-| `mtlctrl` | `u32 count` + `count` × 12 bytes | Three `u32` values; semantics open |
+| `mtlctrl` | `u32 count` + `count` × 12 bytes | Three `u32` values; two bits of the second are read, see Render state and draw order |
 | `texture` | `u32 start`, `u32 count` + per-material records | Texture symbol per material; bound by the host |
-| `mdlattr` | Named attribute table | Model metadata |
+| `mdlattr` | Named attribute table | Model metadata; see `mdlattr` |
 | `vtxweigh` | `u32 count` + `count` floats | Per vertex, the weight of its second bone (0 to 0.5 in Kain); see Skeleton pose and skinning |
 | `jointidx` | `u32 count` + `count` u16 | Per vertex, the position of its second bone in the bone array |
 | `skeleton` / `modlskel` | `u32 count` + `count` × 104-byte bone records | Decoded; see Skeleton pose and skinning |
@@ -268,9 +268,111 @@ loader also matches models to light-map groups by vertex count and model
 order (62 model light maps, 2,769 triangles in sanctuary). The layers take
 no part in that combination (see above).
 
-The observed `mtlctrl` record is `{0, 0x004c0000, 0x00000100}` per
-material. The observed `mlyrctrl` record is `{0x000a0000|1|6, 1.0, 0, 0}`;
-the high word and the two `u16` fields are not interpreted.
+The observed `mtlctrl` record is `{0, 0x4c00, 1}`: 1,082 of the 1,084
+materials of `sl01`; the other two and most HUD pieces have `{0, 0x8c00, 1}`.
+(An earlier version of this page gave `{0, 0x004c0000, 0x00000100}`: the
+same record read three bytes late.) The observed first word of a `mlyrctrl`
+record is `0x000a0000` plus 0, 1 or 6 in its low bits, sometimes with
+`0x08000000`; the two `u16` fields are not interpreted. The bits the renderer
+reads are in the next two sections.
+
+### `mdlattr`
+
+The attributes of a model: what kind of object it is and how it is drawn.
+The layout below is read from the data (the 42 models of the `ui/hud` cell
+group), not from the loader:
+
+```
+char[8] table name ("default")
+u32     size of the table, this header included
+u32     1
+u32     2
+record[(size - 20) / 8]:
+  u8   type: 0 float, 3 bool, 7 symbol
+  u8   0
+  u16  key (symbol: the name of the attribute)
+  4-byte value: f32; or u8 and three 0xff; or u16 symbol and 0xffff
+```
+
+The two header words and attributes with more than one value are not read.
+In memory a record is `u16 key`, `u8 type`, `u8 count` and the value
+(`FUN_006c05c0` finds a record by key; `FUN_006c2250` returns the floats of
+a type 0 record and `FUN_006c2190` the bytes of a type 3 record;
+`FUN_006c2170` the count). The readers are `FUN_006a81a0` (float),
+`FUN_006a80a0` (bool) and `FUN_006a8620` (true when the bool is present and
+set).
+
+The attribute names are symbols the executable builds at start (the
+`0x5d0b00`..`0x5d1310` initialisers): `ClipEnable`, `ClipFar`, `ClipNear`,
+`DFacade`, `FogColor`, `FogEnable`, `FogFar`, `FogNear`, `Lightmaps`,
+`NoCollide`, `NoDraw`, `NoFog`, `NoLighting`, `ObjectType`,
+`RenderPriority`, `RenderType`, `SkySphere`, `SortBias`, `SpriteFacade`,
+`VertexAlpha`, `Water`, `ZFacade` and others. The HUD models carry
+`ObjectType`, `EntityClass`, `UseMaxMesh`, `NoCollisionModel` and
+`RenderPriority`.
+
+### Render state and draw order
+
+How the renderer turns a model into draw calls. Every rule names the
+function it was read from.
+
+A model becomes a mesh object (`FUN_0056d130`) with one material record per
+material (`FUN_005711e0`, `FUN_00571a70`, `FUN_00571bf0`). The state of a
+material is a word of flags:
+
+| Flag | Set when | Effect (`FUN_00565b50`) |
+|---|---|---|
+| bits 0..10 | always: the slot of the material's texture | texture of stage 0 |
+| `0x800` | the texture blends, or the model has `VertexAlpha` | alpha blending on, destination factor `INVSRCALPHA` |
+| `0x1000` | not by this path | alpha blending on, destination factor `ONE`, fog colour 0 |
+| `0x2000` | `mtlctrl` word 1 has `0x4000` | back faces culled; without it, none |
+| `0x4000` | `(mlyrctrl word 0 & 0xc00000) != 0x400000` | texture addressing wraps; without it, clamps |
+| `0x8000` | not by this path | alpha test off |
+| `0x10000` | the texture does not write depth, or `mtlctrl` word 1 has `0x10000` | depth write off |
+| `0x80000` | the model has `NoFog` or `SkySphere` | fog off |
+
+A texture blends and writes depth by its DDS format (`FUN_0056f320`):
+
+| Format | Blends | Writes depth |
+|---|---|---|
+| DXT1, DXT2, DXT4, RGB without alpha | no | yes |
+| DXT3 | yes | yes |
+| DXT5, RGB with alpha | yes | no |
+
+The material also keeps three colours and one alpha (`FUN_00571a70`): the
+alpha is the smallest of the three layer alphas of `mlyrcolr`. With bit 26
+of `mlyrctrl` word 0 clear, which is every material of `sl01` and of the
+HUD, the first and the third colour are 1 and the second is the third
+layer's colour, or 1 when the low six bits of the word are 6.
+
+When a mesh is queued (`FUN_0056ce80`) each of its batches gets `0x800` as
+well when the model has a `RenderPriority` other than 0 or the material
+alpha is below 1. A batch with `0x800` or `0x1000` goes to the sorted pass
+with a sort value k (`FUN_0056d130`, `FUN_0056ce80`):
+
+| `RenderPriority` p | k |
+|---|---|
+| 0 (the default) | the depth of the instance origin along the view direction, plus `SortBias` |
+| below 0 | `100000 + p` |
+| above 0 | `-100000 - p` |
+| any, with `SkySphere` | the above `+ 100000` |
+
+The frame is drawn in this order (`FUN_005611c0`):
+
+1. The batches without `0x800` or `0x1000`, grouped by state.
+2. The sorted pass, triangle by triangle, from the largest k to the smallest
+   (`FUN_00562e60` stores `k * -8.38848` as a 24-bit key and the flush sorts
+   it upward). So: negative priorities and the sky, then the rest from far
+   to near, then the positive priorities in rising order. Equal keys keep
+   the order in which they were queued.
+
+Objects are queued cell by cell, in the order of each cell's object list
+(`FUN_007f6340`, `FUN_005fbea0`), and the cell's own geometry after its
+objects (`FUN_00605be0`). The depth test is `LESSEQUAL` and the source
+blend factor `SRCALPHA` (set by the flush).
+
+Not read: the alpha test reference and function, and how the colour a class
+sets on its model (`FUN_005dce00`, parameter 8) reaches the vertices.
 
 ## Cell grid and visibility
 
@@ -836,7 +938,10 @@ interior, while the default isometric frame shows the level.
 ## Open questions
 
 - Per-cell/object light-map selection (the group name to model binding),
-  fog, the per-level ambient values and the `mtlctrl` values.
+  fog, the per-level ambient values and the `mtlctrl` bits other than
+  `0x4000` and `0x10000` of the second word.
+- The `mdlattr` header words, attributes with several values, the alpha test
+  reference and how a model's colour parameter reaches its vertices.
 - The 40/42-byte `prims` extra record.
 - `cells` flags, `cellattr`/`attrs` value semantics, the `portal2`
   plane/index and the BSP traversal.
