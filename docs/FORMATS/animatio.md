@@ -372,8 +372,9 @@ speed 1.7 (`BO2NX_ASSETS_DIR` set; skipped otherwise).
   advance (FUN_005e1f80) during a blend and the cross blend entity (vtable
   0x86eaa4).
 - `st_startjump` plays a 0.0333 s sequence, but the oracle holds the state
-  for 3 to 5 samples from a standstill and 8 to 12 from a run: the takeoff
-  delay is in the jump state of the game, not in the graph.
+  for 3 to 5 samples on a tap and about 10 on a held jump: the jump state of
+  the game decides when to leave it (FUN_00443a50, see
+  [`../GAMEPLAY.md`](../GAMEPLAY.md#animation-state)), not the graph.
 - Shift+W (200 u/s, unverified). FUN_00445ba0 gives 230 at full stick; the
   value 200 needs a smaller stick magnitude `s` and the cross blend weights.
   Where the input layer sets `s` for Shift is not decoded.

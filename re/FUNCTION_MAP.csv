@@ -1195,7 +1195,7 @@ address,name,subsystem,status,notes
 00443620,FUN_00443620,unknown,todo,ghidra
 00443650,FUN_00443650,unknown,todo,ghidra
 004436e0,FUN_004436e0,player,wip,src/game/player.cpp: install_air_kind launch per direction; src/game/kain_animation.cpp starts st_startjump with the 0.2 s timer; the run flag the 0.25 stick scale and the platform velocity are not ported
-00443a50,FUN_00443a50,player,wip,src/game/player.cpp: hold boost window and the release rule only; timers states and animation are not ported
+00443a50,FUN_00443a50,player,wip,src/game/player.cpp: hold boost window and the release rule; src/game/kain_animation.cpp leaves st_startjump by the 0.2 s timer or the vertical velocity or the end of the boost; the 0x45c mode and the 0x5c flag and the state changes are not ported
 00443c60,FUN_00443c60,unknown,todo,ghidra
 00443d20,FUN_00443d20,unknown,todo,ghidra
 00443d50,FUN_00443d50,unknown,todo,ghidra

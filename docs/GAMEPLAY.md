@@ -226,7 +226,7 @@ Every movement state of Kain stores the index of an `animatio` graph state at
 | 0 | `st_ready` | the ready state (stored at 0x445e8f) |
 | 1 | `st_run` | the run state enter, FUN_004458e0 |
 | 59 | `st_back` | the walk-back state (stored at 0x446240) |
-| 76 | `st_startjump` | the jump state enter, FUN_004436e0, which also sets a 0.2 s timer |
+| 76 | `st_startjump` | the jump state enter (FUN_004436e0; FUN_00443d60 for the back and side jumps), which also sets a 0.2 s timer |
 | 78 | `st_fallingup` | the falling state while the vertical velocity is not negative (FUN_00442800, FUN_00442ae0) |
 | 79 | `st_fallingdn` | the falling state once it is negative |
 | 86 | `st_normal_landing` | the landing state |
@@ -241,24 +241,31 @@ samples of 20 ms in the captures); turning in place keeps `st_ready`.
 The run state writes the run clip rate every frame (FUN_00445ba0), so
 `cl_run` plays at 1.15 instead of its node speed 1.5.
 
+The jump state leaves `st_startjump` from its update (FUN_00443a50), which
+hands over to the falling state when the 0.2 s timer has run out, when the
+vertical velocity is no longer positive, or when the hold boost is over: its
+start time has passed and the jump button is up, or its end time has passed
+too. A tap therefore leaves at the boost start and a held jump at the timer,
+which is what the captures show (3 to 5 samples for a tap, about 10 held).
+
 Gate: `bo2nx --replay` writes the port's index as the `anim` column and
 `tools/oracle/compare_state.py` counts the rows where it equals the oracle's.
 
 | Capture | Rows that match | Where it differs |
 |---|---:|---|
-| `wine_probe_20261111` | 2,993 / 3,109 (96.3%) | `run` 31/139: Shift is combat mode, which the port does not model; `jump` 154/161 |
-| `wine_camera_1` | 3,602 / 3,611 (99.8%) | `jump` 146/155 |
-| `wine_air_1`, first five jump phases | 820 / 981 (83.6%) | the takeoff and the landing choice; from `air_w` on the port's position has left the route, so the later phases say nothing about the animation |
+| `wine_probe_20261111` | 2,998 / 3,109 (96.4%) | `run` 31/139: Shift is combat mode, which the port does not model; `jump` 159/161 |
+| `wine_camera_1` | 3,609 / 3,611 (99.9%) | `jump` 153/155 |
+| `wine_air_1`, first five jump phases | 832 / 981 (84.8%) | the landing choice and the jump physics (the port's position leaves the route in these phases); from `air_w` on it is far off, so the later phases say nothing about the animation |
 
 W is 137/137, S 50/51 and A/D 51/51 in `wine_probe_20261111`.
 
 Open:
 
-- The length of `st_startjump`. The oracle holds it for 3 to 5 samples from a
-  standstill and 8 to 12 from a run; the port holds it for the 0.2 s timer in
-  both cases.
 - Combat mode, the attacks and the state the landing state picks, which is
   read from the captures here.
+- In FUN_00443a50 the timer does not end the state while `KainState+0x45c`
+  is 2, and the boost exit waits for a flag (`+0x5c` of the state) that the
+  movement step clears; the port has neither.
 - What is drawn: `KainActor` (`src/game/kain_actor.cpp`) skins the model with
   the reel of the layer 0 clip at the machine's reel time, and while a clip
   blends in it goes from the pose drawn last to the clip's first frame

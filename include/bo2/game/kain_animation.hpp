@@ -26,16 +26,19 @@ constexpr std::int32_t kRunLanding = 87;     // st_run_landing
 // Chooses the animation state from the player and runs the state machine
 // (docs/GAMEPLAY.md, "Animation state"). Read from the original:
 //   - on the ground forward starts st_run, back st_back and nothing st_ready;
-//   - the jump state starts st_startjump with a 0.2 s timer (FUN_004436e0);
-//   - in the air the state is st_fallingup while the vertical velocity is not
-//     negative and st_fallingdn after that (FUN_00442800, FUN_00442ae0);
+//   - the jump state starts st_startjump (FUN_004436e0, FUN_00443d60) and its
+//     update (FUN_00443a50) leaves it when its 0.2 s timer runs out, when the
+//     vertical velocity is no longer positive, or when the hold boost is over:
+//     the boost start has passed and the button is up or the boost end has
+//     passed too;
+//   - in the air the state is then st_fallingup while the vertical velocity is
+//     not negative and st_fallingdn after that (FUN_00442800, FUN_00442ae0);
 //   - the run state writes the run clip rate every frame (FUN_00445ba0).
 // Read from the oracle, not from the code: a landing is st_run_landing when
 // forward is held and st_normal_landing otherwise, and it lasts until its
 // sequence ends.
 // Not modelled: combat mode (Shift gives st_ready_cm and st_walk_cm in the
-// oracle), the turns (they keep st_ready), attacks, and the shorter
-// st_startjump of a standing jump.
+// oracle), the turns (they keep st_ready) and attacks.
 class KainAnimation {
 public:
     // `graph` is Kain's `animatio` graph and must outlive this object.
@@ -56,7 +59,14 @@ private:
     std::int32_t state_ = -1;
     bool was_grounded_ = true;
     bool landing_ = false;
-    float takeoff_left_ = 0.0f;  // the FUN_004436e0 timer
+    float takeoff_left_ = 0.0f;  // the 0.2 s timer of the jump state
+    // The hold boost window of the jump model (FUN_00451d00), in seconds after
+    // takeoff; unset when the tuning carries no jump.
+    bool has_boost_ = false;
+    float boost_start_ = 0.0f;
+    float boost_end_ = 0.0f;
+    float air_time_ = 0.0f;
+    bool jump_released_ = false;
 
     void request(std::int32_t state);
 };

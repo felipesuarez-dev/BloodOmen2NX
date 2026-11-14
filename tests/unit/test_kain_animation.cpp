@@ -143,6 +143,41 @@ void test_jump_and_landing() {
     CHECK(animation.state() == anim::kRun);
 }
 
+void test_takeoff_ends_with_the_boost_window() {
+    const bo2::engine::AnimGraph graph = movement_graph();
+    bo2::game::KainTuning jumping = tuning();
+    jumping.jump.gravity_up = -2500.0f;
+    jumping.jump.gravity_down = -700.0f;
+    jumping.jump.height_tap = 64.0f;
+    jumping.jump.height_hold = 128.0f;
+    jumping.jump.boost_start = 0.08f;
+    jumping.jump.boost_end = 0.4f;
+    const bo2::game::JumpDerived window = bo2::game::derive_jump(jumping.jump);
+    CHECK(window.boost_start > 0.02f && window.boost_start < 0.2f);
+    PlayerInput held = stick(0.0f);
+    held.jump = true;
+    const auto takeoff_ticks = [&](bool release) {
+        KainAnimation animation(graph, jumping);
+        animation.step(stick(0.0f), on_ground(), kTick);
+        animation.step(held, in_air(500.0f), kTick);
+        int ticks = 1;
+        while (animation.state() == anim::kStartJump && ticks < 40) {
+            animation.step(release ? stick(0.0f) : held, in_air(400.0f), kTick);
+            ++ticks;
+        }
+        CHECK(animation.state() == anim::kFallingUp);
+        return ticks;
+    };
+    // A tap: the button is up when the boost would start, so the state ends
+    // there (FUN_00443a50). The oracle holds it for 3 to 5 samples.
+    const int tap = takeoff_ticks(true);
+    CHECK(std::fabs(static_cast<float>(tap) * 0.02f - window.boost_start) < 0.05f);
+    // A held jump: the boost lasts past the 0.2 s timer, which ends the state.
+    const int hold = takeoff_ticks(false);
+    CHECK(hold >= 10 && hold <= 12);
+    CHECK(tap < hold);
+}
+
 void test_run_landing_and_fall() {
     const bo2::engine::AnimGraph graph = movement_graph();
     KainAnimation animation(graph, tuning());
@@ -177,6 +212,7 @@ int main() {
     test_ground_states();
     test_run_plays_at_the_run_rate();
     test_jump_and_landing();
+    test_takeoff_ends_with_the_boost_window();
     test_run_landing_and_fall();
     if (failures != 0) {
         std::cerr << failures << " check(s) failed\n";
