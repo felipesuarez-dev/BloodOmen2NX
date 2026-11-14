@@ -50,6 +50,7 @@ Lee esto en español: [README.md](README.md)
 > Your game files stay on your machine, in a gitignored folder (`external/`); see [`external/README.txt`](external/README.txt) and [`docs/GAME_DATA.md`](docs/GAME_DATA.md).
 > No textures, models, sounds, music, videos, executables or data containers from *Blood Omen 2* are distributed here.
 > **You need your own legitimate copy of the game** to run the port (see [Game data](#game-data)).
+> That will not change when the port is playable: only the program will be published, and each person will have to use the data of their own original copy of the game.
 >
 > This is an independent, non-commercial preservation and interoperability project. It is **not affiliated with, endorsed by, or sponsored by** Crystal Dynamics, Eidos Interactive, Square Enix, or any other publisher or developer involved in the original game. All trademarks and game names belong to their respective owners.
 
@@ -331,6 +332,10 @@ Per-function loop: [`docs/PORTING_GUIDE.md`](docs/PORTING_GUIDE.md). The rule is
 | [Wine](https://www.winehq.org) | Oracle environment | LGPL |
 
 Original game by Crystal Dynamics, published by Eidos Interactive. Not affiliated.
+
+## Mentions
+
+- [Awesome REA](https://awesome-rea.com/resources/bloodomen2nx-case/): case study "Blood Omen 2: functional decompilation toward a Switch port".
 
 ## License
 

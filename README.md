@@ -50,6 +50,7 @@ English version: [README.en.md](README.en.md)
 > Tus archivos del juego permanecen en tu equipo, en una carpeta ignorada por git (`external/`); consulta [`external/README.txt`](external/README.txt) y [`docs/GAME_DATA.md`](docs/GAME_DATA.md).
 > Aquí no se distribuyen texturas, modelos, sonidos, música, videos, ejecutables ni contenedores de datos de *Blood Omen 2*.
 > **Necesitas tu propia copia legítima del juego** para ejecutar el port (consulta [Datos del juego](#datos-del-juego)).
+> Eso no cambiará cuando el port sea jugable: se publicará solo el programa, y cada persona tendrá que usar los datos de su propia copia original del juego.
 >
 > Este es un proyecto independiente, sin fines comerciales, de preservación e interoperabilidad. **No está afiliado, respaldado ni patrocinado** por Crystal Dynamics, Eidos Interactive, Square Enix ni ningún otro editor o desarrollador involucrado en el juego original. Todas las marcas y nombres de juegos pertenecen a sus respectivos propietarios.
 
@@ -333,6 +334,10 @@ La documentación técnica está en inglés.
 | [Wine](https://www.winehq.org) | Entorno del oráculo | LGPL |
 
 Juego original de Crystal Dynamics, publicado por Eidos Interactive. Sin afiliación.
+
+## Menciones
+
+- [Awesome REA](https://awesome-rea.com/resources/bloodomen2nx-case/): caso de estudio «Blood Omen 2: functional decompilation toward a Switch port».
 
 ## Licencia
 
