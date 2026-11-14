@@ -2,10 +2,11 @@
 
 Status: **read, not ported**. The enemies, the doors, the cinematics, the
 sounds and the triggers of the game are script classes compiled into the
-`bpackage` entries of the containers
-([`FORMATS/bpackage.md`](FORMATS/bpackage.md)). This page describes how the
-executable runs them, read from its interpreter (`FUN_0057de80`) and the
-functions around it. Nothing of this is in the port yet.
+`bpackage` entries of the containers and into the `packages` section of
+every region ([`FORMATS/bpackage.md`](FORMATS/bpackage.md)). This page
+describes how the executable loads, binds and runs them, read from its
+interpreter (`FUN_0057de80`) and the functions around it, and what of it
+was checked in the running game. Nothing of this is in the port yet.
 
 ## Objects, classes and states
 
@@ -158,13 +159,138 @@ A body is reached in one of four ways, by the words after the instruction:
 In the game data the calls that start a thread (`0x4d` to `0x52`, `0x55`,
 `0x56`) always target a method whose byte +5 is 2, and the others never do.
 
+## Values
+
+Every value takes 4 bytes in a local, a field or a stack cell, except a
+boolean and a byte, which take one (`FUN_00587d30`; an array takes its
+count times the size of its element). What the 4 bytes hold:
+
+| Kind | Holds | Initial value (`FUN_00588390`) | Store (`FUN_00587fc0`) |
+|---|---|---|---|
+| 1 boolean, 5 byte | the value, one byte | 0 | the low byte |
+| 2 integer, 3 float, 11 enumeration | the value | 0 | the word |
+| 8 | a word (no data uses it) | 0 | 0 |
+| 4 string | a pointer to a counted string | the shared empty string, counted | the string, counted |
+| 10 object | a pointer to the counted handle of an object | 0 | the handle, counted |
+| 9 value of a class | a pointer to a block the value type owns | the type's virtual +0x18 with no source | +0x18, then +0x20 with the source |
+| 6 array | the elements, one after the other | each element | each element |
+| 7 | a pointer to a collection object of 0x1c bytes (no data uses it) | an empty collection | a copy |
+
+A value type is the native type of a value class (`goe::NativeType`; one
+`NT<name>` class per value class: `NTposition`, `NTtimer`, ...). Its
+virtuals, read on `NTposition` (vtable `0x878d68`): +8 make from a source
+(`FUN_0079e2f0`), +0xc free, +0x10 read from a stream (`0x79e350`: three
+floats), +0x14 write to a stream (`FUN_0079e390`), +0x18 initialise a slot
+(`FUN_0079e3c0`: a new block, zeroed or copied), +0x1c destroy a slot
+(`FUN_0079e430`), +0x20 assign (`FUN_0079e450`), +0x24 bind the natives of
+the class. The default value of a field of kind 9 is the chunk +0x14 wrote:
+12 bytes for `position` and `rotation` (three floats), 4 bytes for
+`effect`, `sound` and `soundgroup` (measured on `sl01`).
+
+## Loading and linking
+
+A package is read in three steps by `goe::PackageBinaryLoaderContext`
+(`FUN_0058ac40`): the header and the imports (`FUN_0058ad60`), one class
+declaration per step (`FUN_0058b500`), and one link record per step
+(`FUN_0058c060`). The loader accepts versions 0 and 1; the data has only 1.
+
+Linking writes the code words that the file leaves to the loader (the
+reference list of [`FORMATS/bpackage.md`](FORMATS/bpackage.md)):
+
+| Reference | The word becomes |
+|---|---|
+| 0 | `0x04000000` and the index of the name in the global name table |
+| 1 | `0x5f000000` and the index of the name |
+| 2 | a pointer to the value type of the class (the map at manager +0x7c) |
+| 3 | a pointer to the method record (class +0x38, 0x20 bytes each) |
+| 4 | a pointer to the body record (class +0x3c, 0x1c bytes each) |
+| 5 | a pointer to the state tables of the first class (+0x24), and in the next word a pointer to the method record of the second |
+
+A body record has the method (+0), the flags (+4), the state (+6), the size
+of the locals (+8), the size of the stack (+0xa) and, for a native body,
+its function (+0x10).
+
+## Native functions
+
+After linking a class, `FUN_0058c060` binds its native bodies:
+
+- A script class (kind 1, and the classes written in script, which inherit
+  it) has a factory: the object at manager +0x6c for its name, or the one
+  of its parent, or the default one (manager +0x9c). Each native script
+  class has one, `S<name>Factory` (`goe::ScriptFactory`, vtable of the
+  base `0x866c40`). Its virtual +0xc binds the natives of the class, +0x10
+  creates the C++ object of a script object of the class (`FUN_00764230`
+  makes a `Sbasescript`, 0x2c bytes, over `goe::ScriptObject`), and +8
+  returns the index of the class name.
+- A value class (kind 5) is bound by its value type, virtual +0x24.
+- A bind function stores one function per native body, by the index of the
+  body: `FUN_00587ac0` or `FUN_005a10d0` for a function that returns at
+  once, `FUN_00587b00` or `FUN_005a1110` for one that returns a task (the
+  `0x4d` calls). The first two check that the body is native.
+- The functions of a script class take the object, the argument count, the
+  address of the first argument and the address of the result. The task
+  functions take the object, the thread, the argument count and the
+  arguments, and return the task or 0.
+
+Measured with a scan of the bind functions against the `native` package
+of `sl01` (local script `re/decomp/script/natives.py`): the 58 native
+classes bind 505 functions, one per native body and none more; 72 of them
+return a task, and they are exactly the bodies whose method has byte +5
+equal to 2.
+
+## The classes of a level
+
+Every region carries, in its `packages` section, one more compiled package
+named `default` ([`FORMATS/bpackage.md`](FORMATS/bpackage.md), "Region
+packages"). It imports `creatures` and holds the class `resourcedb` and one
+class for each scripted entity, named like the entity (`sfxobj002`,
+`regionkeeper001`); the entity names it in its `reserved.script` property.
+Each of those classes derives from a class of `creatures` or `native` and
+can add fields, states and bodies. 165 regions, 13,158 classes.
+
+## Checked in the running game
+
+A local probe (`re/decomp/script/live_probe.py`, route
+`re/decomp/script/probe_route.txt`) reads the script objects of the Wine
+oracle standing in `sl01` (the set at manager +0xb4, manager
+`DAT_00a6a5dc`), four times 25 seconds apart, and compares them with the
+classes of the eight `slums` containers (their `bpackage` entries and their
+region packages):
+
+- 396 objects of 224 classes. 395 of them have a class of those files, and
+  its kind (+0x1c), data size (+0x1e) and state count in memory are the
+  ones of the file. The other one, `gamecameraimpl`, is the class of the
+  `camera` package of `code.big` (not compared).
+- The state byte of every object is below the state count of its class.
+  Objects by state: 226 in state 0, 104 in 1, 57 in 2, 9 in 3.
+- 87 objects have a main thread (94 right after the spawn). 78 of them are
+  `goe::ScriptExec` threads, and in all 78 the first frame belongs to the
+  object, runs a body of its class or of an ancestor, and that body is the
+  `start` (slot 0) of the state the object is in. The other 9 are other
+  objects: `FUN_00580be0` stores there what a native `start` returns.
+
+## Linking checked on the data
+
+A local check (`re/decomp/script/link_check.py`) links by name, for each of
+the 165 regions, the `bpackage` entries of its container and its region
+package: 81,752 classes. Every parent, every state owner, every slot entry
+and every reference of kinds 3, 4 and 5 resolves to a class of the same
+program, with its method or body index in range. The references of kind 2
+name a value type: `position`, `gridposition`, `color` and `sound`, which
+are value classes of `native`, and `activation_info` and `creature`, which
+are native types with no class (`ActivationNativeType`,
+`CreatureNativeType`). For `sl01` the program has 497 classes, 1,320 bodies
+(505 native), 24,640 code words, 13,361 slot entries and 3,991 references.
+
 ## Not read
 
-- How the native bodies get their function (the body +0x10) and the list of
-  native functions of each class.
-- The functions that copy a value into a local or a field (`FUN_00587fc0`,
-  `FUN_00588390`) and the classes of values (kind 9).
+- What each native function does: one function per row of the table of
+  `natives.py`.
 - Who creates the script objects of a level and who runs them each frame.
+  The lead: the entities that name a class in `reserved.script`
+  (`FUN_00737a80`, `FUN_007828c0`) and the factory +0x10 of the class.
 - The virtual +0x18 of a script object (`0x580880`), called after a state
   change.
-- The text compiler (`FUN_00793280` imports a package from source).
+- The collection type (kind 7) and the type with kind 8: no data uses them.
+- The text compiler (`FUN_00793280` imports a package from source); the
+  game data has only compiled packages.

@@ -28,8 +28,12 @@ repeated section:
   payload
 ```
 
-The observed section names are `packages`, `entities`, `cellgrup` and
-`demodata`. An `entities` section payload starts with two u32 values
+The observed section names are `packages`, `entities`, `cellgrup`,
+`demodata` and `orgnmrkr`. Every region has one `packages` section: a
+compiled script package with the classes of the scripted entities of the
+region ([`bpackage.md`](bpackage.md), "Region packages").
+
+An `entities` section payload starts with two u32 values
 (package and marker) followed by `entity` chunks:
 
 ```
@@ -110,7 +114,7 @@ python3 tools/bo2fmt/region.py entities level.big --out entities.json
 
 ## Open questions
 
-- The `packages` section and the short-name-to-`model` resource mapping.
+- The short-name-to-`model` resource mapping.
 - The remaining property types.
 - `cellgrup`/`demodata` sections.
 - Shared props such as `pilara`/`curtaina` do not appear in `region` or

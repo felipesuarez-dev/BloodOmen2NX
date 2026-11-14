@@ -13,6 +13,8 @@ code does when it runs is in [`../SCRIPTS.md`](../SCRIPTS.md).
 - 480 entries in the 179 containers, four names: `native` (168), `creatures`
   (162), `sounds` (149) and `camera` (1). A level container carries its own
   copy of each.
+- One more package in the `packages` section of each of the 165 regions,
+  with the classes of the entities of that region (see "Region packages").
 - `native` declares the classes the executable implements (`basescript`,
   `creaturescript`, `bo2creaturescript`, `monsterscript`, `timer`,
   `position`, ...). `creatures` and `sounds` import `native` and define the
@@ -110,11 +112,15 @@ A type (`FUN_0058ce80`) is a `u16` kind followed by what the kind needs:
 | 3 | nothing | a float |
 | 4 | nothing | a string |
 | 5 | nothing | a byte (the result of `getstate`) |
-| 6 | the element type, then a `u32` | an array |
-| 7 | another type | a reference to a value |
-| 9 | a class name | a value of a class |
+| 6 | the element type, then a `u32` count | an array |
+| 7 | the element type | a collection of values of that type (no data uses it) |
+| 8 | nothing | a word (no data uses it) |
+| 9 | a class name | a value of a value class (`position`, `timer`, ...) |
 | 10 | a class name | a reference to a script object |
 | 11 | an enum name | a value of an enumeration |
+
+What each kind holds in memory is in [`../SCRIPTS.md`](../SCRIPTS.md)
+("Values").
 
 Kinds 2 and 3 are told apart by the defaults of the fields: the 16,386
 defaults of kind 3 that are not zero are float bit patterns, and the ones
@@ -177,11 +183,34 @@ code ends with `0x5c`, and the 80,885 jumps of the game land on the first
 word of an instruction of their body or right after its last word. The
 instructions are described in [`../SCRIPTS.md`](../SCRIPTS.md).
 
+## Region packages
+
+The `packages` section of a region entry ([`region.md`](region.md)) holds
+one more package:
+
+```
+u32   4
+u32   package count (1)
+u16   1
+u16   0xffff
+then `size` bytes:
+  cstr  package name ("default"), padded to 4
+  u32   size: the bytes from the package name to the end of the section
+  u32   0
+  the package, in the layout above
+```
+
+Measured on the 165 regions: one package each, named `default`, importing
+`creatures`, read to its last byte with the symbols of the region entry. Its
+first class is `resourcedb` (no parent, no states); the others are the
+classes of the scripted entities of the region, named like the entity
+(`reserved.script` property) and derived from a class of `creatures` or
+`native`. 13,158 classes, 16,104 bodies, 345,637 words of code, 17,255
+fields.
+
 ## Not read
 
 - The words of a class, an enumeration, a field and a method that the
   layout above leaves without a name.
-- The object stored as the default of a field of kind 9, and how many bytes
-  a field of kind 9 takes.
 - The array type (kind 6), which the game data uses only in 336
-  parameters, and the reference type (kind 7), which it does not use.
+  parameters.
