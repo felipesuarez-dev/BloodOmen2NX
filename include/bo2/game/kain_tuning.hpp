@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 #include <vector>
 
 #include "bo2/engine/big_archive.hpp"
@@ -43,6 +44,20 @@ struct AirSteerTuning {
     float max_lateral_vel = 0.0f;  // MaxLateralVel: top speed on the other axes of this jump
 };
 
+// One record of `healthParams.lorePerLevelArray` (kaintune.h KainLoreLevels).
+struct LoreLevel {
+    float max_lore = 0.0f;        // maxLore
+    float max_hit_points = 0.0f;  // maxHitPoints
+};
+
+// One record of `healthParams.debugHealth` (kaintune.h KainDebugHealth): the
+// lore level Kain enters a level with when there is no saved state
+// (FUN_004256c0). The seven dark gift flags after it are not read.
+struct StartLoreLevel {
+    std::string level;            // name
+    std::int32_t lore_level = 0;  // loreLevel
+};
+
 struct KainTuning {
     float stick_deadzone = 0.0f;       // B+0x00C (FUN_00425520, FUN_0041ecf0)
     float jump_turn_rate = 0.0f;       // B+0x9DC jumpParams.jumpTurnRate, deg/s per unit stick in a forward or back jump (FUN_00441f20)
@@ -75,6 +90,12 @@ struct KainTuning {
     // (FUN_0063d080); for a linear channel, as in kain/run and
     // kain/walk_backwards, that is this speed times the reel time played.
     std::vector<float> clip_forward_speed;
+    // `healthParams` (B+0x898). The two tables are behind pointers that the
+    // fixup list of the entry relocates (FUN_007706c0, FUN_00780580); a table
+    // without a fixup stays empty.
+    std::vector<LoreLevel> lore_levels;             // B+0x8B0 lorePerLevelArray, B+0x8B4 numLoreLevels
+    std::int32_t default_lore_level = 0;            // B+0x8BC defaultHealth.loreLevel
+    std::vector<StartLoreLevel> start_lore_levels;  // B+0x8DC debugHealth, B+0x8E0 numDebugHealths
 };
 
 // Values FUN_00451d00 derives from the jump block.
@@ -96,9 +117,10 @@ struct AirSteerDerived {
     float lateral_speed = 0.0f;  // top speed on the other axes (MaxLateralVel)
 };
 
-// `bytes` is the extracted tunedata entry: a u32 size field followed by the
-// blob. Throws common::ParseError when the entry is truncated or the size
-// field does not cover the movement fields.
+// `bytes` is the extracted tunedata entry: a u32 size field, the blob, and
+// the name and fixup lists (docs/FORMATS/tunedata.md). Throws
+// common::ParseError when the entry is truncated, the size field does not
+// cover the movement fields, or a list or a table runs past its data.
 KainTuning parse_kain_tuning(const std::vector<std::uint8_t>& bytes);
 
 // Reads the root speeds from the `kain/run`, `kain/walk` and

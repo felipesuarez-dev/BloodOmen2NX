@@ -636,9 +636,9 @@ address,name,subsystem,status,notes
 00420610,FUN_00420610,unknown,todo,ghidra
 00420630,FUN_00420630,unknown,todo,ghidra
 00420680,FUN_00420680,unknown,todo,ghidra
-00420700,FUN_00420700,unknown,todo,ghidra
+00420700,FUN_00420700,player,wip,src/game/kain_vitals.cpp: set_lore_level sets the health and the maximum health to maxHitPoints of the lore level; the listener calls are not ported
 00420780,FUN_00420780,unknown,todo,ghidra
-004208a0,FUN_004208a0,unknown,todo,ghidra
+004208a0,FUN_004208a0,player,translated,src/game/kain_vitals.cpp: top_max_health returns maxHitPoints of the last lore level
 004208f0,FUN_004208f0,unknown,todo,ghidra
 00420930,FUN_00420930,unknown,todo,ghidra
 00420950,FUN_00420950,unknown,todo,ghidra
@@ -653,10 +653,10 @@ address,name,subsystem,status,notes
 00420d90,FUN_00420d90,unknown,todo,ghidra
 00420da0,FUN_00420da0,unknown,todo,ghidra
 00420e30,FUN_00420e30,unknown,todo,ghidra
-00420ef0,FUN_00420ef0,unknown,todo,ghidra
+00420ef0,FUN_00420ef0,player,wip,src/game/kain_vitals.cpp: set_lore_level sets the lore level its maximum lore and the clamped lore; a level equal to the record count is rejected instead of reading the last record
 00420f70,FUN_00420f70,unknown,todo,ghidra
-00420ff0,FUN_00420ff0,unknown,todo,ghidra
-00421020,FUN_00421020,unknown,todo,ghidra
+00420ff0,FUN_00420ff0,player,translated,src/game/kain_tuning.cpp: numLoreLevels is the size of KainTuning::lore_levels
+00421020,FUN_00421020,player,translated,src/game/kain_vitals.cpp: top_max_lore returns maxLore of the last lore level
 004210b0,FUN_004210b0,unknown,todo,ghidra
 00421260,FUN_00421260,unknown,todo,ghidra
 004212d0,FUN_004212d0,unknown,todo,ghidra
@@ -733,7 +733,7 @@ address,name,subsystem,status,notes
 00425520,FUN_00425520,unknown,todo,ghidra
 00425580,FUN_00425580,player,wip,src/game/kain_animation.cpp: KainAnimation::combat_direction gives the five directions from the stick; the axes come from the port input instead of FUN_00452c30
 00425670,FUN_00425670,unknown,todo,ghidra
-004256c0,FUN_004256c0,unknown,todo,ghidra
+004256c0,FUN_004256c0,player,wip,src/game/kain_vitals.cpp: start_lore_level picks the debugHealth record by level name or the default one; the dark gift flags are not ported
 00425820,FUN_00425820,unknown,todo,ghidra
 004258e0,FUN_004258e0,unknown,todo,ghidra
 00425910,FUN_00425910,unknown,todo,ghidra
@@ -11574,7 +11574,7 @@ address,name,subsystem,status,notes
 006a0860,FUN_006a0860,unknown,todo,ghidra
 006a0920,FUN_006a0920,unknown,todo,ghidra
 006a0960,FUN_006a0960,unknown,todo,ghidra
-006a09a0,FUN_006a09a0,unknown,todo,ghidra
+006a09a0,FUN_006a09a0,level,translated,src/game/kain_tuning.cpp: read_fixups reads each u32 at the next 4-byte boundary
 006a09e0,FUN_006a09e0,unknown,todo,ghidra
 006a0a40,FUN_006a0a40,unknown,todo,ghidra
 006a0ab0,FUN_006a0ab0,unknown,todo,ghidra
@@ -15736,9 +15736,9 @@ address,name,subsystem,status,notes
 00770570,FUN_00770570,unknown,todo,ghidra
 007705a0,FUN_007705a0,unknown,todo,ghidra
 007705d0,FUN_007705d0,unknown,todo,ghidra
-00770660,FUN_00770660,unknown,todo,ghidra
-00770690,FUN_00770690,unknown,todo,ghidra
-007706c0,FUN_007706c0,unknown,todo,ghidra
+00770660,FUN_00770660,level,wip,src/game/kain_tuning.cpp: read_fixups skips the u32 and the string of each resource name
+00770690,FUN_00770690,level,translated,src/game/kain_tuning.cpp: read_fixups reads the where and target words of a fixup
+007706c0,FUN_007706c0,level,wip,src/game/kain_tuning.cpp: parse_kain_tuning reads the size the blob the name list and the fixup list; the names are not kept
 00770c00,FUN_00770c00,unknown,todo,ghidra
 00770d40,FUN_00770d40,unknown,todo,ghidra
 00770de0,FUN_00770de0,unknown,todo,ghidra
@@ -16054,7 +16054,7 @@ address,name,subsystem,status,notes
 007803a0,FUN_007803a0,unknown,todo,ghidra
 00780450,FUN_00780450,unknown,todo,ghidra
 00780570,FUN_00780570,unknown,todo,ghidra
-00780580,FUN_00780580,unknown,todo,ghidra
+00780580,FUN_00780580,level,translated,src/game/kain_tuning.cpp: read_fixups keeps a fixup when where and target are inside the blob and the tables are read at the target
 007805c0,FUN_007805c0,unknown,todo,ghidra
 007805e0,FUN_007805e0,unknown,todo,ghidra
 00780730,FUN_00780730,unknown,todo,ghidra

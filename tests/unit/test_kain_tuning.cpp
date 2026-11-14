@@ -7,6 +7,7 @@
 
 #include "bo2/common/reader.hpp"
 #include "bo2/game/kain_tuning.hpp"
+#include "bo2/game/kain_vitals.hpp"
 
 namespace {
 
@@ -96,6 +97,63 @@ void test_round_trip() {
     CHECK(tuning.air_back.max_lateral_vel == 0.0f);
 }
 
+void put_u32(std::vector<std::uint8_t>& data, std::size_t offset, std::uint32_t value) {
+    for (std::size_t index = 0; index < 4; ++index) {
+        data[offset + index] = static_cast<std::uint8_t>((value >> (8 * index)) & 0xFF);
+    }
+}
+
+void append_u32(std::vector<std::uint8_t>& data, std::uint32_t value) {
+    while (data.size() % 4 != 0) {
+        data.push_back(0xFF);  // the padding byte of the real entry
+    }
+    data.resize(data.size() + 4);
+    put_u32(data, data.size() - 4, value);
+}
+
+// The blob with a lore level table, two start records and the two lists that
+// follow the blob in a real entry (FUN_007706c0).
+std::vector<std::uint8_t> make_entry_with_tables() {
+    std::vector<std::uint8_t> data = make_blob();
+    const std::size_t table = 0xC00;   // three lore levels
+    const std::size_t starts = 0xC40;  // two start records
+    const std::size_t name = 0xD00;    // "slums"
+    const float levels[6] = {6.0f, 30.0f, 30.0f, 60.0f, 950.0f, 500.0f};
+    for (std::size_t index = 0; index < 6; ++index) {
+        put_float(data, table + 4 * index, levels[index]);
+    }
+    put_u32(data, 4 + 0x8B0, 0x11223344);  // a stale pointer, as in the real file
+    put_u32(data, 4 + 0x8B4, 3);
+    put_u32(data, 4 + 0x8BC, 2);  // defaultHealth.loreLevel
+    put_u32(data, 4 + 0x8DC, 0x55667788);
+    put_u32(data, 4 + 0x8E0, 2);
+    put_u32(data, 4 + starts + 4, 1);          // "slums" starts at level 1
+    put_u32(data, 4 + starts + 0x24 + 4, 0);   // a record without a name
+    const char text[] = "slums";
+    for (std::size_t index = 0; index < sizeof text; ++index) {
+        data[4 + name + index] = static_cast<std::uint8_t>(text[index]);
+    }
+    append_u32(data, 2);   // two names
+    append_u32(data, 1);
+    for (const char character : {'a', 'b', '\0'}) {
+        data.push_back(static_cast<std::uint8_t>(character));
+    }
+    append_u32(data, 3);
+    for (const char character : {'c', '\0'}) {
+        data.push_back(static_cast<std::uint8_t>(character));
+    }
+    append_u32(data, 4);  // four fixups
+    append_u32(data, 0x8B0);
+    append_u32(data, static_cast<std::uint32_t>(table));
+    append_u32(data, 0x8DC);
+    append_u32(data, static_cast<std::uint32_t>(starts));
+    append_u32(data, static_cast<std::uint32_t>(starts));
+    append_u32(data, static_cast<std::uint32_t>(name));
+    append_u32(data, 0x10);        // a target outside the blob is ignored (FUN_00780580)
+    append_u32(data, 0x7FFFFFFF);
+    return data;
+}
+
 template <typename Callback>
 bool throws_parse_error(Callback callback) {
     try {
@@ -126,6 +184,72 @@ void test_rejects_bad_blobs() {
     std::vector<std::uint8_t> padded = make_blob();
     padded.resize(padded.size() + 64, 0);
     CHECK(bo2::game::parse_kain_tuning(padded).jump.height_tap == 64.0f);
+}
+
+void test_lore_tables_follow_the_fixups() {
+    // Without the lists the pointers cannot be followed.
+    const bo2::game::KainTuning bare = bo2::game::parse_kain_tuning(make_blob());
+    CHECK(bare.lore_levels.empty());
+    CHECK(bare.start_lore_levels.empty());
+
+    const std::vector<std::uint8_t> entry = make_entry_with_tables();
+    const bo2::game::KainTuning tuning = bo2::game::parse_kain_tuning(entry);
+    CHECK(tuning.lore_levels.size() == 3);
+    if (tuning.lore_levels.size() == 3) {
+        CHECK(tuning.lore_levels[0].max_lore == 6.0f);
+        CHECK(tuning.lore_levels[0].max_hit_points == 30.0f);
+        CHECK(tuning.lore_levels[2].max_lore == 950.0f);
+        CHECK(tuning.lore_levels[2].max_hit_points == 500.0f);
+    }
+    CHECK(tuning.default_lore_level == 2);
+    CHECK(tuning.start_lore_levels.size() == 2);
+    if (tuning.start_lore_levels.size() == 2) {
+        CHECK(tuning.start_lore_levels[0].level == "slums");
+        CHECK(tuning.start_lore_levels[0].lore_level == 1);
+        CHECK(tuning.start_lore_levels[1].level.empty());
+    }
+
+    // FUN_004256c0: the record with the level's name, or the default.
+    CHECK(bo2::game::start_lore_level(tuning, "slums") == 1);
+    CHECK(bo2::game::start_lore_level(tuning, "keep") == 2);
+    // FUN_004208a0 and FUN_00421020: the last record.
+    CHECK(bo2::game::top_max_health(tuning) == 500.0f);
+    CHECK(bo2::game::top_max_lore(tuning) == 950.0f);
+
+    // FUN_00420ef0 and FUN_00420700: full health, the lore clamped to the level.
+    bo2::game::KainVitals vitals;
+    bo2::game::set_lore_level(vitals, tuning, 1, 12.0f);
+    CHECK(vitals.lore_level == 1);
+    CHECK(vitals.max_lore == 30.0f && vitals.max_lore_target == 30.0f);
+    CHECK(vitals.lore == 12.0f && vitals.lore_target == 12.0f);
+    CHECK(vitals.max_health == 60.0f && vitals.max_health_target == 60.0f);
+    CHECK(vitals.health == 60.0f && vitals.health_target == 60.0f);
+    bo2::game::set_lore_level(vitals, tuning, 0, 40.0f);
+    CHECK(vitals.lore == 6.0f && vitals.lore_target == 6.0f);
+    CHECK(vitals.health == 30.0f);
+    bool rejected = false;
+    try {
+        bo2::game::set_lore_level(vitals, tuning, 3, 0.0f);
+    } catch (const std::out_of_range&) {
+        rejected = true;
+    }
+    CHECK(rejected);
+    rejected = false;
+    try {
+        bo2::game::top_max_health(bare);
+    } catch (const std::out_of_range&) {
+        rejected = true;
+    }
+    CHECK(rejected);
+
+    // A list that stops in the middle of a record.
+    std::vector<std::uint8_t> cut = entry;
+    cut.resize(cut.size() - 6);
+    CHECK(throws_parse_error([&] { bo2::game::parse_kain_tuning(cut); }));
+    // A table that runs past the blob.
+    std::vector<std::uint8_t> long_table = entry;
+    put_u32(long_table, 4 + 0x8B4, 0x1000);
+    CHECK(throws_parse_error([&] { bo2::game::parse_kain_tuning(long_table); }));
 }
 
 void test_derived_jump_matches_the_original() {
@@ -248,6 +372,7 @@ void test_invalid_jump_tuning_throws() {
 int main() {
     test_round_trip();
     test_rejects_bad_blobs();
+    test_lore_tables_follow_the_fixups();
     test_derived_jump_matches_the_original();
     test_derived_airtimes_match_the_original();
     test_derived_air_steering_matches_the_original();

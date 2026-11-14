@@ -24,7 +24,7 @@ English version: [README.en.md](README.en.md)
 <!-- badges:start -->
 [status-badge]: https://img.shields.io/badge/fase-M3%20en%20curso-orange
 [overall-badge]: https://img.shields.io/badge/global-8.2%25-yellow
-[fn-badge]: https://img.shields.io/badge/funciones-24%20%2F%2016925-lightgrey
+[fn-badge]: https://img.shields.io/badge/funciones-30%20%2F%2016925-lightgrey
 [levels-badge]: https://img.shields.io/badge/niveles-0%20%2F%2011-lightgrey
 <!-- badges:end -->
 [cpp-badge]: https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white
@@ -75,11 +75,11 @@ El original se usa como referencia; no se distribuye.
 
 | Componente | Peso | Avance | Puntaje |
 |---|---:|---:|---:|
-| Funciones traducidas / en alcance | 60% | 24 / 16 925 | 0.14% |
+| Funciones traducidas / en alcance | 60% | 30 / 16 925 | 0.18% |
 | Niveles completables (capítulos de la campaña) | 30% | 0 / 11 | 0.00% |
 | Características de plataforma | 10% | 10 / 13 + 1 parcial | 80.77% |
 
-Mapa de funciones: 35 527 filas: 24 traducidas, 92 en curso, 16 809 pendientes, 18 602 externas (no son código del juego).
+Mapa de funciones: 35 527 filas: 30 traducidas, 97 en curso, 16 798 pendientes, 18 602 externas (no son código del juego).
 
 La lista de capítulos está en [`docs/LEVELS.md`](docs/LEVELS.md). Los capítulos completables y las características de plataforma se definen en [`tools/gen/progress_data.py`](tools/gen/progress_data.py).
 <!-- progress:end -->

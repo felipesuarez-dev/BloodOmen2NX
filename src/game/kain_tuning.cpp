@@ -5,6 +5,7 @@
 #include <cstring>
 #include <stdexcept>
 #include <string>
+#include <utility>
 
 #include "bo2/common/reader.hpp"
 #include "bo2/engine/anim_graph.hpp"
@@ -28,6 +29,14 @@ constexpr std::size_t kTurnReady = 0xAC8;
 constexpr std::size_t kTurnRun = 0xACC;
 constexpr std::size_t kTurnWalkBack = 0xAD0;
 constexpr std::size_t kRunClipRate = 0xB14;
+// `healthParams` (kaintune.h KainHealthParams).
+constexpr std::size_t kLoreLevels = 0x8B0;
+constexpr std::size_t kLoreLevelCount = 0x8B4;
+constexpr std::size_t kDefaultLoreLevel = 0x8BC;
+constexpr std::size_t kStartLevels = 0x8DC;
+constexpr std::size_t kStartLevelCount = 0x8E0;
+constexpr std::size_t kLoreLevelSize = 8;    // maxLore, maxHitPoints
+constexpr std::size_t kStartLevelSize = 0x24;  // name, loreLevel and seven gift flags
 // One past the last field we read.
 constexpr std::size_t kBlobMinimum = kRunClipRate + 4;
 
@@ -61,6 +70,77 @@ AirSteerTuning read_air_steer(const common::Reader& reader, std::size_t block) {
     steer.kd = read_float(reader, block + 0x10);
     steer.max_lateral_vel = read_float(reader, block + 0x14);
     return steer;
+}
+
+// The lists after the blob (FUN_007706c0). Every u32 is read at the next
+// 4-byte boundary (FUN_006a09a0). First the resource names: a count and that
+// many { u32, zero-terminated string } (FUN_00770660, FUN_006a0a40). Then the
+// pointer fixups: a count and that many { u32 where, u32 target }
+// (FUN_00770690). FUN_00780580 stores `blob + target` at `blob + where` when
+// both are inside the blob. Returns where -> target; empty when the entry
+// ends with the blob.
+std::map<std::uint32_t, std::uint32_t> read_fixups(const std::vector<std::uint8_t>& bytes,
+                                                   std::size_t blob_size) {
+    const common::Reader reader(bytes);
+    std::map<std::uint32_t, std::uint32_t> fixups;
+    std::size_t offset = kBlobStart + blob_size;
+    const auto next_u32 = [&](std::uint32_t& value) {
+        offset = (offset + 3) & ~static_cast<std::size_t>(3);
+        if (offset + 4 > bytes.size()) {
+            return false;
+        }
+        value = reader.u32(offset);
+        offset += 4;
+        return true;
+    };
+    std::uint32_t names = 0;
+    if (!next_u32(names)) {
+        return fixups;
+    }
+    for (std::uint32_t index = 0; index < names; ++index) {
+        std::uint32_t word = 0;
+        if (!next_u32(word)) {
+            throw common::ParseError("kain tunedata name list is truncated");
+        }
+        while (offset < bytes.size() && bytes[offset] != 0) {
+            ++offset;
+        }
+        if (offset >= bytes.size()) {
+            throw common::ParseError("kain tunedata name is not terminated");
+        }
+        ++offset;
+    }
+    std::uint32_t count = 0;
+    if (!next_u32(count)) {
+        if (names != 0) {
+            throw common::ParseError("kain tunedata has no fixup list");
+        }
+        return fixups;
+    }
+    for (std::uint32_t index = 0; index < count; ++index) {
+        std::uint32_t where = 0;
+        std::uint32_t target = 0;
+        if (!next_u32(where) || !next_u32(target)) {
+            throw common::ParseError("kain tunedata fixup list is truncated");
+        }
+        if (where < blob_size && target < blob_size) {
+            fixups[where] = target;
+        }
+    }
+    return fixups;
+}
+
+std::string read_blob_string(const std::vector<std::uint8_t>& bytes, std::size_t blob_size,
+                             std::size_t blob_offset) {
+    std::string text;
+    for (std::size_t offset = blob_offset; offset < blob_size; ++offset) {
+        const char character = static_cast<char>(bytes[kBlobStart + offset]);
+        if (character == '\0') {
+            return text;
+        }
+        text.push_back(character);
+    }
+    throw common::ParseError("kain tunedata string is not terminated");
 }
 
 // |forward root speed| of the named animreel entry, in u/s.
@@ -124,6 +204,36 @@ KainTuning parse_kain_tuning(const std::vector<std::uint8_t>& bytes) {
     tuning.combat_hold_exit_delay = read_float(reader, kCombatHoldExitDelay);
     if (!(tuning.stick_deadzone >= 0.0f && tuning.stick_deadzone < 1.0f)) {
         throw common::ParseError("kain tunedata stick deadzone is outside [0, 1)");
+    }
+    tuning.default_lore_level = static_cast<std::int32_t>(reader.u32(kBlobStart + kDefaultLoreLevel));
+    const std::map<std::uint32_t, std::uint32_t> fixups = read_fixups(bytes, blob_size);
+    const auto lore = fixups.find(kLoreLevels);
+    if (lore != fixups.end()) {
+        const std::size_t count = reader.u32(kBlobStart + kLoreLevelCount);
+        if (count > (blob_size - lore->second) / kLoreLevelSize) {
+            throw common::ParseError("kain tunedata lore level table runs past the blob");
+        }
+        for (std::size_t index = 0; index < count; ++index) {
+            const std::size_t record = lore->second + index * kLoreLevelSize;
+            tuning.lore_levels.push_back({read_float(reader, record), read_float(reader, record + 4)});
+        }
+    }
+    const auto start = fixups.find(kStartLevels);
+    if (start != fixups.end()) {
+        const std::size_t count = reader.u32(kBlobStart + kStartLevelCount);
+        if (count > (blob_size - start->second) / kStartLevelSize) {
+            throw common::ParseError("kain tunedata start level table runs past the blob");
+        }
+        for (std::size_t index = 0; index < count; ++index) {
+            const std::size_t record = start->second + index * kStartLevelSize;
+            StartLoreLevel entry;
+            const auto name = fixups.find(static_cast<std::uint32_t>(record));
+            if (name != fixups.end()) {
+                entry.level = read_blob_string(bytes, blob_size, name->second);
+            }
+            entry.lore_level = static_cast<std::int32_t>(reader.u32(kBlobStart + record + 4));
+            tuning.start_lore_levels.push_back(std::move(entry));
+        }
     }
     return tuning;
 }

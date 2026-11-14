@@ -44,6 +44,7 @@ add_library(bo2_game STATIC
     src/game/kain_actor.cpp
     src/game/kain_animation.cpp
     src/game/kain_tuning.cpp
+    src/game/kain_vitals.cpp
     src/game/player.cpp
     src/game/replay.cpp
     src/game/save.cpp

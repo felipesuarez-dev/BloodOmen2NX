@@ -13,6 +13,7 @@
 #include "bo2/engine/skeleton_pose.hpp"
 #include "bo2/game/kain_actor.hpp"
 #include "bo2/game/kain_tuning.hpp"
+#include "bo2/game/kain_vitals.hpp"
 
 namespace {
 
@@ -424,6 +425,27 @@ int main() {
             CHECK(tuning.jump.height_tap == 64.0f);
             CHECK(tuning.jump.height_hold == 128.0f);
             CHECK(std::fabs(tuning.run_clip_rate - 1.15f) < 1.0e-6f);
+            // healthParams: the tables behind the relocated pointers.
+            CHECK(tuning.lore_levels.size() == 26);
+            if (tuning.lore_levels.size() == 26) {
+                CHECK(tuning.lore_levels[0].max_lore == 6.0f);
+                CHECK(tuning.lore_levels[0].max_hit_points == 30.0f);
+                CHECK(tuning.lore_levels[1].max_lore == 30.0f);
+                CHECK(tuning.lore_levels[1].max_hit_points == 60.0f);
+                CHECK(bo2::game::top_max_lore(tuning) == 950.0f);
+                CHECK(bo2::game::top_max_health(tuning) == 500.0f);
+            }
+            CHECK(tuning.default_lore_level == 15);
+            CHECK(tuning.start_lore_levels.size() == 17);
+            CHECK(bo2::game::start_lore_level(tuning, "slums") == 0);
+            CHECK(bo2::game::start_lore_level(tuning, "keep") == 7);
+            CHECK(bo2::game::start_lore_level(tuning, "no such level") == 15);
+            // Kain enters the slums with 30 hit points and room for 6 lore.
+            bo2::game::KainVitals vitals;
+            bo2::game::set_lore_level(vitals, tuning,
+                                      bo2::game::start_lore_level(tuning, "slums"), 0.0f);
+            CHECK(vitals.health == 30.0f && vitals.max_health == 30.0f);
+            CHECK(vitals.lore == 0.0f && vitals.max_lore == 6.0f);
             bo2::game::apply_kain_clip_speeds(tuning, archive);
             check_kain_actor(path.string(), tuning);
             check_kain_ground_motion(archive, tuning);
