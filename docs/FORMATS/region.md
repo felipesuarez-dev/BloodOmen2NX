@@ -54,6 +54,31 @@ places `dagger`, `kainemitter`, `ptorch`, `l_club`, `lsword` and
 `regionkeeper`; the model names are short names resolved through the
 package/resource tables.
 
+## UI scenes
+
+`code.big` holds the user interface as four scenes, each a `region` and a
+`cellgrup` entry of the same name: `ui/hud`, `ui/darkgifts`, `ui/pausemenu`
+and `ui/optionscreen_01`. They use the level formats unchanged.
+
+The in-game HUD is `ui/hud`: 38 entities over a cell group of 42 models (192
+triangles, 277 vertices, 30 textures, one cell `ui_hud`). The
+entity names are the ones the game looks up when it builds the HUD
+(`FUN_0052ef60`): `ui_hud_health_bar`, `ui_hud_lore_bar`, `ui_hud_lore_glass`,
+`ui_hud_lore_bottom`, `ui_hud_rage_bar`, `ui_hud_darkgift_icon`,
+`ui_hud_letterbox`, `ui_hud_pause_fade`, `ui_hud_screen_cut` and the others.
+The entity type is a template that names the widget class as its behaviour:
+`assets/etypes/ui/hudhealthbar.etp` is `model ui/dummy` and
+`behavior HUDHealthBar`. The classes are registered by name in
+`FUN_004ab640`. The positions are in a centred screen space: the health bar
+is at (-285, -138, -470) and the main frame `_main` at (-192, 176, -440).
+The cell group has seven bones in all, and the container has seven `animatio`
+entries named `<entity>:ui/hud`: the health, lore, rage and enemy health
+bars, the intent glow, the charm haze and the letterbox.
+
+Not decoded yet: the projection the game draws a UI scene with, which
+entities are visible outside a pause or a cutscene, and how a bar turns its
+value into its fill.
+
 ## Host
 
 `parse_region_entities` unwraps the nested container and returns the

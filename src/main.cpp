@@ -153,7 +153,9 @@ Options parse_options(int argc, char** argv) {
                 << "  bo2nx --event-ogg <event.ogg> [--music-ogg <music.ogg>] [--audio-seconds n]\n"
                 << "  bo2nx --headless --frames <n> [--tick-rate <hz>]\n\n"
                 << "Frame options:\n"
-                << "  --entry <substring>   texture entry (default: first texture)\n"
+                << "  --entry <substring>   texture entry for --frame (default: first texture);\n"
+                << "                        cell group entry for --level, with the region of\n"
+                << "                        the same name (default: the first cell group)\n"
                 << "  --width <n>           frame width (default 640)\n"
                 << "  --height <n>          frame height (default 480)\n"
                 << "  --eye x,y,z           camera position (default 2.4,1.6,2.4)\n"
@@ -485,13 +487,17 @@ LoadedLevel load_level(const Options& options) {
     const double archive_ms = elapsed_ms(load_start);
     const bo2::engine::BigEntry* entry = nullptr;
     for (const bo2::engine::BigEntry& candidate : archive.entries()) {
-        if (bo2::engine::iequals(candidate.type, "cellgrup")) {
+        if (bo2::engine::iequals(candidate.type, "cellgrup") &&
+            (options.entry.empty() || candidate.name.find(options.entry) != std::string::npos)) {
             entry = &candidate;
             break;
         }
     }
     if (entry == nullptr) {
-        throw std::runtime_error("no cellgrup entry in " + options.big);
+        throw std::runtime_error(options.entry.empty()
+                                     ? "no cellgrup entry in " + options.big
+                                     : "no cellgrup entry matching " + options.entry + " in " +
+                                           options.big);
     }
     LoadedLevel level;
     level.name = entry->name;
@@ -502,6 +508,11 @@ LoadedLevel load_level(const Options& options) {
     level.parse_ms = elapsed_ms(parse_start);
     for (const bo2::engine::BigEntry& candidate : archive.entries()) {
         if (!bo2::engine::iequals(candidate.type, "region")) {
+            continue;
+        }
+        // A container with several cell groups (code.big) pairs each with the
+        // region of the same name.
+        if (!options.entry.empty() && !bo2::engine::iequals(candidate.name, entry->name)) {
             continue;
         }
         try {

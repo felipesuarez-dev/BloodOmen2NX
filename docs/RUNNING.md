@@ -204,7 +204,7 @@ provisional until the original controls are recovered from `bo2.exe`.
 | `--kain-at x,y,z` | Kain's position for `--level` and `--sdl` (default 0,0,0) |
 | `--kain-clip <name>` | Pose Kain with one `animreel` clip of `--kain-model`, for example `kain/run` (default: the bind pose in `--level` and `--sdl`, the clip of the animation state in `--replay` and `--play`) |
 | `--kain-frame <n>` | Clip frame for `--level` and `--sdl`; fractions interpolate (default 0) |
-| `--entry <substring>` | Texture entry to use (default: first texture) |
+| `--entry <substring>` | Entry to use: the texture for `--frame` (default: first texture); the cell group for `--level`, with the region of the same name (default: the first cell group and every region). `code.big` has four UI scenes, for example `--entry ui/hud` |
 | `--out <file.ppm>` | Frame output |
 | `--eye x,y,z`, `--target x,y,z` | Free camera |
 | `--width`, `--height`, `--fov` | Frame size and field of view |
