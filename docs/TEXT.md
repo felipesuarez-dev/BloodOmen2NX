@@ -13,8 +13,10 @@ string as a list of rows, each a list of items. The parser is
 `FUN_00772320`. An item is a glyph code or a control value.
 
 A character outside a command becomes a glyph item with its own code. The
-space is one too. A character that fails the library's character test and is
-not a space is reported (`text: unsupported character`) and dropped.
+space is one too. A character that is neither a printable ASCII character
+(0x21 to 0x7e; the test is the C library's `isgraph`, `FUN_007a541e`) nor a
+space is reported (`text: unsupported character`) and dropped. That is what
+happens to the three raw bytes above 0x7f of the string tables.
 
 `@` starts a command of one character:
 
