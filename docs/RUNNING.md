@@ -45,6 +45,25 @@ LEVELS=external/installed/media/gogames/bo2/resources/levels
   --out /tmp/kain_run.ppm
 ```
 
+### README images
+
+The two images of the README (`docs/media/`) are frames of this command,
+converted to JPEG. Only frames rendered by the port go there: no frame of
+the original game and no extracted texture.
+
+```sh
+LEVELS=external/installed/media/gogames/bo2/resources/levels
+shot() {
+  ./build/linux-debug/bo2nx --level --big "$LEVELS/slums/sl01.big" \
+    --kain-model "$LEVELS/kain/kain.big" --kain-clip kain/run --kain-frame "$2" \
+    --kain-at -8.8,57.1,208 --eye "$3" --target "$4" \
+    --hud external/installed/media/gogames/bo2/code.big \
+    --width 960 --height 720 --out "$1"
+}
+shot /tmp/port-sl01-kain-run.ppm 6 -8.8,-62.9,248 -8.8,57.1,244
+shot /tmp/port-sl01-kain-front.ppm 2 70,-30,258 -8.8,57.1,246
+```
+
 `--hud <code.big>` draws the HUD scene (`ui/hud`) over the `--level` frame
 and in the `--play` window: the frame, the health vial and the lore vial,
 with the health and lore Kain enters the level with ([`HUD.md`](HUD.md)). It

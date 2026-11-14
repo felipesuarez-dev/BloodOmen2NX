@@ -92,6 +92,9 @@ Direct3D 8, DirectInput, Bink and FMOD; the game data does not.
   dumps are published in this repository.
 - The port is licensed under GPL-3.0-or-later (`LICENSE`). The license
   covers the original work of its authors and nothing of the game.
-
+- The images under `docs/media/` are frames rendered by the port from a
+  private copy of the game data. They show art that belongs to the owners
+  of the game, they are not covered by the license of the port, and no
+  frame of the original game and no extracted texture is published.
 - The project is unaffiliated with Crystal Dynamics, Eidos Interactive or
   Square Enix. Names are used nominatively.

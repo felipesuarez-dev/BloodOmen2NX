@@ -34,6 +34,12 @@ English version: [README.en.md](README.en.md)
 
 ---
 
+<p align="center">
+  <img src="docs/media/port-sl01-kain-run.jpg" width="49%" alt="Fotograma del port: Kain de perfil en el primer nivel, con el HUD">
+  <img src="docs/media/port-sl01-kain-front.jpg" width="49%" alt="Fotograma del port: Kain visto de frente en el primer nivel, con el HUD">
+</p>
+<p align="center"><em>Fotogramas generados por el port con su renderizador por software: el primer nivel, Kain con una pose de su animación de carrera y el HUD. Son imágenes fijas del visor de niveles, no una partida; los comandos están en <a href="docs/RUNNING.md#readme-images">docs/RUNNING.md</a>.</em></p>
+
 ## Qué es esto
 
 | | |
@@ -51,6 +57,7 @@ English version: [README.en.md](README.en.md)
 > Aquí no se distribuyen texturas, modelos, sonidos, música, videos, ejecutables ni contenedores de datos de *Blood Omen 2*.
 > **Necesitas tu propia copia legítima del juego** para ejecutar el port (consulta [Datos del juego](#datos-del-juego)).
 > Eso no cambiará cuando el port sea jugable: se publicará solo el programa, y cada persona tendrá que usar los datos de su propia copia original del juego.
+> Las imágenes de este README son fotogramas que el propio port genera con los datos de una copia del juego: muestran arte que pertenece a sus dueños, están solo para ilustrar el estado del port y no permiten reconstruir ningún recurso.
 >
 > Este es un proyecto independiente, sin fines comerciales, de preservación e interoperabilidad. **No está afiliado, respaldado ni patrocinado** por Crystal Dynamics, Eidos Interactive, Square Enix ni ningún otro editor o desarrollador involucrado en el juego original. Todas las marcas y nombres de juegos pertenecen a sus respectivos propietarios.
 
@@ -350,4 +357,4 @@ Copyright (C) 2026 felipesuarez-dev y colaboradores.
 - El programa se entrega sin ninguna garantía.
 - `third_party/stb_vorbis.c` conserva su propia licencia (dominio público / MIT).
 
-La licencia cubre solo el trabajo original de los autores de este repositorio. **No concede ningún derecho** sobre *Blood Omen 2*: su código, sus datos, sus recursos, sus nombres y sus marcas pertenecen a sus propietarios (Crystal Dynamics, Eidos Interactive, Square Enix o sus sucesores).
+La licencia cubre solo el trabajo original de los autores de este repositorio. **No concede ningún derecho** sobre *Blood Omen 2*: su código, sus datos, sus recursos, sus nombres y sus marcas pertenecen a sus propietarios (Crystal Dynamics, Eidos Interactive, Square Enix o sus sucesores). Las imágenes de `docs/media/` muestran arte del juego y no quedan bajo esta licencia.
