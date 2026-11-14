@@ -67,7 +67,7 @@ public:
 
     // The first half of a tick, before the player moves: starts the ground
     // state the input asks for, advances the layers and works out how far the
-    // animation moves Kain forward (`ground_advance`). `state` is the player
+    // animation moves Kain (`ground_motion`). `state` is the player
     // at the start of the tick.
     void begin(const PlayerInput& input, const PlayerState& state, double seconds);
     // The second half, after the player moved: the takeoff, the fall and the
