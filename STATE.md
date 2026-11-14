@@ -201,8 +201,9 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   (`FUN_00407c70`) and smooths the range back after a collision pull-in
   (`FUN_004088c0`). `bo2nx --play` drives it in the SDL level viewer; glide,
   ledge falls and the collision size are still provisional (see
-  `docs/GAMEPLAY.md`). Localized resources are looked up in Spanish like the
-  original build (`FUN_006c8fb0`, `FUN_004aae40`) and `strtable` text is read
+  `docs/GAMEPLAY.md`). Localized resources are looked up in the locale of
+  `--locale`, Spanish by default like the original build (`FUN_006c8fb0`,
+  `FUN_004aae40`), and `strtable` text is read
   (`docs/FORMATS/strtable.md`). Entities whose `.etp` template has
   `flag helperobj` are not drawn (`FUN_0070f100`). The `region` entity table is
   decoded (15,632 entities, 533 model names, 0 errors); entity models are

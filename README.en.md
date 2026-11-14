@@ -41,7 +41,7 @@ Lee esto en español: [README.md](README.md)
 | **Target** | A native Nintendo Switch homebrew (`.nro`, libnx + deko3d) that reads your own copy of the game from the SD card. |
 | **Development host** | Linux (SDL2 + OpenGL). The game is built, tested and compared against the original there before it reaches the console. The Switch backend has not started. |
 | **Original** | The Windows PC release of *Blood Omen 2*, 1.02 Spanish GoldMaster: a 32-bit PE built with MSVC 6, Direct3D 8, DirectInput and Bink Video. |
-| **Language** | The port targets that Spanish PC release: `bo2.exe` forces the Spanish locale at boot, so the original has no in-game language option and its menus are in Spanish. See [Game language](#game-language). |
+| **Language** | The port is meant for the five languages the game data carries: English, French, Italian, German and Spanish. Today it starts in Spanish, like the `bo2.exe` it is translated from, and the language is chosen with `--locale`; on-screen text, voices per language and the language-choice screen are planned. See [Game language](#game-language). |
 | **Method** | A functional decompilation: `bo2.exe` is analysed in Ghidra, behaviour is checked against the original running as an oracle, and each function is translated to portable C++17. It is not a byte-matching rebuild. |
 
 ## Legal notice
@@ -202,9 +202,10 @@ The Switch build will read the same layout from the SD card; the exact path is d
 
 ### Game language
 
-- **The original is Spanish only.** `bo2.exe` is a Spanish Gold Master build that forces the locale `spanish` at boot (`FUN_004aae40`, called from `Game::Init`, `FUN_00515920`, before `code.big` loads). The language-choice screen (`LanguageSetupUI`) exists in the code, but this build never shows it.
-- **The data ships up to six variants** of each localized entry. The `.big` `language` field indexes the container's name table: 0 default (an English copy), 1 English, 2 French, 3 Italian, 4 German, 5 Spanish. The localized types are `strtable` (15 per language), `lipsync` (about 11,900 per language) and 44 load-screen textures (French, Italian, German and Spanish only, plus the default copy). Voices are different: `pc.rkv` holds a single Spanish section.
-- **The port selects Spanish the same way:** a localized lookup takes the `spanish` entry and falls back to the default copy (`FUN_006c8fb0`). The string tables are read; the menu and HUD do not use them yet.
+- **The original executable forces Spanish.** `bo2.exe` is a Spanish Gold Master build that forces the locale `spanish` at boot (`FUN_004aae40`, called from `Game::Init`, `FUN_00515920`, before `code.big` loads). The language-choice screen (`LanguageSetupUI`) exists in the code, but this build never shows it.
+- **The data ships up to six variants** of each localized entry. The `.big` `language` field indexes the container's name table: 0 default (an English copy), 1 English, 2 French, 3 Italian, 4 German, 5 Spanish. The localized types are `strtable` (15 per language), `lipsync` (about 11,900 per language) and 44 load-screen textures (French, Italian, German and Spanish only, plus the default copy). Voices are different: `pc.rkv` holds a single language, Spanish, with 2,433 voice clips.
+- **The port chooses the language with `--locale`** (`english`, `french`, `italian`, `german` or `spanish`; without the option, `spanish`): a localized lookup takes the entry of that language and falls back to the default copy (`FUN_006c8fb0`). The string tables are read; the menu and HUD do not use them yet.
+- **Multi-language plan.** The port will not stay tied to Spanish. What is left: drawing the text with the font and the accents of each language, choosing voices and lipsync per language, and porting the original's language-choice screen (`LanguageSetupUI`); on the Switch the first language will be the console's. With the data of this release the voices exist only in Spanish: another voice language has to come from the `pc.rkv` of your own copy of another PC edition.
 
 ## Running
 

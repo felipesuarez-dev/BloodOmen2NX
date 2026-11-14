@@ -214,6 +214,7 @@ provisional until the original controls are recovered from `bo2.exe`.
 | `--play --big <level.big>` | Kain third-person player in the SDL window |
 | `--kain <kain.big>` | `kain` tunedata for `--play` (default `<level dir>/../kain/kain.big`) |
 | `--hud <code.big>` | The HUD scene of `code.big` over the `--level` frame or in the `--play` window |
+| `--locale <name>` | Language of the localized resources: `english`, `french`, `italian`, `german` or `spanish` (default `spanish`, the one the original executable forces) |
 | `--kain-model <kain.big>` | Append Kain's model to the level: at `--kain-at` for `--level` and `--sdl`, at the player for `--replay` and `--play` |
 | `--kain-at x,y,z` | Kain's position for `--level` and `--sdl` (default 0,0,0) |
 | `--kain-clip <name>` | Pose Kain with one `animreel` clip of `--kain-model`, for example `kain/run` (default: the bind pose in `--level` and `--sdl`, the clip of the animation state in `--replay` and `--play`) |

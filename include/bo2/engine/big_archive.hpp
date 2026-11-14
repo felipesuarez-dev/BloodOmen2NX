@@ -7,9 +7,11 @@
 
 namespace bo2::engine {
 
-// The original Spanish build forces this locale at boot: FUN_004aae40 calls
-// Select("spanish") on the locale list and stores Locale=spanish in the
-// config. The port targets that build, so it starts in the same locale.
+// The locale the port starts in when none is chosen. The original Spanish
+// build forces it at boot: FUN_004aae40 calls Select("spanish") on the
+// locale list and stores Locale=spanish in the config. That is a property of
+// that executable; the data carries five locales and the host picks one with
+// --locale.
 inline constexpr const char* kDefaultLocale = "spanish";
 
 // Language of the entries that exist once for every locale: name table index

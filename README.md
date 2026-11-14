@@ -41,7 +41,7 @@ English version: [README.en.md](README.en.md)
 | **Destino** | Un homebrew nativo para Nintendo Switch (`.nro`, libnx + deko3d) que lee tu propia copia del juego desde la tarjeta SD. |
 | **Host de desarrollo** | Linux (SDL2 + OpenGL). El juego se compila, se prueba y se compara con el original ahí antes de llegar a la consola. El backend de Switch todavía no se ha iniciado. |
 | **Original** | El lanzamiento de PC para Windows de *Blood Omen 2*, GoldMaster 1.02 en español: un PE de 32 bits compilado con MSVC 6, con Direct3D 8, DirectInput y Bink Video. |
-| **Idioma** | El port apunta a ese lanzamiento de PC en español: `bo2.exe` fuerza la configuración regional española al arrancar, por lo que el original no tiene opción de idioma dentro del juego y sus menús están en español. Consulta [Idioma del juego](#idioma-del-juego). |
+| **Idioma** | El port está pensado para los cinco idiomas que traen los datos del juego: inglés, francés, italiano, alemán y español. Hoy arranca en español, como el `bo2.exe` del que se traduce, y el idioma se elige con `--locale`; el texto en pantalla, las voces por idioma y la pantalla de elección de idioma están en el plan. Consulta [Idioma del juego](#idioma-del-juego). |
 | **Método** | Descompilación funcional: `bo2.exe` se analiza en Ghidra, el comportamiento se contrasta con el original ejecutándose como oráculo y cada función se traduce a C++17 portable. No es una reconstrucción byte a byte. |
 
 ## Aviso legal
@@ -202,9 +202,10 @@ La compilación para Switch leerá la misma estructura desde la tarjeta SD; la r
 
 ### Idioma del juego
 
-- **El original es solo en español.** `bo2.exe` es una compilación GoldMaster en español que fuerza la configuración regional `spanish` al arrancar (`FUN_004aae40`, llamada desde `Game::Init`, `FUN_00515920`, antes de que se cargue `code.big`). La pantalla de elección de idioma (`LanguageSetupUI`) existe en el código, pero esta compilación nunca la muestra.
-- **Los datos incluyen hasta seis variantes** de cada entrada localizada. El campo `language` de un `.big` es un índice en la tabla de nombres del contenedor: 0 predeterminado (una copia en inglés), 1 inglés, 2 francés, 3 italiano, 4 alemán, 5 español. Los tipos localizados son `strtable` (15 por idioma), `lipsync` (unas 11 900 por idioma) y 44 texturas de pantallas de carga (solo en francés, italiano, alemán y español, más la copia predeterminada). Las voces son distintas: `pc.rkv` contiene una sola sección en español.
-- **El port selecciona el español de la misma forma:** al buscar un recurso localizado elige la entrada `spanish` y, si no existe, la copia predeterminada (`FUN_006c8fb0`). Las tablas de texto ya se leen; el menú y el HUD todavía no las usan.
+- **El ejecutable original fuerza el español.** `bo2.exe` es una compilación GoldMaster en español que fuerza la configuración regional `spanish` al arrancar (`FUN_004aae40`, llamada desde `Game::Init`, `FUN_00515920`, antes de que se cargue `code.big`). La pantalla de elección de idioma (`LanguageSetupUI`) existe en el código, pero esta compilación nunca la muestra.
+- **Los datos incluyen hasta seis variantes** de cada entrada localizada. El campo `language` de un `.big` es un índice en la tabla de nombres del contenedor: 0 predeterminado (una copia en inglés), 1 inglés, 2 francés, 3 italiano, 4 alemán, 5 español. Los tipos localizados son `strtable` (15 por idioma), `lipsync` (unas 11 900 por idioma) y 44 texturas de pantallas de carga (solo en francés, italiano, alemán y español, más la copia predeterminada). Las voces son distintas: `pc.rkv` contiene un solo idioma, el español, con 2433 voces.
+- **El port elige el idioma con `--locale`** (`english`, `french`, `italian`, `german` o `spanish`; sin la opción, `spanish`): al buscar un recurso localizado toma la entrada de ese idioma y, si no existe, la copia predeterminada (`FUN_006c8fb0`). Las tablas de texto ya se leen; el menú y el HUD todavía no las usan.
+- **Plan multiidioma.** El port no quedará atado al español. Falta dibujar el texto con la fuente y los acentos de cada idioma, elegir las voces y el lipsync por idioma y portar la pantalla de elección de idioma del original (`LanguageSetupUI`); en Switch el idioma inicial será el de la consola. Con los datos de este lanzamiento las voces solo están en español: las de otro idioma tendrán que venir del `pc.rkv` de tu propia copia de otra edición de PC.
 
 ## Ejecutar
 

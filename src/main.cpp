@@ -67,6 +67,10 @@ struct Options {
     bo2::engine::Vec3 kain_at{0.0f, 0.0f, 0.0f};
     std::string entry;
     std::string hud;
+    // The locale of the localized resources: one of the names of the
+    // LocaleSet of game.erg. The default is the one the original Spanish
+    // executable forces (FUN_004aae40).
+    std::string locale = bo2::engine::kDefaultLocale;
     std::string out;
     std::string replay;
     std::string state_out;
@@ -182,6 +186,8 @@ Options parse_options(int argc, char** argv) {
                 << "  --hud <code.big>       draw the HUD scene over the --level frame or in the\n"
                 << "                         --play window, with the health and lore Kain enters\n"
                 << "                         the level with\n"
+                << "  --locale <name>        language of the localized resources: english, french,\n"
+                << "                         italian, german or spanish (default: spanish)\n"
                 << "  --kain-model <file.big> append Kain's model to the level (--level and --sdl at\n"
                 << "                         --kain-at, --replay and --play at the player)\n"
                 << "  --kain-at x,y,z        Kain model placement for --level (default 0,0,0)\n"
@@ -250,6 +256,16 @@ Options parse_options(int argc, char** argv) {
             options.entry = next_argument(index, argc, argv);
         } else if (argument == "--hud") {
             options.hud = next_argument(index, argc, argv);
+        } else if (argument == "--locale") {
+            options.locale = next_argument(index, argc, argv);
+            // LocaleSet of game.erg; `default` is the copy every locale falls
+            // back to, not a locale to choose.
+            static constexpr const char* kLocales[] = {"english", "french", "italian",
+                                                       "german", "spanish"};
+            if (std::find(std::begin(kLocales), std::end(kLocales), options.locale) ==
+                std::end(kLocales)) {
+                usage_error("unknown locale: " + options.locale);
+            }
         } else if (argument == "--out") {
             options.out = next_argument(index, argc, argv);
         } else if (argument == "--width") {
@@ -576,7 +592,7 @@ LoadedLevel load_level(const Options& options) {
     level.textures.reserve(level.geometry.texture_names.size());
     for (const std::string& name : level.geometry.texture_names) {
         const bo2::engine::BigEntry* texture_entry =
-            archive.find("texture", name, bo2::engine::kDefaultLocale);
+            archive.find("texture", name, options.locale);
         if (texture_entry == nullptr) {
             level.textures.emplace_back();
             continue;
@@ -626,7 +642,7 @@ LoadedLevel load_level(const Options& options) {
         for (const std::string& name : asset.texture_names) {
             level.geometry.texture_names.push_back(name);
             const bo2::engine::BigEntry* texture_entry =
-                kain_archive.find("texture", name, bo2::engine::kDefaultLocale);
+                kain_archive.find("texture", name, options.locale);
             if (texture_entry == nullptr) {
                 level.textures.emplace_back();
                 continue;

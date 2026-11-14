@@ -42,9 +42,9 @@ entry with its `OggS` signature.
 |---|---|
 | File size | 208,033,792 bytes |
 | `index_size` | `0x187f8` |
-| Language | `spanish` |
+| Language | `spanish`, the only one in the index |
 | Section | `strstrem` |
-| Entries | 2,666 |
+| Entries | 2,666: 2,433 under `vo/` (voices), 196 under `streams/` and 37 under `music/` |
 | First entry | `streams/wav/STR_canyonswind`, 819,877 bytes, Ogg Vorbis mono 44.1 kHz |
 | Last entry | `vo/WHAM_VORA_02`, declared 50,002 bytes, 49,152 stored |
 

@@ -177,8 +177,10 @@ loaded, calls Select (FUN_00697d90) with `spanish` and stores
 `Locale=spanish` in the config. The language chooser the same function can
 open (the `LanguageSetupUI` class) is never shown because `Locale` is
 already set, and there is no in-game language option and no OS locale
-detection. The port mirrors this with `kDefaultLocale = "spanish"`
-(`big.DEFAULT_LOCALE` in Python).
+detection. The port starts in the same locale (`kDefaultLocale = "spanish"`,
+`big.DEFAULT_LOCALE` in Python) and the host takes another one from
+`--locale`: one of the five names of `LocaleSet` (`english`, `french`,
+`italian`, `german`, `spanish`).
 
 ## Open questions
 
