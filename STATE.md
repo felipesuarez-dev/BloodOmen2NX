@@ -191,8 +191,9 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   `docs/FORMATS/animatio.md`). Partial stick runs the FUN_00445ba0 run/walk
   blend (walk root speed 56.3485 u/s); at s = 0.5 it gives 134.85 u/s. The start of the run (100 u/s for 0.2 s), the 0.1 s
   before the walk back and the 50 u/s slide after W is released are blends of
-  the graph that carry a root transform; the Shift+W speed is still measured
-  in the Wine oracle. Jumps have the original air control
+  the graph that carry a root transform. Shift is combat mode: Kain plays
+  `st_ready_cm` and moves with `st_walk_cm` at the 200 u/s of its clip, and
+  the mode lasts 0.15 s after the control is released (FUN_0042dca0). Jumps have the original air control
   (`FUN_004436e0`, `FUN_00441f20`, `FUN_00442240`, `FUN_004423b0`, launch
   blocks from `FUN_00452030`): 323/205/203 u/s forward/back/side, as the
   oracle measures. The follow camera follows the yaw with a limited
@@ -225,14 +226,15 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   the `animatio` state machine (`src/engine/anim_machine.cpp`:
   FUN_00642c00, FUN_00643030, FUN_005e1f80) and the state Kain's movement
   starts (`src/game/kain_animation.cpp`, `docs/GAMEPLAY.md`). The replay
-  writes that state and it equals the oracle's `anim` in 96.5% of
+  writes that state and it equals the oracle's `anim` in 99.9% of
   `wine_probe_20261111` and 99.9% of `wine_camera_1`; Kain is drawn with the
   clip of the state in `--replay` and `--play`, with the pose blend between
   clips (FUN_00639990, FUN_00638310, FUN_0069b640) and the layers of the
   run: the walk on layer 1 and the cross blend by the stick (FUN_005e3b80,
   FUN_006136b0, FUN_005d4300, FUN_00445ba0). Not ported: the transition
   filters of the blends, the lean of layer 3, the layer masks and the
-  ranking of the matrix sources, clip events, combat mode, the attacks,
+  ranking of the matrix sources, clip events, the turn toward a target in
+  combat mode, the attacks,
   the bone LOD collapse and the vertex colour
   of the skinning routine. There is no pose state from the oracle yet: the
   pose is checked against the asset and by eye.
@@ -255,7 +257,7 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   pose; that, the HUD, the green `bo2cinematic001` marker and the exact
   palette texture format remain (BO2NX-68).
 - Gameplay parity beyond turning, ground speeds, partial stick, jumping,
-  air control and the camera range blend: the Shift speed,
+  air control, combat mode and the camera range blend:
   glide, ledge falls, combat (it needs combat mode; map in BO2NX-34) and
   weapon values are pending.
 - The installer's native RAR decoder is not ported; development
@@ -278,7 +280,7 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
 1. Map the shared-model instances and combine the light map with the material layers.
 2. Bind the shared `model` entries; port the lean layer and the layer masks
    of the `animatio` state machine (BO2NX-74).
-3. Port the first claw combo with combat mode, the cone test and the damage
+3. Port the first claw combo, the cone test and the damage
    table (BO2NX-34), and find what hides the remaining pyramid-model helpers
    and lights `sl01` (BO2NX-68).
 4. Compare the port against a Wine `state.csv` route tick by tick

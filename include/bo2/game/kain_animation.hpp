@@ -16,7 +16,12 @@ namespace bo2::game {
 namespace kain_anim {
 constexpr std::int32_t kReady = 0;           // st_ready, stored at 0x445e8f
 constexpr std::int32_t kRun = 1;             // st_run, FUN_004458e0
+constexpr std::int32_t kReadyCombat = 13;    // st_ready_cm
+constexpr std::int32_t kWalkCombat = 14;     // st_walk_cm
+constexpr std::int32_t kBackCombat = 15;     // st_back_cm
 constexpr std::int32_t kBack = 59;           // st_back, stored at 0x446240
+constexpr std::int32_t kStrafeRightCombat = 71;  // st_straferight_cm
+constexpr std::int32_t kStrafeLeftCombat = 72;   // st_strafeleft_cm
 constexpr std::int32_t kStartJump = 76;      // st_startjump, FUN_004436e0
 constexpr std::int32_t kFallingUp = 78;      // st_fallingup, FUN_00442800
 constexpr std::int32_t kFallingDown = 79;    // st_fallingdn, FUN_00442800 and FUN_00442ae0
@@ -41,8 +46,20 @@ constexpr std::int32_t kRunLanding = 87;     // st_run_landing
 // Read from the oracle, not from the code: a landing is st_run_landing when
 // forward is held and st_normal_landing otherwise, and it lasts until its
 // sequence ends.
-// Not modelled: combat mode (Shift gives st_ready_cm and st_walk_cm in the
-// oracle), the turns (they keep st_ready) and attacks.
+// Combat mode (the combat control, Shift in the captures):
+//   - FUN_0042dca0 enters it while the control is held and leaves it once the
+//     control has been up for the hold exit delay of the tuning (0.15 s);
+//   - with the control held and the mode on, the reaction table of the game
+//     (`data/kain.react`, `t_directlytocombat`) starts the combat movement,
+//     which lasts until the mode goes off (`t_notcombat`);
+//   - the combat movement starts the state of the stick direction from the
+//     table its enter fills (0x0044a1c0): st_ready_cm, st_walk_cm, st_back_cm,
+//     st_strafeleft_cm, st_straferight_cm. The direction is FUN_00425580 and
+//     the state changes when the direction does (FUN_0044ab20). Its update
+//     (FUN_0044a380) moves Kain by the root motion and does not turn him.
+// Not modelled: the turn toward a target and its states, the stealth and
+// silent tables of the combat movement, the combat jump, the turns in place
+// (they keep st_ready) and attacks.
 class KainAnimation {
 public:
     // `graph` is Kain's `animatio` graph and must outlive this object.
@@ -59,16 +76,19 @@ public:
     // Both halves with one player state, for a caller that only draws.
     void step(const PlayerInput& input, const PlayerState& state, double seconds);
 
-    // The forward distance the root motion of the last `begin` moves Kain by,
-    // negative backwards. The updates of his ground states (FUN_00445930 for
-    // the run, FUN_00446270 for the walk back) add the root translation of the
-    // animation to his position (FUN_0041f460, FUN_0041f7d0): the transform of
-    // the blend while a clip blends in, the root of the reel after it
-    // (docs/FORMATS/animatio.md, Root motion). In the run with a partial
-    // stick it is the sum of layers 0 and 1 by the weights of the cross
-    // blend, as the pose is; the root output of the cross blend entity is not
-    // decompiled.
-    float ground_advance() const { return ground_advance_; }
+    // What the root motion of the last `begin` moves Kain by. The updates of
+    // his ground states (FUN_00445930 for the run, FUN_00446270 for the walk
+    // back, FUN_0044a380 for the combat movement) add the root translation of
+    // the animation to his position (FUN_0041f460, FUN_0041f7d0): the
+    // transform of the blend while a clip blends in, then the transform of the
+    // clip node or the root of the reel (docs/FORMATS/animatio.md, Root
+    // motion). The root of a reel is taken along the forward axis only. In
+    // the run with a partial stick it is the sum of layers 0 and 1 by the
+    // weights of the cross blend, as the pose is; the root output of the
+    // cross blend entity is not decompiled.
+    const GroundMotion& ground_motion() const { return ground_; }
+    // KainState in combat mode (its vtable slots +0x14 and +0x18).
+    bool combat_mode() const { return combat_mode_; }
 
     // KainState+0x458: the state the player asked for last, -1 before the
     // first step. The machine may be in another one (st_rdy2run before st_run).
@@ -88,7 +108,15 @@ private:
     float deadzone_ = 0.0f;
     float run_rate_ = 1.0f;
     std::vector<float> clip_forward_speed_;  // KainTuning::clip_forward_speed
-    float ground_advance_ = 0.0f;
+    GroundMotion ground_;
+    // Combat mode, FUN_0042dca0: the mode, the exit timer (behaviour +0x6c4)
+    // and whether it has been started (+0x6cc).
+    bool combat_mode_ = false;
+    bool combat_exit_armed_ = false;
+    float combat_exit_left_ = 0.0f;
+    float combat_exit_delay_ = 0.0f;  // A+0x104
+    bool combat_move_ = false;        // the combat movement is the behaviour in charge
+    std::int32_t combat_direction_ = -1;  // KainState+0x540 of the last pick
     std::int32_t state_ = -1;
     bool was_grounded_ = true;
     bool landing_ = false;
@@ -103,7 +131,9 @@ private:
 
     void request(std::int32_t state);
     void request_ground_state(const PlayerInput& input);
-    float layer_advance(const bo2::engine::AnimMachine& machine) const;
+    void update_combat_mode(const PlayerInput& input, float seconds);
+    std::int32_t combat_direction(const PlayerInput& input) const;
+    GroundMotion layer_motion(const bo2::engine::AnimMachine& machine) const;
 };
 
 }  // namespace bo2::game

@@ -14,7 +14,9 @@ struct PlayerInput {
     float move_y = 0.0f;  // positive forward (W), negative backward (S)
     float look_x = 0.0f;
     float look_y = 0.0f;
-    bool run = false;   // Shift: 200 u/s forward (measured in the Wine oracle, unverified)
+    // The combat control of the original (`c_combat`, Shift in the captures):
+    // held, Kain is in combat mode (KainAnimation).
+    bool combat = false;
     bool jump = false;  // press launches; keep it down for the boost toward height_hold
     bool attack = false;
 };
@@ -29,6 +31,16 @@ struct PlayerState {
     std::uint32_t combo = 0;
 };
 
+// What the animation gives the controller for one tick on the ground
+// (KainAnimation::ground_motion): the root motion of the clips.
+struct GroundMotion {
+    float forward = 0.0f;  // along the yaw, negative backwards
+    float lateral = 0.0f;  // to Kain's left, negative to his right
+    // False in the combat movement: its update (FUN_0044a380) does not call
+    // the tank turn FUN_0041ecf0, the stick strafes instead.
+    bool turn = true;
+};
+
 class PlayerController {
 public:
     // Throws std::invalid_argument when the tuning cannot drive a jump or has a
@@ -36,10 +48,9 @@ public:
     PlayerController(bo2::engine::CollisionWorld& collision, const bo2::engine::Vec3& start,
                      const KainTuning& tuning);
 
-    // `ground_advance` is the forward distance the animation moves Kain by in
-    // this tick while he is on the ground (KainAnimation::ground_advance,
-    // negative backwards); nullptr falls back to the steady clip speeds.
-    void step(const PlayerInput& input, double seconds, const float* ground_advance = nullptr);
+    // `motion` is what the animation moves Kain by in this tick while he is
+    // on the ground; nullptr falls back to the steady clip speeds.
+    void step(const PlayerInput& input, double seconds, const GroundMotion* motion = nullptr);
     void look(float yaw_delta, float pitch_delta);
     bool attack(std::vector<std::uint64_t>& targets, const bo2::engine::EntityWorld& world) const;
     void restore(const PlayerState& state);

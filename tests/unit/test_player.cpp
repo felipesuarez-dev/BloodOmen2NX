@@ -215,20 +215,22 @@ void test_partial_stick_speed() {
     CHECK(std::fabs(player.state().position.x - before - expected) < 0.5f);
 }
 
-void test_shift_speed() {
+void test_combat_control_is_not_a_speed() {
+    // The combat control alone changes nothing in the controller: combat mode
+    // moves Kain through the animation (KainAnimation), not through a speed.
     const bo2::engine::LevelGeometry floor = make_floor();
     bo2::engine::CollisionWorld collision(floor);
     bo2::game::PlayerController player(collision, {0.0f, 0.0f, 0.0f}, kain_tuning());
     bo2::game::PlayerInput input;
     input.move_y = 1.0f;
-    input.run = true;
+    input.combat = true;
     run(player, input, 60);
-    CHECK(std::fabs(player.state().position.x - 200.0f) < 0.5f);
+    CHECK(std::fabs(player.state().position.x - 230.0f) < 0.5f);
 }
 
-void test_ground_advance_moves_the_player() {
-    // On the ground the animation moves Kain (FUN_0041f460): the distance the
-    // caller hands in replaces the steady speed, whatever the input is.
+void test_ground_motion_moves_the_player() {
+    // On the ground the animation moves Kain (FUN_0041f460): what the caller
+    // hands in replaces the steady speed, whatever the input is.
     const bo2::engine::LevelGeometry floor = make_floor();
     bo2::engine::CollisionWorld collision(floor);
     bo2::game::PlayerController player(collision, {0.0f, 0.0f, 0.0f}, kain_tuning());
@@ -236,22 +238,41 @@ void test_ground_advance_moves_the_player() {
     CHECK(player.state().grounded);
     bo2::game::PlayerInput input;
     input.move_y = 1.0f;
-    const float start = 2.0f;  // 100 u/s for one 20 ms tick, the start of the run
-    player.step(input, 0.02, &start);
+    bo2::game::GroundMotion motion;
+    motion.forward = 2.0f;  // 100 u/s for one 20 ms tick, the start of the run
+    player.step(input, 0.02, &motion);
     CHECK(std::fabs(player.state().position.x - 2.0f) < 1.0e-4f);
-    const float still = 0.0f;  // the pause before the walk back
+    motion.forward = 0.0f;  // the pause before the walk back
     input.move_y = -1.0f;
-    player.step(input, 0.02, &still);
+    player.step(input, 0.02, &motion);
     CHECK(std::fabs(player.state().position.x - 2.0f) < 1.0e-4f);
-    const float back = -2.125f;
-    player.step(input, 0.02, &back);
+    motion.forward = -2.125f;
+    player.step(input, 0.02, &motion);
     CHECK(std::fabs(player.state().position.x + 0.125f) < 1.0e-4f);
     // A released stick still moves by what the animation gives (the slide of
     // a blend that carries a transform).
-    const float slide = 1.0f;
-    player.step({}, 0.02, &slide);
+    motion.forward = 1.0f;
+    player.step({}, 0.02, &motion);
     CHECK(std::fabs(player.state().position.x - 0.875f) < 1.0e-4f);
     CHECK(std::fabs(player.state().position.y) < 1.0e-4f);
+
+    // The combat movement: the lateral part goes to Kain's left (+y at yaw
+    // 0), and the stick does not turn him.
+    motion.forward = 0.0f;
+    motion.lateral = 1.5f;
+    motion.turn = false;
+    input.move_y = 0.0f;
+    input.move_x = -1.0f;
+    const float yaw = player.state().yaw;
+    player.step(input, 0.02, &motion);
+    CHECK(std::fabs(player.state().position.y - 1.5f) < 1.0e-4f);
+    CHECK(std::fabs(player.state().position.x - 0.875f) < 1.0e-4f);
+    CHECK(player.state().yaw == yaw);
+    // With the turn allowed the same stick turns him.
+    motion.lateral = 0.0f;
+    motion.turn = true;
+    player.step(input, 0.02, &motion);
+    CHECK(player.state().yaw > yaw);
 }
 
 void test_backward_speed() {
@@ -893,8 +914,8 @@ int main() {
     test_forward_follows_the_yaw();
     test_forward_speed();
     test_partial_stick_speed();
-    test_shift_speed();
-    test_ground_advance_moves_the_player();
+    test_combat_control_is_not_a_speed();
+    test_ground_motion_moves_the_player();
     test_backward_speed();
     test_speeds_follow_the_tuning();
     test_wall_blocks_the_walk();

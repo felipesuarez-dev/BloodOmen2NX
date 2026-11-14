@@ -17,6 +17,7 @@ namespace {
 // B offsets inside the data blob; the file offset is 4 + the B offset.
 constexpr std::size_t kBlobStart = 4;
 constexpr std::size_t kStickDeadzone = 0x00C;
+constexpr std::size_t kCombatHoldExitDelay = 0x220;
 constexpr std::size_t kAirTurnRate = 0x9DC;
 constexpr std::size_t kJumpBlock = 0x9FC;
 constexpr std::size_t kAirForward = 0xA20;
@@ -120,6 +121,7 @@ KainTuning parse_kain_tuning(const std::vector<std::uint8_t>& bytes) {
     tuning.turn_rate_run = read_float(reader, kTurnRun);
     tuning.turn_rate_walk_back = read_float(reader, kTurnWalkBack);
     tuning.run_clip_rate = read_float(reader, kRunClipRate);
+    tuning.combat_hold_exit_delay = read_float(reader, kCombatHoldExitDelay);
     if (!(tuning.stick_deadzone >= 0.0f && tuning.stick_deadzone < 1.0f)) {
         throw common::ParseError("kain tunedata stick deadzone is outside [0, 1)");
     }

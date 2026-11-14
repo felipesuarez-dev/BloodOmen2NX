@@ -63,7 +63,7 @@ a number:
 | Run root speed | 200 u/s | `kain/run` animreel, node 0 translation x: 0 to 160 over 24 frames (0.8 s) |
 | W, first 0.2 s | 100 u/s. From rest the graph plays `st_rdy2run`, a held frame behind a 0.2 s blend whose transform is (20, 0, 0); while a clip blends in, the root gets the part of the blend's transform that matches the blend time played. When the blend ends Kain is 20.1 u ahead: the original counts 0.001 s more of the blend | FUN_005ceef0, blend 4 of the `kain` graph ([`FORMATS/animatio.md`](FORMATS/animatio.md), Root motion); oracle: x is the rest position plus 20.100 when the blend ends (`wine_probe_20261111`, frame 2253) |
 | W, after it | 230 u/s = run root speed 200 * run clip rate 1.15. The tick where the run clip ends drops what is left of it, and the first tick of every restart plays at the node speed 1.5 (300 u/s): the run state writes the rate before the advance that restarts the clip | FUN_00445ba0, FUN_00445930, FUN_00643f80; oracle: world \|vel_xy\| reads 300 at about +191, +892 and +1572 ms after W in `external/captures/wine_20261029_0110/state.csv`, spaced by the run cycle 0.8 / 1.15 = 0.696 s, and 132.98 at the end of a cycle in `wine_probe_20261111` |
-| Shift+W | 200 u/s (= 200 * 1.0, unexplained), no start ramp. Unverified: Kain was probably blocked for part of that phase | measured, oracle (`docs/ORACLE_WINE.md`) |
+| Shift+W | 200 u/s: Shift is the combat control, and in combat mode forward plays `st_walk_cm`, whose clip `kain/advance` moves the root 200 u/s at node speed 1. The blend that starts it carries 20 u in 0.1 s, so the speed is 200 from the first sample | FUN_0044ab20 and the `kain` graph; oracle: 200.0 u/s from the first sample of `st_walk_cm` (`wine_probe_20261111`, frame 2535) |
 | Walk root speed | 56.3485 u/s forward | `kain/walk` animreel, node 0 translation x: 0 to 86.4010 over 47 frames (1.5333 s) |
 | Walk-back root speed | 62.5 u/s backward | `kain/walk_backwards` animreel, node 0 translation x: -2.0833 to -100 over 47 frames (1.5667 s) |
 | Partial stick | At stick magnitude s (clamped to 1): run rate `(0.5 s + 0.5) * 1.15`, walk rate `(s + 1) * 1.15`; speed = `run_rate * s * 200 + walk_rate * (1 - s) * 56.3485`. At s = 0.5 it is 134.85 u/s; at s = 1, 230 | FUN_00445ba0; with the animation the port sums the root motion of layers 0 and 1 by these weights, which gives the same speed. The root output of the cross blend entity is not decompiled |
@@ -195,14 +195,14 @@ These have no original source. They are development aids or placeholders.
 | Forward and back | On the ground the root motion of the animation moves Kain (`KainAnimation::ground_advance`): the start of the run, the 0.1 s without movement before the walk back and the slide after W is released are blends of the graph. Without an animation the controller keeps the steady clip speeds. The platform layer also zeroes sticks below 0.25 before the deadzone applies |
 | Step cap | A step is cut to 0.1 s (the cap the SDL loop already uses) and a move to 64 sub-steps, so a stalled frame cannot tunnel through a wall or the floor |
 | Deadzone edge | Turning starts at exactly the deadzone (FUN_0041ecf0 compares `deadzone <= ax`); the forward/back gate is not traced and the port uses past-the-deadzone |
-| Run button | `run` is Shift and gives 200 u/s, which is slower than plain W (230). That is what the oracle measured (unverified, see above); the name is kept from the input layer. In the oracle prefix Shift is the `autoface` row, not a run (`docs/ORACLE_WINE.md`, Input bindings), so this speed is probably that action |
+| Combat control | `combat` is Shift (the `Run` action of the input layer). Held, Kain is in combat mode: FUN_0042dca0 enters it and leaves it once the control has been up for the hold exit delay of the tuning (B+0x220, 0.15 s). With the control held the reaction table (`data/kain.react`, `t_directlytocombat`) starts the combat movement, which lasts until the mode goes off (`t_notcombat`). It starts the state of the stick direction (FUN_00425580: none, forward, back, left, right; a side when \|x\| is over twice \|y\|) from the table its enter fills: `st_ready_cm`, `st_walk_cm`, `st_back_cm`, `st_strafeleft_cm`, `st_straferight_cm`. Its update (FUN_0044a380) moves Kain by the root motion, forward and sideways, and does not turn him |
 
 ### Pending
 
 | Item | State |
 |---|---|
 | Root motion | Decoded for the `kain/run` and `kain/walk_backwards` clips and used for the W and S speeds above; the walk-back clip node speed is read from the `kain` animatio graph. Clip blending, events and the landing clips are not ported |
-| Shift+W | The 200 u/s of Shift+W is a measured constant with no decompiled source: Shift is combat mode (BO2NX-83). The start of the run at partial stick has no oracle capture; the port sums the root motion of the run and walk layers by the weights of the cross blend |
+| Combat mode extras | Not ported: the turn toward a target (FUN_0041d370) and its states, the stealth and silent tables of the combat movement, the combat jump and the attacks (BO2NX-85). The start of the run at partial stick has no oracle capture; the port sums the root motion of the run and walk layers by the weights of the cross blend |
 | Air control extras | The run flag (a running jump with an off-axis stick counts as forward), the 0.25 stick scale, the platform velocity at takeoff and the blocked forward and back flags are not ported. The sideways rise (69.0 in the oracle against 64.0) is unexplained |
 | Air step rate | The original applies the air damping (0.96 per call) and the 1 degree turn rule once per frame, and so does the port; the port steps once per rendered frame, so the air feel follows the frame rate until the fixed logic tick lands (BO2NX-37) |
 | Landing | On the ground a landing clip moves Kain by the root of its reel, like any other clip; that is not compared with the oracle beyond the jump phases |
@@ -231,7 +231,7 @@ Every movement state of Kain stores the index of an `animatio` graph state at
 | 79 | `st_fallingdn` | the falling state once it is negative |
 | 86 | `st_normal_landing` | the landing state |
 | 87 | `st_run_landing` | the landing state |
-| 13, 14 | `st_ready_cm`, `st_walk_cm` | combat mode: this is what Shift and Shift+W start |
+| 13, 14, 15, 72, 71 | `st_ready_cm`, `st_walk_cm`, `st_back_cm`, `st_strafeleft_cm`, `st_straferight_cm` | the combat movement, by stick direction (FUN_0044ab20): this is what Shift and Shift+W start |
 
 Read from the oracle, not from the code: a landing with forward held is
 `st_run_landing` and any other is `st_normal_landing`; the state lasts until
@@ -253,7 +253,7 @@ Gate: `bo2nx --replay` writes the port's index as the `anim` column and
 
 | Capture | Rows that match | Where it differs |
 |---|---:|---|
-| `wine_probe_20261111` | 2,999 / 3,109 (96.5%) | `run` 31/139: Shift is combat mode, which the port does not model; `jump` 160/161 |
+| `wine_probe_20261111` | 3,106 / 3,109 (99.9%) | `run` (Shift, combat mode) 138/139: the port leaves combat mode one sample late; `jump` 160/161 |
 | `wine_camera_1` | 3,608 / 3,611 (99.9%) | `jump` 152/155 |
 | `wine_air_1`, first five jump phases | 832 / 981 (84.8%) | the landing choice and the jump physics (the port's position leaves the route in these phases); from `air_w` on it is far off, so the later phases say nothing about the animation |
 

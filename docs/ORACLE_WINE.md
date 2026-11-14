@@ -321,9 +321,9 @@ and left mouse inputs of `sl01_basic` are the candidates, and the missing piece
 is the state that enables combat (an equipped weapon or a target is the first
 thing to check).
 
-Shift is bound to the autoface row, not to a run, so the 200 u/s of `shift+w`
-measured in `sl01_basic` is probably Kain with that action active (not
-verified).
+Shift is the combat control: held, Kain is in combat mode and `shift+w` plays
+`st_walk_cm`, whose clip moves him 200 u/s
+([`GAMEPLAY.md`](GAMEPLAY.md#kain-movement), Combat control).
 
 ## Port replay and state comparison
 

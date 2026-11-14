@@ -55,6 +55,9 @@ struct KainTuning {
     float turn_rate_run = 0.0f;        // B+0xACC -> A+0x1C
     float turn_rate_walk_back = 0.0f;  // B+0xAD0 -> A+0x20
     float run_clip_rate = 0.0f;        // B+0xB14 -> A+0x40, run playback rate (FUN_00445ba0)
+    // B+0x220 -> A+0x104 (`combatModeHoldExitDelay`): how long combat mode
+    // lasts after its button is released (FUN_0042dca0). 0.15 s.
+    float combat_hold_exit_delay = 0.0f;
     // Root motion speeds in u/s, filled by apply_kain_clip_speeds from the
     // animreel entries of kain.big (docs/FORMATS/animreel.md). They are
     // magnitudes of the clip's forward (local x) root speed.

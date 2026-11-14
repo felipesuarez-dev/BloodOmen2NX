@@ -55,10 +55,11 @@ void KainActor::step(const PlayerInput& input, const PlayerState& state, double 
     fixed_seconds_ += seconds;
 }
 
-float KainActor::begin(const PlayerInput& input, const PlayerState& state, double seconds) {
+GroundMotion KainActor::begin(const PlayerInput& input, const PlayerState& state,
+                              double seconds) {
     animation_.begin(input, state, seconds);
     fixed_seconds_ += seconds;
-    return animation_.ground_advance();
+    return animation_.ground_motion();
 }
 
 void KainActor::end(const PlayerInput& input, const PlayerState& state, double seconds) {

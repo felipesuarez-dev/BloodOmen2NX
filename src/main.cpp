@@ -1157,14 +1157,14 @@ int run_replay(const Options& options) {
         bo2::game::PlayerInput input;
         input.move_x = tick.move_x;
         input.move_y = tick.move_y;
-        input.run = tick.run;
+        input.combat = tick.run;  // the capture's Shift key is the combat control
         input.jump = tick.jump;
         input.attack = tick.attack;
         // The order of a ground state of the original: the animation advances
         // and its root motion moves Kain (FUN_0041f460).
         animation.begin(input, player.state(), tick.seconds);
-        const float ground_advance = animation.ground_advance();
-        player.step(input, tick.seconds, &ground_advance);
+        const bo2::game::GroundMotion ground = animation.ground_motion();
+        player.step(input, tick.seconds, &ground);
         camera.update(player.state(), collision, tick.seconds);
         animation.end(input, player.state(), tick.seconds);
         if (actor) {

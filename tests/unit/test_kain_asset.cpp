@@ -322,7 +322,7 @@ void check_kain_ground_motion(const bo2::engine::BigArchive& archive,
     const auto step = [&](const bo2::game::PlayerInput& input) {
         animation.begin(input, ground, tick);
         animation.end(input, ground, tick);
-        return animation.ground_advance();
+        return animation.ground_motion().forward;
     };
     step(idle);
 
@@ -361,6 +361,36 @@ void check_kain_ground_motion(const bo2::engine::BigArchive& archive,
     }
     CHECK(pause == 15);
     CHECK(std::fabs(advance + 106.25f * 0.007f) < 1.0e-3f);
+
+    // Combat mode: with the control held the oracle shows st_ready_cm, and
+    // with W st_walk_cm at exactly 200 u/s from the first sample: the blend
+    // that starts it carries 20 u in 0.1 s and kain/advance moves 200 u/s.
+    for (int index = 0; index < 150; ++index) {
+        step(idle);
+    }
+    bo2::game::PlayerInput hold;
+    hold.combat = true;
+    step(hold);
+    CHECK(animation.state() == bo2::game::kain_anim::kReadyCombat);
+    CHECK(std::fabs(animation.ground_motion().forward) < 1.0e-4f);
+    bo2::game::PlayerInput advance_input = hold;
+    advance_input.move_y = 1.0f;
+    CHECK(std::fabs(step(advance_input) - 200.0f * 0.007f) < 1.0e-3f);
+    CHECK(animation.state() == bo2::game::kain_anim::kWalkCombat);
+    CHECK(!animation.ground_motion().turn);
+    float walked = 0.0f;
+    for (int index = 0; index < 100; ++index) {
+        walked += step(advance_input);
+    }
+    // 0.7 s at 200 u/s; the ticks where the blend and the clip end give less.
+    CHECK(walked > 0.7f * 200.0f * 0.95f && walked < 0.7f * 200.0f + 0.3f);
+    // The control released: the mode lasts 0.15 s more, then st_run is back.
+    int held = 0;
+    for (; held < 60 && animation.combat_mode(); ++held) {
+        step(forward);
+    }
+    CHECK(held == 23);  // the arming tick and 22 of 7 ms
+    CHECK(animation.state() == bo2::game::kain_anim::kRun);
 }
 
 int main() {

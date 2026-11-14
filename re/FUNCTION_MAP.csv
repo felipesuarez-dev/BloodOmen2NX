@@ -731,7 +731,7 @@ address,name,subsystem,status,notes
 004253d0,FUN_004253d0,unknown,todo,ghidra
 004254f0,FUN_004254f0,unknown,todo,ghidra
 00425520,FUN_00425520,unknown,todo,ghidra
-00425580,FUN_00425580,player,wip,src/game/player.cpp: stick_class (thresholds and deadzone edge as the dump); pinned only through PlayerController tests
+00425580,FUN_00425580,player,wip,src/game/kain_animation.cpp: KainAnimation::combat_direction gives the five directions from the stick; the axes come from the port input instead of FUN_00452c30
 00425670,FUN_00425670,unknown,todo,ghidra
 004256c0,FUN_004256c0,unknown,todo,ghidra
 00425820,FUN_00425820,unknown,todo,ghidra
@@ -842,7 +842,7 @@ address,name,subsystem,status,notes
 0042d5f0,FUN_0042d5f0,unknown,todo,ghidra
 0042d6c0,FUN_0042d6c0,unknown,todo,ghidra
 0042d840,FUN_0042d840,unknown,todo,ghidra
-0042dca0,FUN_0042dca0,unknown,todo,ghidra
+0042dca0,FUN_0042dca0,player,wip,src/game/kain_animation.cpp: KainAnimation::update_combat_mode enters combat mode while the control is held and leaves it after the hold exit delay; the checks before it and the camera and weapon work of the enter and leave functions are not ported
 0042ddd0,FUN_0042ddd0,unknown,todo,ghidra
 0042e010,FUN_0042e010,unknown,todo,ghidra
 0042e0f0,FUN_0042e0f0,unknown,todo,ghidra
@@ -1288,13 +1288,14 @@ address,name,subsystem,status,notes
 0044a0f0,FUN_0044a0f0,unknown,todo,ghidra
 0044a190,FUN_0044a190,unknown,todo,ghidra
 0044a310,FUN_0044a310,unknown,todo,ghidra
+0044a380,FUN_0044a380,player,wip,src/game/kain_animation.cpp: the combat movement moves Kain by the root motion and does not turn him; the turn toward a target and the wall cast are not ported
 0044a6b0,FUN_0044a6b0,unknown,todo,ghidra
 0044a7b0,FUN_0044a7b0,unknown,todo,ghidra
 0044a7e0,FUN_0044a7e0,unknown,todo,ghidra
 0044a9b0,FUN_0044a9b0,unknown,todo,ghidra
 0044aae0,FUN_0044aae0,unknown,todo,ghidra
 0044ab10,FUN_0044ab10,unknown,todo,ghidra
-0044ab20,FUN_0044ab20,unknown,todo,ghidra
+0044ab20,FUN_0044ab20,player,wip,src/game/kain_animation.cpp: the combat movement starts the state of the direction from the normal table when the direction changes; the stealth and silent tables and the target test are not ported
 0044adb0,FUN_0044adb0,unknown,todo,ghidra
 0044ae40,FUN_0044ae40,unknown,todo,ghidra
 0044ae70,FUN_0044ae70,unknown,todo,ghidra

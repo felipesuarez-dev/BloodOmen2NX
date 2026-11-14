@@ -17,4 +17,5 @@ Status: Kain movement is in (`kain_tuning`, `player`, `camera`,
 (`KainAnimation::ground_advance`, `docs/FORMATS/animatio.md`): the blends of
 the graph give the start of the run, the pause before the walk back and the
 slide after the run, and the clips give the run and walk-back speeds. The
-Shift+W speed is still measured in the Wine oracle. See `docs/GAMEPLAY.md`.
+combat mode (Shift) plays the combat movement states of the graph. See
+`docs/GAMEPLAY.md`.

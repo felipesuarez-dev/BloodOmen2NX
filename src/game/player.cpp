@@ -10,7 +10,7 @@ namespace {
 
 // Ground movement is animation root motion in the original: FUN_0041f7d0 adds
 // the root delta of FUN_0041fb00 to the position. `step` takes that delta as
-// `ground_advance`, which KainAnimation works out from the animation state
+// `motion`, which KainAnimation works out from the animation state
 // machine (docs/FORMATS/animatio.md, Root motion). Without it the controller
 // falls back to the steady speeds of the clips (docs/FORMATS/animreel.md):
 //   W at full stick: kain/run root speed (200 u/s) * the run clip rate
@@ -19,11 +19,6 @@ namespace {
 //     in the `kain` animatio graph (1.7).
 // The fallback has no start of the run and no pause before the walk back:
 // those come from the blends of the graph.
-// Measured but unverified: Kain was probably blocked for part of that capture
-// (docs/ORACLE_WINE.md), so this is not a confirmed top speed. 200 = 200 * 1.0
-// is unexplained.
-constexpr float kShiftSpeed = 200.0f;      // measured, Shift+W
-
 constexpr float kMaxTurnScale = 4.0f;  // FUN_0041ecf0 caps |ax| / (1 - deadzone) at 4
 
 // DAT_00844c00: degrees to radians. FUN_00441f20 turns a forward or back jump
@@ -174,7 +169,7 @@ PlayerController::PlayerController(bo2::engine::CollisionWorld& collision,
 }
 
 void PlayerController::step(const PlayerInput& input, double seconds,
-                            const float* ground_advance) {
+                            const GroundMotion* motion) {
     if (!std::isfinite(seconds) || seconds <= 0.0) {
         return;
     }
@@ -199,6 +194,8 @@ void PlayerController::step(const PlayerInput& input, double seconds,
     }
     if (air_jump_) {
         steer_in_air(input, dt);
+    } else if (motion != nullptr && !motion->turn) {
+        // The combat movement strafes: no tank turn (FUN_0044a380).
     } else if (input.move_x != 0.0f && deadzone <= std::fabs(input.move_x)) {  // FUN_0041ecf0: `deadzone <= ax`
         const float scale =
             std::min(std::fabs(input.move_x) / (1.0f - deadzone), kMaxTurnScale);
@@ -211,15 +208,12 @@ void PlayerController::step(const PlayerInput& input, double seconds,
 
     // Ground speed. A jump has its own horizontal velocity (steer_in_air). On
     // the ground the animation moves Kain (FUN_0041f460): the caller hands in
-    // the forward distance of this tick. A plain fall, and a caller without
+    // the forward and lateral distance of this tick. A plain fall, and a caller without
     // an animation, keep the steady speed of the held input.
     float speed = 0.0f;
-    if (air_jump_) {
-        // Horizontal motion comes from steer_in_air.
-    } else if (forward_held && input.run) {
-        speed = kShiftSpeed;
-    } else if (ground_advance != nullptr && state_.grounded) {
-        speed = dt > 0.0f ? *ground_advance / dt : 0.0f;
+    const bool rooted = !air_jump_ && motion != nullptr && state_.grounded;
+    if (air_jump_ || rooted) {
+        // Horizontal motion comes from steer_in_air or from the root motion.
     } else if (forward_held) {
         const float stick =
             std::min(1.0f, std::sqrt(input.move_x * input.move_x + input.move_y * input.move_y));
@@ -231,9 +225,11 @@ void PlayerController::step(const PlayerInput& input, double seconds,
 
     const bo2::engine::Vec3 heading{std::cos(state_.yaw), std::sin(state_.yaw), 0.0f};
     // The step of this tick: the jump velocity, or the ground speed along the yaw.
+    const bo2::engine::Vec3 left{-std::sin(state_.yaw), std::cos(state_.yaw), 0.0f};
     const bo2::engine::Vec3 displacement =
         air_jump_ ? bo2::engine::Vec3{air_velocity_.x * dt, air_velocity_.y * dt, 0.0f}
-                  : heading * (speed * dt);
+                  : (rooted ? heading * motion->forward + left * motion->lateral
+                            : heading * (speed * dt));
     const float travel = bo2::engine::length(displacement);
     // FUN_0042ee60: the run probe is a sphere swept from the chest 32 u
     // forward (FUN_005be9a0) and it records a wall it faces (the hit normal

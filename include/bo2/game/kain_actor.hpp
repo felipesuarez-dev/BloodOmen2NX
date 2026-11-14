@@ -41,9 +41,9 @@ public:
     void step(const PlayerInput& input, const PlayerState& state, double seconds);
     // The same tick in two halves, for a host that moves the player by the
     // root motion: `begin` before the player steps, with its state at the
-    // start of the tick, returns the forward distance of the tick
-    // (KainAnimation::ground_advance); `end` after it.
-    float begin(const PlayerInput& input, const PlayerState& state, double seconds);
+    // start of the tick, returns what the animation moves him by
+    // (KainAnimation::ground_motion); `end` after it.
+    GroundMotion begin(const PlayerInput& input, const PlayerState& state, double seconds);
     void end(const PlayerInput& input, const PlayerState& state, double seconds);
 
     // Skins the model at the current clip time and places it.

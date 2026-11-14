@@ -141,28 +141,93 @@ void test_ground_advance() {
     // W: the run starts and moves in the same tick, at the run rate.
     animation.begin(stick(1.0f), on_ground(), kTick);
     CHECK(animation.state() == anim::kRun);
-    CHECK(std::fabs(animation.ground_advance() - 200.0f * 1.15f * 0.02f) < 1.0e-4f);
+    CHECK(std::fabs(animation.ground_motion().forward - 200.0f * 1.15f * 0.02f) < 1.0e-4f);
     animation.end(stick(1.0f), on_ground(), kTick);
     // Nothing held: the idle clip does not move him.
     animation.begin(stick(0.0f), on_ground(), kTick);
-    CHECK(animation.state() == anim::kReady && animation.ground_advance() == 0.0f);
+    CHECK(animation.state() == anim::kReady && animation.ground_motion().forward == 0.0f);
     animation.end(stick(0.0f), on_ground(), kTick);
     // S: the blend gives its transform over its 0.1 s (FUN_005ceef0)...
     animation.begin(stick(-1.0f), on_ground(), kTick);
     CHECK(animation.state() == anim::kBack);
-    CHECK(std::fabs(animation.ground_advance() + 1.0f) < 1.0e-4f);
+    CHECK(std::fabs(animation.ground_motion().forward + 1.0f) < 1.0e-4f);
     animation.end(stick(-1.0f), on_ground(), kTick);
     // ...and then the clip moves him by the root of its reel.
     for (int tick = 0; tick < 7; ++tick) {
         animation.begin(stick(-1.0f), on_ground(), kTick);
         animation.end(stick(-1.0f), on_ground(), kTick);
     }
-    CHECK(std::fabs(animation.ground_advance() + 62.5f * 0.02f) < 1.0e-4f);
+    CHECK(std::fabs(animation.ground_motion().forward + 62.5f * 0.02f) < 1.0e-4f);
     // In the air `begin` asks for no ground state: `end` owns the jump.
     animation.end(stick(-1.0f), in_air(200.0f), kTick);
     CHECK(animation.state() == anim::kStartJump);
     animation.begin(stick(1.0f), in_air(200.0f), kTick);
     CHECK(animation.state() == anim::kStartJump);
+}
+
+void test_combat_mode() {
+    // The combat states play 1 s clips; the walk moves the root 200 u per
+    // second and the left strafe clip names a transform of 96 u to the left.
+    bo2::engine::AnimGraph graph = movement_graph();
+    graph.transforms = {bo2::engine::AnimTransform{
+        {0.0f, 96.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}}};
+    graph.clips[72].transform_tag = 1;
+    bo2::game::KainTuning value = tuning();
+    value.combat_hold_exit_delay = 0.15f;
+    value.clip_forward_speed.assign(graph.clips.size(), 0.0f);
+    value.clip_forward_speed[14] = 200.0f;
+    KainAnimation animation(graph, value);
+    const auto combat = [](float move_y, float move_x = 0.0f) {
+        PlayerInput input = stick(move_y, move_x);
+        input.combat = true;
+        return input;
+    };
+    animation.step(stick(0.0f), on_ground(), kTick);
+    CHECK(animation.state() == anim::kReady && !animation.combat_mode());
+
+    // The control held: combat mode, and the combat movement takes over.
+    animation.step(combat(0.0f), on_ground(), kTick);
+    CHECK(animation.combat_mode() && animation.state() == anim::kReadyCombat);
+    CHECK(!animation.ground_motion().turn);
+    // FUN_00425580: forward, back, and a side when |x| is over twice |y|.
+    animation.step(combat(1.0f), on_ground(), kTick);
+    CHECK(animation.state() == anim::kWalkCombat);
+    CHECK(std::fabs(animation.ground_motion().forward - 200.0f * 0.02f) < 1.0e-4f);
+    animation.step(combat(-1.0f), on_ground(), kTick);
+    CHECK(animation.state() == anim::kBackCombat);
+    animation.step(combat(0.4f, -1.0f), on_ground(), kTick);
+    CHECK(animation.state() == anim::kStrafeLeftCombat);
+    // The strafe clip gives the part of its transform that matches its time.
+    CHECK(std::fabs(animation.ground_motion().lateral - 96.0f * 0.02f) < 1.0e-4f);
+    CHECK(animation.ground_motion().forward == 0.0f);
+    animation.step(combat(0.4f, 1.0f), on_ground(), kTick);
+    CHECK(animation.state() == anim::kStrafeRightCombat);
+    animation.step(combat(0.6f, 1.0f), on_ground(), kTick);
+    CHECK(animation.state() == anim::kWalkCombat);  // |x| is not over twice |y|
+    animation.step(combat(0.05f, 0.05f), on_ground(), kTick);
+    CHECK(animation.state() == anim::kReadyCombat);  // inside the deadzone
+
+    // FUN_0042dca0: the mode outlasts the control by the hold exit delay. The
+    // first tick without it arms the timer, then 0.15 s run down.
+    animation.step(stick(1.0f), on_ground(), kTick);
+    CHECK(animation.combat_mode() && animation.state() == anim::kWalkCombat);
+    int ticks = 1;
+    while (animation.combat_mode() && ticks < 40) {
+        animation.step(stick(1.0f), on_ground(), kTick);
+        ++ticks;
+    }
+    CHECK(ticks == 9);  // the arming tick and eight of 20 ms
+    // Out of combat mode the ready behaviour is back: W runs and turns again.
+    CHECK(animation.state() == anim::kRun);
+    CHECK(animation.ground_motion().turn);
+    // Holding the control again before the exit keeps the mode.
+    animation.step(combat(0.0f), on_ground(), kTick);
+    animation.step(stick(0.0f), on_ground(), kTick);
+    animation.step(combat(0.0f), on_ground(), kTick);
+    for (int tick = 0; tick < 6; ++tick) {
+        animation.step(stick(0.0f), on_ground(), kTick);
+    }
+    CHECK(animation.combat_mode());
 }
 
 void test_jump_and_landing() {
@@ -267,6 +332,7 @@ int main() {
     test_ground_states();
     test_run_plays_at_the_run_rate();
     test_ground_advance();
+    test_combat_mode();
     test_jump_and_landing();
     test_takeoff_ends_with_the_boost_window();
     test_run_landing_and_fall();
