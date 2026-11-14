@@ -58,6 +58,10 @@ There is no glyph for the space, for `"`, `#`, `$`, `&`, `*`, `<`, `=`, `>`,
 `@`, `[`, `\`, `]`, `^`, `_`, `` ` ``, `{`, `|`, `}`, `~`, or for any other
 byte above 0x7f. Widths go from 4 to 28 texels and heights are 19 or 20.
 
+The host reads this entry in `parse_pixmap_font`
+(`src/engine/pixmap_font.cpp`) and keeps the texture name, the four floats in
+file order, the flag and the glyph rectangles.
+
 ## Inspection
 
 `tools/bo2fmt/textures.py` lists the texture entries of a container and

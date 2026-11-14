@@ -8129,7 +8129,7 @@ address,name,subsystem,status,notes
 005ded00,FUN_005ded00,unknown,todo,ghidra
 005df830,FUN_005df830,unknown,todo,ghidra
 005df8d0,FUN_005df8d0,unknown,todo,ghidra
-005df900,FUN_005df900,unknown,todo,ghidra
+005df900,FUN_005df900,font,wip,src/engine/pixmap_font.cpp: parse_pixmap_font reads the texture symbol the four header floats the flag and the glyphs; the font manager registration and the texture load are not ported
 005dfdd0,FUN_005dfdd0,unknown,todo,ghidra
 005dfe50,FUN_005dfe50,unknown,todo,ghidra
 005dff70,FUN_005dff70,unknown,todo,ghidra

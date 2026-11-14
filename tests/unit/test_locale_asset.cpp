@@ -1,3 +1,4 @@
+#include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <filesystem>
@@ -6,6 +7,7 @@
 #include <vector>
 
 #include "bo2/engine/big_archive.hpp"
+#include "bo2/engine/pixmap_font.hpp"
 #include "bo2/engine/string_table.hpp"
 
 namespace {
@@ -140,6 +142,46 @@ bool has_non_ascii(const std::string& text) {
     return false;
 }
 
+// The font of the game (FUN_005df900): the entry, its texture and the glyphs
+// the story text uses.
+void test_game_font(const bo2::engine::BigArchive& archive) {
+    const bo2::engine::BigEntry* entry = archive.find("texfont", "main/main");
+    CHECK(entry != nullptr);
+    if (entry == nullptr) {
+        return;
+    }
+    const std::vector<std::uint8_t> data = archive.extract(*entry);
+    CHECK(data.size() == 1780);
+    const bo2::engine::PixmapFont font =
+        bo2::engine::parse_pixmap_font(data, entry->symbols, archive.names());
+    CHECK(font.texture == "fonts/revised");
+    CHECK(std::fabs(font.header[0] - 20.0f) < 1.0e-5f);
+    CHECK(std::fabs(font.header[1] - 2.0f) < 1.0e-5f);
+    CHECK(std::fabs(font.header[2] - 5.0f) < 1.0e-5f);
+    CHECK(std::fabs(font.header[3] - 8.0f) < 1.0e-5f);
+    CHECK(!font.upper_case_only);
+    CHECK(font.glyphs.size() == 87);
+    const auto same = [&font](std::uint8_t code, float x, float y, float width, float height) {
+        const bo2::engine::FontGlyph* glyph = font.find(code);
+        return glyph != nullptr && glyph->x == x && glyph->y == y && glyph->width == width &&
+               glyph->height == height;
+    };
+    CHECK(same('a', 0.0f, 0.0f, 12.0f, 20.0f));
+    CHECK(same('A', 105.0f, 105.0f, 12.0f, 20.0f));
+    CHECK(same('T', 231.0f, 126.0f, 12.0f, 20.0f));
+    CHECK(same('0', 42.0f, 42.0f, 13.0f, 20.0f));
+    CHECK(same(0xc8, 105.0f, 84.0f, 20.0f, 20.0f));
+    CHECK(same('S', 63.0f, 63.0f, 10.0f, 20.0f));
+    CHECK(same('?', 63.0f, 63.0f, 10.0f, 20.0f));
+    CHECK(font.find(' ') == nullptr);
+
+    const bo2::engine::BigEntry* copy = archive.find("texfont", "main/main.fnt");
+    CHECK(copy != nullptr);
+    if (copy != nullptr) {
+        CHECK(archive.extract(*copy) == data);
+    }
+}
+
 }  // namespace
 
 int main() {
@@ -162,6 +204,7 @@ int main() {
     }
     try {
         const bo2::engine::BigArchive archive = bo2::engine::BigArchive::load(path.string());
+        test_game_font(archive);
         // Every installed container starts its name table with the language names.
         const std::vector<std::string> expected = {"default", "english", "french",
                                                    "italian", "german",  "spanish"};

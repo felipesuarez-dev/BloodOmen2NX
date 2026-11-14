@@ -29,6 +29,7 @@ add_library(bo2_engine STATIC
     src/engine/erg.cpp
     src/engine/navigation.cpp
     src/engine/ogg.cpp
+    src/engine/pixmap_font.cpp
     src/engine/region.cpp
     src/engine/skeleton_pose.cpp
     src/engine/string_table.cpp

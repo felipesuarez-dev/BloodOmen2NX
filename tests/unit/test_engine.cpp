@@ -14,6 +14,7 @@
 #include "bo2/engine/dds.hpp"
 #include "bo2/engine/erg.hpp"
 #include "bo2/engine/math.hpp"
+#include "bo2/engine/pixmap_font.hpp"
 
 namespace {
 
@@ -503,6 +504,40 @@ std::vector<std::uint8_t> build_cell_group(
         append_chunk(cell, "cellinst", instances);
     }
     return cell;
+}
+
+struct GlyphSpec {
+    std::uint8_t code;
+    float x;
+    float y;
+    float width;
+    float height;
+};
+
+std::vector<std::uint8_t> make_font(bool upper_case_only, const std::vector<GlyphSpec>& glyphs) {
+    std::vector<std::uint8_t> data;
+    append(data, std::string("texfont\0", 8));
+    put32(data, static_cast<std::uint32_t>(40 + glyphs.size() * 20));
+    put32(data, 0);
+    put16(data, 0);
+    put16(data, 0xFFFF);
+    for (float value : {20.0f, 2.0f, 5.0f, 8.0f}) {
+        put_float(data, value);
+    }
+    data.push_back(upper_case_only ? 1 : 0);
+    data.push_back(0xFF);
+    put16(data, static_cast<std::uint16_t>(glyphs.size()));
+    for (const GlyphSpec& glyph : glyphs) {
+        data.push_back(glyph.code);
+        data.push_back(0xFF);
+        data.push_back(0xFF);
+        data.push_back(0xFF);
+        put_float(data, glyph.x);
+        put_float(data, glyph.y);
+        put_float(data, glyph.width);
+        put_float(data, glyph.height);
+    }
+    return data;
 }
 
 void test_reader() {
@@ -1135,6 +1170,55 @@ void test_model_render_priority() {
     }));
 }
 
+// FUN_005df900: the texfont entry and its upper-case-only rule.
+void test_pixmap_font() {
+    const std::vector<std::uint16_t> symbols = {100};
+    std::vector<std::string> names(101);
+    names[100] = "fonts/revised";
+    const std::vector<std::uint8_t> data = make_font(
+        false, {{'a', 0, 0, 12, 20}, {'A', 105, 105, 12, 20}, {'S', 63, 63, 10, 20}});
+    const bo2::engine::PixmapFont font = bo2::engine::parse_pixmap_font(data, symbols, names);
+    CHECK(font.texture == "fonts/revised");
+    CHECK(std::fabs(font.header[0] - 20.0f) < 1.0e-5f);
+    CHECK(std::fabs(font.header[1] - 2.0f) < 1.0e-5f);
+    CHECK(std::fabs(font.header[2] - 5.0f) < 1.0e-5f);
+    CHECK(std::fabs(font.header[3] - 8.0f) < 1.0e-5f);
+    CHECK(!font.upper_case_only);
+    CHECK(font.glyphs.size() == 3);
+    const bo2::engine::FontGlyph* a = font.find('a');
+    CHECK(a != nullptr && a->x == 0.0f && a->width == 12.0f);
+    const bo2::engine::FontGlyph* capital = font.find('A');
+    CHECK(capital != nullptr && capital->x == 105.0f && capital->y == 105.0f);
+    const bo2::engine::FontGlyph* s = font.find('S');
+    CHECK(s != nullptr && s->width == 10.0f);
+    CHECK(font.find('z') == nullptr);
+
+    const std::vector<std::uint8_t> upper = make_font(true, {{'A', 105, 105, 12, 20}});
+    const bo2::engine::PixmapFont upper_font =
+        bo2::engine::parse_pixmap_font(upper, symbols, names);
+    CHECK(upper_font.upper_case_only);
+    CHECK(upper_font.glyphs.size() == 2);
+    const bo2::engine::FontGlyph* lower = upper_font.find('a');
+    CHECK(lower != nullptr && lower->x == 105.0f && lower->y == 105.0f);
+
+    const std::vector<std::uint8_t> both =
+        make_font(true, {{'A', 105, 105, 12, 20}, {'a', 1, 2, 3, 4}});
+    const bo2::engine::PixmapFont both_font =
+        bo2::engine::parse_pixmap_font(both, symbols, names);
+    CHECK(both_font.glyphs.size() == 2);
+    const bo2::engine::FontGlyph* own = both_font.find('a');
+    CHECK(own != nullptr && own->x == 1.0f);
+
+    std::vector<std::uint8_t> truncated = data;
+    truncated.pop_back();
+    CHECK(throws([&] { bo2::engine::parse_pixmap_font(truncated, symbols, names); }));
+    std::vector<std::uint8_t> bad_size = data;
+    patch32(bad_size, 8, 12);
+    CHECK(throws([&] { bo2::engine::parse_pixmap_font(bad_size, symbols, names); }));
+    const std::vector<std::uint16_t> no_symbols;
+    CHECK(throws([&] { bo2::engine::parse_pixmap_font(data, no_symbols, names); }));
+}
+
 // The modlskel record is 104 bytes (FUN_0067bdd0), not the old guessed
 // count + pairs + 96 bytes layout.
 void test_skeleton_bones() {
@@ -1195,6 +1279,7 @@ int main() {
     test_material_texture_lists();
     test_material_cull();
     test_model_render_priority();
+    test_pixmap_font();
     test_skeleton_bones();
     test_collision_chunk();
     test_cell_animations();
