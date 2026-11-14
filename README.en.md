@@ -303,6 +303,7 @@ Per-function loop: [`docs/PORTING_GUIDE.md`](docs/PORTING_GUIDE.md). The rule is
 | [`docs/GAMEPLAY.md`](docs/GAMEPLAY.md) | Translated gameplay systems |
 | [`docs/HUD.md`](docs/HUD.md) | The HUD: projection, visibility and bar rules |
 | [`docs/TEXT.md`](docs/TEXT.md) | Text: the commands of a string and the placing of the glyphs |
+| [`docs/SCRIPTS.md`](docs/SCRIPTS.md) | Scripts: objects, states, threads and the instructions of their machine |
 | [`docs/RUNNING.md`](docs/RUNNING.md) | Host build, Switch target and the oracle |
 | [`docs/TESTING.md`](docs/TESTING.md) | Test pyramid and rules |
 | [`docs/GAME_DATA.md`](docs/GAME_DATA.md) | Game files, layout and where they live |

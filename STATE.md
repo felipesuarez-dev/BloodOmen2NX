@@ -255,8 +255,9 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   it. Wiring the `sound`/`strmfile` event table to gameplay is pending.
 - `planinfo`, `musicbnk` and `liteinfo`. The layout of `bpackage` (the
   compiled script packages) is read from the writer of the executable
-  (`docs/FORMATS/bpackage.md`), but its instructions are not interpreted
-  and the port has no reader for it. The layout of `texfont` is read
+  (`docs/FORMATS/bpackage.md`) and the machine that runs them from its
+  interpreter (`docs/SCRIPTS.md`), but the port has no reader for the
+  packages and runs no script. The layout of `texfont` is read
   (`docs/FORMATS/textures.md`) and the port has no reader for it yet.
 - Oracle state beyond position, velocity, health, lore, the animation id
   and the camera: the logic tick and the grounded flag are not located.

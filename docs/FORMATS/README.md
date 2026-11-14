@@ -17,7 +17,7 @@ by a parser or the original game; **observed** = seen but not decoded;
 | `animreel` clips | decoded for inner version 6; root motion of the Kain clips verified against the oracle | [`animreel.md`](animreel.md) |
 | `animatio` graphs | decoded: all 4,081 installed entries parse to the last byte; clip nodes and states read | [`animatio.md`](animatio.md) |
 | Textures | verified: DDS payloads | [`textures.md`](textures.md) |
-| `bpackage` script packages | layout read from the writer of the executable; a reference reader consumes the 480 entries to the last byte; instructions not interpreted | [`bpackage.md`](bpackage.md) |
+| `bpackage` script packages | layout read from the writer of the executable; a reference reader consumes the 480 entries to the last byte; the instructions are in [`../SCRIPTS.md`](../SCRIPTS.md) | [`bpackage.md`](bpackage.md) |
 | Light maps (`litedata/*.slm`) | partially verified: 71 entries, palette + 4-bit indices | [`litedata.md`](litedata.md) |
 | Audio | verified: Ogg Vorbis in `pc.rkv` | [`audio.md`](audio.md) |
 | Video | verified (magic only) | [`video.md`](video.md) |

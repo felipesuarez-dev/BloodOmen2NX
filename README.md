@@ -305,6 +305,7 @@ La documentación técnica está en inglés.
 | [`docs/GAMEPLAY.md`](docs/GAMEPLAY.md) | Sistemas de juego traducidos |
 | [`docs/HUD.md`](docs/HUD.md) | El HUD: proyección, visibilidad y reglas de las barras |
 | [`docs/TEXT.md`](docs/TEXT.md) | El texto: comandos de una cadena y colocación de los glifos |
+| [`docs/SCRIPTS.md`](docs/SCRIPTS.md) | Los scripts: objetos, estados, hilos y las instrucciones de su máquina |
 | [`docs/RUNNING.md`](docs/RUNNING.md) | Compilación del host, destino Switch y el oráculo |
 | [`docs/TESTING.md`](docs/TESTING.md) | Pirámide de pruebas y reglas |
 | [`docs/GAME_DATA.md`](docs/GAME_DATA.md) | Archivos del juego, estructura y dónde viven |

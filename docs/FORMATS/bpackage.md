@@ -5,8 +5,8 @@ script classes compiled by the game's own script compiler. The layout below
 is read from the function that writes a package (`FUN_0058cbb0`, a method of
 `goe::PackageBinaryLoader`, and the two functions it calls per class,
 `FUN_0058d000` and `FUN_0058d420`) and checked by a reference reader on the
-480 entries of the game: every one is consumed to its last byte. The
-instructions of the code are not interpreted yet.
+480 entries of the game: every one is consumed to its last byte. What the
+code does when it runs is in [`../SCRIPTS.md`](../SCRIPTS.md).
 
 ## What the game data has
 
@@ -57,12 +57,14 @@ The classes are written sorted (`FUN_0058ce60` compares two of them).
 
 ```
 name  class name
-u16   kind: 1 in the script classes of `native`, 5 in its value classes
-      (`position`, `timer`, ...), 0 in the classes written in script
-u16   (class +0x1e)
-u16   slot count
-u16   base count, enum count, field count, method count, body count
-name  base[base count]
+u16   kind (class +0x1c): 1 in the 44 script classes the executable
+      implements, 5 in its 14 value classes (`position`, `timer`,
+      `effect`, ...), 0 in the 361 classes written in script
+u16   size in bytes of the data of an object (class +0x1e; `FUN_0057fa20`
+      allocates that much)
+u16   slot count: the methods that can be replaced per state
+u16   state count, enum count, field count, method count, body count
+name  state[state count]: the first one is `default`
 enum[enum count]:
   name  enum name
   u16   (first word of the record)
@@ -71,35 +73,52 @@ enum[enum count]:
   u32   value[value count]
 field[field count]:
   name  field name
-  u16   (first word of the record)
-  u32   (record +8)
+  u16   flags (first word of the record; 12 values in the data)
+  u32   offset of the field in the data of the object
   type  field type
   default value (below)
 method[method count]:
   name  method name
-  u8    (record +4)
-  u8    (record +5)
-  u16   (record +6): 0xffff or 0 in the data
+  u8    (record +4): 0, 1, 2, 3, 4 or 5 in the data
+  u8    (record +5): 2 in the methods that run as a thread, else 0 or 1
+  u16   slot (record +6), or 0xffff when the method has none
   type  result type
   u16   parameter count
-  parameter[count]: type, u32
+  parameter[count]: type, u32 offset in the locals of a call
 body[body count]:
   u16   index of the method it implements
-  u16   flags: bit 0 set means native, no code
-  u16, u16, u16
+  u16   flags (body +4): bit 0 set means native, no code
+  u16   state the body belongs to (body +6)
+  u16   size in bytes of the locals of a call (body +8)
+  u16   size in cells of the stack of a call (body +10)
   u16   local count
-  local[count]: type, u32
+  local[count]: type, u32 offset in the locals
   without bit 0: u32 word count, then the code, one u32 per word
 ```
 
+The first method of every class is `start`, in slot 0: the body a state
+runs when the object enters it. A class has one body of `start` per state
+that defines one.
+
 A type (`FUN_0058ce80`) is a `u16` kind followed by what the kind needs:
 
-| Kind | Followed by | Seen as |
+| Kind | Followed by | What it is |
 |---|---|---|
+| 0 | nothing | no value (the result of a method that returns nothing) |
+| 1 | nothing | a boolean, one byte |
+| 2 | nothing | an integer, 32 bits |
+| 3 | nothing | a float |
+| 4 | nothing | a string |
+| 5 | nothing | a byte (the result of `getstate`) |
 | 6 | the element type, then a `u32` | an array |
-| 7 | another type | a reference |
-| 9, 10, 11 | a name | an object of a class (9), a handle to one (10), a value of an enumeration (11) |
-| any other | nothing | 0 result of a method with no value; 1, 2, 3, 4, 5 simple values |
+| 7 | another type | a reference to a value |
+| 9 | a class name | a value of a class |
+| 10 | a class name | a reference to a script object |
+| 11 | an enum name | a value of an enumeration |
+
+Kinds 2 and 3 are told apart by the defaults of the fields: the 16,386
+defaults of kind 3 that are not zero are float bit patterns, and the ones
+of kind 2 are small integers. A field of kind 1 takes one byte.
 
 The default value of a field (`FUN_0058cf20`) depends on the kind of its
 type: for 1, 2, 3, 5 and 11, a `u16` 1 and a `u32`; for 4, a `u16` that says
@@ -112,22 +131,35 @@ What the loader needs to connect the class with the others:
 
 ```
 u16   1 and the name of the parent class, or 0
-per base: u16 1 and the name of the class that provides it, or 0
-slot list, until a u16 0xffff:
-  u16 base index, u16 slot index, name of a class, u16 body index
+per state: u16 0 when the class has its own slot table for the state, or
+           u16 1 and the name of the nearest ancestor whose table it shares
+slot list, until a u16 0xffff, for the states with an own table:
+  u16 state, u16 slot, name of a class, u16 body index of that class
 body list, until a u16 0xffff:
   u16 body index
   reference list, until a u16 0xffff:
-    u16 kind, u16 operand word, then by kind:
+    u16 kind, u16 index of a code word of the body, then by kind:
       0, 1, 2: a name
       3, 4:    a name and a u16
       5:       two names and a u16
 ```
 
+The slot list says, for each state and slot of the class, which body runs:
+its own or the one of an ancestor. A slot without a body is not listed.
+
 The reference list has one entry for each instruction of the body whose
-operand is a pointer in memory, in the order of the code: a name (kinds 0
-and 1), a class (2), a method of a class (3), a body of a class (4) or a
-method reached through a base (5).
+operand is a pointer or a global index in memory. The code words of the
+file hold the values the compiler had in memory, so a reader takes these
+operands from here:
+
+| Kind | Code word | The operand is |
+|---|---|---|
+| 0 | the instruction (`0x04`) | a name: a string constant |
+| 1 | the instruction (`0x5f`) | a name: a class |
+| 2 | the word after the instruction (`0x21`) | a class |
+| 3 | the word after the instruction | the method `u16` of a class |
+| 4 | the word after the instruction | the body `u16` of a class |
+| 5 | the two words after the instruction | the state tables of the first class, and the method `u16` of the second |
 
 ## Code
 
@@ -140,18 +172,16 @@ one word, except (`FUN_005b8b80`):
 | 2 | `0x02`, `0x21`, `0x26`, `0x47`, `0x48`, `0x4a` to `0x4e`, `0x50` to `0x54`, `0x56` to `0x58` |
 | 3 | `0x49`, `0x4f`, `0x55` |
 
-The reference kinds of the link record tell what some of them point at:
-`0x04` and `0x5f` a name; `0x21` and `0x26` a class; `0x47`, `0x48`, `0x4b`,
-`0x4d`, `0x4e`, `0x51`, `0x53`, `0x54` and `0x57` a body of a class; `0x4a`,
-`0x4c`, `0x50`, `0x52`, `0x56` and `0x58` a method of a class; `0x49`,
-`0x4f` and `0x55` a method reached through a base. 63 codes are used in the
-game data, from `0x00` to `0x60`.
+63 codes are used in the game data, from `0x00` to `0x60`. Every body with
+code ends with `0x5c`, and the 80,885 jumps of the game land on the first
+word of an instruction of their body or right after its last word. The
+instructions are described in [`../SCRIPTS.md`](../SCRIPTS.md).
 
 ## Not read
 
-- What each instruction does: the interpreter (`goe::ScriptExec`, vtable
-  `0x86def0`).
-- The meaning of the unnamed words of a class, a field, a method and a body,
-  and the names of the simple type kinds.
-- The object stored as the default of a field of kind 9.
-- How the native classes are bound to the functions of the executable.
+- The words of a class, an enumeration, a field and a method that the
+  layout above leaves without a name.
+- The object stored as the default of a field of kind 9, and how many bytes
+  a field of kind 9 takes.
+- The array type (kind 6), which the game data uses only in 336
+  parameters, and the reference type (kind 7), which it does not use.
