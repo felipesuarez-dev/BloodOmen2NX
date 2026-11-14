@@ -946,7 +946,8 @@ void test_cell_group() {
     CHECK(geometry.has_markers);
     CHECK(geometry.markers.size() == 1);
     CHECK(geometry.markers[0].version == 4);
-    CHECK(geometry.markers[0].symbol_a == 3);
+    CHECK(geometry.markers[0].model == 1 && geometry.markers[0].clip == 2);
+    CHECK(geometry.markers[0].name_symbol == 3 && geometry.markers[0].class_symbol == 4);
     CHECK(std::fabs(geometry.markers[0].position.z - 6.0f) < 1.0e-5f);
     CHECK(std::fabs(geometry.markers[0].normal.z - 1.0f) < 1.0e-5f);
     CHECK(std::fabs(geometry.markers[0].number - 3.5f) < 1.0e-5f);

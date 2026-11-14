@@ -205,12 +205,20 @@ struct LevelLight {
     std::vector<std::uint32_t> indices;
 };
 
+// One object of a cell group (FUN_006889a0 reads the record). `model` is the
+// index of its model in `cellmdls` and `clip` the index of its clip in
+// `cellanim`, each -1 for none: a camera has a clip and no model. `name` is
+// the object and `entity_class` its `EntityClass`, empty for a plain child
+// model. The meaning of the two indices is read from the data: in `ui/hud`
+// and `sl01` they are in range and every clip is named exactly once.
 struct LevelMarker {
     std::uint32_t version = 0;
-    std::uint32_t id_a = 0;
-    std::uint32_t id_b = 0;
-    std::uint32_t symbol_a = 0;
-    std::uint32_t symbol_b = 0;
+    std::int32_t model = -1;
+    std::int32_t clip = -1;
+    std::uint32_t name_symbol = 0;
+    std::uint32_t class_symbol = 0;
+    std::string name;
+    std::string entity_class;
     Vec3 position{0.0f, 0.0f, 0.0f};
     Vec3 normal{0.0f, 0.0f, 0.0f};
     std::uint32_t flag = 0;

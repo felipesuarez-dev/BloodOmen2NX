@@ -423,10 +423,10 @@ Markers use a fixed version 4 record (56 bytes) in the reference levels:
 u32 marker count
 per marker:
   u32  version = 4
-  u32  id A
-  u32  id B
-  u32  symbol A
-  u32  symbol B
+  i32  model: index into `cellmdls`, -1 for none
+  i32  clip: index into `cellanim`, -1 for none
+  u32  name (symbol)
+  u32  class (symbol): the `EntityClass` of the object
   Vec3 position
   Vec3 normal
   u32  flag
@@ -435,8 +435,15 @@ per marker:
 ```
 
 `FUN_006889a0` selects the version and `FUN_00688c90` parses version 4.
-The symbols are kept raw; the marker kind and the meaning of the numeric
-fields are open. The host exposes the markers but does not render them.
+A marker is one object of the cell group. The meaning of the two indices is
+read from the data: in `ui/hud` every marker names the model of its own
+index and the seven clips are named by the seven animated objects (the health
+bar has clip 0, the lore bar 1, the letterbox 2, the charm haze 3, the intent
+glow 4, the rage bar 5, the enemy health bar 6). In `sl01` the 19 clips are
+named once each: by the eight animated models (the gate, the spotlight, four
+flocks of birds and two boats) and by eleven camera markers that have a clip
+and no model. The flag, the value and the number are open. The host exposes
+the markers but does not render them.
 
 ### `portal2`
 

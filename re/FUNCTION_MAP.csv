@@ -11096,10 +11096,10 @@ address,name,subsystem,status,notes
 00688730,FUN_00688730,unknown,todo,ghidra
 006887c0,FUN_006887c0,unknown,todo,ghidra
 00688900,FUN_00688900,unknown,todo,ghidra
-006889a0,FUN_006889a0,unknown,todo,ghidra
+006889a0,FUN_006889a0,level,wip,src/engine/cell_group.cpp: read_markers accepts the version 4 record only; versions 1 to 3 are rejected
 00688b80,FUN_00688b80,unknown,todo,ghidra
 00688c00,FUN_00688c00,unknown,todo,ghidra
-00688c90,FUN_00688c90,level,wip,src/engine/cell_group.cpp: read_markers (version 4); the symbols are kept raw and the marker kind is open
+00688c90,FUN_00688c90,level,wip,src/engine/cell_group.cpp: read_markers reads the version 4 record with its model and clip indices and resolves the name and the class; the flag the value and the number are kept raw
 00688d30,FUN_00688d30,unknown,todo,ghidra
 00688ea0,FUN_00688ea0,unknown,todo,ghidra
 00688f20,FUN_00688f20,unknown,todo,ghidra

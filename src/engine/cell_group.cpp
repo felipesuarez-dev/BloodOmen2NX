@@ -525,10 +525,10 @@ std::vector<LevelMarker> read_markers(const common::Reader& reader, const Chunk&
         if (marker.version != 4) {
             throw common::ParseError("unsupported marker version");
         }
-        marker.id_a = reader.u32(position + 4);
-        marker.id_b = reader.u32(position + 8);
-        marker.symbol_a = reader.u32(position + 12);
-        marker.symbol_b = reader.u32(position + 16);
+        marker.model = static_cast<std::int32_t>(reader.u32(position + 4));
+        marker.clip = static_cast<std::int32_t>(reader.u32(position + 8));
+        marker.name_symbol = reader.u32(position + 12);
+        marker.class_symbol = reader.u32(position + 16);
         marker.position = read_vec3(reader, position + 20);
         marker.normal = read_vec3(reader, position + 32);
         marker.flag = reader.u32(position + 44);
@@ -671,6 +671,10 @@ void read_cell_tail(const common::Reader& reader, std::size_t start, std::size_t
             geometry.has_lights = true;
         } else if (chunk.name == "cellmark") {
             geometry.markers = read_markers(reader, chunk);
+            for (LevelMarker& marker : geometry.markers) {
+                marker.name = resolve_symbol_name(marker.name_symbol, symbols, names);
+                marker.entity_class = resolve_symbol_name(marker.class_symbol, symbols, names);
+            }
             geometry.has_markers = true;
         } else if (chunk.name == "cellbsp") {
             geometry.cell_bsp = read_cell_bsp(reader, chunk);

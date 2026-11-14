@@ -82,9 +82,14 @@ the `cellanim` section of the cell group ([`models.md`](models.md#cellanim)).
 The same function scales the vial on Y by the maximum health over a value of
 the Kain tuning table (`FUN_004208a0`).
 
-Not decoded yet: the projection the game draws a UI scene with, which
-entities are visible outside a pause or a cutscene, and which clip belongs to
-which entity.
+The markers of the cell group tie the scene together: each one names an
+object, its class, its position, its model and its clip
+([`models.md`](models.md#cellmark)). Four models have no entity of their own
+(`ui_hud_health_glass`, `ui_hud_health_vial`, `ui_hud_blood_drip`,
+`ui_hud_blood_drop`): the bar classes look them up by name.
+
+Not decoded yet: the projection the game draws a UI scene with and which
+entities are visible outside a pause or a cutscene.
 
 ## Host
 
