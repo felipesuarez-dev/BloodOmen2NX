@@ -47,9 +47,9 @@ visibility update and the per-frame update.
 | `EnemyModeHUDComponent` | `_main_enemy`, `_enemy_glass`, `ui_hud_enemy_health_glass`, `ui_hud_enemy_health_bottom` | `FUN_00524d40` | nothing |
 | `HUDAwarenessGlow` | `ui_hud_intent_glow` | `FUN_00532700` | `FUN_00532750` |
 | `HUDCharmHaze` | `ui_hud_anim_charm_haze` | no rule; its init (`FUN_005357f0`) hides the entity | `FUN_00535830` |
-| `ScreenCut` | the screen cut | no rule; its init (`FUN_0073d8f0`) shows the entity and the end of a cut hides it | `FUN_0073d9d0` |
-| `HilitComponent` | the four `ui_hud_hilit_*` | no rule; its init (`FUN_0052e6b0`) runs the `ScreenCut` init | `FUN_0052e760`, which runs the `ScreenCut` update |
-| `PauseFade` | the pause fade | set by the per-frame update | `FUN_00775b10` |
+| `ScreenCut` | `ui_hud_screen_cut`, `ui_hud_letterbox` | no rule; a cut shows the entity and its end hides it | `FUN_0073d9d0` |
+| `HilitComponent` | the four `ui_hud_hilit_*` | no rule; its init (`FUN_0052e6b0`) hides the entity | `FUN_0052e760`, which runs the `ScreenCut` update |
+| `PauseFade` | `ui_hud_pause_fade` | set by the per-frame update | `FUN_00775b10` |
 | `HUDEnemyHealthBar` | the enemy health bar | `FUN_004b2870`, which is `FUN_00524d40` | `FUN_00539540` |
 | `HUDEnemyIcon` | the enemy icon | `FUN_00539d50`, which is `FUN_00524d40` | nothing |
 
@@ -68,15 +68,41 @@ flag (`FUN_00531470`).
 - The enemy health bar and the enemy icon follow the enemy mode rule: their
   visibility methods only call `FUN_00524d40`.
 - `FUN_00775b10`: the pause fade is visible while its own flag (component
-  `+0x48`) is set. The constructor (`FUN_007759e0`) clears it; what sets it
-  is not read.
+  `+0x48`) is set. The constructor (`FUN_007759e0`) clears it and the HUD
+  sets it to its paused flag (`FUN_00531470` calls the setter at `0x775af0`):
+  the pause fade is visible while the game is paused. Its init
+  (`FUN_00775a50`) gives it the colour (0, 0, 0, 0.9).
 
 A class without a visibility rule can still hide its entity:
 `FUN_0070dfa0(1)` sets the byte at entity `+0x139` (and bit 0 of `+0x60`),
 and the entity's draw (`FUN_0070f100`) returns at once while that byte is
-set. The charm haze does it in its init. The screen cut clears the byte in
-its init and sets it when a cut ends (`FUN_0073d9d0`); what a screen cut and
-a highlight draw while no cut is running is not read.
+set. The base init of a component (`FUN_00754df0`) clears it.
+
+- Screen cut: a quad of 672 x 512 that covers the screen. Its init
+  (`FUN_0073d8f0`) sets its three colours to (0, 0, 0, 1) and leaves it
+  shown: the screen starts black. A cut (`FUN_0073da40`) is a list of keys,
+  each a duration and a colour; the update (`FUN_0073d9d0`, `FUN_0073d6a0`)
+  moves the colour from one key to the next in a straight line and sets it
+  on the model (`FUN_00724420`, which also turns blending on while an alpha
+  is below 1). When the keys run out with an alpha below 0.001 the entity is
+  hidden. `FUN_0073db50` drops a running cut: colour (0, 0, 0, 0), hidden.
+- Letterbox: a `ScreenCut` as well; the HUD finds it by name
+  (`FUN_0052ef60`). Its model is two bars above and below the screen (y from
+  250.9 to 519.7 and from -536 to -267.2 at rest). `FUN_00531840` starts a
+  cut on it and moves its clip to the fraction it is given, at most 0.5.
+- Highlights: the class's own setup (the code at `0x52e6e0`, which the init
+  calls last) sets the colour to (1, 1, 1, 0) and hides the entity. What
+  starts a highlight is not read.
+- Charm haze: hidden by its init. `FUN_00535880` takes a state: 0 hides the
+  entity, 1 and 2 show it. When the global at `0x91f1bc` is 0 the state goes
+  to the renderer instead (slot `+0x10c`) and the entity is not touched.
+
+The state of each entity when Kain stands at the `sl01` spawn, read from the
+running game (`instances.json` of the capture `wine_hidden_3`, byte
+`+0x139`): the screen cut, the charm haze and the four highlights are
+hidden; the letterbox, the pause fade, `_main`, the rage bar and the intent
+glow are not. The init leaves the screen cut shown, so by then a cut has
+ended or has been dropped: those are the two places that hide it.
 
 ## Bars
 
@@ -234,10 +260,11 @@ Not ported:
   that save names.
 - What changes the rage (blocks, dodges, the drain of `FUN_004300d0`) and
   the selection and ownership of the gifts.
-- The enemy health bar and the enemy icon (mode 3 only), the pause fade,
-  the charm haze (hidden by its init), the screen cut, the letterbox and
-  the highlights (not read to the end), the blood drip of the health vial
-  (`FUN_00532f30`) and the awareness glow.
+- The enemy health bar and the enemy icon (mode 3 only), the pause fade
+  (paused only), the charm haze and the highlights (hidden until something
+  starts them), the screen cut and the letterbox (nothing starts a cut in
+  the port), the blood drip of the health vial (`FUN_00532f30`) and the
+  awareness glow.
 - How a model uses the colour its class sets (the port multiplies the
   texture by it). `FUN_005dce00` hands parameter 8 to an object of the model
   whose class is not read.
