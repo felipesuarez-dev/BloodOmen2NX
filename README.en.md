@@ -24,7 +24,7 @@ Lee esto en español: [README.md](README.md)
 <!-- badges:start -->
 [status-badge]: https://img.shields.io/badge/phase-M3%20in%20progress-orange
 [overall-badge]: https://img.shields.io/badge/overall-8.2%25-yellow
-[fn-badge]: https://img.shields.io/badge/functions-30%20%2F%2016925-lightgrey
+[fn-badge]: https://img.shields.io/badge/functions-33%20%2F%2016927-lightgrey
 [levels-badge]: https://img.shields.io/badge/levels-0%20%2F%2011-lightgrey
 <!-- badges:end -->
 [cpp-badge]: https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white
@@ -75,11 +75,11 @@ The original is used as a reference, not shipped.
 
 | Component | Weight | Progress | Score |
 |---|---:|---:|---:|
-| Functions translated / in scope | 60% | 30 / 16,925 | 0.18% |
+| Functions translated / in scope | 60% | 33 / 16,927 | 0.19% |
 | Levels completable (campaign chapters) | 30% | 0 / 11 | 0.00% |
 | Platform features | 10% | 10 / 13 + 1 partial | 80.77% |
 
-Function map: 35,527 rows: 30 translated, 97 in progress, 16,798 to do, 18,602 external (not game code).
+Function map: 35,529 rows: 33 translated, 101 in progress, 16,793 to do, 18,602 external (not game code).
 
 The chapter list is in [`docs/LEVELS.md`](docs/LEVELS.md). Chapter flags and platform features are in [`tools/gen/progress_data.py`](tools/gen/progress_data.py).
 <!-- progress:end -->
@@ -292,6 +292,7 @@ Per-function loop: [`docs/PORTING_GUIDE.md`](docs/PORTING_GUIDE.md). The rule is
 | [`docs/PRIOR_ART.md`](docs/PRIOR_ART.md) | Public tools, licenses and what we reuse or only use as an oracle |
 | [`docs/LEVELS.md`](docs/LEVELS.md) | The 11 campaign chapters, their source in `bo2.exe` and the region mapping |
 | [`docs/GAMEPLAY.md`](docs/GAMEPLAY.md) | Translated gameplay systems |
+| [`docs/HUD.md`](docs/HUD.md) | The HUD: projection, visibility and bar rules |
 | [`docs/RUNNING.md`](docs/RUNNING.md) | Host build, Switch target and the oracle |
 | [`docs/TESTING.md`](docs/TESTING.md) | Test pyramid and rules |
 | [`docs/GAME_DATA.md`](docs/GAME_DATA.md) | Game files, layout and where they live |

@@ -41,6 +41,7 @@ target_compile_options(bo2_engine PRIVATE ${BO2NX_WARNINGS})
 
 add_library(bo2_game STATIC
     src/game/camera.cpp
+    src/game/hud_scene.cpp
     src/game/kain_actor.cpp
     src/game/kain_animation.cpp
     src/game/kain_tuning.cpp
@@ -159,6 +160,11 @@ if(BUILD_TESTING)
     target_link_libraries(bo2nx_kain_tuning_tests PRIVATE bo2_game)
     target_compile_options(bo2nx_kain_tuning_tests PRIVATE ${BO2NX_WARNINGS})
     add_test(NAME kain_tuning COMMAND bo2nx_kain_tuning_tests)
+
+    add_executable(bo2nx_hud_scene_tests tests/unit/test_hud_scene.cpp)
+    target_link_libraries(bo2nx_hud_scene_tests PRIVATE bo2_game)
+    target_compile_options(bo2nx_hud_scene_tests PRIVATE ${BO2NX_WARNINGS})
+    add_test(NAME hud_scene COMMAND bo2nx_hud_scene_tests)
 
     add_executable(bo2nx_kain_animation_tests tests/unit/test_kain_animation.cpp)
     target_link_libraries(bo2nx_kain_animation_tests PRIVATE bo2_game)

@@ -88,8 +88,8 @@ object, its class, its position, its model and its clip
 (`ui_hud_health_glass`, `ui_hud_health_vial`, `ui_hud_blood_drip`,
 `ui_hud_blood_drop`): the bar classes look them up by name.
 
-Not decoded yet: the projection the game draws a UI scene with and which
-entities are visible outside a pause or a cutscene.
+How the game draws the scene, which objects it shows and the rule of each
+bar are in [`../HUD.md`](../HUD.md).
 
 ## Host
 
