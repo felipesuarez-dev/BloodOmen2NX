@@ -58,6 +58,13 @@ struct AnimReel {
 // samples (a port-only limit).
 AnimReel parse_anim_reel(const std::vector<std::uint8_t>& bytes);
 
+// Reads one reel that starts with its inner version: the layout of an
+// `animreel` chunk after its 16-byte chunk header, which is what FUN_006689a0
+// reads. The `cellanim` section of a cell group stores its clips this way.
+// Sets `used` to the size of the reel. Throws common::ParseError as
+// parse_anim_reel does, and when the reel does not fit in `size` bytes.
+AnimReel parse_anim_reel_body(const std::uint8_t* data, std::size_t size, std::size_t& used);
+
 // Root translation over one cycle: value(last frame) - value(first frame) of
 // node 0, type 1, components 0..2 (local x is forward). Missing components
 // are 0. The root is matched as node == 0 exactly; flagged nodes (>= 0x1000)

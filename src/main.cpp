@@ -968,6 +968,9 @@ void print_scene(const LoadedLevel& level) {
     if (geometry.has_markers) {
         std::cout << "markers: " << geometry.markers.size() << "\n";
     }
+    if (!geometry.cell_animations.empty()) {
+        std::cout << "cell animations: " << geometry.cell_animations.size() << " clips\n";
+    }
     if (geometry.has_level_attributes) {
         std::cout << "attrs: " << geometry.level_attributes.size() << " tables\n";
     }

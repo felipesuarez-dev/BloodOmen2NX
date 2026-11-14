@@ -617,6 +617,32 @@ Vec3 rotate_euler_impl(const Vec3& value, const Vec3& angles) {
     return rotate_z(rotate_y(rotate_x(value, angles.x), angles.y), angles.z);
 }
 
+// `cellanim`: a count and that many clips, each in the layout of an `animreel`
+// chunk from its inner version on. The cell group loader (FUN_00665200) reads
+// the count, and FUN_00665b50 reads one clip per item with FUN_006689a0.
+std::vector<AnimReel> read_cell_animations(const common::Reader& reader, const Chunk& chunk) {
+    if (chunk.data_size < 4) {
+        throw common::ParseError("cellanim has no count");
+    }
+    const std::uint32_t count = reader.u32(chunk.data_offset);
+    std::size_t cursor = chunk.data_offset + 4;
+    // The smallest clip is 28 bytes: three header words and the clip header.
+    if (count > (chunk.end - cursor) / 28) {
+        throw common::ParseError("cellanim count does not fit in the section");
+    }
+    std::vector<AnimReel> reels;
+    reels.reserve(count);
+    for (std::uint32_t index = 0; index < count; ++index) {
+        std::size_t used = 0;
+        reels.push_back(parse_anim_reel_body(reader.data() + cursor, chunk.end - cursor, used));
+        cursor += used;
+    }
+    if (cursor != chunk.end) {
+        throw common::ParseError("cellanim has trailing bytes after its clips");
+    }
+    return reels;
+}
+
 void read_cell_tail(const common::Reader& reader, std::size_t start, std::size_t end,
                     const std::vector<std::uint16_t>& symbols,
                     const std::vector<std::string>& names, LevelGeometry& geometry) {
@@ -638,6 +664,8 @@ void read_cell_tail(const common::Reader& reader, std::size_t start, std::size_t
                 instance.external = resolve_symbol_name(instance.external_symbol, symbols, names);
             }
             geometry.has_instances = true;
+        } else if (chunk.name == "cellanim") {
+            geometry.cell_animations = read_cell_animations(reader, chunk);
         } else if (chunk.name == "cellight") {
             geometry.lights = read_lights(reader, chunk);
             geometry.has_lights = true;

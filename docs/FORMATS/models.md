@@ -276,8 +276,33 @@ The chunks after `cellmdls` are a second chunk stream inside the same
 cellmdls [cellanim] cellinst cellight cellmark cells attrs cellbsp
 ```
 
-`cells`, `attrs`, `cellbsp`, `cellinst`, `cellight` and `cellmark` are
-decoded here. `cellanim` is still opaque.
+`cells`, `attrs`, `cellbsp`, `cellinst`, `cellight`, `cellmark` and
+`cellanim` are decoded here.
+
+### `cellanim`
+
+The clips of the cell group's animated models. The data is a `u32` count and
+that many clips, each stored as an `animreel` chunk without its 16-byte chunk
+header, so it starts at the inner version ([`animreel.md`](animreel.md)):
+
+```
+u32 count
+count x { u32 inner version (6), u32, u32 events, events, clip header, blob, descriptors }
+```
+
+The dispatcher `FUN_00665200` reads the count and `FUN_00665b50` reads one
+clip per item with `FUN_006689a0`, the reader an `animreel` entry uses after
+its chunk header. The clips end exactly at the end of the section.
+
+Measured on the installed levels: 127 of the 152 level containers that load
+have the section, with 2,490 clips in all, and every one parses (`sl01` has
+19). The UI scenes have it too ([`region.md`](region.md#ui-scenes)): `ui/hud`
+has seven clips of 11 to 101 frames, each on the scale of bone 0, and
+`ui/darkgifts` eight clips of 31 frames on the rotation X of bone 0.
+
+`parse_cell_group` keeps them in `LevelGeometry::cell_animations`, in file
+order; `tools/bo2fmt/animreel.py` has the reference reader
+(`parse_cellanim`). Which model a clip belongs to is not decoded.
 
 ### `cells`
 
@@ -805,7 +830,7 @@ interior, while the default isometric frame shows the level.
   plane/index and the BSP traversal.
 - `cellinst` external references, flags and the Euler order.
 - `cellight` type-specific parameters and the marker symbol semantics.
-- `cellanim`.
+- Which model each `cellanim` clip belongs to, and what plays it in a level.
 - `model 74` has no `rmd`; its role is unknown.
 - The `RO`, `JO`, `Rot` and `Scl` vectors of the bone record, `rotOrder`, the
   state mask/value and the other `chanMask` bits.
@@ -816,6 +841,6 @@ interior, while the default isometric frame shows the level.
 ## Next steps
 
 1. Use the cell grid and BSP for culling and cell visibility.
-2. Select shared-model light maps and decode `cellanim`.
+2. Select shared-model light maps and bind the `cellanim` clips to their models.
 3. Match the light-map group to the cell/object and combine it with the material layers.
 4. Blend the `animreel` clips on the skeleton as the `animatio` layers describe.

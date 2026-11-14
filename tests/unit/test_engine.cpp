@@ -424,6 +424,33 @@ std::vector<std::uint8_t> build_cell_group(bool with_instances = false,
     put_float(markers, 3.5f);
     append_chunk(cell, "cellmark", markers);
 
+    // `cellanim`: a count and two clip bodies (an animreel from its inner
+    // version on). The first is one constant scale Y channel over 28 frames,
+    // the second one raw scale X channel over 2 frames.
+    std::vector<std::uint8_t> animations;
+    put32(animations, 2);
+    put32(animations, 6);
+    put32(animations, 0);
+    put32(animations, 0);
+    put_float(animations, 30.0f);
+    put32(animations, 28);
+    put32(animations, 1);
+    put32(animations, 0);
+    put32(animations, 0x01020000);  // node 0, type 2 (scale), component 1
+    put32(animations, 0x3f800001);  // constant: the float with its tag bit
+    put32(animations, 6);
+    put32(animations, 0);
+    put32(animations, 0);
+    put_float(animations, 30.0f);
+    put32(animations, 2);
+    put32(animations, 1);
+    put32(animations, 8);
+    put_float(animations, 0.0f);
+    put_float(animations, 1.0f);
+    put32(animations, 0x00020000);  // node 0, type 2 (scale), component 0
+    put32(animations, 0);           // raw floats
+    append_chunk(cell, "cellanim", animations);
+
     std::vector<std::uint8_t> cells;
     append_cell_grid(cells);
     append_chunk(cell, "cells", cells);
@@ -561,6 +588,23 @@ void test_math() {
     CHECK(std::fabs(near_point.z / near_point.w + 1.0f) < 1.0e-5f);
     const bo2::engine::Vec4 far_point = projection * bo2::engine::Vec4{0.0f, 0.0f, -10.0f, 1.0f};
     CHECK(std::fabs(far_point.z / far_point.w - 1.0f) < 1.0e-5f);
+}
+
+void test_cell_animations() {
+    const bo2::engine::LevelGeometry geometry = bo2::engine::parse_cell_group(build_cell_group());
+    CHECK(geometry.cell_animations.size() == 2);
+    if (geometry.cell_animations.size() != 2) {
+        return;
+    }
+    const bo2::engine::AnimReel& first = geometry.cell_animations[0];
+    CHECK(first.frames == 28);
+    CHECK(first.channels.size() == 1);
+    CHECK(first.channels[0].node == 0 && first.channels[0].type == 2 &&
+          first.channels[0].component == 1);
+    CHECK(first.channels[0].constant);
+    const bo2::engine::AnimReel& second = geometry.cell_animations[1];
+    CHECK(second.frames == 2);
+    CHECK(std::fabs(second.channels[0].sample(0.5f) - 0.5f) < 1.0e-6f);
 }
 
 void test_cell_instances() {
@@ -1013,6 +1057,7 @@ int main() {
     test_cell_group();
     test_skeleton_bones();
     test_collision_chunk();
+    test_cell_animations();
     test_cell_instances();
     test_lightmaps();
     test_model_lightmaps();

@@ -178,6 +178,22 @@ class AnimReelTest(unittest.TestCase):
         with self.assertRaises(animreel.AnimReelError):
             animreel.root_speed(parsed)
 
+    def test_cellanim_is_a_count_and_reel_bodies(self):
+        first = reel(28, [(0, 2, 1, const_value(1.0), b"")])[16:]
+        second = reel(3, [(0, 2, 0, 0, uc_channel([0.0, 0.5, 1.0]))])[16:]
+        section = struct.pack("<I", 2) + first + second
+        reels = animreel.parse_cellanim(section)
+        self.assertEqual([r.frames for r in reels], [28, 3])
+        self.assertEqual((reels[0].channels[0].type, reels[0].channels[0].component), (2, 1))
+        parsed, end = animreel.parse_body(section, 4)
+        self.assertEqual((parsed.frames, end), (28, 4 + len(first)))
+        with self.assertRaises(animreel.AnimReelError):
+            animreel.parse_cellanim(section + b"\0\0\0\0")
+        with self.assertRaises(animreel.AnimReelError):
+            animreel.parse_cellanim(section[:-4])
+        with self.assertRaises(animreel.AnimReelError):
+            animreel.parse_cellanim(struct.pack("<I", 3) + first + second)
+
     def test_cli_info_and_root(self):
         data = reel(31, [(0, 1, 0, 0, uc_channel([float(i) for i in range(31)]))])
         entries = [big.Entry("animreel", "kain/run", 0, 0, 0, data),

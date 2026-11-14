@@ -18,6 +18,7 @@ public:
     Reader(const std::uint8_t* data, std::size_t size) : data_(data), size_(size) {}
     explicit Reader(const std::vector<std::uint8_t>& data) : Reader(data.data(), data.size()) {}
 
+    const std::uint8_t* data() const { return data_; }
     std::size_t size() const { return size_; }
 
     void require(std::size_t offset, std::size_t length) const {

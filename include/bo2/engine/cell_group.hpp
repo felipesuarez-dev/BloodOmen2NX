@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "bo2/engine/anim_reel.hpp"
 #include "bo2/engine/image.hpp"
 #include "bo2/engine/math.hpp"
 
@@ -271,6 +272,9 @@ struct LevelGeometry {
     std::vector<std::uint32_t> instance_vertex_base;
     std::vector<LevelLight> lights;
     std::vector<LevelMarker> markers;
+    // The clips of the `cellanim` section, in file order. A UI scene such as
+    // `ui/hud` keeps the clip of each animated model here (the fill of a bar).
+    std::vector<AnimReel> cell_animations;
     CellGrid cell_grid;
     CellBsp cell_bsp;
     Vec3 minimum{0.0f, 0.0f, 0.0f};

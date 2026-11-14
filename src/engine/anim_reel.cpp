@@ -84,33 +84,21 @@ void expand_lsc(const common::Reader& reader, std::size_t channel, std::size_t f
     }
 }
 
-}  // namespace
-
-AnimReel parse_anim_reel(const std::vector<std::uint8_t>& bytes) {
-    const common::Reader reader(bytes);
-    reader.require(0, 28);
-    if (std::memcmp(bytes.data(), kTag, sizeof kTag) != 0) {
-        throw common::ParseError("not an animreel chunk");
-    }
-    if (reader.u32(8) != bytes.size()) {
-        throw common::ParseError("animreel size field does not match the payload");
-    }
-    if (reader.u32(12) != kChunkVersion) {
-        throw common::ParseError("unsupported animreel chunk version " +
-                                 std::to_string(reader.u32(12)));
-    }
-    if (reader.u32(16) != kInnerVersion) {
+// One reel from its inner version on (FUN_006689a0, then FUN_00668700 for
+// version 6). Returns the bytes it used.
+std::size_t read_reel_body(const common::Reader& reader, AnimReel& reel) {
+    reader.require(0, 12);
+    if (reader.u32(0) != kInnerVersion) {
         throw common::ParseError("unsupported animreel inner version " +
-                                 std::to_string(reader.u32(16)));
+                                 std::to_string(reader.u32(0)));
     }
-    // reader.u32(20) is reel+8, unknown.
-    std::size_t cursor = 24;
+    // reader.u32(4) is reel+8, unknown.
+    std::size_t cursor = 8;
     const std::size_t event_count = reader.u32(cursor);
     cursor += 4;
     reader.require(cursor, event_count * 8);
     cursor += event_count * 8;  // {symbol id, frame} pairs are not used yet
 
-    AnimReel reel;
     reader.require(cursor, 16);
     reel.fps = read_float(reader, cursor);
     reel.frames = reader.u32(cursor + 4);
@@ -124,9 +112,6 @@ AnimReel parse_anim_reel(const std::vector<std::uint8_t>& bytes) {
     reader.require(blob, blob_size);
     const std::size_t descriptors = blob + blob_size;
     reader.require(descriptors, descriptor_count * 8);
-    if (descriptors + descriptor_count * 8 != bytes.size()) {
-        throw common::ParseError("animreel has trailing bytes after the descriptors");
-    }
     reel.duration = static_cast<float>((reel.frames - 1) * kFrameTime);
 
     const std::size_t frames = reel.frames;
@@ -197,6 +182,36 @@ AnimReel parse_anim_reel(const std::vector<std::uint8_t>& bytes) {
     if (used != blob_size) {
         throw common::ParseError("animreel blob has unread bytes");
     }
+    return descriptors + descriptor_count * 8;
+}
+
+}  // namespace
+
+AnimReel parse_anim_reel(const std::vector<std::uint8_t>& bytes) {
+    const common::Reader reader(bytes);
+    reader.require(0, 28);
+    if (std::memcmp(bytes.data(), kTag, sizeof kTag) != 0) {
+        throw common::ParseError("not an animreel chunk");
+    }
+    if (reader.u32(8) != bytes.size()) {
+        throw common::ParseError("animreel size field does not match the payload");
+    }
+    if (reader.u32(12) != kChunkVersion) {
+        throw common::ParseError("unsupported animreel chunk version " +
+                                 std::to_string(reader.u32(12)));
+    }
+    std::size_t used = 0;
+    AnimReel reel = parse_anim_reel_body(bytes.data() + 16, bytes.size() - 16, used);
+    if (used != bytes.size() - 16) {
+        throw common::ParseError("animreel has trailing bytes after the descriptors");
+    }
+    return reel;
+}
+
+AnimReel parse_anim_reel_body(const std::uint8_t* data, std::size_t size, std::size_t& used) {
+    const common::Reader reader(data, size);
+    AnimReel reel;
+    used = read_reel_body(reader, reel);
     return reel;
 }
 

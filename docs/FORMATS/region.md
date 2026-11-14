@@ -75,9 +75,16 @@ The cell group has seven bones in all, and the container has seven `animatio`
 entries named `<entity>:ui/hud`: the health, lore, rage and enemy health
 bars, the intent glow, the charm haze and the letterbox.
 
+A bar shows its value with its own clip. The health bar (`FUN_0053a9b0`)
+divides the health by the maximum health and sets the time of its model's
+clip to that fraction of the clip length (`FUN_00775bb0`). The clips are in
+the `cellanim` section of the cell group ([`models.md`](models.md#cellanim)).
+The same function scales the vial on Y by the maximum health over a value of
+the Kain tuning table (`FUN_004208a0`).
+
 Not decoded yet: the projection the game draws a UI scene with, which
-entities are visible outside a pause or a cutscene, and how a bar turns its
-value into its fill.
+entities are visible outside a pause or a cutscene, and which clip belongs to
+which entity.
 
 ## Host
 

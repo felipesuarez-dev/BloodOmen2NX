@@ -195,6 +195,42 @@ def parse(data: bytes) -> Reel:
     return Reel(inner, unknown, events, fps, frames, channels)
 
 
+def parse_body(data: bytes, offset: int = 0) -> tuple[Reel, int]:
+    """One reel stored from its inner version on, without the chunk header.
+
+    This is what FUN_006689a0 reads. Returns the reel and the offset after it.
+    """
+    _need(data, offset, 12, "reel header")
+    events = struct.unpack_from("<I", data, offset + 8)[0]
+    clip = offset + 12 + events * 8
+    _need(data, clip, 16, "clip header")
+    descriptors, blob = struct.unpack_from("<II", data, clip + 8)
+    end = clip + 16 + blob + descriptors * 8
+    _need(data, offset, end - offset, "reel")
+    body = data[offset:end]
+    return parse(TAG + struct.pack("<II", 16 + len(body), CHUNK_VERSION) + body), end
+
+
+def parse_cellanim(data: bytes) -> list[Reel]:
+    """The data of a cell group's `cellanim` section.
+
+    A count and that many reel bodies: the cell group loader (FUN_00665200)
+    reads the count and FUN_00665b50 reads one clip per item.
+    """
+    _need(data, 0, 4, "cellanim count")
+    count = struct.unpack_from("<I", data, 0)[0]
+    if count > (len(data) - 4) // 28:
+        raise AnimReelError("cellanim count does not fit in the section")
+    cursor = 4
+    reels = []
+    for _ in range(count):
+        reel, cursor = parse_body(data, cursor)
+        reels.append(reel)
+    if cursor != len(data):
+        raise AnimReelError("trailing bytes after the cellanim clips")
+    return reels
+
+
 def root_displacement(reel: Reel) -> tuple[float, float, float]:
     """Root translation over one cycle: last frame minus first frame (x, y, z)."""
     out = [0.0, 0.0, 0.0]

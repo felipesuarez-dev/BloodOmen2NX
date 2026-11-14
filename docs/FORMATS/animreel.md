@@ -151,6 +151,14 @@ node speed from the `animatio` graph ([`animatio.md`](animatio.md): the node
 is `cl_back`, speed 1.7; the run state overwrites the node speed instead of
 multiplying it).
 
+## Clips inside a cell group
+
+A cell group stores the clips of its animated models in its `cellanim`
+section, without the chunk header: each one starts at the inner version
+(offset 0x10 of the layout above). `FUN_006689a0` reads both. See
+[`models.md`](models.md#cellanim); the port reads one with
+`parse_anim_reel_body`.
+
 ## Open questions
 
 - The event symbol ids (footsteps in Kain's clips: four events at frames 5

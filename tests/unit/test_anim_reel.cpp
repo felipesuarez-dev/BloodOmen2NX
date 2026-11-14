@@ -305,9 +305,42 @@ void test_find_channel() {
     CHECK(bo2::engine::find_channel(reel, 5, 0, 0) == -1);
 }
 
+void test_bodies_back_to_back() {
+    // A `cellanim` section stores its clips as bodies: the chunk without its
+    // 16-byte header, one after the other.
+    const Bytes first = make_reel(28, {{0, 2, 1, constant_value(1.0f), {}}});
+    const Bytes second = make_reel(3, {{0, 2, 0, 0, uc({0.0f, 0.5f, 1.0f})}});
+    Bytes bodies(first.begin() + 16, first.end());
+    bodies.insert(bodies.end(), second.begin() + 16, second.end());
+
+    std::size_t used = 0;
+    const auto one = bo2::engine::parse_anim_reel_body(bodies.data(), bodies.size(), used);
+    CHECK(used == first.size() - 16);
+    CHECK(one.frames == 28);
+    CHECK(one.channels.size() == 1 && one.channels[0].type == 2 && one.channels[0].component == 1);
+
+    std::size_t used_second = 0;
+    const auto two = bo2::engine::parse_anim_reel_body(bodies.data() + used, bodies.size() - used,
+                                                       used_second);
+    CHECK(used + used_second == bodies.size());
+    CHECK(two.frames == 3);
+    CHECK(near(two.channels[0].sample(1.0f), 0.5f));
+
+    // A body cut short is an error, not a short clip.
+    bool threw = false;
+    try {
+        std::size_t ignored = 0;
+        bo2::engine::parse_anim_reel_body(bodies.data(), first.size() - 16 - 4, ignored);
+    } catch (const bo2::common::ParseError&) {
+        threw = true;
+    }
+    CHECK(threw);
+}
+
 }  // namespace
 
 int main() {
+    test_bodies_back_to_back();
     test_fractional_sample();
     test_find_channel();
     test_header_and_duration();

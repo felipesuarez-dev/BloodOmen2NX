@@ -10495,13 +10495,13 @@ address,name,subsystem,status,notes
 00664d50,FUN_00664d50,unknown,todo,ghidra
 00664d80,FUN_00664d80,unknown,todo,ghidra
 00664ef0,FUN_00664ef0,unknown,todo,ghidra
-00665200,FUN_00665200,unknown,todo,ghidra
+00665200,FUN_00665200,level,wip,src/engine/cell_group.cpp: read_cell_tail dispatches cells attrs cellinst cellanim cellight cellmark and cellbsp; cellcams cellolgt cellslgt celldlgt cellorgn and cellspln are skipped and the incremental loading states are not ported
 006657f0,FUN_006657f0,unknown,todo,ghidra
 00665870,FUN_00665870,unknown,todo,ghidra
 006658f0,FUN_006658f0,unknown,todo,ghidra
 00665910,FUN_00665910,unknown,todo,ghidra
 006659f0,FUN_006659f0,unknown,todo,ghidra
-00665b50,FUN_00665b50,unknown,todo,ghidra
+00665b50,FUN_00665b50,animation,wip,src/engine/cell_group.cpp: read_cell_animations reads every cellanim clip at once; the original reads them under a time budget and adds each to the cell group (FUN_00682630)
 00665c70,FUN_00665c70,unknown,todo,ghidra
 00665e50,FUN_00665e50,unknown,todo,ghidra
 00665f10,FUN_00665f10,unknown,todo,ghidra
@@ -10550,7 +10550,7 @@ address,name,subsystem,status,notes
 00668530,FUN_00668530,unknown,todo,ghidra
 00668700,FUN_00668700,animation,wip,src/engine/anim_reel.cpp: v6 header blob and descriptors are read; the event {symbol frame} pairs are skipped
 00668950,FUN_00668950,unknown,todo,ghidra
-006689a0,FUN_006689a0,unknown,todo,ghidra
+006689a0,FUN_006689a0,animation,wip,src/engine/anim_reel.cpp: parse_anim_reel_body reads inner version 6 (FUN_00668700); the older inner versions are rejected
 00668f10,FUN_00668f10,unknown,todo,ghidra
 00668f30,FUN_00668f30,unknown,todo,ghidra
 00668f50,FUN_00668f50,unknown,todo,ghidra
