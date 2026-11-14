@@ -187,6 +187,20 @@ the class. The default value of a field of kind 9 is the chunk +0x14 wrote:
 12 bytes for `position` and `rotation` (three floats), 4 bytes for
 `effect`, `sound` and `soundgroup` (measured on `sl01`).
 
+The blocks of the value types read so far:
+
+| Type | Vtable | Block | Initial block (+0x18 with no source) | Default chunk (+0x10) |
+|---|---|---|---|---|
+| `position` | `0x878d68` | 12 bytes, three floats | zeroed | three floats |
+| `rotation` | `0x878d3c` | 12 bytes, three floats (radians) | zeroed (`FUN_0079e0a0`) | three floats (`FUN_0079e020`) |
+| `color` | `0x878d10` | 16 bytes, four floats | zeroed (`FUN_0079ddd0`) | four floats (`FUN_0079dd50`) |
+| `gridposition` | `0x878bb0` | 8 bytes | left as the allocator gives it (`FUN_0079b080`) | none: +0x10 returns 0 (`FUN_0079b060`) |
+| `timer` | `0x878c34` | a counted timer object of 0x14 bytes (`FUN_0079cac0`); assign shares it (`FUN_0079cca0`) | a new timer (`0x79cc30`) | not read |
+
+Assign (+0x20) of the block types copies the block, or zeroes it when the
+source is null, or initialises the slot when it is empty (`FUN_0079de70`,
+`FUN_0079b0f0`, `FUN_0079e130`).
+
 ## Loading and linking
 
 A package is read in three steps by `goe::PackageBinaryLoaderContext`
