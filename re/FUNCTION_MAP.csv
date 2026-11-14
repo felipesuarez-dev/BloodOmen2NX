@@ -8104,7 +8104,7 @@ address,name,subsystem,status,notes
 005dd630,FUN_005dd630,unknown,todo,ghidra
 005dd6a0,FUN_005dd6a0,unknown,todo,ghidra
 005ddc60,FUN_005ddc60,unknown,todo,ghidra
-005ddc90,FUN_005ddc90,unknown,todo,ghidra
+005ddc90,FUN_005ddc90,collision,wip,src/engine/collision.cpp: CollisionWorld::touches applies the side and category rule to the swept sphere and the body separation; the exact face edge and vertex tests are a closest-point sweep and the ray and static queries do not use the rule
 005de0c0,FUN_005de0c0,unknown,todo,ghidra
 005de120,FUN_005de120,unknown,todo,ghidra
 005de1c0,FUN_005de1c0,unknown,todo,ghidra

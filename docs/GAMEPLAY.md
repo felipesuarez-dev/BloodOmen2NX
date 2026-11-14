@@ -348,10 +348,15 @@ Two filters were needed to match the oracle's contacts:
   `c = record & 0x1ff`), and a record with bit 31 set is two dwords with
   16-bit indices. Reading fewer bits invents triangles; the parser unpacks
   the records as the pair test does ([`FORMATS/models.md`](FORMATS/models.md)).
-- The packed record's 2-bit category (`attribute >> 5`) marks a face-only
-  triangle as edges only when it is 2 (`FUN_005ddc90` skips the face test).
-  The ramp at (274, 59, 254) in `sl01` is such a triangle; the port now skips
-  its face in the sphere and ray queries.
+- The narrow phase tests a moving sphere against a triangle by parts
+  (`FUN_005ddc90`). The face counts only from its front, when the mover goes
+  against the normal `(b - a) x (c - a)`. The edges and the vertices follow
+  the category of the record (bits 29 and 30): category 0 only from the
+  front, category 1 from both sides, category 2 never. The swept sphere and
+  the separation of the body follow that rule (`CollisionWorld::touches`).
+  The ray and the static overlap queries do not yet: they skip a category 2
+  triangle, which is what let the W run pass the ramp at (274, 59, 254) of
+  `sl01` before the rule was read in full.
 
 The cell broad phase was also wrong: a cell's `terrains` list references the
 `cellmdls` models it draws, so it is a hint, not an owner. Model 649 instance

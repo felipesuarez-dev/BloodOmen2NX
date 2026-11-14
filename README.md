@@ -79,7 +79,7 @@ El original se usa como referencia; no se distribuye.
 | Niveles completables (capítulos de la campaña) | 30% | 0 / 11 | 0.00% |
 | Características de plataforma | 10% | 10 / 13 + 1 parcial | 80.77% |
 
-Mapa de funciones: 35 527 filas: 24 traducidas, 90 en curso, 16 811 pendientes, 18 602 externas (no son código del juego).
+Mapa de funciones: 35 527 filas: 24 traducidas, 91 en curso, 16 810 pendientes, 18 602 externas (no son código del juego).
 
 La lista de capítulos está en [`docs/LEVELS.md`](docs/LEVELS.md). Los capítulos completables y las características de plataforma se definen en [`tools/gen/progress_data.py`](tools/gen/progress_data.py).
 <!-- progress:end -->

@@ -421,9 +421,11 @@ void test_slide_body() {
     CHECK(slid.position.y < -5.0f);
 }
 
-// Category 2 has edges only: the narrow phase skips its face (FUN_005ddc90),
-// and the ramp at (274, 59, 254) in sl01 is one.
-void test_face_solid_category() {
+// The triangle test of a moving sphere (FUN_005ddc90). The face stops a mover
+// only from its front, that is, a mover that goes against the normal. The
+// edges and the vertices follow the category of the record: 0 only from the
+// front, 1 from both sides, 2 never.
+void test_narrow_phase_sides_and_categories() {
     const auto make_payload = [](std::uint8_t attribute) {
         std::vector<std::uint8_t> data = {'d', 'e', 'f', 'a', 'u', 'l', 't', 0};
         put_u32(data, 20);
@@ -459,14 +461,49 @@ void test_face_solid_category() {
         return bo2::engine::CollisionWorld(geometry,
                                            bo2::engine::CollisionSource::Collmodc);
     };
-    const auto solid = make_world(0x18);
-    CHECK(solid.triangles() == 1);
-    CHECK(solid.swept_sphere({0.0f, 0.0f, 5.0f}, {0.0f, 0.0f, -10.0f}, 0.5f, -1)
-              .has_value());
-    const auto edges_only = make_world(0x58);
-    CHECK(edges_only.triangles() == 1);
-    CHECK(!edges_only.swept_sphere({0.0f, 0.0f, 5.0f}, {0.0f, 0.0f, -10.0f}, 0.5f, -1)
-               .has_value());
+    // The triangle lies at z = 0 with its normal up. A sphere of radius 0.5
+    // comes down or up over its middle (the face), or 0.3 outside the edge at
+    // y = -10 (the edge alone).
+    const auto hits = [](const bo2::engine::CollisionWorld& world, float y, bool from_above) {
+        const bo2::engine::Vec3 origin{0.0f, y, from_above ? 5.0f : -5.0f};
+        return world
+            .swept_sphere(origin, from_above ? bo2::engine::Vec3{0.0f, 0.0f, -10.0f}
+                                             : bo2::engine::Vec3{0.0f, 0.0f, 10.0f},
+                          0.5f, -1)
+            .has_value();
+    };
+    const float face = 0.0f;
+    const float edge = -10.3f;
+
+    const auto plain = make_world(0x18);  // category 0
+    CHECK(plain.triangles() == 1);
+    CHECK(hits(plain, face, true));
+    CHECK(!hits(plain, face, false));
+    CHECK(hits(plain, edge, true));
+    CHECK(!hits(plain, edge, false));
+
+    const auto two_sided_edges = make_world(0x38);  // category 1
+    CHECK(hits(two_sided_edges, face, true));
+    CHECK(!hits(two_sided_edges, face, false));
+    CHECK(hits(two_sided_edges, edge, true));
+    CHECK(hits(two_sided_edges, edge, false));
+
+    const auto face_only = make_world(0x58);  // category 2
+    CHECK(hits(face_only, face, true));
+    CHECK(!hits(face_only, face, false));
+    CHECK(!hits(face_only, edge, true));
+    CHECK(!hits(face_only, edge, false));
+
+    // The separation of the body follows the same rule when it is given the
+    // way the body moves: a triangle the sweep cannot touch does not push.
+    const bo2::engine::Vec3 inside{0.0f, 0.0f, -0.2f};
+    const bo2::engine::Vec3 going_up{0.0f, 0.0f, 1.0f};
+    const bo2::engine::Vec3 going_down{0.0f, 0.0f, -1.0f};
+    CHECK(plain.sphere_contact(inside, 0.5f, -1).has_value());
+    CHECK(!plain.sphere_contact(inside, 0.5f, -1, &going_up).has_value());
+    CHECK(plain.sphere_contact(inside, 0.5f, -1, &going_down).has_value());
+    // The queries without a direction keep skipping a category 2 triangle.
+    CHECK(!face_only.sphere_contact(inside, 0.5f, -1).has_value());
 }
 
 // Two walls, one in a neighbouring cell and one in a cell that only shares a
@@ -581,7 +618,7 @@ int main() {
     test_collmodc_triangle_records();
     test_collmodc_boxes();
     test_slide_body();
-    test_face_solid_category();
+    test_narrow_phase_sides_and_categories();
     if (failures != 0) {
         std::cerr << failures << " check(s) failed\n";
         return 1;

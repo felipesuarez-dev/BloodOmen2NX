@@ -9,7 +9,13 @@ namespace bo2::engine {
 
 namespace {
 
-Vec3 closest_point_on_triangle(const Vec3& point, const Vec3& a, const Vec3& b, const Vec3& c) {
+// `on_face`, when given, tells whether the closest point is inside the face
+// (false on an edge or a vertex).
+Vec3 closest_point_on_triangle(const Vec3& point, const Vec3& a, const Vec3& b, const Vec3& c,
+                               bool* on_face = nullptr) {
+    if (on_face != nullptr) {
+        *on_face = false;
+    }
     const Vec3 ab = b - a;
     const Vec3 ac = c - a;
     const Vec3 ap = point - a;
@@ -48,6 +54,9 @@ Vec3 closest_point_on_triangle(const Vec3& point, const Vec3& a, const Vec3& b, 
     const float denominator = 1.0f / (va + vb + vc);
     const float v = vb * denominator;
     const float w = vc * denominator;
+    if (on_face != nullptr) {
+        *on_face = true;
+    }
     return a + ab * v + ac * w;
 }
 
@@ -176,14 +185,20 @@ CollisionWorld::CollisionWorld(const LevelGeometry& geometry, CollisionSource so
         }
         return static_cast<std::int32_t>(-1);
     };
+    // `category` is given for a hull triangle only (bits 29..30 of its record).
     const auto append_triangle = [this](const Vec3& a, const Vec3& b, const Vec3& c,
-                                        std::int32_t cell, bool face_solid = true) {
+                                        std::int32_t cell, int category = -1) {
         Triangle value;
         value.a = a;
         value.b = b;
         value.c = c;
         value.cell = cell;
-        value.face_solid = face_solid;
+        if (category >= 0) {
+            value.hull = true;
+            value.category = static_cast<std::uint8_t>(category);
+            value.face_solid = category != 2;
+            value.normal = normalize(cross(b - a, c - a));
+        }
         value.minimum = {std::min({a.x, b.x, c.x}), std::min({a.y, b.y, c.y}),
                          std::min({a.z, b.z, c.z})};
         value.maximum = {std::max({a.x, b.x, c.x}), std::max({a.y, b.y, c.y}),
@@ -234,7 +249,7 @@ CollisionWorld::CollisionWorld(const LevelGeometry& geometry, CollisionSource so
                     append_triangle(to_world(model.vertices[triangle.a]),
                                     to_world(model.vertices[triangle.b]),
                                     to_world(model.vertices[triangle.c]), cell,
-                                    ((triangle.attribute >> 5) & 3) != 2);
+                                    triangle.category);
                 }
             }
         }
@@ -353,15 +368,28 @@ bool CollisionWorld::intersects_sphere(const Vec3& center, float radius,
     return false;
 }
 
+bool CollisionWorld::touches(const Triangle& triangle, const Vec3& direction, bool on_face) {
+    if (!triangle.hull) {
+        return true;
+    }
+    const bool front = dot(direction, triangle.normal) < 0.0f;
+    if (on_face) {
+        return front;
+    }
+    return triangle.category != 2 && (front || triangle.category == 1);
+}
+
 std::optional<SphereContact> CollisionWorld::sphere_contact(const Vec3& center, float radius,
-                                                            std::int32_t cell) const {
+                                                            std::int32_t cell,
+                                                            const Vec3* direction) const {
     if (!std::isfinite(radius) || radius < 0.0f) {
         throw std::invalid_argument("sphere radius must be non-negative");
     }
     std::optional<SphereContact> best;
     float best_squared = radius * radius;
     for (const Triangle& triangle : triangles_) {
-        if (!cell_allows(cell, triangle.cell) || !triangle.face_solid) {
+        if (!cell_allows(cell, triangle.cell) ||
+            (direction == nullptr && !triangle.face_solid)) {
             continue;
         }
         const Vec3 box_point{std::clamp(center.x, triangle.minimum.x, triangle.maximum.x),
@@ -371,10 +399,15 @@ std::optional<SphereContact> CollisionWorld::sphere_contact(const Vec3& center, 
         if (dot(box_difference, box_difference) > best_squared) {
             continue;
         }
-        const Vec3 point = closest_point_on_triangle(center, triangle.a, triangle.b, triangle.c);
+        bool on_face = false;
+        const Vec3 point =
+            closest_point_on_triangle(center, triangle.a, triangle.b, triangle.c, &on_face);
         const Vec3 difference = center - point;
         const float squared = dot(difference, difference);
         if (!std::isfinite(squared) || squared > best_squared) {
+            continue;
+        }
+        if (direction != nullptr && !touches(triangle, *direction, on_face)) {
             continue;
         }
         best_squared = squared;
@@ -470,16 +503,22 @@ std::optional<RayHit> CollisionWorld::swept_sphere(const Vec3& origin, const Vec
         Vec3 point{0.0f, 0.0f, 0.0f};
         Vec3 normal{0.0f, 0.0f, 1.0f};
         for (const Triangle& triangle : triangles_) {
-            if (!cell_allows(cell, triangle.cell) || !triangle.face_solid) {
+            if (!cell_allows(cell, triangle.cell)) {
                 continue;
             }
+            bool on_face = false;
             const Vec3 candidate =
-                closest_point_on_triangle(center, triangle.a, triangle.b, triangle.c);
+                closest_point_on_triangle(center, triangle.a, triangle.b, triangle.c, &on_face);
             const Vec3 difference = center - candidate;
             const float distance = bo2::engine::length(difference);
             // A degenerate triangle decodes with non-finite points; it has no
             // surface and a NaN would poison the nearest distance below.
             if (!std::isfinite(distance) || distance >= nearest) {
+                continue;
+            }
+            // FUN_005ddc90: the part of a hull triangle a mover cannot touch
+            // does not stop it.
+            if (!touches(triangle, direction, on_face)) {
                 continue;
             }
             nearest = distance;
@@ -656,8 +695,9 @@ BodyMove CollisionWorld::slide_body(const Vec3& origin,
         // A slide around a curved bevel can leave the body overlapping the
         // next triangle; push it out before sweeping so the contact is real.
         for (const BodySphere& sphere : spheres) {
+            const Vec3 heading = remaining * (1.0f / remaining_length);
             const auto overlap =
-                sphere_contact(result.position + sphere.offset, sphere.radius, cell);
+                sphere_contact(result.position + sphere.offset, sphere.radius, cell, &heading);
             if (overlap.has_value() && overlap->distance < sphere.radius) {
                 result.position = result.position +
                                   overlap->normal * (sphere.radius - overlap->distance + kSkin);

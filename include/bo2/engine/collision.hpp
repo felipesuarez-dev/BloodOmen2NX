@@ -58,8 +58,12 @@ public:
     bool intersects_sphere(const Vec3& center, float radius, std::int32_t cell) const;
     // Nearest contact of a sphere with the hull, or nothing. The `cell`
     // filter is the same as `intersects_sphere`.
+    // With `direction`, the way the sphere is moving, a hull triangle counts
+    // only where the narrow phase of the original lets a mover touch it
+    // (`touches`); without it every part of every triangle counts.
     std::optional<SphereContact> sphere_contact(const Vec3& center, float radius,
-                                                std::int32_t cell) const;
+                                                std::int32_t cell,
+                                                const Vec3* direction = nullptr) const;
     // Nearest contact of a vertical capsule: the segment runs from `base` up
     // `height`, with `radius` around it. Used for the player body.
     std::optional<SphereContact> capsule_contact(const Vec3& base, float height, float radius,
@@ -94,12 +98,25 @@ private:
         Vec3 minimum;
         Vec3 maximum;
         std::int32_t cell = -1;
-        // The packed `collmodc` triangle record carries a 2-bit category in
-        // the top bits of its attribute byte. Category 2 has edges only: the
-        // narrow phase skips its face, so the body and the probes pass through
-        // it (FUN_005ddc90; the ramp at (274, 59, 254) is one).
+        // A `collmodc` hull triangle: `normal` is (b - a) x (c - a) and
+        // `category` bits 29..30 of its record. The other sources leave
+        // `hull` false and are two-sided.
+        bool hull = false;
+        std::uint8_t category = 0;
+        Vec3 normal{0.0f, 0.0f, 0.0f};
+        // The queries without a direction (the static overlaps and the ray)
+        // still skip a category 2 triangle, as they did before the narrow
+        // phase was read in full; `touches` is the rule of the original.
         bool face_solid = true;
     };
+
+    // FUN_005ddc90, the triangle test of a moving sphere: which parts of a
+    // hull triangle the mover can touch. The face counts only from its front,
+    // that is, when the mover goes against the normal. The edges and the
+    // vertices never count for category 2, always for category 1, and only
+    // from the front for the others. `on_face` tells whether the contact
+    // point is inside the face.
+    static bool touches(const Triangle& triangle, const Vec3& direction, bool on_face);
 
     std::vector<Triangle> triangles_;
     std::vector<LevelCell> cells_;
