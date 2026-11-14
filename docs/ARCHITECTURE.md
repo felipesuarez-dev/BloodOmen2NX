@@ -123,6 +123,48 @@ must stream levels instead of loading the whole game, and every subsystem
 must expose its peak allocation. The numbers are measured on the host
 first and then on hardware; no target is promised before M2.
 
+## Script machine
+
+The game's scripts are compiled code for a stack machine
+([`SCRIPTS.md`](SCRIPTS.md)). That code addresses memory directly: a local
+is the locals of the frame plus an offset, a field is the data of an object
+plus an offset, an element is an address plus an index times a size, and
+every pointer a script holds (a string, an object handle, the block of a
+value) takes 4 bytes, so the offsets in the compiled classes count 4-byte
+pointers. The Switch runs 64-bit code only.
+
+Decision (2026-11-14): the port keeps the 32-bit model of the original
+inside the machine instead of rewriting the code for 8-byte pointers.
+
+- `ScriptMemory` is one byte arena per machine, addressed by 32-bit
+  offsets. Address 0 is null and no block starts below 8. Blocks are
+  aligned to 4. Reads and writes are little-endian and checked: an address
+  outside a live block stops the machine with an error, where the original
+  would read garbage or crash.
+- Everything a script can address lives in the arena: the data block of
+  every object, the stack and the locals of every frame, the cells that
+  hold a string, the counted string records, the handles of the objects and
+  the blocks of the value types. The global name table is an arena block
+  of 4-byte cells, one per name, each holding the address of the record of
+  the name, so `0x04` pushes the address of a cell as in the original.
+- An object handle is a 12-byte block like the original's (word 0 unused,
+  the count at +4, the object at +8); the object is an index into the
+  machine's object table, plus one, so 0 stays null.
+- The linked code keeps the instruction words of the file. The words the
+  original rewrites into pointers at link time hold indices into the
+  machine's tables instead (value type, method record, body record, class
+  of the state tables), and the words of references 0 and 1 hold the index
+  of the name, as in the original.
+- A native function is bound by class name and body index, as the
+  factories of the original do ([`SCRIPTS.md`](SCRIPTS.md), "Native
+  functions"), and takes the machine, the object, the argument count, the
+  address of the first argument and the address of the result.
+
+Rejected: rewriting the compiled classes for 8-byte pointers (every field
+offset, local offset and copy size of the data would change, so the port
+would no longer run the game's code as it is), and a 32-bit build (the
+Switch toolchain targets AArch64 only).
+
 ## What is not ported
 
 The MSVC CRT, Direct3D 8, DirectInput and Bink. They are replaced by the
