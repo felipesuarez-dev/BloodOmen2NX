@@ -110,3 +110,77 @@ takes any `.big`); it is not in the table and is not counted as a chapter.
 entry region and reaches the hand-off (the end, for Hylden City) with the
 original's rules, checked by a replayed route or an oracle comparison.
 `tests/python/test_progress.py` keeps this document and that list in step.
+
+## What the Slums chapter needs
+
+An inventory of the first chapter from the game data (2026-11-14): what is
+placed in its eight regions and what code runs each object. It is the list
+of systems the port needs before the chapter is completable.
+
+How it was counted: `tools/bo2fmt/region.py entities` on `sl01.big` to
+`sl08.big` gives every placed entity with its type; the type's template is
+the `strmfile` entry `assets/etypes/.../<type>.etp` of the same container,
+whose `behavior <class>` line names a class of `bo2.exe` and whose
+`goscript <name>` line names a script.
+
+| Measure | Count |
+|---|---:|
+| Placed entities | 718 |
+| Entity types | 83 |
+| Placements that name a script instance (`reserved.script`) | 565 |
+| Entities whose template names a native class (`behavior`) | 234, in 18 classes |
+| Entities whose template names a script (`goscript`) | 374, in 31 scripts |
+| Entities whose template names neither | 110 (`camera` 92, `leverf` 9, `doorslums` 4, `switch` 2, two chained peasants, one without a template) |
+| `bpackage` entries per region | 3: `native`, `creatures`, `sounds` |
+
+Native classes, by number of entities:
+
+| Class | Entities | Types |
+|---|---:|---|
+| `toplevelai` | 66 | peasants `psntcnf` 16 and `psntanm` 15, thugs `thugawm` 13, `umahvf` 11, `rat` 6, `cat` 2, `glpwnm` 2, `sgrdwm` 1 |
+| `detector` | 30 | `detector` |
+| `planhelper`, `planhelperline` | 34 | `planhelpersmall` 22, `planhelper` 6, `planhelperline` 6 |
+| `dumbactor` | 26 | `kainactor` 12, `umahvfactor` 5, `jumpvmactor` 5 and four single actors |
+| `collectable` | 12 | `coll_lore` 10, `coll_biglore` 1, `coll_weapon` 1 |
+| `donothing` | 12 | `firebox` 11, `more_animations` 1 |
+| `checkpoint` | 10 | `checkpoint` 9, `hidden_checkpoint` 1 |
+| `kainemitter` | 8 | `kainemitter` |
+| `levelKeeper`, `RegionKeeper` | 16 | one of each per region |
+| `weapon` | 4 | `l_club` 2, `lsword` 1, `dagger` 1 |
+| `stealthshadow` | 4 | `stealthshadow` |
+| `wardgate` | 3 | `wardgatesmall` 2, `clearwardfield` 1 |
+| `toplevelboss` | 3 | `umahvf_train_attack`, `umahvf_train_block`, `umahvf_train_grab` |
+| `interactable` | 2 | `valve` |
+| `pushable`, `pushgrid` | 4 | `pushcratea`, `pushcrateb`, `rectpushgrid` 2 |
+
+Scripts, by number of entities:
+
+| Script | Entities | Types |
+|---|---:|---|
+| `AmbSoundScriptV2` | 112 | `sfxobj` |
+| Effect scripts (`cl_*`, `pwatdrip`, `watersteam`, `glyph_line_smoke`) | 123 | 17 effect types, `cl_blacksmoke2` 29 and `cl_torch1` 22 first |
+| `bo2creaturescript` | 27 | `bo2creature_helperstatic` 12, `bo2creature` 8, `powerbox_on` 7 |
+| `bo2cinematicscript` | 23 | `bo2cinematic` |
+| `animgate` | 21 | `animgate` |
+| `animated` | 20 | `animated` 12, `animated_nocull` 8 |
+| `hint_proximity`, `hint_controller` | 20 | the tutorial hints |
+| `scrolling`, `animtextures` | 13 | texture animation |
+| `WaitForRegionLoad` | 6 | `waitforregionload_face` |
+| `conversationscript` | 4 | `conversation` |
+| `swapablescript` | 3 | `powerbox_off` |
+| `platformscript` | 2 | `newplatform`, `slumslift` |
+
+What this means for the port, none of it translated yet:
+
+- **A script runtime.** More than half of the entities run a `goscript`, and
+  each region carries its script packages (`bpackage`). Gates, levers,
+  cinematics, hints and the region hand-off depend on it.
+- **Streaming.** The chapter is eight regions joined by `levelKeeper`,
+  `RegionKeeper` and `WaitForRegionLoad`.
+- **Creatures and combat.** 66 creatures run `toplevelai`, and the three
+  `toplevelboss` entities are Umah's attack, block and grab training.
+- **Cinematics.** 92 cameras, 23 cinematic scripts, 26 actors and 4
+  conversations.
+- **Interaction.** Detectors, checkpoints, collectables, weapons, valves,
+  push crates, ward gates, levers, doors and switches.
+- **Presentation.** Ambient sound objects, effects and on-screen hints.
