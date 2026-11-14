@@ -179,8 +179,9 @@ Options parse_options(int argc, char** argv) {
                 << "  --audio-seconds <n>    audio demo duration (default 5)\n"
                 << "  --play                 Kain third-person player (needs --big)\n"
                 << "  --kain <file.big>      kain tunedata for --play (default: <level dir>/../kain/kain.big)\n"
-                << "  --hud <code.big>       draw the HUD scene over the --level frame, with the\n"
-                << "                         health and lore Kain enters the level with\n"
+                << "  --hud <code.big>       draw the HUD scene over the --level frame or in the\n"
+                << "                         --play window, with the health and lore Kain enters\n"
+                << "                         the level with\n"
                 << "  --kain-model <file.big> append Kain's model to the level (--level and --sdl at\n"
                 << "                         --kain-at, --replay and --play at the player)\n"
                 << "  --kain-at x,y,z        Kain model placement for --level (default 0,0,0)\n"
@@ -306,6 +307,9 @@ Options parse_options(int argc, char** argv) {
     }
     if (!options.kain.empty() && !options.play && options.replay.empty()) {
         usage_error("--kain requires --play or --replay");
+    }
+    if (!options.hud.empty() && !options.level && !options.play) {
+        usage_error("--hud requires --level or --play");
     }
     if (!options.kain_clip.empty() && options.kain_model.empty()) {
         usage_error("--kain-clip requires --kain-model");
@@ -1063,25 +1067,41 @@ void default_camera(const LoadedLevel& level, bo2::engine::Vec3& eye,
 
 bo2::game::KainTuning load_kain_tuning(const Options& options);
 
-// Draws the `ui/hud` scene of `options.hud` (code.big) over `pixels`: the
-// objects HudScene shows in game, with the health and the lore Kain enters
-// the level with when there is no saved state. The original names the level
-// to FUN_004256c0; the port passes the folder of the level archive
-// (`slums` for resources/levels/slums/sl01.big).
-void draw_hud(const Options& options, std::vector<std::uint8_t>& pixels, std::uint32_t width,
-              std::uint32_t height) {
+// The `ui/hud` scene of `options.hud` (code.big): its cell group and textures.
+LoadedLevel load_hud_scene(const Options& options) {
     Options scene_options = options;
     scene_options.big = options.hud;
     scene_options.entry = "ui/hud";
     scene_options.kain_model.clear();
-    const LoadedLevel scene = load_level(scene_options);
-    const bo2::game::KainTuning tuning = load_kain_tuning(options);
+    return load_level(scene_options);
+}
+
+// The health and the lore Kain enters the level with when there is no saved
+// state. The original names the level to FUN_004256c0; the port passes the
+// folder of the level archive (`slums` for resources/levels/slums/sl01.big).
+bo2::game::KainVitals start_vitals(const Options& options, const bo2::game::KainTuning& tuning) {
     const std::string folder = bo2::platform::FileSystem::parent(options.big);
     const std::size_t slash = folder.find_last_of("/\\");
     const std::string level_name = slash == std::string::npos ? folder : folder.substr(slash + 1);
     bo2::game::KainVitals vitals;
     bo2::game::set_lore_level(vitals, tuning, bo2::game::start_lore_level(tuning, level_name),
                               0.0f);
+    return vitals;
+}
+
+void print_hud(std::size_t objects, const bo2::game::KainVitals& vitals) {
+    std::cout << "hud: " << objects << " objects, lore level " << vitals.lore_level
+              << ", health " << vitals.health << '/' << vitals.max_health << ", lore "
+              << vitals.lore << '/' << vitals.max_lore << "\n";
+}
+
+// Draws the `ui/hud` scene of `options.hud` over `pixels`: the objects
+// HudScene shows in game, with the counters of start_vitals.
+void draw_hud(const Options& options, std::vector<std::uint8_t>& pixels, std::uint32_t width,
+              std::uint32_t height) {
+    const LoadedLevel scene = load_hud_scene(options);
+    const bo2::game::KainTuning tuning = load_kain_tuning(options);
+    const bo2::game::KainVitals vitals = start_vitals(options, tuning);
     const bo2::game::HudScene hud(scene.geometry);
     std::vector<bo2::platform::headless::ScreenItem> items;
     for (const bo2::game::HudItem& item :
@@ -1097,9 +1117,7 @@ void draw_hud(const Options& options, std::vector<std::uint8_t>& pixels, std::ui
     bo2::platform::headless::draw_screen_items(pixels, width, height, scene.geometry,
                                                scene.textures, items, bo2::game::kHudHalfWidth,
                                                bo2::game::kHudHalfHeight);
-    std::cout << "hud: " << items.size() << " objects, lore level " << vitals.lore_level
-              << ", health " << vitals.health << '/' << vitals.max_health << ", lore "
-              << vitals.lore << '/' << vitals.max_lore << "\n";
+    print_hud(items.size(), vitals);
 }
 
 int render_level_frame(const Options& options) {
@@ -1298,6 +1316,17 @@ int run_sdl(const Options& options) {
                      window.camera.fov_degrees, window.width, window.height);
     if (options.stats) {
         print_stats(level, -1.0);
+    }
+    // The HUD of play: the scene outlives the window, which only points at it.
+    LoadedLevel hud_scene;
+    if (options.play && !options.hud.empty()) {
+        hud_scene = load_hud_scene(options);
+        window.hud_scene = &hud_scene.geometry;
+        window.hud_textures = &hud_scene.textures;
+        window.vitals = start_vitals(options, window.kain);
+        const bo2::game::HudScene hud(hud_scene.geometry);
+        print_hud(hud.items(window.vitals, window.kain, bo2::game::HudMode::Kain, false).size(),
+                  window.vitals);
     }
     return bo2::platform::sdl::run_level(level.geometry, level.textures, window);
 #else

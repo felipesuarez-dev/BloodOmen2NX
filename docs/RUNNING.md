@@ -45,10 +45,10 @@ LEVELS=external/installed/media/gogames/bo2/resources/levels
   --out /tmp/kain_run.ppm
 ```
 
-`--hud <code.big>` draws the HUD scene (`ui/hud`) over the `--level` frame:
-the frame, the health vial and the lore vial, with the health and lore Kain
-enters the level with ([`HUD.md`](HUD.md)). It reads the Kain tuning from
-`--kain` or `<level dir>/../kain/kain.big`.
+`--hud <code.big>` draws the HUD scene (`ui/hud`) over the `--level` frame
+and in the `--play` window: the frame, the health vial and the lore vial,
+with the health and lore Kain enters the level with ([`HUD.md`](HUD.md)). It
+reads the Kain tuning from `--kain` or `<level dir>/../kain/kain.big`.
 
 `--replay` and `--play` take `--kain-model` too. The replay end frame
 (`--out`) draws Kain at the replayed position and yaw; the player skins him
@@ -161,10 +161,16 @@ LEVELS=external/installed/media/gogames/bo2/resources/levels
   --kain "$LEVELS/kain/kain.big"
 ./build/linux-debug/bo2nx --play --big "$LEVELS/slums/sl01.big" \
   --kain-model "$LEVELS/kain/kain.big"
+./build/linux-debug/bo2nx --play --big "$LEVELS/slums/sl01.big" \
+  --kain-model "$LEVELS/kain/kain.big" \
+  --hud external/installed/media/gogames/bo2/code.big
 ```
 
 With `--kain-model` the player is Kain's skinned model instead of the
-marker, animated by his state.
+marker, animated by his state. With `--hud` the window shows the original
+HUD; without it there is none. With `--out`, `--play` captures its first
+frame and prints the follow camera of that frame
+(`sdl camera: eye ... target ...`) in the form `--eye` and `--target` take.
 
 Controls are tank style: `W`/`S` walk forward and back, `A`/`D` turn in
 place, `Shift` (or `R`) holds combat mode (the stick then moves and strafes
@@ -172,7 +178,7 @@ without turning), `Space` jumps (hold it for
 the higher jump), `F` attacks, `F5`/`F9` save/load the checkpoint slot and
 `Escape` quits. The right mouse button looks around as a debug aid. The
 follow camera sits 190.9 behind and 96.1 above Kain and is pulled in by the
-level collision mesh; two bars show health and mana. With `--kain-model` the root
+level collision mesh. With `--kain-model` the root
 motion of the animation moves Kain on the ground; without it he keeps the
 steady run and walk-back speeds of the clips, and combat mode does nothing;
 see
@@ -207,6 +213,7 @@ provisional until the original controls are recovered from `bo2.exe`.
 | `--sdl [--big <file>]` | SDL2 + OpenGL window; no `--big` draws a triangle |
 | `--play --big <level.big>` | Kain third-person player in the SDL window |
 | `--kain <kain.big>` | `kain` tunedata for `--play` (default `<level dir>/../kain/kain.big`) |
+| `--hud <code.big>` | The HUD scene of `code.big` over the `--level` frame or in the `--play` window |
 | `--kain-model <kain.big>` | Append Kain's model to the level: at `--kain-at` for `--level` and `--sdl`, at the player for `--replay` and `--play` |
 | `--kain-at x,y,z` | Kain's position for `--level` and `--sdl` (default 0,0,0) |
 | `--kain-clip <name>` | Pose Kain with one `animreel` clip of `--kain-model`, for example `kain/run` (default: the bind pose in `--level` and `--sdl`, the clip of the animation state in `--replay` and `--play`) |

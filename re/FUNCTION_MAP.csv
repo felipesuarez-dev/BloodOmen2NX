@@ -5882,7 +5882,7 @@ address,name,subsystem,status,notes
 00566b10,FUN_00566b10,unknown,todo,ghidra
 00566cf0,FUN_00566cf0,unknown,todo,ghidra
 00566f90,FUN_00566f90,unknown,todo,ghidra
-00567090,FUN_00567090,level,wip,include/bo2/game/hud_scene.hpp: the orthographic frustum of a camera with field of view 0 (kHudHalfWidth and kHudHalfHeight) used by draw_screen_items; the perspective branch and the matrices are not ported
+00567090,FUN_00567090,level,wip,include/bo2/game/hud_scene.hpp: the orthographic frustum of a camera with field of view 0 (kHudHalfWidth and kHudHalfHeight) used by draw_screen_items and by draw_hud of the SDL backend; the perspective branch and the matrices are not ported
 00567b60,FUN_00567b60,unknown,todo,ghidra
 00567d20,FUN_00567d20,unknown,todo,ghidra
 00567dd0,FUN_00567dd0,unknown,todo,ghidra

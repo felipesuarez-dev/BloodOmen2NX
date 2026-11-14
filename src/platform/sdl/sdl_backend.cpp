@@ -1,4 +1,5 @@
 #include "bo2/game/camera.hpp"
+#include "bo2/game/hud_scene.hpp"
 #include "bo2/game/player.hpp"
 #include "bo2/game/save.hpp"
 #include "bo2/engine/collision.hpp"
@@ -11,8 +12,10 @@
 #include <cmath>
 #include <cstddef>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <memory>
+#include <sstream>
 #include <stdexcept>
 #include <set>
 #include <string>
@@ -316,39 +319,76 @@ SDL_GameController* open_controller(int index) {
     return SDL_GameControllerOpen(index);
 }
 
-void draw_hud(std::uint32_t width, std::uint32_t height, const game::HudState& hud) {
-    glDisable(GL_TEXTURE_2D);
+// Draws the objects of a UI scene over the frame with the rules of the
+// software renderer (draw_screen_items): the orthographic screen the original
+// builds for a UI scene (FUN_00567090: kHudHalfWidth by kHudHalfHeight around
+// the origin, y up), each texel multiplied by the object's colour and blended
+// by its alpha, and the objects drawn from the most negative z to the least.
+// The original's blend mode and draw order for a UI scene are not decompiled.
+void draw_hud(const engine::LevelGeometry& scene, const std::vector<GLuint>& textures,
+              const std::vector<game::HudItem>& items) {
+    std::vector<const game::HudItem*> order;
+    for (const game::HudItem& item : items) {
+        if (item.model >= scene.model_ranges.size()) {
+            throw std::invalid_argument("a HUD item names a model the scene does not have");
+        }
+        order.push_back(&item);
+    }
+    std::stable_sort(order.begin(), order.end(),
+                     [](const game::HudItem* a, const game::HudItem* b) {
+                         return a->position.z < b->position.z;
+                     });
+    glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT | GL_CURRENT_BIT | GL_TEXTURE_BIT |
+                 GL_TRANSFORM_BIT);
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    glOrtho(-static_cast<double>(game::kHudHalfWidth), static_cast<double>(game::kHudHalfWidth),
+            -static_cast<double>(game::kHudHalfHeight), static_cast<double>(game::kHudHalfHeight),
+            -1.0, 1.0);
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glOrtho(0.0, static_cast<double>(width), static_cast<double>(height), 0.0, -1.0, 1.0);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+    for (const game::HudItem* item : order) {
+        const engine::ModelRange& range = scene.model_ranges[item->model];
+        glColor4f(item->colour.x, item->colour.y, item->colour.z, item->alpha);
+        for (std::uint32_t offset = 0; offset < range.triangle_count; ++offset) {
+            const engine::LevelTriangle& triangle =
+                scene.triangles.at(range.first_triangle + offset);
+            // A triangle without a texture is white, as in the software renderer.
+            GLuint texture = 0;
+            if (triangle.texture >= 0 &&
+                static_cast<std::size_t>(triangle.texture) < textures.size()) {
+                texture = textures[static_cast<std::size_t>(triangle.texture)];
+            }
+            if (texture != 0) {
+                glEnable(GL_TEXTURE_2D);
+                glBindTexture(GL_TEXTURE_2D, texture);
+            } else {
+                glDisable(GL_TEXTURE_2D);
+            }
+            glBegin(GL_TRIANGLES);
+            for (const std::uint32_t index : {triangle.a, triangle.b, triangle.c}) {
+                const engine::Vec3& vertex = scene.positions.at(index);
+                const engine::Vec2 uv =
+                    index < scene.texcoords.size() ? scene.texcoords[index] : engine::Vec2{};
+                glTexCoord2f(uv.x, uv.y);
+                glVertex2f(vertex.x * item->scale.x + item->position.x,
+                           vertex.y * item->scale.y + item->position.y);
+            }
+            glEnd();
+        }
+    }
     glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    const float bar_width = static_cast<float>(width) * 0.3f;
-    const float bar_height = static_cast<float>(height) * 0.025f;
-    const float x = static_cast<float>(width) * 0.03f;
-    const float y = static_cast<float>(height) * 0.93f;
-    auto bar = [&](float position, float fraction, float red, float green, float blue) {
-        glColor3f(0.1f, 0.1f, 0.1f);
-        glBegin(GL_QUADS);
-        glVertex2f(x, y + position);
-        glVertex2f(x + bar_width, y + position);
-        glVertex2f(x + bar_width, y + position + bar_height);
-        glVertex2f(x, y + position + bar_height);
-        glEnd();
-        glColor3f(red, green, blue);
-        glBegin(GL_QUADS);
-        glVertex2f(x, y + position);
-        glVertex2f(x + bar_width * fraction, y + position);
-        glVertex2f(x + bar_width * fraction, y + position + bar_height);
-        glVertex2f(x, y + position + bar_height);
-        glEnd();
-    };
-    bar(0.0f, std::clamp(hud.health / 100.0f, 0.0f, 1.0f), 0.85f, 0.15f, 0.15f);
-    bar(bar_height * 1.6f, std::clamp(hud.mana / 100.0f, 0.0f, 1.0f), 0.15f, 0.3f, 0.9f);
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_TEXTURE_2D);
+    glPopMatrix();
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glPopAttrib();
 }
 
 // Debug marker at Kain's position. Its size only has to be visible at the
@@ -473,11 +513,44 @@ int run_level(const engine::LevelGeometry& geometry,
         }
         return current_camera(orbit);
     };
+    // The HUD of play: the rules of the scene and its textures, sent once.
+    // Kain's counters are the ones he enters the level with; nothing changes
+    // them yet (damage and the growth of FUN_004210b0 are not ported).
+    std::unique_ptr<game::HudScene> hud_scene;
+    std::vector<GLuint> hud_texture_ids;
+    const game::KainVitals vitals = options.vitals;
+    if (player != nullptr && options.hud_scene != nullptr) {
+        hud_scene = std::make_unique<game::HudScene>(*options.hud_scene);
+        if (options.hud_textures != nullptr) {
+            hud_texture_ids = upload_textures(*options.hud_textures);
+        }
+    }
+    const auto draw_play_hud = [&]() {
+        if (!hud_scene) {
+            return;
+        }
+        // The player exists and the HUD is in Kain mode for the whole of play.
+        // The loop has no paused state (the Pause action closes the window),
+        // so the pause test of FUN_00540b50 never hides it.
+        draw_hud(*options.hud_scene, hud_texture_ids,
+                 hud_scene->items(vitals, options.kain, game::HudMode::Kain, false));
+    };
     if (!options.screenshot.empty()) {
         const auto frame_start = std::chrono::steady_clock::now();
         draw_level(geometry, texture_ids, lightmap_ids, model_lightmap_offset, pipeline,
                    active_camera(), options.width, options.height, options.material_mode,
                    options.lightmap);
+        draw_play_hud();
+        if (follow) {
+            // The follow camera of this frame, in the form --eye and --target
+            // take, so that a --level frame can be rendered with the same one.
+            const engine::Vec3& eye = follow->eye();
+            const engine::Vec3& target = follow->target();
+            std::ostringstream line;
+            line << std::setprecision(9) << "sdl camera: eye " << eye.x << ',' << eye.y << ','
+                 << eye.z << " target " << target.x << ',' << target.y << ',' << target.z;
+            std::cout << line.str() << '\n';
+        }
         glFinish();
         capture(options.screenshot, options.width, options.height);
         if (options.stats) {
@@ -643,9 +716,7 @@ int run_level(const engine::LevelGeometry& geometry,
         if (!actor) {
             draw_player(player ? player->state().position : orbit.target);
         }
-        if (player) {
-            draw_hud(options.width, options.height, hud);
-        }
+        draw_play_hud();
         SDL_GL_SwapWindow(context->window);
         if (print_stats) {
             const double frame_ms = static_cast<double>(

@@ -8,6 +8,7 @@
 #include "bo2/engine/image.hpp"
 #include "bo2/game/kain_actor.hpp"
 #include "bo2/game/kain_tuning.hpp"
+#include "bo2/game/kain_vitals.hpp"
 #include "bo2/engine/math.hpp"
 
 namespace bo2::platform::sdl {
@@ -34,6 +35,11 @@ struct WindowOptions {
     // Each frame it steps its animation with the player, is skinned and drawn
     // at the player; without it play draws a marker. Null in the viewer.
     game::KainActor* kain_actor = nullptr;
+    // The HUD of play: the `ui/hud` cell group of code.big, its textures and
+    // the counters Kain enters the level with. Null: play draws no HUD.
+    const engine::LevelGeometry* hud_scene = nullptr;
+    const std::vector<engine::Image>* hud_textures = nullptr;
+    game::KainVitals vitals;
     Camera camera;
 };
 

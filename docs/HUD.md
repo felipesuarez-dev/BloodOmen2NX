@@ -2,9 +2,9 @@
 
 Status: **partially ported**. The projection, the visibility rule and the
 health and lore bars are decompiled and ported (`src/game/hud_scene.cpp`),
-and the software renderer draws them over a level frame (`--hud`). Every
-rule below names the function it was read from; the dumps are local
-(`re/decomp/hud/`).
+and both renderers draw them with `--hud`: the software renderer over a
+`--level` frame and the SDL backend in the `--play` window. Every rule below
+names the function it was read from; the dumps are local (`re/decomp/hud/`).
 
 The scene data (the `ui/hud` region and cell group of `code.big`, its
 markers and its clips) is described in
@@ -112,9 +112,18 @@ level with: the port passes the folder of the level archive (`slums`) as the
 level name of `FUN_004256c0`. The result against the original is in
 [`ORACLE_COMPARE.md`](ORACLE_COMPARE.md#hud-of-the-sl01-spawn-frame-bo2nx-75).
 
+`bo2nx --play ... --hud <code.big>` draws the same objects every frame in the
+SDL window (`draw_hud` in `src/platform/sdl/sdl_backend.cpp`) with the same
+rules: the 640 x 480 orthographic screen, the texture multiplied by the
+object's colour, alpha blending and the order from the farthest z to the
+nearest. The HUD is in Kain mode for the whole of play and is never paused,
+because the play loop has no pause, and Kain's counters stay at the values he
+enters the level with: nothing changes them yet. The two renderers agree
+within 1.3 of 255 (MAE) in the HUD boxes
+([`ORACLE_COMPARE.md`](ORACLE_COMPARE.md#sdl-backend-against-the-software-renderer-bo2nx-89)).
+
 Not ported:
 
-- The HUD in the SDL backend: `--play` still draws its two placeholder bars.
 - The blend mode and the draw order of the original (the two above are the
   port's).
 - The rage bar and the dark gift icon: the port has no rage and no dark gift

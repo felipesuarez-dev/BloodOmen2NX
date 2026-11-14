@@ -210,10 +210,10 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   lc01), with named light-map selection and a vertex-count fallback.
   Save states serialize the level name, player transform, HUD and tick
   with a versioned binary format; checkpoint slots, checkpoint triggers,
-  F5/F9 save/load and corruption checks are implemented. A minimal
-  health/mana HUD bar is drawn in `--play`; the original HUD scene (frame,
-  health vial, lore vial) is drawn over a `--level` frame with `--hud`
-  (`docs/HUD.md`). Combat has attack cooldown,
+  F5/F9 save/load and corruption checks are implemented. The original HUD
+  scene (frame, health vial, lore vial) is drawn over a `--level` frame and
+  in the `--play` window with `--hud` (`docs/HUD.md`); its counters do not
+  change yet. Combat has attack cooldown,
   combo state, entity health/damage and a forward hit-sphere query; the
   faithful original values and animation/weapon effects are still pending.
   The compressed `collmodc` runtime and game-specific entities remain

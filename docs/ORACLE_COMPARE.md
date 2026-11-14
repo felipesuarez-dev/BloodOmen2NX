@@ -236,6 +236,50 @@ What the numbers hold:
   with `--material off`, whose world error is about 35) and of the dark gift
   icon inside the orb, which the port does not draw.
 
+### SDL backend against the software renderer (BO2NX-89)
+
+**Status: the two renderers draw the same HUD; the limit is 10 of MAE in
+`vials`.**
+
+`--play --hud` draws the scene in the SDL window. The check is one renderer
+against the other with the camera the player starts with: `--play --out`
+prints it (`sdl camera: eye ... target ...`) in the form `--eye` and
+`--target` take.
+
+```sh
+LEVELS=external/installed/media/gogames/bo2/resources/levels
+CODE=external/installed/media/gogames/bo2/code.big
+xvfb-run -a -s "-screen 0 1024x768x24" bo2nx --play --big "$LEVELS/slums/sl01.big" \
+  --material off --width 800 --height 600 \
+  --eye "-8.803,-62.9,248" --target "-8.803,57.129,208" --hud "$CODE" --out play.ppm
+bo2nx --level --big "$LEVELS/slums/sl01.big" --material off --width 800 --height 600 \
+  --eye "-199.75119,57.1290016,305.069519" --target "-8.80299377,57.1290016,285" \
+  --hud "$CODE" --out level.ppm
+python3 tools/compare_frames.py play.ppm level.ppm --out /tmp/gate \
+  --region ui:0,0,290,175 --region vials:28,82,62,90 --region frame:90,8,186,32
+```
+
+`--target` of `--play` is Kain's spawn. `--eye` only has to be present:
+without both, the player starts at the centre of the level.
+
+MAE / RMSE of each box, of 255, SDL against software (2026-11-14):
+
+| Box | Without `--hud` | With `--hud` |
+|---|---|---|
+| `ui` | 1.25 / 5.06 | 0.86 / 4.15 |
+| `vials` | 0.59 / 0.93 | 0.27 / 0.59 |
+| `frame` | 1.85 / 6.19 | 1.27 / 4.94 |
+
+What the numbers hold:
+
+- The column without `--hud` is the difference of the two rasterizers on the
+  world alone. The HUD lowers it because it covers part of each box with
+  pixels that agree.
+- `--hud` changes 12,539 pixels of the SDL frame and 12,530 of the software
+  frame, inside the same rectangle (x 7..275, y 8..180).
+- The camera matters: with the camera of the spawn gate above in place of the
+  printed one, the world alone differs by 7.95 in `vials`.
+
 ## Rules
 
 - A screenshot comparison is a gate, not a demo. Do not show a level until
