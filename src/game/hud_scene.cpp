@@ -1,6 +1,7 @@
 #include "bo2/game/hud_scene.hpp"
 
 #include <algorithm>
+#include <array>
 #include <stdexcept>
 #include <string>
 
@@ -74,6 +75,8 @@ HudScene::HudScene(const engine::LevelGeometry& scene) {
     lore_.glass = find_marker(scene, "ui_hud_lore_glass");
     lore_.bottom = find_marker(scene, "ui_hud_lore_bottom");
     lore_.clip = marker_clip(scene, lore_.bar);
+    rage_bar_ = find_marker(scene, "ui_hud_rage_bar");
+    rage_clip_ = marker_clip(scene, rage_bar_);
     for (std::size_t index = 0; index < scene.markers.size(); ++index) {
         const std::uint32_t marker = static_cast<std::uint32_t>(index);
         if (scene.markers[index].entity_class == "KainModeHUDComponent" &&
@@ -115,8 +118,9 @@ std::vector<HudItem> HudScene::items(const KainVitals& vitals, const KainTuning&
     if ((mode != HudMode::Kain && mode != HudMode::KainAndEnemy) || paused) {
         return items;
     }
-    if (!(vitals.max_health > 0.0f) || !(vitals.max_lore > 0.0f)) {
-        throw std::invalid_argument("the HUD needs a positive maximum health and lore");
+    if (!(vitals.max_health > 0.0f) || !(vitals.max_lore > 0.0f) ||
+        !(vitals.max_rage > 0.0f)) {
+        throw std::invalid_argument("the HUD needs a positive maximum health, lore and rage");
     }
     for (const std::uint32_t marker : frame_) {
         HudItem item;
@@ -132,6 +136,20 @@ std::vector<HudItem> HudScene::items(const KainVitals& vitals, const KainTuning&
     // FUN_0053cab0.
     add_bar(items, lore_, vitals.lore / vitals.max_lore, vitals.max_lore / top_max_lore(tuning),
             {1.0f, 1.0f, 1.0f});
+    // FUN_0053d180: the clip of the rage bar follows the rage, and its colour
+    // says whether the rage reaches the threshold of the selected gift.
+    const float rage = vitals.rage / vitals.max_rage;
+    const RageBarColours colours = rage_bar_colours(vitals, tuning);
+    const std::array<float, 4>& colour =
+        rage < rage_threshold(vitals, tuning) / vitals.max_rage ? colours.cant_use
+                                                                 : colours.can_use;
+    HudItem rage_bar;
+    rage_bar.model = rage_bar_;
+    rage_bar.position = positions_[rage_bar_];
+    rage_bar.scale = clip_scale(rage_clip_, rage);
+    rage_bar.colour = {colour[0], colour[1], colour[2]};
+    rage_bar.alpha = colour[3];
+    items.push_back(rage_bar);
     std::sort(items.begin(), items.end(),
               [](const HudItem& a, const HudItem& b) { return a.model < b.model; });
     return items;

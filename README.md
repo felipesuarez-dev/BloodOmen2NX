@@ -24,7 +24,7 @@ English version: [README.en.md](README.en.md)
 <!-- badges:start -->
 [status-badge]: https://img.shields.io/badge/fase-M3%20en%20curso-orange
 [overall-badge]: https://img.shields.io/badge/global-8.2%25-yellow
-[fn-badge]: https://img.shields.io/badge/funciones-33%20%2F%2016927-lightgrey
+[fn-badge]: https://img.shields.io/badge/funciones-36%20%2F%2016927-lightgrey
 [levels-badge]: https://img.shields.io/badge/niveles-0%20%2F%2011-lightgrey
 <!-- badges:end -->
 [cpp-badge]: https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white
@@ -75,11 +75,11 @@ El original se usa como referencia; no se distribuye.
 
 | Componente | Peso | Avance | Puntaje |
 |---|---:|---:|---:|
-| Funciones traducidas / en alcance | 60% | 33 / 16 927 | 0.19% |
+| Funciones traducidas / en alcance | 60% | 36 / 16 927 | 0.21% |
 | Niveles completables (capítulos de la campaña) | 30% | 0 / 11 | 0.00% |
 | Características de plataforma | 10% | 10 / 13 + 1 parcial | 80.77% |
 
-Mapa de funciones: 35 529 filas: 33 traducidas, 103 en curso, 16 791 pendientes, 18 602 externas (no son código del juego).
+Mapa de funciones: 35 529 filas: 36 traducidas, 105 en curso, 16 786 pendientes, 18 602 externas (no son código del juego).
 
 La lista de capítulos está en [`docs/LEVELS.md`](docs/LEVELS.md). Los capítulos completables y las características de plataforma se definen en [`tools/gen/progress_data.py`](tools/gen/progress_data.py).
 <!-- progress:end -->
@@ -117,7 +117,7 @@ Fuente de verdad: [`STATE.md`](STATE.md) y [`ROADMAP.md`](ROADMAP.md) (en inglé
 | Capítulos | Ninguno se puede completar; no hay flujo de niveles, ni menús, ni pantalla de inicio |
 | Sistemas de juego | El combate, los enemigos y la IA, los dotes oscuras, las armas y el inventario, y los scripts y disparadores no están traducidos. Faltan el planeo y la caída desde bordes |
 | Animación y colisión | La evaluación del esqueleto, el skinning y la máquina de estados del grafo de animación (`animatio`) están portados para una capa. También están portadas la mezcla de poses entre clips, sin los filtros de transición, y las capas de la carrera con la mezcla caminar/correr según el stick. El modo combate (Shift) reproduce el movimiento de combate del grafo. Faltan la inclinación al girar, las máscaras de capa, los eventos de los clips y los ataques. La colisión está portada: el `collmodc` se decodifica (puntos, triángulos empaquetados, esferas y caras), `CollisionWorld` usa el hull exacto y el gestor de colisión barre la esfera del cuerpo de Kain. La carrera de W en `sl01` desliza a 162 u/s por el chaflán del modelo 57 y frena en x = 326,38, y = 44,18 (oráculo: 326,35 / 44,14) |
-| Iluminación y materiales | El palette de `.slm` es un mapa de sombra; en el punto de inicio de `sl01` el error del mundo es 8,69/255. El HUD del original ya se dibuja sobre el frame del nivel y en la ventana de `--play` (marco, vial de salud y vial de lore). Quedan Kain, el icono de dark gift y la barra de furia del HUD, el marcador verde `bo2cinematic001` y el formato exacto de textura del palette; la niebla está desactivada en `sl01` |
+| Iluminación y materiales | El palette de `.slm` es un mapa de sombra; en el punto de inicio de `sl01` el error del mundo es 8,69/255. El HUD del original ya se dibuja sobre el frame del nivel y en la ventana de `--play` (marco, vial de salud, vial de lore y barra de furia). Quedan Kain, el icono de dark gift del HUD, el marcador verde `bo2cinematic001` y el formato exacto de textura del palette; la niebla está desactivada en `sl01` |
 | Eventos de audio y video | La tabla de eventos `sound` y `strmfile` no está conectada al juego; no hay reproducción de Bink |
 | Switch | El backend libnx y deko3d no se ha iniciado |
 

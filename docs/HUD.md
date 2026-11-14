@@ -91,18 +91,63 @@ vial 6 / 950.
 The health bar also sets its colour (`FUN_00775cb0`): (0.5, 0.5, 0.5, 1)
 while the fraction is 0.3 or more, (1, 1, 1, 1) below it.
 
-The rage bar (`FUN_0053d180`) sets its clip to `rage / maximum rage` (the
-clip scales X from 1 to 28) and takes one of two colours of the selected
-dark gift, by whether the rage covers the gift's cost. The dark gift icon
-(`FUN_00535e40`, `FUN_00535f10`) shows the texture of the selected gift and
-dims it when the gift cannot be used.
+## Rage and dark gifts
+
+The player owns a gift object (`player + 0x128`, the object the game UI
+keeps at `+0x84`): the index of the selected gift (`+4`, -1 for none), the
+seven gifts (`+8`), the rage (`+0x24`) and the maximum rage (`+0x28`). The
+index of a gift is also the type it reports.
+
+| Index | Gift | Spends rage |
+|---|---|---|
+| 0 | stealth | no |
+| 1 | rupture | yes |
+| 2 | superJump | no |
+| 3 | speed | yes |
+| 4 | charm | no |
+| 5 | fury | yes |
+| 6 | telekinesis | no |
+
+- The gift object is created with no rage, no gift selected and no gift
+  owned (`FUN_00435b60`, `FUN_00436080`). `FUN_00428fe0` sets the maximum
+  rage to `rageParams.maxPoints` (450) and `FUN_00428780` copies the cost and
+  the two rage bar colours of fury, rupture and speed from the tuning data
+  ([`FORMATS/tunedata.md`](FORMATS/tunedata.md#darkgiftparams-and-rageparams)).
+- `FUN_00436bb0` adds rage up to the maximum and `FUN_00436c00` takes it
+  down to 0. Each frame `FUN_004300d0` takes `pointsLostPerSec` times the
+  frame time.
+- The rage bar (`FUN_0053d180`) sets its clip to `rage / maximum rage` (the
+  clip scales X from 1 to 28) and its colour (`FUN_00775cb0`) to one of two:
+  the first while that fraction reaches `threshold / maximum rage`, the
+  second below it.
+  - The threshold (`FUN_00425f50`) is the cost of the selected gift when it
+    is fury or speed, and the maximum rage otherwise.
+  - The colours (`FUN_00425fd0`) are `canUseColor` and `cantUseColor` of the
+    selected gift when it spends rage, and `nonRageGiftBar` for both
+    otherwise.
+- The dark gift icon (`FUN_00535e40`, `FUN_00535f10`) shows the texture
+  `FUN_00524cd0` gives for the type of the selected gift (charm 1, superJump
+  2, speed 3, telekinesis 4, stealth 5, rupture 6, fury 7) and dims it when
+  the gift cannot be used.
+
+Which gift is selected when a level starts (`FUN_0042af90`):
+
+- With a saved state, the gift the state names (`+0x88`) when Kain owns it,
+  else gift 0. The owned gifts come from the start record of the level
+  (`FUN_004256c0`).
+- Without one, the creation code selects none: `FUN_00428780` runs before the
+  start record marks any gift as owned. The icon code reads the selected
+  gift without testing for none, so something selects one before the HUD is
+  first drawn. What does it is not found.
 
 ## Port
 
 `HudScene` (`src/game/hud_scene.cpp`) takes the scene, Kain's counters
 (`KainVitals`), the tuning and the mode, and returns the objects to draw with
-their position, scale and colour: `_main`, `_glass` and the three pieces of
-each of the two bars.
+their position, scale and colour: `_main`, `_glass`, the three pieces of
+each of the two bars and the rage bar. The rage bar starts as the gift object
+is created: no rage and no gift selected, so its clip is at its start and its
+colour is `nonRageGiftBar`.
 
 `bo2nx --level ... --hud <code.big>` draws them over the level frame
 (`draw_screen_items` in the software renderer): each texel is multiplied by
@@ -126,8 +171,12 @@ Not ported:
 
 - The blend mode and the draw order of the original (the two above are the
   port's).
-- The rage bar and the dark gift icon: the port has no rage and no dark gift
-  selection.
+- The dark gift icon: its texture is the selected gift's, and the port does
+  not know which gift a level starts with (see "Rage and dark gifts"). The
+  oracle captures load a saved game, so the icon in their frames is the gift
+  that save names.
+- What changes the rage (blocks, dodges, the drain of `FUN_004300d0`) and
+  the selection and ownership of the gifts.
 - The objects whose visibility is not read (screen cut, letterbox, pause
   fade, charm haze, highlights, enemy bar and icon), the blood drip of the
   health vial (`FUN_00532f30`) and the awareness glow.

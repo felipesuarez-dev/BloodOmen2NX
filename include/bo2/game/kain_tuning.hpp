@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -58,6 +59,16 @@ struct StartLoreLevel {
     std::int32_t lore_level = 0;  // loreLevel
 };
 
+// The first nine fields of a dark gift that spends rage (kaintune.h
+// KainFuryParams, KainRuptureParams and KainSpeedParams). FUN_00428780 copies
+// them into the gift object: the cost (slot +4) and the two colours of the
+// rage bar (slots +0xc and +0x14).
+struct RageGiftTuning {
+    float cost = 0.0f;                       // cost
+    std::array<float, 4> can_use_colour{};   // canUseColorR, G, B, A
+    std::array<float, 4> cant_use_colour{};  // cantUseColorR, G, B, A
+};
+
 struct KainTuning {
     float stick_deadzone = 0.0f;       // B+0x00C (FUN_00425520, FUN_0041ecf0)
     float jump_turn_rate = 0.0f;       // B+0x9DC jumpParams.jumpTurnRate, deg/s per unit stick in a forward or back jump (FUN_00441f20)
@@ -96,6 +107,13 @@ struct KainTuning {
     std::vector<LoreLevel> lore_levels;             // B+0x8B0 lorePerLevelArray, B+0x8B4 numLoreLevels
     std::int32_t default_lore_level = 0;            // B+0x8BC defaultHealth.loreLevel
     std::vector<StartLoreLevel> start_lore_levels;  // B+0x8DC debugHealth, B+0x8E0 numDebugHealths
+    // `darkGiftParams`: the three gifts that spend rage, and the colour of the
+    // rage bar while another gift, or none, is selected (FUN_00425fd0).
+    RageGiftTuning fury;                       // B+0x5A4 furyParams
+    RageGiftTuning rupture;                    // B+0x5E4 ruptureParams
+    RageGiftTuning speed;                      // B+0x64C speedParams
+    std::array<float, 4> non_rage_gift_bar{};  // B+0x7A4 nonRageGiftBarR, G, B, A
+    float max_rage = 0.0f;                     // B+0xB70 rageParams.maxPoints (FUN_00428fe0)
 };
 
 // Values FUN_00451d00 derives from the jump block.

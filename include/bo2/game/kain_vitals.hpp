@@ -1,11 +1,26 @@
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <string_view>
 
 #include "bo2/game/kain_tuning.hpp"
 
 namespace bo2::game {
+
+// The dark gifts by their index in the player's gift table, which is also
+// the type each gift reports. FUN_00435b60 builds them; FUN_004256c0 pairs
+// each index with a field of KainDebugHealth.
+enum class DarkGift : std::int32_t {
+    None = -1,
+    Stealth = 0,
+    Rupture = 1,
+    SuperJump = 2,
+    Speed = 3,
+    Charm = 4,
+    Fury = 5,
+    Telekinesis = 6,
+};
 
 // Kain's lore and health counters. The original keeps them in two objects of
 // the player: the lore object (FUN_00425fc0) and the health object
@@ -21,6 +36,11 @@ struct KainVitals {
     float health_target = 0.0f;      // +0x10
     float max_health = 0.0f;         // +0x14, shown
     float max_health_target = 0.0f;  // +0x18
+    // The gift object of the player (player + 0x128): the selected gift and
+    // the rage the gifts spend.
+    DarkGift selected_gift = DarkGift::None;  // +0x04, an index or -1
+    float rage = 0.0f;                        // +0x24
+    float max_rage = 0.0f;                    // +0x28
 };
 
 // FUN_00420ef0 and the FUN_00420700 it ends with: enters lore level `level`
@@ -43,5 +63,23 @@ float top_max_health(const KainTuning& tuning);
 // FUN_00421020: `maxLore` of the last lore level. Throws std::out_of_range
 // when the table is empty.
 float top_max_lore(const KainTuning& tuning);
+
+// FUN_00435b60 and the rage line of FUN_00428fe0, the state of the gift
+// object when the player is created: no gift selected, no rage, and
+// `rageParams.maxPoints` as the maximum rage.
+void reset_gifts(KainVitals& vitals, const KainTuning& tuning);
+
+// FUN_00425f50: the rage the rage bar compares with. The cost of the
+// selected gift when it is fury or speed; the maximum rage otherwise.
+float rage_threshold(const KainVitals& vitals, const KainTuning& tuning);
+
+// FUN_00425fd0: the two colours of the rage bar, RGBA. The colours of the
+// selected gift when it spends rage (fury, rupture or speed);
+// `nonRageGiftBar` for both when another gift, or none, is selected.
+struct RageBarColours {
+    std::array<float, 4> can_use{};   // the rage reaches the threshold
+    std::array<float, 4> cant_use{};  // it does not
+};
+RageBarColours rage_bar_colours(const KainVitals& vitals, const KainTuning& tuning);
 
 }  // namespace bo2::game

@@ -41,8 +41,8 @@ struct HudItem {
 
 // The rules of the HUD objects whose state the port has. Drawn: the frame
 // and its glass, the health bar with its glass and vial, the lore bar with
-// its glass and bottom. Not drawn: the rage bar and the dark gift icon (they
-// follow the selected dark gift), the weapon icons (hidden without a weapon,
+// its glass and bottom, and the rage bar. Not drawn: the dark gift icon (its
+// texture is the selected gift's), the weapon icons (hidden without a weapon,
 // FUN_0053f1a0), the enemy mode objects (mode 3 only, FUN_00524d40) and the
 // classes whose rule is not ported (screen cut, pause fade, charm haze,
 // awareness glow, the highlights, the blood drip).
@@ -55,7 +55,8 @@ public:
 
     // The visible objects, in scene order. Empty unless the mode is Kain or
     // KainAndEnemy and the game is not paused (FUN_00540b50). Throws
-    // std::invalid_argument when a maximum of `vitals` is not positive and
+    // std::invalid_argument when a maximum of `vitals` (health, lore or rage)
+    // is not positive and
     // std::out_of_range when the lore level table of `tuning` is empty.
     std::vector<HudItem> items(const KainVitals& vitals, const KainTuning& tuning, HudMode mode,
                                bool paused) const;
@@ -75,6 +76,8 @@ private:
     std::vector<std::uint32_t> frame_;     // the plain Kain mode components
     Bar health_;
     Bar lore_;
+    std::uint32_t rage_bar_ = 0;
+    engine::AnimReel rage_clip_;
 };
 
 }  // namespace bo2::game

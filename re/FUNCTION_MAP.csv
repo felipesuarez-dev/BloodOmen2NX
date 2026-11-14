@@ -743,10 +743,10 @@ address,name,subsystem,status,notes
 00425be0,FUN_00425be0,unknown,todo,ghidra
 00425d30,FUN_00425d30,unknown,todo,ghidra
 00425eb0,FUN_00425eb0,unknown,todo,ghidra
-00425f50,FUN_00425f50,unknown,todo,ghidra
+00425f50,FUN_00425f50,player,translated,src/game/kain_vitals.cpp: rage_threshold: the cost of the selected gift for fury and speed and the maximum rage otherwise
 00425fb0,FUN_00425fb0,unknown,todo,ghidra
 00425fc0,FUN_00425fc0,unknown,todo,ghidra
-00425fd0,FUN_00425fd0,unknown,todo,ghidra
+00425fd0,FUN_00425fd0,player,translated,src/game/kain_vitals.cpp: rage_bar_colours: the two colours of the selected rage gift or nonRageGiftBar for both
 004260c0,FUN_004260c0,unknown,todo,ghidra
 004260d0,FUN_004260d0,unknown,todo,ghidra
 004262d0,FUN_004262d0,unknown,todo,ghidra
@@ -819,9 +819,9 @@ address,name,subsystem,status,notes
 004283c0,FUN_004283c0,unknown,todo,ghidra
 00428640,FUN_00428640,unknown,todo,ghidra
 00428720,FUN_00428720,unknown,todo,ghidra
-00428780,FUN_00428780,unknown,todo,ghidra
+00428780,FUN_00428780,player,wip,src/game/kain_tuning.cpp: reads the cost and the two rage bar colours of fury rupture and speed; the scripts the effects and the first gift selection are not ported
 00428f80,FUN_00428f80,unknown,todo,ghidra
-00428fe0,FUN_00428fe0,player,wip,src/game/kain_tuning.cpp: reads the turn rates the run clip rate and the jump block from the tunedata; the other copied fields are not ported
+00428fe0,FUN_00428fe0,player,wip,src/game/kain_tuning.cpp: reads the turn rates the run clip rate the jump block and the maximum rage from the tunedata; the other copied fields are not ported
 0042a150,FUN_0042a150,unknown,todo,ghidra
 0042acf0,FUN_0042acf0,unknown,todo,ghidra
 0042af40,FUN_0042af40,unknown,todo,ghidra
@@ -985,7 +985,7 @@ address,name,subsystem,status,notes
 004359f0,FUN_004359f0,unknown,todo,ghidra
 00435ac0,FUN_00435ac0,unknown,todo,ghidra
 00435af0,FUN_00435af0,unknown,todo,ghidra
-00435b60,FUN_00435b60,unknown,todo,ghidra
+00435b60,FUN_00435b60,player,wip,src/game/kain_vitals.cpp: reset_gifts: no gift selected and no rage; the seven gift objects are not ported
 00436080,FUN_00436080,unknown,todo,ghidra
 00436110,FUN_00436110,unknown,todo,ghidra
 004361a0,FUN_004361a0,unknown,todo,ghidra
@@ -5230,7 +5230,7 @@ address,name,subsystem,status,notes
 0053cf20,FUN_0053cf20,unknown,todo,ghidra
 0053d010,FUN_0053d010,unknown,todo,ghidra
 0053d150,FUN_0053d150,unknown,todo,ghidra
-0053d180,FUN_0053d180,unknown,todo,ghidra
+0053d180,FUN_0053d180,level,translated,src/game/hud_scene.cpp: HudScene::items: the clip of the rage bar follows rage over maximum rage and its colour is chosen by the threshold of the selected gift
 0053d240,FUN_0053d240,unknown,todo,ghidra
 0053d350,FUN_0053d350,unknown,todo,ghidra
 0053d470,FUN_0053d470,unknown,todo,ghidra

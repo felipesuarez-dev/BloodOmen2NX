@@ -256,7 +256,7 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   (`--kain-model kain.big --kain-at x,y,z`: 2,846 triangles, 3 DDS
   textures, 104 bones and 1,988 skin weights) and a clip can pose it
   (`--kain-clip`), but the gate frame does not yet draw him in the oracle's
-  pose; that, the dark gift icon and the rage bar of the HUD, the green
+  pose; that, the dark gift icon of the HUD, the green
   `bo2cinematic001` marker and the exact palette texture format remain
   (BO2NX-68).
 - Gameplay parity beyond turning, ground speeds, partial stick, jumping,

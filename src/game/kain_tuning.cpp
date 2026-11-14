@@ -1,5 +1,6 @@
 #include "bo2/game/kain_tuning.hpp"
 
+#include <array>
 #include <map>
 #include <cmath>
 #include <cstring>
@@ -37,8 +38,16 @@ constexpr std::size_t kStartLevels = 0x8DC;
 constexpr std::size_t kStartLevelCount = 0x8E0;
 constexpr std::size_t kLoreLevelSize = 8;    // maxLore, maxHitPoints
 constexpr std::size_t kStartLevelSize = 0x24;  // name, loreLevel and seven gift flags
+// `darkGiftParams` and `rageParams` (kaintune.h KainDarkGiftParams,
+// KainRageParams). The offsets are the ones FUN_00428780, FUN_00425fd0 and
+// FUN_00428fe0 read.
+constexpr std::size_t kFuryGift = 0x5A4;
+constexpr std::size_t kRuptureGift = 0x5E4;
+constexpr std::size_t kSpeedGift = 0x64C;
+constexpr std::size_t kNonRageGiftBar = 0x7A4;
+constexpr std::size_t kMaxRage = 0xB70;
 // One past the last field we read.
-constexpr std::size_t kBlobMinimum = kRunClipRate + 4;
+constexpr std::size_t kBlobMinimum = kMaxRage + 4;
 
 float read_float(const common::Reader& reader, std::size_t blob_offset) {
     const std::uint32_t bits = reader.u32(kBlobStart + blob_offset);
@@ -70,6 +79,19 @@ AirSteerTuning read_air_steer(const common::Reader& reader, std::size_t block) {
     steer.kd = read_float(reader, block + 0x10);
     steer.max_lateral_vel = read_float(reader, block + 0x14);
     return steer;
+}
+
+std::array<float, 4> read_colour(const common::Reader& reader, std::size_t offset) {
+    return {read_float(reader, offset), read_float(reader, offset + 4),
+            read_float(reader, offset + 8), read_float(reader, offset + 12)};
+}
+
+RageGiftTuning read_rage_gift(const common::Reader& reader, std::size_t block) {
+    RageGiftTuning gift;
+    gift.cost = read_float(reader, block);
+    gift.can_use_colour = read_colour(reader, block + 0x04);
+    gift.cant_use_colour = read_colour(reader, block + 0x14);
+    return gift;
 }
 
 // The lists after the blob (FUN_007706c0). Every u32 is read at the next
@@ -202,6 +224,11 @@ KainTuning parse_kain_tuning(const std::vector<std::uint8_t>& bytes) {
     tuning.turn_rate_walk_back = read_float(reader, kTurnWalkBack);
     tuning.run_clip_rate = read_float(reader, kRunClipRate);
     tuning.combat_hold_exit_delay = read_float(reader, kCombatHoldExitDelay);
+    tuning.fury = read_rage_gift(reader, kFuryGift);
+    tuning.rupture = read_rage_gift(reader, kRuptureGift);
+    tuning.speed = read_rage_gift(reader, kSpeedGift);
+    tuning.non_rage_gift_bar = read_colour(reader, kNonRageGiftBar);
+    tuning.max_rage = read_float(reader, kMaxRage);
     if (!(tuning.stick_deadzone >= 0.0f && tuning.stick_deadzone < 1.0f)) {
         throw common::ParseError("kain tunedata stick deadzone is outside [0, 1)");
     }

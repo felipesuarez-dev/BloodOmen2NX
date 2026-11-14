@@ -198,8 +198,8 @@ How to read it:
 
 ## HUD of the `sl01` spawn frame (BO2NX-75)
 
-**Status: the frame, the health vial and the lore vial are in place; the
-dark gift icon and the rage bar are not drawn.**
+**Status: the frame, the health vial, the lore vial and the rage bar are in
+place; the dark gift icon is not drawn.**
 
 Same reference frame and camera as the spawn gate above
 (`wine_20261029_0110`, `frames_ppm/01_spawn.ppm`, 800x600). `--hud` draws the
@@ -235,6 +235,11 @@ What the numbers hold:
 - The boxes keep the error of the world behind the glass (the frame is drawn
   with `--material off`, whose world error is about 35) and of the dark gift
   icon inside the orb, which the port does not draw.
+- The rage bar is empty in both frames: the rage is 0. Drawing it (BO2NX-90)
+  leaves the three numbers as they are.
+- The capture route loads a saved game, so the icon in the oracle frame is
+  the gift that save names, not the one a level starts with
+  ([`HUD.md`](HUD.md#rage-and-dark-gifts)).
 
 ### SDL backend against the software renderer (BO2NX-89)
 
@@ -266,7 +271,7 @@ MAE / RMSE of each box, of 255, SDL against software (2026-11-14):
 
 | Box | Without `--hud` | With `--hud` |
 |---|---|---|
-| `ui` | 1.25 / 5.06 | 0.86 / 4.15 |
+| `ui` | 1.25 / 5.06 | 0.85 / 4.15 |
 | `vials` | 0.59 / 0.93 | 0.27 / 0.59 |
 | `frame` | 1.85 / 6.19 | 1.27 / 4.94 |
 
@@ -275,8 +280,9 @@ What the numbers hold:
 - The column without `--hud` is the difference of the two rasterizers on the
   world alone. The HUD lowers it because it covers part of each box with
   pixels that agree.
-- `--hud` changes 12,539 pixels of the SDL frame and 12,530 of the software
-  frame, inside the same rectangle (x 7..275, y 8..180).
+- `--hud` changes 12,558 pixels of the SDL frame and 12,530 of the software
+  frame, inside the same rectangle (x 7..275, y 8..180). The difference is
+  the empty rage bar, a sliver that only the SDL rasterizer lights.
 - The camera matters: with the camera of the spawn gate above in place of the
   printed one, the world alone differs by 7.95 in `vials`.
 

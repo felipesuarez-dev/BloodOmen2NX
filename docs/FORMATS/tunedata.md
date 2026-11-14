@@ -173,6 +173,39 @@ and `top_max_lore` in `src/game/kain_vitals.cpp`. Not ported: the gift flags,
 the growth of the shown values toward their targets (FUN_004210b0) and the
 level-up (FUN_00420ab0).
 
+## `darkGiftParams` and `rageParams`
+
+`KainDarkGiftParams` holds one block per dark gift and `KainRageParams`
+(B+0xB70) the rage they spend. The port reads the fields the rage bar of the
+HUD uses ([`HUD.md`](../HUD.md#rage-and-dark-gifts)).
+
+| B offset | Field | Value | Consumers |
+|---|---|---|---|
+| 0x5A4 | `furyParams.cost` | 270 | FUN_00428780 |
+| 0x5A8 | `furyParams.canUseColor` R, G, B, A | (0.8, 0.2, 0.1, 0.8) | FUN_00428780 |
+| 0x5B8 | `furyParams.cantUseColor` R, G, B, A | (0.5, 0.1, 0.001, 0.5) | FUN_00428780 |
+| 0x5E4 | `ruptureParams.cost` and the same two colours | 450, (0.8, 0.2, 0.1, 0.8), (0.5, 0.1, 0, 0.5) | FUN_00428780 |
+| 0x64C | `speedParams.cost` and the same two colours | 360, (0.8, 0.2, 0.1, 0.8), (0.5, 0.1, 0, 0.5) | FUN_00428780 |
+| 0x7A4 | `nonRageGiftBar` R, G, B, A | (0.2, 0.2, 0.8, 0.5) | FUN_00425fd0 |
+| 0xB70 | `rageParams.maxPoints` | 450 | FUN_00428fe0 |
+| 0xB74 | `rageParams.pointsLostPerSec` | not read by the port | FUN_004300d0 |
+
+- FUN_00428780 copies the cost and the two colours of fury, rupture and speed
+  into their gift objects (slots +4, +0xc and +0x14 of a
+  `PointBasedDarkGift`).
+- FUN_00428fe0 stores `maxPoints` as the maximum rage of the player.
+- FUN_00425fd0 reads `nonRageGiftBar` when the selected gift spends no rage.
+
+The seven flags of a start record (`KainDebugHealth`) are, in order, charm,
+fury, rupture, speed, stealth, superJump and telekinesis. FUN_004256c0 hands
+each one to the gift with index 4, 5, 1, 3, 0, 2 and 6, which is how the
+gift indices are named.
+
+The port: `KainTuning::fury`, `rupture`, `speed`, `non_rage_gift_bar` and
+`max_rage`; `reset_gifts`, `rage_threshold` and `rage_bar_colours` in
+`src/game/kain_vitals.cpp`. Not ported: the gift flags, the rest of each gift
+block and of `rageParams`.
+
 ## Open questions
 
 - Which string the game passes to FUN_004256c0 as the level name (the caller,

@@ -51,4 +51,47 @@ float top_max_lore(const KainTuning& tuning) {
     return tuning.lore_levels.back().max_lore;
 }
 
+void reset_gifts(KainVitals& vitals, const KainTuning& tuning) {
+    vitals.selected_gift = DarkGift::None;
+    vitals.rage = 0.0f;
+    vitals.max_rage = tuning.max_rage;
+}
+
+namespace {
+
+// The gifts FUN_00435b60 builds as a PointBasedDarkGift.
+const RageGiftTuning* rage_gift(DarkGift gift, const KainTuning& tuning) {
+    switch (gift) {
+    case DarkGift::Fury:
+        return &tuning.fury;
+    case DarkGift::Rupture:
+        return &tuning.rupture;
+    case DarkGift::Speed:
+        return &tuning.speed;
+    default:
+        return nullptr;
+    }
+}
+
+}  // namespace
+
+float rage_threshold(const KainVitals& vitals, const KainTuning& tuning) {
+    // Only the types 5 and 3 answer with their cost.
+    if (vitals.selected_gift == DarkGift::Fury) {
+        return tuning.fury.cost;
+    }
+    if (vitals.selected_gift == DarkGift::Speed) {
+        return tuning.speed.cost;
+    }
+    return vitals.max_rage;
+}
+
+RageBarColours rage_bar_colours(const KainVitals& vitals, const KainTuning& tuning) {
+    const RageGiftTuning* gift = rage_gift(vitals.selected_gift, tuning);
+    if (gift != nullptr) {
+        return {gift->can_use_colour, gift->cant_use_colour};
+    }
+    return {tuning.non_rage_gift_bar, tuning.non_rage_gift_bar};
+}
+
 }  // namespace bo2::game

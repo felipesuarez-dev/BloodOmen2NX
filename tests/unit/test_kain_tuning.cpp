@@ -61,6 +61,21 @@ std::vector<std::uint8_t> make_blob() {
     put_float(data, 0xACC, 2.6f);
     put_float(data, 0xAD0, 2.7f);
     put_float(data, 0xB14, 1.15f);
+    // darkGiftParams: cost, canUseColor RGBA and cantUseColor RGBA of fury,
+    // rupture and speed, then nonRageGiftBar; rageParams.maxPoints.
+    const float fury[9] = {270.0f, 0.8f, 0.2f, 0.1f, 0.8f, 0.5f, 0.1f, 0.001f, 0.5f};
+    const float rupture[9] = {450.0f, 0.8f, 0.2f, 0.1f, 0.8f, 0.5f, 0.1f, 0.0f, 0.5f};
+    const float speed[9] = {360.0f, 0.8f, 0.2f, 0.1f, 0.8f, 0.5f, 0.1f, 0.0f, 0.5f};
+    for (std::size_t index = 0; index < 9; ++index) {
+        put_float(data, 0x5A4 + 4 * index, fury[index]);
+        put_float(data, 0x5E4 + 4 * index, rupture[index]);
+        put_float(data, 0x64C + 4 * index, speed[index]);
+    }
+    const float bar[4] = {0.2f, 0.2f, 0.8f, 0.5f};
+    for (std::size_t index = 0; index < 4; ++index) {
+        put_float(data, 0x7A4 + 4 * index, bar[index]);
+    }
+    put_float(data, 0xB70, 450.0f);
     return data;
 }
 
@@ -80,6 +95,15 @@ void test_round_trip() {
     CHECK(tuning.turn_rate_run == 2.6f);
     CHECK(tuning.turn_rate_walk_back == 2.7f);
     CHECK(tuning.run_clip_rate == 1.15f);
+    CHECK(tuning.max_rage == 450.0f);
+    CHECK(tuning.fury.cost == 270.0f);
+    CHECK(tuning.fury.can_use_colour == (std::array<float, 4>{0.8f, 0.2f, 0.1f, 0.8f}));
+    CHECK(tuning.fury.cant_use_colour == (std::array<float, 4>{0.5f, 0.1f, 0.001f, 0.5f}));
+    CHECK(tuning.rupture.cost == 450.0f);
+    CHECK(tuning.rupture.cant_use_colour == (std::array<float, 4>{0.5f, 0.1f, 0.0f, 0.5f}));
+    CHECK(tuning.speed.cost == 360.0f);
+    CHECK(tuning.speed.can_use_colour == (std::array<float, 4>{0.8f, 0.2f, 0.1f, 0.8f}));
+    CHECK(tuning.non_rage_gift_bar == (std::array<float, 4>{0.2f, 0.2f, 0.8f, 0.5f}));
     CHECK(tuning.jump_turn_rate == 45.0f);
     CHECK(tuning.side_jump.gravity_up == -3000.0f);
     CHECK(tuning.side_jump.gravity_down == -500.0f);
@@ -252,6 +276,42 @@ void test_lore_tables_follow_the_fixups() {
     CHECK(throws_parse_error([&] { bo2::game::parse_kain_tuning(long_table); }));
 }
 
+// FUN_00435b60, FUN_00425f50 and FUN_00425fd0.
+void test_gift_state() {
+    const bo2::game::KainTuning tuning = bo2::game::parse_kain_tuning(make_blob());
+    bo2::game::KainVitals vitals;
+    vitals.rage = 12.0f;
+    vitals.selected_gift = bo2::game::DarkGift::Fury;
+    bo2::game::reset_gifts(vitals, tuning);
+    CHECK(vitals.selected_gift == bo2::game::DarkGift::None);
+    CHECK(vitals.rage == 0.0f);
+    CHECK(vitals.max_rage == 450.0f);
+    // No gift: the threshold is the maximum and both colours are the bar's.
+    CHECK(bo2::game::rage_threshold(vitals, tuning) == 450.0f);
+    CHECK(bo2::game::rage_bar_colours(vitals, tuning).can_use == tuning.non_rage_gift_bar);
+    CHECK(bo2::game::rage_bar_colours(vitals, tuning).cant_use == tuning.non_rage_gift_bar);
+    // Fury and speed answer with their cost; rupture does not.
+    vitals.selected_gift = bo2::game::DarkGift::Fury;
+    CHECK(bo2::game::rage_threshold(vitals, tuning) == 270.0f);
+    CHECK(bo2::game::rage_bar_colours(vitals, tuning).can_use == tuning.fury.can_use_colour);
+    CHECK(bo2::game::rage_bar_colours(vitals, tuning).cant_use == tuning.fury.cant_use_colour);
+    vitals.selected_gift = bo2::game::DarkGift::Speed;
+    CHECK(bo2::game::rage_threshold(vitals, tuning) == 360.0f);
+    vitals.selected_gift = bo2::game::DarkGift::Rupture;
+    CHECK(bo2::game::rage_threshold(vitals, tuning) == 450.0f);
+    CHECK(bo2::game::rage_bar_colours(vitals, tuning).cant_use ==
+          tuning.rupture.cant_use_colour);
+    // The other gifts spend no rage.
+    for (const bo2::game::DarkGift gift :
+         {bo2::game::DarkGift::Stealth, bo2::game::DarkGift::SuperJump,
+          bo2::game::DarkGift::Charm, bo2::game::DarkGift::Telekinesis}) {
+        vitals.selected_gift = gift;
+        CHECK(bo2::game::rage_threshold(vitals, tuning) == 450.0f);
+        CHECK(bo2::game::rage_bar_colours(vitals, tuning).can_use ==
+              tuning.non_rage_gift_bar);
+    }
+}
+
 void test_derived_jump_matches_the_original() {
     const bo2::game::KainTuning tuning = bo2::game::parse_kain_tuning(make_blob());
     const bo2::game::JumpDerived derived = bo2::game::derive_jump(tuning);
@@ -373,6 +433,7 @@ int main() {
     test_round_trip();
     test_rejects_bad_blobs();
     test_lore_tables_follow_the_fixups();
+    test_gift_state();
     test_derived_jump_matches_the_original();
     test_derived_airtimes_match_the_original();
     test_derived_air_steering_matches_the_original();
