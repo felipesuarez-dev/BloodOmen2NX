@@ -730,7 +730,7 @@ address,name,subsystem,status,notes
 00425320,FUN_00425320,unknown,todo,ghidra
 004253d0,FUN_004253d0,unknown,todo,ghidra
 004254f0,FUN_004254f0,unknown,todo,ghidra
-00425520,FUN_00425520,unknown,todo,ghidra
+00425520,FUN_00425520,player,wip,include/bo2/game/kain_tuning.hpp: stick_deadzone is read from the tunedata and applied to the stick; the rest of the input path is not ported
 00425580,FUN_00425580,player,wip,src/game/kain_animation.cpp: KainAnimation::combat_direction gives the five directions from the stick; the axes come from the port input instead of FUN_00452c30
 00425670,FUN_00425670,unknown,todo,ghidra
 004256c0,FUN_004256c0,player,wip,src/game/kain_vitals.cpp: start_lore_level picks the debugHealth record by level name or the default one; the dark gift flags are not ported
@@ -843,8 +843,8 @@ address,name,subsystem,status,notes
 0042d6c0,FUN_0042d6c0,unknown,todo,ghidra
 0042d840,FUN_0042d840,unknown,todo,ghidra
 0042dca0,FUN_0042dca0,player,wip,src/game/kain_animation.cpp: KainAnimation::update_combat_mode enters combat mode while the control is held and leaves it after the hold exit delay; the checks before it and the camera and weapon work of the enter and leave functions are not ported
-0042ddd0,FUN_0042ddd0,unknown,todo,ghidra
-0042e010,FUN_0042e010,unknown,todo,ghidra
+0042ddd0,FUN_0042ddd0,player,wip,src/game/kain_animation.cpp: entering combat mode sets combat_mode_; the rest of the transition is not ported
+0042e010,FUN_0042e010,player,wip,src/game/kain_animation.cpp: leaving combat mode clears combat_mode_; the rest of the transition is not ported
 0042e0f0,FUN_0042e0f0,unknown,todo,ghidra
 0042e370,FUN_0042e370,unknown,todo,ghidra
 0042e440,FUN_0042e440,unknown,todo,ghidra
@@ -861,7 +861,7 @@ address,name,subsystem,status,notes
 0042ecb0,FUN_0042ecb0,unknown,todo,ghidra
 0042ed20,FUN_0042ed20,unknown,todo,ghidra
 0042ed90,FUN_0042ed90,unknown,todo,ghidra
-0042ee60,FUN_0042ee60,unknown,todo,ghidra
+0042ee60,FUN_0042ee60,player,wip,src/game/player.cpp: the run probe records the wall the run faces; the blocker record of FUN_0041ee60 is not ported
 0042f190,FUN_0042f190,unknown,todo,ghidra
 0042f3c0,FUN_0042f3c0,unknown,todo,ghidra
 0042f6a0,FUN_0042f6a0,unknown,todo,ghidra
@@ -1186,6 +1186,7 @@ address,name,subsystem,status,notes
 00442670,FUN_00442670,unknown,todo,ghidra
 00442730,FUN_00442730,unknown,todo,ghidra
 004427d0,FUN_004427d0,unknown,todo,ghidra
+00442800,FUN_00442800,player,wip,src/game/kain_animation.cpp: the falling states st_fallingup and st_fallingdn are chosen from the vertical velocity; the full transition is not ported
 004429a0,FUN_004429a0,unknown,todo,ghidra
 00442aa0,FUN_00442aa0,unknown,todo,ghidra
 00442ae0,FUN_00442ae0,player,wip,src/game/player.cpp: gravity picked by the sign of vz (g_up or g_down); src/game/kain_animation.cpp starts st_fallingup or st_fallingdn by the same sign; the landing and glide state selection are not ported
@@ -1201,6 +1202,7 @@ address,name,subsystem,status,notes
 00443c60,FUN_00443c60,unknown,todo,ghidra
 00443d20,FUN_00443d20,unknown,todo,ghidra
 00443d50,FUN_00443d50,unknown,todo,ghidra
+00443d60,FUN_00443d60,player,wip,src/game/kain_animation.cpp: the jump state starts st_startjump; the rest of its set-up is not ported
 00443f30,FUN_00443f30,unknown,todo,ghidra
 00444110,FUN_00444110,unknown,todo,ghidra
 004441c0,FUN_004441c0,unknown,todo,ghidra
@@ -1225,6 +1227,7 @@ address,name,subsystem,status,notes
 00445800,FUN_00445800,unknown,todo,ghidra
 004458a0,FUN_004458a0,unknown,todo,ghidra
 004458d0,FUN_004458d0,unknown,todo,ghidra
+004458e0,FUN_004458e0,player,wip,src/game/kain_animation.cpp: the run state id st_run is used; the rest of the state is not ported
 00445930,FUN_00445930,player,wip,src/game/kain_animation.cpp: KainAnimation::begin writes the run rates and then advances as the run state update does; the transition check and the lean of layer 3 are not ported
 00445ba0,FUN_00445ba0,player,wip,src/game/player.cpp: partial-stick run/walk blend ported; src/game/kain_animation.cpp writes the cross blend weight and the rates of layers 0 and 1 every frame; the 0.18 s start ramp and Shift speed are measured approximations
 00445d10,FUN_00445d10,unknown,todo,ghidra
@@ -7416,7 +7419,8 @@ address,name,subsystem,status,notes
 005be4e0,FUN_005be4e0,unknown,todo,ghidra
 005be740,FUN_005be740,unknown,todo,ghidra
 005be7b0,FUN_005be7b0,unknown,todo,ghidra
-005be9a0,FUN_005be9a0,unknown,todo,ghidra
+005be8b0,FUN_005be8b0,collision,wip,src/engine/collision.cpp: the cell query tests the cell and its portal neighbours; the rest of the broad phase is not ported
+005be9a0,FUN_005be9a0,collision,wip,src/engine/collision.cpp: swept_sphere returns the first contact of a sphere swept along the offset; the full manager sweep is not ported
 005bea40,FUN_005bea40,unknown,todo,ghidra
 005bea90,FUN_005bea90,unknown,todo,ghidra
 005beb00,FUN_005beb00,unknown,todo,ghidra
@@ -7735,7 +7739,7 @@ address,name,subsystem,status,notes
 005cc8b0,FUN_005cc8b0,unknown,todo,ghidra
 005cc920,FUN_005cc920,unknown,todo,ghidra
 005ccac0,FUN_005ccac0,unknown,todo,ghidra
-005ccb60,FUN_005ccb60,unknown,todo,ghidra
+005ccb60,FUN_005ccb60,collision,wip,src/engine/collision.cpp: the swept body move resolves the earliest contact and slides the rest; the vertical part is not taken from here
 005cd260,FUN_005cd260,unknown,todo,ghidra
 005cd2c0,FUN_005cd2c0,unknown,todo,ghidra
 005cd550,FUN_005cd550,unknown,todo,ghidra
@@ -8181,14 +8185,14 @@ address,name,subsystem,status,notes
 005e1730,FUN_005e1730,unknown,todo,ghidra
 005e1750,FUN_005e1750,unknown,todo,ghidra
 005e1a10,FUN_005e1a10,unknown,todo,ghidra
-005e1b60,FUN_005e1b60,unknown,todo,ghidra
+005e1b60,FUN_005e1b60,animation,wip,src/engine/anim_graph.cpp: the tagged reel reference (index << 1 | 1) is read; the other reference forms are not
 005e1d80,FUN_005e1d80,animation,wip,src/engine/anim_machine.cpp: AnimMachine::start_clip starts the clock the blend time before the clip; the blend sampler and the resume flags and the root channel slots are not ported
 005e1f80,FUN_005e1f80,animation,wip,src/engine/anim_machine.cpp: AnimMachine::advance_clip moves the clock in real time during the blend and at the clip rate after it and clamps at the end and gives the root motion of blends and of clips with a transform; the root channels of the reel and the events are not ported
 005e26a0,FUN_005e26a0,unknown,todo,ghidra
 005e26c0,FUN_005e26c0,unknown,todo,ghidra
 005e2750,FUN_005e2750,unknown,todo,ghidra
 005e27a0,FUN_005e27a0,unknown,todo,ghidra
-005e27e0,FUN_005e27e0,unknown,todo,ghidra
+005e27e0,FUN_005e27e0,animation,wip,src/engine/skeleton_pose.cpp: the channel mask of a bone is copied to the runtime key; the rest of the instance set-up is not ported
 005e2a00,FUN_005e2a00,unknown,todo,ghidra
 005e2a20,FUN_005e2a20,unknown,todo,ghidra
 005e2a30,FUN_005e2a30,unknown,todo,ghidra
@@ -8327,7 +8331,7 @@ address,name,subsystem,status,notes
 005e8ee0,FUN_005e8ee0,animation,wip,src/engine/anim_graph.cpp: the whole version 0 stream is read and must end with the graph; masks and layer types and the symbol map and objects and transforms and event lists are read and dropped (tools/bo2fmt/animatio.py keeps them)
 005e9170,FUN_005e9170,unknown,todo,ghidra
 005e9180,FUN_005e9180,animation,wip,src/engine/anim_graph.cpp: the second reel table is walked and not resolved
-005e9460,FUN_005e9460,unknown,todo,ghidra
+005e9460,FUN_005e9460,animation,wip,src/engine/anim_graph.cpp: the count at +0x98 is read; the rest of the block is skipped
 005e95d0,FUN_005e95d0,unknown,todo,ghidra
 005e9820,FUN_005e9820,unknown,todo,ghidra
 005e9840,FUN_005e9840,animation,translated,src/engine/anim_graph.cpp: AnimReelRef (two u16 symbol indexes); tests/unit/test_anim_graph.cpp
@@ -8388,15 +8392,15 @@ address,name,subsystem,status,notes
 005eb4f0,FUN_005eb4f0,unknown,todo,ghidra
 005eb5d0,FUN_005eb5d0,animation,translated,src/engine/anim_graph.cpp: the reel table; tests/unit/test_anim_graph.cpp
 005eb6e0,FUN_005eb6e0,unknown,todo,ghidra
-005eb700,FUN_005eb700,unknown,todo,ghidra
+005eb700,FUN_005eb700,animation,wip,src/engine/anim_graph.cpp: the count at +0x74 is read; the rest of the block is skipped
 005eb880,FUN_005eb880,unknown,todo,ghidra
 005eb8c0,FUN_005eb8c0,unknown,todo,ghidra
-005eb900,FUN_005eb900,unknown,todo,ghidra
+005eb900,FUN_005eb900,animation,wip,src/engine/anim_graph.cpp: the layer type list at +0x8c is skipped by its count; the types are not interpreted
 005eba10,FUN_005eba10,unknown,todo,ghidra
 005eba40,FUN_005eba40,animation,wip,src/engine/anim_graph.cpp: a blend record keeps its time in seconds and its transform tag; the event list and the transition filter are dropped
 005ebb60,FUN_005ebb60,unknown,todo,ghidra
 005ebba0,FUN_005ebba0,unknown,todo,ghidra
-005ebbf0,FUN_005ebbf0,unknown,todo,ghidra
+005ebbf0,FUN_005ebbf0,animation,wip,src/engine/anim_graph.cpp: the event list count at +0xf0 is read; the events are not
 005ebdf0,FUN_005ebdf0,unknown,todo,ghidra
 005ebeb0,FUN_005ebeb0,unknown,todo,ghidra
 005ebed0,FUN_005ebed0,animation,translated,src/engine/anim_graph.cpp: a variant is a type and a value read as a float bit pattern for types 1 4 5 and a u16 for types 9 10 and an int otherwise (AnimVariant); test_states_and_tables in tests/unit/test_anim_graph.cpp
@@ -9060,7 +9064,7 @@ address,name,subsystem,status,notes
 0060aec0,FUN_0060aec0,unknown,todo,ghidra
 0060b040,FUN_0060b040,unknown,todo,ghidra
 0060b350,FUN_0060b350,unknown,todo,ghidra
-0060b460,FUN_0060b460,unknown,todo,ghidra
+0060b460,FUN_0060b460,level,wip,src/engine/cell_group.cpp: repeated lightmap names are renamed name|N; the rest of the function is not ported
 0060b600,FUN_0060b600,unknown,todo,ghidra
 0060b6c0,FUN_0060b6c0,unknown,todo,ghidra
 0060b6e0,FUN_0060b6e0,unknown,todo,ghidra
@@ -9153,7 +9157,7 @@ address,name,subsystem,status,notes
 0060f750,FUN_0060f750,unknown,todo,ghidra
 0060f760,FUN_0060f760,unknown,todo,ghidra
 0060f770,FUN_0060f770,unknown,todo,ghidra
-0060f780,FUN_0060f780,unknown,todo,ghidra
+0060f780,FUN_0060f780,animation,wip,src/engine/anim_graph.cpp: the count at +0xcc is read; the rest of the block is skipped
 0060f790,FUN_0060f790,unknown,todo,ghidra
 0060f820,FUN_0060f820,unknown,todo,ghidra
 0060fa10,FUN_0060fa10,unknown,todo,ghidra
@@ -9256,9 +9260,14 @@ address,name,subsystem,status,notes
 00613320,FUN_00613320,unknown,todo,ghidra
 00613380,FUN_00613380,unknown,todo,ghidra
 006133b0,FUN_006133b0,unknown,todo,ghidra
+006134e0,FUN_006134e0,animation,wip,src/engine/anim_machine.cpp: the kNot condition is evaluated; the rest of the function is not ported
 00613510,FUN_00613510,animation,translated,src/engine/anim_machine.cpp: condition 0x401 is the OR of two bindings (AnimMachine::condition); test_conditions in tests/unit/test_anim_machine.cpp
 00613570,FUN_00613570,animation,translated,src/engine/anim_machine.cpp: condition 0x402 is the AND of two bindings (AnimMachine::condition); test_conditions in tests/unit/test_anim_machine.cpp
+006135d0,FUN_006135d0,animation,wip,src/engine/anim_machine.cpp: the kAlways condition is evaluated; the rest of the function is not ported
+006135e0,FUN_006135e0,animation,wip,src/engine/anim_machine.cpp: the kPreviousState condition is evaluated; the rest of the function is not ported
 00613670,FUN_00613670,unknown,todo,ghidra
+006136b0,FUN_006136b0,animation,wip,src/engine/anim_machine.cpp: the kLayerInState condition is evaluated; the rest of the function is not ported
+00613770,FUN_00613770,animation,wip,src/engine/anim_machine.cpp: the kClipAtEnd condition is evaluated; the rest of the function is not ported
 006137e0,FUN_006137e0,unknown,todo,ghidra
 00613a50,FUN_00613a50,unknown,todo,ghidra
 00613a80,FUN_00613a80,unknown,todo,ghidra
@@ -9626,7 +9635,7 @@ address,name,subsystem,status,notes
 0062eec0,FUN_0062eec0,unknown,todo,ghidra
 0062eee0,FUN_0062eee0,unknown,todo,ghidra
 0062ef00,FUN_0062ef00,unknown,todo,ghidra
-0062ef20,FUN_0062ef20,unknown,todo,ghidra
+0062ef20,FUN_0062ef20,player,wip,src/game/player.cpp: the body query keeps the sphere whose flags have bit 0; the rest of the manager query is not ported
 0062f470,FUN_0062f470,unknown,todo,ghidra
 0062f710,FUN_0062f710,unknown,todo,ghidra
 0062f7d0,FUN_0062f7d0,unknown,todo,ghidra
@@ -9794,6 +9803,7 @@ address,name,subsystem,status,notes
 00639990,FUN_00639990,animation,wip,src/game/kain_actor.cpp: the pose drawn last and the new clip's pose are kept as the two ends of the blend; the per-bone record with its precomputed quaternions and the temporary sampler are not ported
 00639d20,FUN_00639d20,unknown,todo,ghidra
 00639d50,FUN_00639d50,unknown,todo,ghidra
+00639de0,FUN_00639de0,animation,wip,src/engine/anim_machine.cpp: blend_factor returns how far the blend has gone; the transition filter is not decoded
 0063a750,FUN_0063a750,unknown,todo,ghidra
 0063a940,FUN_0063a940,unknown,todo,ghidra
 0063a970,FUN_0063a970,unknown,todo,ghidra
@@ -9815,7 +9825,7 @@ address,name,subsystem,status,notes
 0063bc70,FUN_0063bc70,unknown,todo,ghidra
 0063bdf0,FUN_0063bdf0,unknown,todo,ghidra
 0063bfd0,FUN_0063bfd0,unknown,todo,ghidra
-0063c480,FUN_0063c480,unknown,todo,ghidra
+0063c480,FUN_0063c480,animation,wip,src/engine/anim_reel.cpp: the frame count is kept as a 16-bit value; the rest of the reel copy is not ported
 0063c870,FUN_0063c870,unknown,todo,ghidra
 0063c8b0,FUN_0063c8b0,unknown,todo,ghidra
 0063c950,FUN_0063c950,unknown,todo,ghidra
@@ -9949,7 +9959,7 @@ address,name,subsystem,status,notes
 00642c00,FUN_00642c00,animation,wip,src/engine/anim_machine.cpp: AnimMachine::start_state runs the first true transition with its play-sequence and continue-with-state actions and the actions on other layers (kinds 1 to 4); the layer entity (5) and the callbacks (6) are not ported
 00642e30,FUN_00642e30,unknown,todo,ghidra
 00642e50,FUN_00642e50,unknown,todo,ghidra
-00642ea0,FUN_00642ea0,unknown,todo,ghidra
+00642ea0,FUN_00642ea0,animation,wip,src/engine/anim_graph.cpp: name tags are read as byte offsets into the name pool; the rest is not
 00643030,FUN_00643030,animation,wip,src/engine/anim_machine.cpp: AnimMachine::advance restarts the requested state when the sequence has finished and reports the finish and runs the state function with its child state; the layer entity is not ported
 00643170,FUN_00643170,unknown,todo,ghidra
 006431b0,FUN_006431b0,unknown,todo,ghidra
@@ -9960,7 +9970,7 @@ address,name,subsystem,status,notes
 00643770,FUN_00643770,unknown,todo,ghidra
 00643800,FUN_00643800,unknown,todo,ghidra
 00643820,FUN_00643820,unknown,todo,ghidra
-00643d60,FUN_00643d60,unknown,todo,ghidra
+00643d60,FUN_00643d60,animation,wip,src/engine/anim_graph.cpp: a clip index of -1 means no clip; the rest of the node rule is not ported
 00643f10,FUN_00643f10,animation,wip,src/engine/anim_machine.cpp: AnimMachine::play_sequence starts the first chain link with the given blend or its own; the event flush is not ported
 00643f80,FUN_00643f80,animation,wip,src/engine/anim_machine.cpp: AnimMachine::advance moves the clip once and starts the next chain link or rests on the terminator when it ends; the sequence clock and the events are not ported
 006440b0,FUN_006440b0,unknown,todo,ghidra
@@ -10589,6 +10599,7 @@ address,name,subsystem,status,notes
 0066a8b0,FUN_0066a8b0,unknown,todo,ghidra
 0066a8d0,FUN_0066a8d0,unknown,todo,ghidra
 0066a910,FUN_0066a910,unknown,todo,ghidra
+0066aa20,FUN_0066aa20,animation,wip,src/engine/anim_reel.cpp: version 4 is accepted; the other versions the original accepts are not
 0066ae20,FUN_0066ae20,unknown,todo,ghidra
 0066aec0,FUN_0066aec0,unknown,todo,ghidra
 0066af30,FUN_0066af30,unknown,todo,ghidra
@@ -10914,7 +10925,7 @@ address,name,subsystem,status,notes
 0067bbd0,FUN_0067bbd0,unknown,todo,ghidra
 0067bcc0,FUN_0067bcc0,unknown,todo,ghidra
 0067bcf0,FUN_0067bcf0,unknown,todo,ghidra
-0067bdd0,FUN_0067bdd0,unknown,todo,ghidra
+0067bdd0,FUN_0067bdd0,level,wip,src/engine/cell_group.cpp: the 104-byte bone record is parsed; the rest of the skeleton set-up is not ported
 0067c140,FUN_0067c140,unknown,todo,ghidra
 0067c1d0,FUN_0067c1d0,unknown,todo,ghidra
 0067c520,FUN_0067c520,unknown,todo,ghidra
@@ -11327,7 +11338,7 @@ address,name,subsystem,status,notes
 00693fc0,FUN_00693fc0,unknown,todo,ghidra
 00694180,FUN_00694180,unknown,todo,ghidra
 00694380,FUN_00694380,unknown,todo,ghidra
-00694400,FUN_00694400,unknown,todo,ghidra
+00694400,FUN_00694400,camera,wip,src/game/camera.cpp: the camera yaw takes the angle closest to the target; the rest of the camera update is not ported
 006944d0,FUN_006944d0,unknown,todo,ghidra
 00694520,FUN_00694520,unknown,todo,ghidra
 00694590,FUN_00694590,unknown,todo,ghidra
@@ -11576,10 +11587,10 @@ address,name,subsystem,status,notes
 006a07a0,FUN_006a07a0,unknown,todo,ghidra
 006a07c0,FUN_006a07c0,unknown,todo,ghidra
 006a0860,FUN_006a0860,unknown,todo,ghidra
-006a0920,FUN_006a0920,unknown,todo,ghidra
-006a0960,FUN_006a0960,unknown,todo,ghidra
+006a0920,FUN_006a0920,animation,wip,src/engine/anim_graph.cpp: the aligned int and float stream primitives are read; the rest of the graph reader is not
+006a0960,FUN_006a0960,animation,wip,src/engine/anim_graph.cpp: the aligned int and float stream primitives are read; the rest of the graph reader is not
 006a09a0,FUN_006a09a0,level,translated,src/game/kain_tuning.cpp: read_fixups reads each u32 at the next 4-byte boundary
-006a09e0,FUN_006a09e0,unknown,todo,ghidra
+006a09e0,FUN_006a09e0,animation,wip,src/engine/anim_graph.cpp: the aligned u16 stream primitive is read; the rest of the graph reader is not
 006a0a40,FUN_006a0a40,unknown,todo,ghidra
 006a0ab0,FUN_006a0ab0,unknown,todo,ghidra
 006a0b30,FUN_006a0b30,unknown,todo,ghidra
@@ -11761,7 +11772,7 @@ address,name,subsystem,status,notes
 006a8f20,FUN_006a8f20,unknown,todo,ghidra
 006a8f40,FUN_006a8f40,unknown,todo,ghidra
 006a9080,FUN_006a9080,unknown,todo,ghidra
-006a90c0,FUN_006a90c0,unknown,todo,ghidra
+006a90c0,FUN_006a90c0,locale,wip,src/engine/string_table.cpp: StringTable::parse and find read the table by name; the manager and its cache are not ported
 006a91f0,FUN_006a91f0,unknown,todo,ghidra
 006a9290,FUN_006a9290,unknown,todo,ghidra
 006a9480,FUN_006a9480,unknown,todo,ghidra
