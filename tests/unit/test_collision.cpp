@@ -72,14 +72,13 @@ std::vector<std::uint8_t> make_collision_payload() {
     return data;
 }
 
-void put_packed_triangle(std::vector<std::uint8_t>& data, std::uint8_t a, std::uint8_t b,
-                         std::uint8_t c, std::uint8_t attribute) {
-    data.push_back(a);
-    data.push_back(static_cast<std::uint8_t>(b << 1));
-    data.push_back(static_cast<std::uint8_t>((c & 0x3F) << 2));
-    // The third index keeps its top two bits in the low bits of the attribute
-    // byte (FUN_0062dfc0 packs three 9-bit indices).
-    data.push_back(static_cast<std::uint8_t>(attribute | ((c >> 6) & 7)));
+// A triangle record as the game stores it (FUN_0062dfc0): three 9-bit indices,
+// a at bits 18..26, b at bits 9..17 and c at bits 0..8. The top byte keeps the
+// five bits of `attribute` above the three it shares with `a`.
+void put_packed_triangle(std::vector<std::uint8_t>& data, std::uint32_t a, std::uint32_t b,
+                         std::uint32_t c, std::uint8_t attribute) {
+    put_u32(data, (static_cast<std::uint32_t>(attribute & 0xF8U) << 24) | ((a & 0x1FFU) << 18) |
+                      ((b & 0x1FFU) << 9) | (c & 0x1FFU));
 }
 
 // A complete payload shaped like the reference model 0: a 160 x 64 x 80 box
@@ -316,34 +315,77 @@ void test_box_contact() {
     CHECK(band->normal.x < -0.99f);
 }
 
-// The packed triangle record keeps the top two bits of the third index in the
-// low bits of the attribute byte (FUN_0062dfc0 packs three 9-bit indices).
-void test_collmodc_high_index() {
+// The pair test unpacks three 9-bit indices from a record, and two dwords with
+// 16-bit indices when bit 31 is set (FUN_0062dfc0). Every field can pass 127
+// and 255, and a record after a wide one is still read at its place.
+void test_collmodc_triangle_records() {
     std::vector<std::uint8_t> data = {'d', 'e', 'f', 'a', 'u', 'l', 't', 0};
     put_u32(data, 20);
     for (int index = 0; index < 20; ++index) {
         data.push_back(0);
     }
     put_u32(data, 0xFFFFFF01U);
-    put_u32(data, 70 * 6);
-    for (std::int16_t index = 0; index < 70; ++index) {
+    put_u32(data, 420 * 6);
+    for (std::int16_t index = 0; index < 420; ++index) {
         put_i16(data, index);
         put_i16(data, 0);
         put_i16(data, 0);
     }
     put_u32(data, 1);
-    put_u32(data, 4);
-    put_packed_triangle(data, 1, 2, 69, 0x18);
+    put_u32(data, 16);
+    put_packed_triangle(data, 300, 200, 400, 0x18);
+    put_u32(data, 0x80000000U | (1U << 29) | 291U);  // wide, category 1, a = 291
+    put_u16(data, 7);
+    put_u16(data, 419);
+    put_packed_triangle(data, 5, 6, 7, 0x40);  // category 2
+    put_u32(data, 0);
+    // One face over the last record: its slice starts at byte 12 of the list.
+    put_u32(data, 1);
+    put_u16(data, 0);
+    put_u16(data, 1);
     put_u32(data, 0);
     put_u32(data, 0);
+    put_u16(data, 0);
+    put_u16(data, 1);
+    put_u32(data, 12);
     const bo2::engine::CollisionModel model = bo2::engine::parse_collmodc(data);
     CHECK(model.valid);
-    CHECK(model.vertices.size() == 70);
-    CHECK(model.triangles.size() == 1);
-    CHECK(model.triangles[0].a == 1);
-    CHECK(model.triangles[0].b == 2);
-    CHECK(model.triangles[0].c == 69);
-    CHECK(model.triangles[0].attribute == 0x19);
+    CHECK(model.vertices.size() == 420);
+    CHECK(model.triangles.size() == 3);
+    if (model.triangles.size() != 3) {
+        return;
+    }
+    CHECK(model.triangles[0].a == 300 && model.triangles[0].b == 200 &&
+          model.triangles[0].c == 400);
+    CHECK(model.triangles[0].category == 0);
+    CHECK(model.triangles[1].a == 291 && model.triangles[1].b == 7 &&
+          model.triangles[1].c == 419);
+    CHECK(model.triangles[1].category == 1);
+    CHECK(model.triangles[2].a == 5 && model.triangles[2].b == 6 && model.triangles[2].c == 7);
+    CHECK(model.triangles[2].category == 2);
+    // The face slice counts records, not dwords: byte 12 is the third record.
+    CHECK(model.faces.size() == 1);
+    if (model.faces.size() == 1) {
+        CHECK(model.faces[0].first_triangle == 2 && model.faces[0].triangle_count == 1);
+    }
+
+    // A wide record cut after its first dword is not a model.
+    std::vector<std::uint8_t> cut = {'d', 'e', 'f', 'a', 'u', 'l', 't', 0};
+    put_u32(cut, 20);
+    for (int index = 0; index < 20; ++index) {
+        cut.push_back(0);
+    }
+    put_u32(cut, 0xFFFFFF01U);
+    put_u32(cut, 6);
+    put_i16(cut, 0);
+    put_i16(cut, 0);
+    put_i16(cut, 0);
+    put_u32(cut, 1);
+    put_u32(cut, 4);
+    put_u32(cut, 0x80000000U);
+    put_u32(cut, 0);
+    put_u32(cut, 0);
+    CHECK(!bo2::engine::parse_collmodc(cut).valid);
 }
 
 // The swept body (FUN_005ccb60): a sphere stops at a head-on wall and slides
@@ -536,7 +578,7 @@ int main() {
     test_swept_sphere();
     test_box_contact();
     test_collmodc_model();
-    test_collmodc_high_index();
+    test_collmodc_triangle_records();
     test_collmodc_boxes();
     test_slide_body();
     test_face_solid_category();

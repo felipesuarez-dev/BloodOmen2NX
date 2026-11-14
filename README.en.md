@@ -79,7 +79,7 @@ The original is used as a reference, not shipped.
 | Levels completable (campaign chapters) | 30% | 0 / 11 | 0.00% |
 | Platform features | 10% | 10 / 13 + 1 partial | 80.77% |
 
-Function map: 35,527 rows: 24 translated, 89 in progress, 16,812 to do, 18,602 external (not game code).
+Function map: 35,527 rows: 24 translated, 90 in progress, 16,811 to do, 18,602 external (not game code).
 
 The chapter list is in [`docs/LEVELS.md`](docs/LEVELS.md). Chapter flags and platform features are in [`tools/gen/progress_data.py`](tools/gen/progress_data.py).
 <!-- progress:end -->

@@ -115,11 +115,18 @@ struct CollisionSphere {
     std::uint32_t flags = 0;
 };
 
+// One triangle of a `collmodc` hull, as the pair test unpacks its record
+// (FUN_0062dfc0). A record is one dword, three 9-bit vertex indices:
+// a = bits 18..26, b = bits 9..17, c = bits 0..8. With bit 31 set it is two
+// dwords with 16-bit indices: a = the low word of the first, b and c the two
+// words of the second. The normal is (b - a) x (c - a).
 struct CollisionTriangle {
     std::uint32_t a = 0;
     std::uint32_t b = 0;
     std::uint32_t c = 0;
-    std::uint8_t attribute = 0;
+    std::uint8_t attribute = 0;  // the top byte of the record
+    // Bits 29..30 of the record. The narrow phase FUN_005ddc90 reads it.
+    std::uint8_t category = 0;
 };
 
 // One convex face of a `collmodc` hull. The payload stores the face as the two

@@ -102,17 +102,22 @@ u32  header size; bytes[header size]
 u32  record flag (0xFFFFFF01)
 u32  vertex bytes; point[vertex bytes / 6]   (three i16 per point)
      pad to a 4-byte boundary                 (2 bytes for an odd point count)
-u32  index bytes; record[index bytes / 4]    (three packed u8 indices + attr)
+u32  index bytes; triangle records           (4 bytes each, 8 for a wide one)
 u32  sphere count; sphere[24 bytes each]
 u32  face count; face[20 bytes each]
 28-byte trailer
 ```
 
 The vertex block is a point list, not a box list: each point is three `i16`
-in model space. The index record is three vertex indices, each stored one bit
-lower than the previous field, so the loader reads `v0 = b0`, `v1 = b1 >> 1`,
-`v2 = b2 >> 2` and keeps `b3` as the attribute (`0x18` in the shared models,
-`0x38`/`0x58`/`0x59` in model 57). A sphere is 24 bytes: centre `f32[3]`,
+in model space. A triangle record is the dword the pair test unpacks
+(`FUN_0062dfc0`): three 9-bit vertex indices, `a = (record >> 18) & 0x1ff`,
+`b = (record >> 9) & 0x1ff`, `c = record & 0x1ff`, and a category in bits 29
+and 30. With bit 31 set the record is wide, two dwords with 16-bit indices:
+`a` is the low word of the first, `b` and `c` the two words of the second.
+The normal of a triangle is `(b - a) x (c - a)`. `sl01` has 73,542 records,
+82 of them wide; 57,594 are category 0, 10,428 category 1 and 5,520
+category 2. A face slice is the byte offset of its first record and a count
+of records. A sphere is 24 bytes: centre `f32[3]`,
 radius `f32`, bone index `u32`, flags `u32`. Kain's model has three:
 `(0, 0, 51.98) r 19.8`, `(0, 0, 49.62) r 19.3` and `(0, 0, 23.60) r 15.0`, over
 the body AABB `(-20, -20, 0)..(20, 20, 72)`. Its `collmodc` holds exactly that

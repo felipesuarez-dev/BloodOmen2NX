@@ -343,11 +343,11 @@ substeps; without that the body cuts the corner of the bevel.
 
 Two filters were needed to match the oracle's contacts:
 
-- The packed `collmodc` triangle record keeps the third vertex index in 9
-  bits: its top two bits live in the low bits of the attribute byte
-  (`FUN_0062dfc0`: `v0 = (record >> 18) & 0x1ff`, `v1 = (record >> 9) &
-  0x1ff`, `v2 = record & 0x1ff`). The port kept only 6 bits, which invented
-  triangles. The parser now restores the high bits.
+- A packed `collmodc` triangle record holds three 9-bit vertex indices
+  (`FUN_0062dfc0`: `a = (record >> 18) & 0x1ff`, `b = (record >> 9) & 0x1ff`,
+  `c = record & 0x1ff`), and a record with bit 31 set is two dwords with
+  16-bit indices. Reading fewer bits invents triangles; the parser unpacks
+  the records as the pair test does ([`FORMATS/models.md`](FORMATS/models.md)).
 - The packed record's 2-bit category (`attribute >> 5`) marks a face-only
   triangle as edges only when it is 2 (`FUN_005ddc90` skips the face test).
   The ramp at (274, 59, 254) in `sl01` is such a triangle; the port now skips

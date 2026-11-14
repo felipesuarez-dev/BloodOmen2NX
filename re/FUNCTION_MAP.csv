@@ -9612,7 +9612,7 @@ address,name,subsystem,status,notes
 0062d4f0,FUN_0062d4f0,unknown,todo,ghidra
 0062d870,FUN_0062d870,unknown,todo,ghidra
 0062d8f0,FUN_0062d8f0,unknown,todo,ghidra
-0062dfc0,FUN_0062dfc0,unknown,todo,ghidra
+0062dfc0,FUN_0062dfc0,collision,wip,src/engine/cell_group.cpp: parse_collmodc unpacks the 9-bit and the wide triangle records as the pair test does; the group flags and the nearest-hit bookkeeping of the pair test are not ported
 0062e3c0,FUN_0062e3c0,unknown,todo,ghidra
 0062e5a0,FUN_0062e5a0,unknown,todo,ghidra
 0062e730,FUN_0062e730,unknown,todo,ghidra

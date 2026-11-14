@@ -1096,27 +1096,39 @@ bool parse_collmodc_at(const common::Reader& reader, std::size_t flag_offset, bo
         model.valid = !complete;
         return !complete;
     }
-    // Triangle list: one 4-byte record per index, three packed u8 indices plus
-    // the attribute. Each index loses one alignment bit per byte position.
+    // Triangle list: the records the pair test walks (FUN_0062dfc0). A record
+    // is one dword with three 9-bit indices, or two dwords with 16-bit indices
+    // when its bit 31 is set. `triangle_at` maps the byte offset of a record
+    // to its index, for the face slices below.
     const std::uint32_t index_bytes = reader.u32(position + 4);
     position += 8;
     if (index_bytes % 4 != 0 || index_bytes > size - position) {
         model = CollisionModel{};
         return false;
     }
-    const std::size_t triangle_count = index_bytes / 4;
-    model.triangles.reserve(triangle_count);
-    for (std::size_t index = 0; index < triangle_count; ++index) {
-        const std::size_t offset = position + index * 4;
+    std::vector<std::int32_t> triangle_at(index_bytes / 4, -1);
+    model.triangles.reserve(index_bytes / 4);
+    for (std::size_t offset = 0; offset < index_bytes;) {
+        const std::uint32_t record = reader.u32(position + offset);
         CollisionTriangle triangle;
-        // Runtime packing (FUN_0062dfc0): three 9-bit vertex indices share
-        // the record. The port's byte order is a, b, c, so `c` keeps the two
-        // bits stored in the low bits of the attribute byte.
-        triangle.a = reader.u8(offset);
-        triangle.b = static_cast<std::uint32_t>(reader.u8(offset + 1) >> 1);
-        triangle.attribute = reader.u8(offset + 3);
-        triangle.c = static_cast<std::uint32_t>(reader.u8(offset + 2) >> 2) |
-                     (static_cast<std::uint32_t>(triangle.attribute & 7) << 6);
+        triangle.attribute = static_cast<std::uint8_t>(record >> 24);
+        triangle.category = static_cast<std::uint8_t>((record >> 29) & 3U);
+        triangle_at[offset / 4] = static_cast<std::int32_t>(model.triangles.size());
+        if ((record & 0x80000000U) == 0) {
+            triangle.a = (record >> 18) & 0x1FFU;
+            triangle.b = (record >> 9) & 0x1FFU;
+            triangle.c = record & 0x1FFU;
+            offset += 4;
+        } else {
+            if (index_bytes - offset < 8) {
+                model = CollisionModel{};
+                return false;
+            }
+            triangle.a = record & 0xFFFFU;
+            triangle.b = reader.u16(position + offset + 4);
+            triangle.c = reader.u16(position + offset + 6);
+            offset += 8;
+        }
         model.triangles.push_back(triangle);
     }
     position += index_bytes;
@@ -1166,8 +1178,20 @@ bool parse_collmodc_at(const common::Reader& reader, std::size_t flag_offset, bo
         }
         const std::uint32_t triangle_offset = reader.u32(offset + 16);
         const std::uint16_t face_triangles = reader.u16(offset + 14);
-        if (triangle_offset % 4 != 0 ||
-            triangle_offset / 4 + face_triangles > model.triangles.size()) {
+        // The slice starts at the byte offset of a record and counts records.
+        if (triangle_offset % 4 != 0) {
+            continue;
+        }
+        std::size_t first_triangle = model.triangles.size();
+        if (triangle_offset / 4 < triangle_at.size()) {
+            if (triangle_at[triangle_offset / 4] < 0) {
+                continue;  // the second dword of a wide record
+            }
+            first_triangle = static_cast<std::size_t>(triangle_at[triangle_offset / 4]);
+        } else if (face_triangles != 0 || triangle_offset / 4 != triangle_at.size()) {
+            continue;
+        }
+        if (first_triangle + face_triangles > model.triangles.size()) {
             continue;
         }
         CollisionFace face;
@@ -1179,7 +1203,7 @@ bool parse_collmodc_at(const common::Reader& reader, std::size_t flag_offset, bo
                                std::max(first.z, second.z)};
         face.adjacent[0] = reader.u32(offset + 4);
         face.adjacent[1] = reader.u32(offset + 8);
-        face.first_triangle = triangle_offset / 4;
+        face.first_triangle = static_cast<std::uint32_t>(first_triangle);
         face.triangle_count = face_triangles;
         face.has_triangles = face_triangles != 0;
         model.faces.push_back(face);
