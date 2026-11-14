@@ -154,6 +154,9 @@ index of a gift is also the type it reports.
   rage to `rageParams.maxPoints` (450) and `FUN_00428780` copies the cost and
   the two rage bar colours of fury, rupture and speed from the tuning data
   ([`FORMATS/tunedata.md`](FORMATS/tunedata.md#darkgiftparams-and-rageparams)).
+  `FUN_00428780` also marks stealth as owned before anything else (the call
+  at `0x4288ae`) and ends by selecting gift 0 when the selected gift is not
+  an owned one (`0x428f5f`).
 - `FUN_00436bb0` adds rage up to the maximum and `FUN_00436c00` takes it
   down to 0. Each frame `FUN_004300d0` takes `pointsLostPerSec` times the
   frame time.
@@ -166,20 +169,34 @@ index of a gift is also the type it reports.
   - The colours (`FUN_00425fd0`) are `canUseColor` and `cantUseColor` of the
     selected gift when it spends rage, and `nonRageGiftBar` for both
     otherwise.
-- The dark gift icon (`FUN_00535e40`, `FUN_00535f10`) shows the texture
-  `FUN_00524cd0` gives for the type of the selected gift (charm 1, superJump
-  2, speed 3, telekinesis 4, stealth 5, rupture 6, fury 7) and dims it when
-  the gift cannot be used.
+- The dark gift icon (`FUN_00535e40`, `FUN_00535f10`). Its first material
+  has a list of nine textures (`icon_none`, `icon_charm`, `icon_jump`,
+  `icon_speed`, `icon_telekinesis`, `icon_stealth`, `icon_rupture`,
+  `icon_fury`, `icon_slord`) and `FUN_005dce40(1, index, 0)` picks one: the
+  index `FUN_00524cd0` gives for the type of the selected gift (charm 1,
+  superJump 2, speed 3, telekinesis 4, stealth 5, rupture 6, fury 7, anything
+  else 0). The colour is (1, 1, 1, 1) while the gift can be used and
+  (0.5, 0.5, 0.5, 1) while it cannot.
+  - Stealth can be used when the gift is enabled (byte `+9`, set by
+    `FUN_00436080`) and its timer is not above 0 (`FUN_00437540`; the timer
+    starts at 0, `FUN_00436390`).
+  - Fury can be used when its cost is not above the rage (`FUN_00437040`).
+- The second material of the icon has no texture: 36 triangles behind the
+  picture, black by the per-vertex colours of the model
+  ([`FORMATS/models.md`](FORMATS/models.md#rmd-subchunks), `diffuse`).
 
-Which gift is selected when a level starts (`FUN_0042af90`):
+Which gift is selected when a level starts:
 
-- With a saved state, the gift the state names (`+0x88`) when Kain owns it,
-  else gift 0. The owned gifts come from the start record of the level
-  (`FUN_004256c0`).
-- Without one, the creation code selects none: `FUN_00428780` runs before the
-  start record marks any gift as owned. The icon code reads the selected
-  gift without testing for none, so something selects one before the HUD is
-  first drawn. What does it is not found.
+- Kain is created with stealth owned and selected (`FUN_00428780`, above).
+- The start record of the level then says which gifts he owns
+  (`FUN_004256c0`); in the slums, fury and stealth.
+- With a saved state (`FUN_0042af90`), the gift the state names (`+0x88`) is
+  selected when Kain owns it, else gift 0.
+
+Checked in the running game with the saved game the captures load (the
+`sl01` checkpoint): from the first moment Kain exists the selected gift is 0,
+he owns gifts 0 and 5, the rage is 0 of 450 and the saved state names gift
+0. The icon in the orb of the capture is `icon_stealth`.
 
 ## Draw order and blending
 
@@ -227,9 +244,11 @@ priority 50) against `_main` (z -440, priority 60).
 `HudScene` (`src/game/hud_scene.cpp`) takes the scene, Kain's counters
 (`KainVitals`), the tuning and the mode, and returns the objects to draw with
 their position, scale and colour: `_main`, `_glass`, the three pieces of
-each of the two bars and the rage bar. The rage bar starts as the gift object
-is created: no rage and no gift selected, so its clip is at its start and its
-colour is `nonRageGiftBar`.
+each of the two bars and the rage bar. The port starts the gift object as its
+constructor leaves it, with no gift selected, which is not what the original
+has when a level starts (stealth). The rage bar is the same either way: no
+rage, so its clip is at its start, and `nonRageGiftBar` as its colour, which
+is also the colour of a gift that spends no rage.
 
 `bo2nx --level ... --hud <code.big>` draws them over the level frame
 (`draw_screen_items` in the software renderer): each texel is multiplied by
@@ -254,10 +273,9 @@ Not ported:
 - The draw order by `RenderPriority`: the port orders by z, which gives the
   same sequence for the objects it draws (see "Draw order and blending").
   The blend is the original's.
-- The dark gift icon: its texture is the selected gift's, and the port does
-  not know which gift a level starts with (see "Rage and dark gifts"). The
-  oracle captures load a saved game, so the icon in their frames is the gift
-  that save names.
+- The dark gift icon. Its rule is read (see "Rage and dark gifts"); the
+  port lacks the stealth start state, the texture list of a material and the
+  per-vertex colours of a model.
 - What changes the rage (blocks, dodges, the drain of `FUN_004300d0`) and
   the selection and ownership of the gifts.
 - The enemy health bar and the enemy icon (mode 3 only), the pause fade

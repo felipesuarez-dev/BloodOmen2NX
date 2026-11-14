@@ -64,7 +64,8 @@ u32   2
 | `mlyrcolr` | `u32 start`, `u32 count` + `count` × 48 bytes | Three RGBA colors; see Material layers |
 | `mlyrctrl` | `u32 start`, `u32 count` + `count` × 12 bytes | Three controls; see Material layers |
 | `mtlctrl` | `u32 count` + `count` × 12 bytes | Three `u32` values; two bits of the second are read, see Render state and draw order |
-| `texture` | `u32 start`, `u32 count` + per-material records | Texture symbol per material; bound by the host |
+| `texture` | `u32 start`, `u32 count` + per-material records | The textures of each material; see `texture` |
+| `diffuse` | `u32 count` + `count` × 4 bytes (R, G, B, A) | One colour per vertex; only some models have it; see `diffuse` |
 | `mdlattr` | Named attribute table | Model metadata; see `mdlattr` |
 | `vtxweigh` | `u32 count` + `count` floats | Per vertex, the weight of its second bone (0 to 0.5 in Kain); see Skeleton pose and skinning |
 | `jointidx` | `u32 count` + `count` u16 | Per vertex, the position of its second bone in the bone array |
@@ -90,6 +91,40 @@ dumper prints at `0x67d270` (`MaterialIdx`, `NTris`, `NStrips`,
 `strip_lens`, `Tri_Coords`, `NAdcs`). The on-disk layout of the extra is
 observed, not fully decompiled; the triangle list is the render
 geometry.
+
+### `texture`
+
+One record per material, of variable length:
+
+```
+u32  texture count n (0 for a material without a texture)
+u16  symbol[n]
+     0xffff when n is odd, so the record ends on a 4-byte boundary
+```
+
+A material with several textures is a material whose texture changes: the
+frames of an animated surface, or the nine pictures of the dark gift icon of
+the HUD, which the game picks by index (`FUN_005dce40`). Read from the data
+and checked on every `texture` chunk of `code.big` (59), `sl01.big` (636) and
+`kain.big` (22): each one ends exactly at its last record. Materials by
+texture count: `code.big` 0: 11, 1: 42, 6: 1, 8: 14, 9: 2, 147: 4;
+`sl01.big` 0: 8, 1: 1,125, 3: 7, 12: 2, 33: 1; `kain.big` 0: 1, 1: 28, 6: 1,
+147: 1.
+
+The host reads one symbol per material and takes every record of a chunk to
+have the same size, which holds only when every material has one texture.
+
+### `diffuse`
+
+`u32 count` and one R, G, B, A byte quadruple per vertex; `count` is the
+vertex count of the model. In the `ui/hud` cell group only the dark gift icon
+and the enemy icon have it: white on the eight vertices of the picture and
+black on the 38 vertices of the 36 triangles behind it. The chunk is one of the names the model loader
+matches (`0x61f70f`). The renderer builds vertices of position, colour and
+texture coordinate for a model with per-vertex colours, and reorders the
+four bytes from R, G, B, A to the device's A, R, G, B (`FUN_005711e0`); that
+this chunk is the source of those colours is read from the data, not traced
+in the loader. The host does not read it.
 
 ### `collmodc`
 
