@@ -336,7 +336,7 @@ void draw_hud(const engine::LevelGeometry& scene, const std::vector<GLuint>& tex
     }
     std::stable_sort(order.begin(), order.end(),
                      [](const game::HudItem* a, const game::HudItem* b) {
-                         return a->position.z < b->position.z;
+                         return a->priority < b->priority;
                      });
     glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT | GL_CURRENT_BIT | GL_TEXTURE_BIT |
                  GL_TRANSFORM_BIT);

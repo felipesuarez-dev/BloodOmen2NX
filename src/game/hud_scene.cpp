@@ -64,6 +64,11 @@ engine::Vec3 mix(const engine::Vec3& a, const engine::Vec3& b, float weight) {
 HudScene::HudScene(const engine::LevelGeometry& scene) {
     for (const engine::LevelMarker& marker : scene.markers) {
         positions_.push_back(marker.position);
+        const std::int32_t model = marker.model;
+        priorities_.push_back(model >= 0 && static_cast<std::size_t>(model) <
+                                                 scene.model_render_priority.size()
+                                  ? scene.model_render_priority[static_cast<std::size_t>(model)]
+                                  : 0.0f);
     }
     health_.bar = find_marker(scene, "ui_hud_health_bar");
     // The two children the health bar creates (FUN_0053a2e0).
@@ -160,6 +165,9 @@ std::vector<HudItem> HudScene::items(const KainVitals& vitals, const KainTuning&
     const float tint = gift_usable(vitals, tuning) ? 1.0f : 0.5f;
     icon.colour = {tint, tint, tint};
     items.push_back(icon);
+    for (HudItem& item : items) {
+        item.priority = item.model < priorities_.size() ? priorities_[item.model] : 0.0f;
+    }
     std::sort(items.begin(), items.end(),
               [](const HudItem& a, const HudItem& b) { return a.model < b.model; });
     return items;

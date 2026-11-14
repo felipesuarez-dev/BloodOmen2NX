@@ -40,6 +40,9 @@ struct HudItem {
     // Index inside the texture list of each material of the model
     // (FUN_005dce40); 0 is the first.
     std::int32_t texture_frame = 0;
+    // RenderPriority of the model (FUN_0056d130); the HUD draws in rising
+    // order.
+    float priority = 0.0f;
 };
 
 // The rules of the HUD objects whose state the port has. Drawn: the frame
@@ -76,6 +79,7 @@ private:
                  const engine::Vec3& colour) const;
 
     std::vector<engine::Vec3> positions_;  // of every marker
+    std::vector<float> priorities_;        // RenderPriority of every marker's model
     std::vector<std::uint32_t> frame_;     // the plain Kain mode components
     Bar health_;
     Bar lore_;

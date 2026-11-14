@@ -1,3 +1,4 @@
+#include <cmath>
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
@@ -148,6 +149,58 @@ void test_hud_cull_flags(const bo2::engine::LevelGeometry& scene) {
     }
 }
 
+// The RenderPriority of each HUD model, read from its mdlattr table.
+void check_priority(const bo2::engine::LevelGeometry& scene, const std::string& name,
+                    float expected) {
+    const bo2::engine::LevelMarker* marker = nullptr;
+    for (const bo2::engine::LevelMarker& candidate : scene.markers) {
+        if (candidate.name == name) {
+            marker = &candidate;
+            break;
+        }
+    }
+    CHECK(marker != nullptr);
+    if (marker == nullptr || marker->model < 0) {
+        return;
+    }
+    const std::size_t model = static_cast<std::size_t>(marker->model);
+    CHECK(model < scene.model_render_priority.size());
+    if (model < scene.model_render_priority.size()) {
+        CHECK(std::fabs(scene.model_render_priority[model] - expected) < 1.0e-5f);
+    }
+}
+
+void test_hud_render_priorities(const bo2::engine::LevelGeometry& scene) {
+    struct Entry {
+        const char* name;
+        float priority;
+    };
+    const Entry entries[] = {
+        {"ui_hud_screen_cut", 8.0f},
+        {"ui_hud_letterbox", 9.0f},
+        {"ui_hud_pause_fade", 15.0f},
+        {"ui_hud_anim_charm_haze", 20.0f},
+        {"ui_hud_health_bar", 30.0f},
+        {"ui_hud_lore_bar", 30.0f},
+        {"ui_hud_rage_bar", 30.0f},
+        {"ui_hud_health_glass", 40.0f},
+        {"ui_hud_lore_glass", 40.0f},
+        {"ui_hud_health_vial", 50.0f},
+        {"ui_hud_lore_bottom", 50.0f},
+        {"_main", 60.0f},
+        {"ui_hud_darkgift_icon", 70.0f},
+        {"_glass", 80.0f},
+        {"ui_hud_intent_glow", 90.0f},
+        {"ui_hud_hilit_lore_bar", 100.0f},
+        {"ui_hud_hilit_health_bar", 100.0f},
+        {"ui_hud_hilit_dark_gift_icon", 100.0f},
+        {"ui_hud_hilit_rage_bar", 100.0f},
+    };
+    for (const Entry& entry : entries) {
+        check_priority(scene, entry.name, entry.priority);
+    }
+}
+
 int main() {
     const char* root = std::getenv("BO2NX_ASSETS_DIR");
     if (root == nullptr) {
@@ -222,6 +275,7 @@ int main() {
                     CHECK(count == 1);  // every clip belongs to one object
                 }
                 test_hud_cull_flags(scene);
+                test_hud_render_priorities(scene);
             }
         }
         test_texture_lists_of_the_game_data(root);

@@ -259,20 +259,21 @@ spends no rage.
 
 `bo2nx --level ... --hud <code.big>` draws them over the level frame
 (`draw_screen_items` in the software renderer): each texel is multiplied by
-the object's colour and blended by its alpha, and the objects are drawn from
-the farthest z to the nearest. Kain's counters are the ones he enters the
-level with: the port passes the folder of the level archive (`slums`) as the
-level name of `FUN_004256c0`. The result against the original is in
+the object's colour and blended by its alpha, and the objects are drawn in
+rising `RenderPriority` order (`FUN_0056d130`). Kain's counters are the ones
+he enters the level with: the port passes the folder of the level archive
+(`slums`) as the level name of `FUN_004256c0`. The result against the original
+is in
 [`ORACLE_COMPARE.md`](ORACLE_COMPARE.md#hud-of-the-sl01-spawn-frame-bo2nx-75).
 
 `bo2nx --play ... --hud <code.big>` draws the same objects every frame in the
 SDL window (`draw_hud` in `src/platform/sdl/sdl_backend.cpp`) with the same
 rules: the 640 x 480 orthographic screen, the texture multiplied by the
-object's colour, alpha blending and the order from the farthest z to the
-nearest. The HUD is in Kain mode for the whole of play and is never paused,
-because the play loop has no pause, and Kain's counters stay at the values he
-enters the level with: nothing changes them yet. The two renderers agree
-within 1.3 of 255 (MAE) in the HUD boxes
+object's colour, alpha blending and the order from the lowest
+`RenderPriority` to the highest. The HUD is in Kain mode for the whole of
+play and is never paused, because the play loop has no pause, and Kain's
+counters stay at the values he enters the level with: nothing changes them
+yet. The two renderers agree within 1.3 of 255 (MAE) in the HUD boxes
 ([`ORACLE_COMPARE.md`](ORACLE_COMPARE.md#sdl-backend-against-the-software-renderer-bo2nx-89)).
 
 Both drawings discard the back faces of the materials whose `mtlctrl` record
@@ -281,9 +282,6 @@ asks for it (`FUN_00571bf0`); the other materials draw both sides
 
 Not ported:
 
-- The draw order by `RenderPriority`: the port orders by z, which gives the
-  same sequence for the objects it draws (see "Draw order and blending").
-  The blend is the original's.
 - The dark gift icon: the spin when the selected gift changes, the timer of
   stealth and the gifts a level owns. The texture of the selected gift and
   the colour of a gift that cannot be used are ported.

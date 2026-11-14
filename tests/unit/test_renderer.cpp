@@ -226,10 +226,10 @@ int main() {
     // y is up: the lower half and the right half stay untouched.
     CHECK(overlay[pixel_at(10, 30) + 0] == 0);
     CHECK(overlay[pixel_at(40, 10) + 0] == 0);
-    // Two items on the same pixels: the nearer one (less negative z) is
-    // drawn last whatever the order of the list.
+    // Two items on the same pixels and the same z: the one with the higher
+    // RenderPriority is drawn last whatever the order of the list.
     bo2::platform::headless::ScreenItem near_item = far_item;
-    near_item.position.z = -360.0f;
+    near_item.priority = 10.0f;
     near_item.colour = {0.0f, 0.0f, 1.0f};
     std::vector<std::uint8_t> ordered(64U * 48U * 4U, 0);
     bo2::platform::headless::draw_screen_items(ordered, 64, 48, screen, {half},

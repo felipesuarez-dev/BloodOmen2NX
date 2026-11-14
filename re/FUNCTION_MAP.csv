@@ -5822,7 +5822,7 @@ address,name,subsystem,status,notes
 00560fd0,FUN_00560fd0,unknown,todo,ghidra
 00560ff0,FUN_00560ff0,unknown,todo,ghidra
 00561140,FUN_00561140,unknown,todo,ghidra
-005611c0,FUN_005611c0,unknown,todo,ghidra
+005611c0,FUN_005611c0,render,wip,src/platform/headless/software_renderer.cpp: draw_screen_items draws the HUD in rising RenderPriority order; the opaque pass and the depth order are not ported
 005625e0,FUN_005625e0,unknown,todo,ghidra
 00562700,FUN_00562700,unknown,todo,ghidra
 00562a40,FUN_00562a40,unknown,todo,ghidra
@@ -5949,7 +5949,7 @@ address,name,subsystem,status,notes
 0056cc20,FUN_0056cc20,animation,wip,src/engine/skeleton_pose.cpp: skin_vertices walks the bones and skins each vertex range; the lit vertex pass and the per-bone view transform are not ported
 0056ce80,FUN_0056ce80,unknown,todo,ghidra
 0056d090,FUN_0056d090,unknown,todo,ghidra
-0056d130,FUN_0056d130,unknown,todo,ghidra
+0056d130,FUN_0056d130,render,wip,src/engine/cell_group.cpp: read_render_priority reads the RenderPriority float of mdlattr; the depth sort key, SortBias and the facades are not ported
 0056d9d0,FUN_0056d9d0,unknown,todo,ghidra
 0056db00,FUN_0056db00,unknown,todo,ghidra
 0056db70,FUN_0056db70,unknown,todo,ghidra

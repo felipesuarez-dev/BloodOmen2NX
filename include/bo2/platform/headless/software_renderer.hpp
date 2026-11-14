@@ -54,6 +54,9 @@ struct ScreenItem {
     // Index inside the texture list of each material of the model
     // (FUN_005dce40); 0 is the first.
     std::int32_t texture_frame = 0;
+    // RenderPriority of the model (FUN_0056d130); the HUD draws in rising
+    // order.
+    float priority = 0.0f;
 };
 
 // Draws `items` of `scene` over the frame `rgba`. The screen is orthographic,

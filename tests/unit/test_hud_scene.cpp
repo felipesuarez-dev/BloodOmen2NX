@@ -368,6 +368,29 @@ void test_dark_gift_icon_rule() {
           near(icon->colour, {0.5f, 0.5f, 0.5f}));
 }
 
+// Every HudItem carries the RenderPriority of the model it draws.
+void test_items_carry_the_priority() {
+    bo2::engine::LevelGeometry scene = make_scene();
+    scene.model_render_priority.assign(scene.markers.size(), 0.0f);
+    for (std::size_t model = 0; model < scene.model_render_priority.size(); ++model) {
+        scene.model_render_priority[model] = 10.0f * static_cast<float>(model);
+    }
+    const bo2::game::HudScene hud(scene);
+    const bo2::game::KainTuning tuning = make_tuning();
+    bo2::game::KainVitals vitals;
+    bo2::game::set_lore_level(vitals, tuning, 0, 0.0f);
+    bo2::game::reset_gifts(vitals, tuning);
+    const std::vector<bo2::game::HudItem> items =
+        hud.items(vitals, tuning, bo2::game::HudMode::Kain, false);
+    CHECK(!items.empty());
+    for (const bo2::game::HudItem& item : items) {
+        CHECK(item.model < scene.model_render_priority.size());
+        if (item.model < scene.model_render_priority.size()) {
+            CHECK(near(item.priority, scene.model_render_priority[item.model]));
+        }
+    }
+}
+
 void test_rejects_what_it_cannot_draw() {
     bo2::engine::LevelGeometry no_vial = make_scene();
     no_vial.markers[1].name = "other";
@@ -481,6 +504,7 @@ int main() {
     test_gift_icon_texture();
     test_gift_usable();
     test_dark_gift_icon_rule();
+    test_items_carry_the_priority();
     test_rejects_what_it_cannot_draw();
     try {
         if (!test_game_data()) {

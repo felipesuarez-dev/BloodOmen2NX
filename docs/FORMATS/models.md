@@ -348,6 +348,9 @@ The attribute names are symbols the executable builds at start (the
 `ObjectType`, `EntityClass`, `UseMaxMesh`, `NoCollisionModel` and
 `RenderPriority`.
 
+The host reads the type 0 record of `RenderPriority` into
+`LevelGeometry::model_render_priority`, one value per model.
+
 ### Render state and draw order
 
 How the renderer turns a model into draw calls. Every rule names the

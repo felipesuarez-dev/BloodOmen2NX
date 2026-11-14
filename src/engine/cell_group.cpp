@@ -903,6 +903,34 @@ ModelSkeleton& skeleton_for(LevelGeometry& geometry, std::uint32_t model) {
     return geometry.skeletons.back();
 }
 
+// FUN_0056d130: the RenderPriority of a model is the type 0 record of its
+// `mdlattr` table whose key resolves to RenderPriority. The other attributes
+// are not read.
+float read_render_priority(const common::Reader& reader, const std::vector<Chunk>& chunks,
+                           const std::vector<std::uint16_t>& symbols,
+                           const std::vector<std::string>& names) {
+    const Chunk* attributes = find_chunk(chunks, "mdlattr");
+    if (attributes == nullptr) {
+        return 0.0f;
+    }
+    if (attributes->data_size < 20 || (attributes->data_size - 20) % 8 != 0) {
+        throw common::ParseError("bad mdlattr table size");
+    }
+    const std::size_t records = (attributes->data_size - 20) / 8;
+    const std::size_t start = attributes->data_offset + 20;
+    for (std::size_t index = 0; index < records; ++index) {
+        const std::size_t record = start + index * 8;
+        if (reader.u8(record) != 0) {
+            continue;
+        }
+        const std::uint16_t key = reader.u16(record + 2);
+        if (resolve_symbol_name(key, symbols, names) == "RenderPriority") {
+            return read_float(reader, record + 4);
+        }
+    }
+    return 0.0f;
+}
+
 void parse_model(const common::Reader& reader, const Chunk& rmd, std::uint32_t model,
                  const std::vector<std::uint16_t>& symbols,
                  const std::vector<std::string>& names, LevelGeometry& geometry) {
@@ -919,6 +947,11 @@ void parse_model(const common::Reader& reader, const Chunk& rmd, std::uint32_t m
         throw common::ParseError("bad rmd record size");
     }
     const std::vector<Chunk> chunks = read_chunks(reader, record + 16, record + total);
+    if (geometry.model_render_priority.size() <= model) {
+        geometry.model_render_priority.resize(static_cast<std::size_t>(model) + 1);
+    }
+    geometry.model_render_priority[model] =
+        read_render_priority(reader, chunks, symbols, names);
     const Chunk* positions = find_chunk(chunks, "position");
     const Chunk* normals = find_chunk(chunks, "normals");
     const Chunk* prims = find_chunk(chunks, "prims");

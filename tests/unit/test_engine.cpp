@@ -253,7 +253,8 @@ void append_cell_bsp(std::vector<std::uint8_t>& out) {
 std::vector<std::uint8_t> build_cell_group(
     bool with_instances = false, bool with_collision = false,
     const std::vector<std::uint8_t>& texture_payload = {},
-    const std::vector<std::uint8_t>& cull_payload = {}) {
+    const std::vector<std::uint8_t>& cull_payload = {},
+    const std::vector<std::uint8_t>& attr_payload = {}) {
     std::vector<std::uint8_t> positions;
     put32(positions, 4);
     for (const auto& point : std::vector<std::array<float, 3>>{{0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0}}) {
@@ -357,6 +358,9 @@ std::vector<std::uint8_t> build_cell_group(
     append_chunk(record, "texture", material_texture);
     if (!cull_payload.empty()) {
         append_chunk(record, "mtlctrl", cull_payload);
+    }
+    if (!attr_payload.empty()) {
+        append_chunk(record, "mdlattr", attr_payload);
     }
     append_chunk(record, "mlyrcolr", layer_colors);
     append_chunk(record, "mlyrctrl", layer_controls);
@@ -1083,6 +1087,54 @@ void test_material_cull() {
     }));
 }
 
+// FUN_0056d130: RenderPriority is the type 0 record of the mdlattr table
+// whose key resolves to RenderPriority; a model without it keeps 0.
+void test_model_render_priority() {
+    std::vector<std::uint8_t> attributes;
+    append(attributes, std::string("default\0\0\0\0\0", 8));
+    put32(attributes, 20 + 3 * 8);
+    put32(attributes, 1);
+    put32(attributes, 2);
+    attributes.push_back(3);  // bool
+    attributes.push_back(0);
+    put16(attributes, 0);
+    attributes.push_back(1);
+    attributes.push_back(0xFF);
+    attributes.push_back(0xFF);
+    attributes.push_back(0xFF);
+    attributes.push_back(7);  // symbol
+    attributes.push_back(0);
+    put16(attributes, 1);
+    put16(attributes, 0);
+    put16(attributes, 0xFFFF);
+    attributes.push_back(0);  // float
+    attributes.push_back(0);
+    put16(attributes, 2);
+    put_float(attributes, 30.0f);
+
+    const std::vector<std::uint16_t> symbols = {100, 101, 102};
+    std::vector<std::string> names(103);
+    names[100] = "ObjectType";
+    names[101] = "EntityClass";
+    names[102] = "RenderPriority";
+    const std::vector<std::uint8_t> data = build_cell_group(false, false, {}, {}, attributes);
+    const bo2::engine::LevelGeometry geometry =
+        bo2::engine::parse_cell_group(data, symbols, names);
+    CHECK(geometry.model_render_priority.size() == 1);
+    CHECK(std::fabs(geometry.model_render_priority[0] - 30.0f) < 1.0e-5f);
+
+    const bo2::engine::LevelGeometry plain = bo2::engine::parse_cell_group(build_cell_group());
+    CHECK(plain.model_render_priority.size() == 1);
+    CHECK(plain.model_render_priority[0] == 0.0f);
+
+    std::vector<std::uint8_t> broken = attributes;
+    broken.push_back(0);  // 20 + 8 n + 1
+    CHECK(throws([&] {
+        bo2::engine::parse_cell_group(build_cell_group(false, false, {}, {}, broken), symbols,
+                                      names);
+    }));
+}
+
 // The modlskel record is 104 bytes (FUN_0067bdd0), not the old guessed
 // count + pairs + 96 bytes layout.
 void test_skeleton_bones() {
@@ -1142,6 +1194,7 @@ int main() {
     test_cell_group();
     test_material_texture_lists();
     test_material_cull();
+    test_model_render_priority();
     test_skeleton_bones();
     test_collision_chunk();
     test_cell_animations();

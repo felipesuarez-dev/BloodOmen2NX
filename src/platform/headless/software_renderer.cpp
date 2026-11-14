@@ -578,7 +578,7 @@ void draw_screen_items(std::vector<std::uint8_t>& rgba, std::uint32_t width, std
         order.push_back(&item);
     }
     std::stable_sort(order.begin(), order.end(), [](const ScreenItem* a, const ScreenItem* b) {
-        return a->position.z < b->position.z;
+        return a->priority < b->priority;
     });
     const float scale_x = static_cast<float>(width) / (2.0f * half_width);
     const float scale_y = static_cast<float>(height) / (2.0f * half_height);

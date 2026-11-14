@@ -280,6 +280,9 @@ struct LevelGeometry {
     // record has 0x4000 (FUN_00571bf0). Indexed like LevelTriangle::material;
     // 0 for a material without a record.
     std::vector<std::uint8_t> material_cull;
+    // RenderPriority of each model, in the order of model_ranges; 0 for a
+    // model without the attribute (FUN_0056d130).
+    std::vector<float> model_render_priority;
     std::vector<CellAttributeTable> level_attributes;
     std::vector<ModelRange> model_ranges;
     std::vector<LevelCollision> collisions;
