@@ -379,3 +379,24 @@ baseline now. The oracle's post-stop drift down the wall (y 44.14 ->
 42.84) and the S/A/D phases that follow it are still open (BO2NX-37). Entity
 collision is ruled out: `staticcollision` / `collisionresponse_stop` are
 parsed and `sl01` has 0 static collision entities.
+
+## Random numbers
+
+The game has one global random generator (`0xa74c00`, built at start-up by
+`FUN_00694750`); 188 functions draw from it, the script natives `random`
+and `randomint` among them. It is an additive lagged generator:
+
+- State (`FUN_00694760`): `k = 24`, `j = 55` and a table `T[1..55]` of
+  32-bit words, seeded with 12345 (`0x3039`). No other call seeds it.
+- Seeding (`FUN_006947e0`): `v = seed`; for `i` from 55 down to 1,
+  `T[i] = v`, then `v = (v * 16807) mod 0x7fffffff` in 64-bit arithmetic.
+- Next value (`FUN_00694820`): `i = j`, `j -= 1`, `T[i] += T[k]` (wrapping),
+  `k -= 1`; when `j` reaches 0 it becomes 55 and the value is returned
+  without looking at `k`; otherwise, when `k` reaches 0 it becomes 55. The
+  value is `T[i]`.
+- The first values of a fresh generator are `0x7490722f`, `0x3738a772`,
+  `0xe87949af`, `0xf2d4f764`; the 100th is `0xecdac651`.
+
+The sequence the game sees depends on every function that draws from it,
+so a script's random values match the original only when everything before
+it drew the same count.

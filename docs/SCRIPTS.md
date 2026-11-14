@@ -238,6 +238,32 @@ classes bind 505 functions, one per native body and none more; 72 of them
 return a task, and they are exactly the bodies whose method has byte +5
 equal to 2.
 
+## The natives of `basescript`
+
+Read from their functions (dumps of `natives.py`'s table):
+
+| Body | Method | Function | What it does |
+|---|---|---|---|
+| 0 | `self` | `FUN_007644a0` | The result (an object local) takes the handle of the object, counted |
+| 1 | `getstate` | `FUN_00764550` | The result byte is the state of the object |
+| 2 | `isnull` | `FUN_00764560` | The result byte is 1 when the argument is 0 |
+| 3 | `isequal` | `FUN_00764580` | The result byte is 1 when the two arguments are equal |
+| 4 | `del` | `FUN_007645a0` | Removes an object from the list of the object (+0x20); not read further |
+| 5 | `isrunning` | `FUN_007645c0` | The result byte is 1 when the object has a main thread |
+| 6 | `join` | `FUN_007645d0` | Returns a task (vtable `0x879ecc`) on the object; not read further |
+| 7 | `position` | `FUN_007645e0` | Writes the three arguments into the position block of the result |
+| 8 | `rotation` | `FUN_00764600` | As `position`, each one times `0x3c8efa35` (0.0174532924) |
+| 9 | `color` | `FUN_00764620` | Writes four floats into the colour block of the result |
+| 10, 11 | `printstring`, `printnumber` | `FUN_00764650`, `FUN_007646f0` | Draw the string or the number (`%f`) on the debug overlay (`FUN_00731880`) when the debug channel 5/0x19 is on |
+| 12 | `logstring` | `FUN_00764710` | Writes the string to the log (`%s\n`) |
+| 13 | `lognumber` | `FUN_007647b0` | Nothing |
+| 15 | `random` | `FUN_007647d0` | (b − a) × r × 2^-32 + a, with r the next value of the global generator ([`GAMEPLAY.md`](GAMEPLAY.md), "Random numbers") |
+| 16 | `randomint` | `FUN_007647f0` | f = r × 2^-32; b when f is 1.0, else (int)((b − a + 1) × f) + a |
+| 17 | `distance` | `FUN_00764810` | sqrt(dy² + dz² + dx²) of two position blocks, 0 when a block is missing or the sum is 0 |
+| 18, 19 | `degtorad`, `radtodeg` | `FUN_00764830`, `FUN_00764850` | The argument times `0x3c8efa35` or `0x42652ee1` (57.2957802) |
+
+Body 14, `wait`, is written in script.
+
 ## The classes of a level
 
 Every region carries, in its `packages` section, one more compiled package
