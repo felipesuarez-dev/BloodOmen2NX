@@ -23,11 +23,11 @@ char[8] "texfont"
 u32     size of the entry (1,780)
 u32     0
 u16     texture (a symbol of the entry), u16 0xffff
-f32     20.0
-f32     2.0
-f32     5.0
-f32     8.0
-u8      upper-case-only flag (0), u8 0xff
+f32     base_height   20.0
+f32     kerning       2.0
+f32     leading       5.0
+f32     space_width   8.0
+u8      upper_case_only (0), u8 0xff
 u16     glyph count (87)
 glyph[count], 20 bytes each:
   u8   code, three 0xff
@@ -39,8 +39,14 @@ glyph[count], 20 bytes each:
   `256 - y - height` to `256 - y`.
 - The shape of a glyph is in the alpha channel. The colour channels are white
   under the letters and carry the colours of the controller buttons.
-- The loader stores the four floats at font `+0x10`, `+0x18`, `+0x1c` and
-  `+0x14`, in file order. What they mean (line height, spacing) is not read.
+- The names of the fields are the keys of the text form of a font, which
+  the converter `FUN_005ded00` reads (`texture`, `base_height`, `kerning`,
+  `leading`, `space_width`, `upper_case_only`, and then the glyphs) and
+  writes in this order as the `texfont` entry. It accepts a font only with a
+  base height above 0, a kerning and a leading of 0 or more and a space width
+  above 0. The loader stores them at font `+0x10` (base height), `+0x18`
+  (kerning), `+0x1c` (leading) and `+0x14` (space width). How the text code
+  uses each one is not read yet.
 - With the flag set, the loader gives every code from `A` to `Z` a second
   code 0x20 above it and warns when that lower-case code already exists.
   This font has the flag clear and defines both cases itself.
