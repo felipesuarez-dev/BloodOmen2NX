@@ -118,8 +118,12 @@ a triangle; a surface draws the first texture of its list.
 
 ### `diffuse`
 
-`u32 count` and one R, G, B, A byte quadruple per vertex; `count` is the
-vertex count of the model. In the `ui/hud` cell group only the dark gift icon
+`u32 count` and one R, G, B, A byte quadruple per vertex. `count` is the
+vertex count of the model in most models and smaller in some, never larger:
+of the 2,045 models of the cell groups that have the chunk, 59 have fewer
+colours than vertices (in `slums/sl01`, 245 for 249 vertices in one model
+and 119 for 159 in two). What the vertices past the last colour get is not
+read. In the `ui/hud` cell group only the dark gift icon
 and the enemy icon have it: white on the eight vertices of the picture and
 black on the 38 vertices of the 36 triangles behind it. The chunk is one of the names the model loader
 matches (`0x61f70f`). The renderer builds vertices of position, colour and
@@ -315,29 +319,34 @@ reads are in the next two sections.
 
 ### `mdlattr`
 
-The attributes of a model: what kind of object it is and how it is drawn.
-The layout below is read from the data (the 42 models of the `ui/hud` cell
-group), not from the loader:
+The attributes of a model: what kind of object it is and how it is drawn. A
+model block carries the table twice, as a chunk of the block and as a
+subchunk of its `rmd`. The layout is read from the data and checked on every
+table of the cell groups of the 179 containers (71,096 tables in 47,880
+model blocks): each one is consumed exactly.
 
 ```
 char[8] table name ("default")
 u32     size of the table, this header included
 u32     1
 u32     2
-record[(size - 20) / 8]:
-  u8   type: 0 float, 3 bool, 7 symbol
-  u8   0
+records until the end of the table:
+  u8   type: 0 float, 3 byte, 7 symbol
+  u8   array flag: 0 or 1
   u16  key (symbol: the name of the attribute)
-  4-byte value: f32; or u8 and three 0xff; or u16 symbol and 0xffff
+  flag 0: one value in 4 bytes (f32; or u8 and three 0xff; or u16 and 0xffff)
+  flag 1: u32 count, then count values of 4, 1 or 2 bytes, padded to 4 bytes
 ```
 
-The two header words and attributes with more than one value are not read.
-In memory a record is `u16 key`, `u8 type`, `u8 count` and the value
-(`FUN_006c05c0` finds a record by key; `FUN_006c2250` returns the floats of
-a type 0 record and `FUN_006c2190` the bytes of a type 3 record;
-`FUN_006c2170` the count). The readers are `FUN_006a81a0` (float),
-`FUN_006a80a0` (bool) and `FUN_006a8620` (true when the bool is present and
-set).
+The only arrays in the game data are byte arrays of four, a colour:
+`FogColor` (180 tables), `AmbientColor` (180) and `BackgroundColor` (58).
+The two header words are the same in every table and are not read. In
+memory a record is `u16 key`, `u8 type`, `u8 count` and the value, or a
+pointer to a counted array when the count byte is 0xff (`FUN_006c05c0` finds
+a record by key; `FUN_006c2250` returns the floats of a type 0 record and
+`FUN_006c2190` the bytes of a type 3 record; `FUN_006c2170` the count). The
+readers are `FUN_006a81a0` (float), `FUN_006a80a0` (byte) and `FUN_006a8620`
+(true when the byte is present and set).
 
 The attribute names are symbols the executable builds at start (the
 `0x5d0b00`..`0x5d1310` initialisers): `ClipEnable`, `ClipFar`, `ClipNear`,
@@ -346,10 +355,17 @@ The attribute names are symbols the executable builds at start (the
 `RenderPriority`, `RenderType`, `SkySphere`, `SortBias`, `SpriteFacade`,
 `VertexAlpha`, `Water`, `ZFacade` and others. The HUD models carry
 `ObjectType`, `EntityClass`, `UseMaxMesh`, `NoCollisionModel` and
-`RenderPriority`.
+`RenderPriority`. The models of `slums/sl01` carry, by number of models:
+`ObjectType` 267, `NoCollisionModel` 171, `NoDraw` 55, `VertexLighting` 50,
+`EntityClass` 16, `UseMaxMesh` 16, `TransparentToLight` 11, `NoEdgeGrab` 6,
+`SignalObject` 5, `GetHitGeom` 4, `Animated` 4, `NoCameraCollide` 4,
+`TransparentToLineOfSight` 3, and `VertexAlpha`, `DFacade`, `Lightmaps`,
+`SkySphere` and `SortBias` 2 each.
 
-The host reads the type 0 record of `RenderPriority` into
-`LevelGeometry::model_render_priority`, one value per model.
+The host reads the `RenderPriority` of each model
+(`LevelGeometry::model_render_priority`). Its reader takes every record to
+be 8 bytes, which fails on the tables with an array: 16 cell groups of the
+game do not load with it.
 
 ### Render state and draw order
 
