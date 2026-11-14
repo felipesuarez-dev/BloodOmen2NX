@@ -106,7 +106,8 @@ A material with several textures is a material whose texture changes: the
 frames of an animated surface, or the nine pictures of the dark gift icon of
 the HUD, which the game picks by index (`FUN_005dce40`). Read from the data
 and checked on every `texture` chunk of `code.big` (59), `sl01.big` (636) and
-`kain.big` (22): each one ends exactly at its last record. Materials by
+`kain.big` (22), and on the 42,108 chunks of the cell groups of the 179
+containers: each one ends exactly at its last record. Materials by
 texture count: `code.big` 0: 11, 1: 42, 6: 1, 8: 14, 9: 2, 147: 4;
 `sl01.big` 0: 8, 1: 1,125, 3: 7, 12: 2, 33: 1; `kain.big` 0: 1, 1: 28, 6: 1,
 147: 1.
@@ -360,7 +361,7 @@ material is a word of flags:
 | bits 0..10 | always: the slot of the material's texture | texture of stage 0 |
 | `0x800` | the texture blends, or the model has `VertexAlpha` | alpha blending on, destination factor `INVSRCALPHA` |
 | `0x1000` | not by this path | alpha blending on, destination factor `ONE`, fog colour 0 |
-| `0x2000` | `mtlctrl` word 1 has `0x4000` | back faces culled; without it, none |
+| `0x2000` | `mtlctrl` word 1 has `0x4000` | cull mode 2 (clockwise): a triangle whose vertices run clockwise on screen is not drawn; without it, mode 1 (none) |
 | `0x4000` | `(mlyrctrl word 0 & 0xc00000) != 0x400000` | texture addressing wraps; without it, clamps |
 | `0x8000` | not by this path | alpha test off |
 | `0x10000` | the texture does not write depth, or `mtlctrl` word 1 has `0x10000` | depth write off |

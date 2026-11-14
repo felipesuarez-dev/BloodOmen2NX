@@ -181,9 +181,13 @@ index of a gift is also the type it reports.
     `FUN_00436080`) and its timer is not above 0 (`FUN_00437540`; the timer
     starts at 0, `FUN_00436390`).
   - Fury can be used when its cost is not above the rage (`FUN_00437040`).
-- The second material of the icon has no texture: 36 triangles behind the
-  picture, black by the per-vertex colours of the model
-  ([`FORMATS/models.md`](FORMATS/models.md#rmd-subchunks), `diffuse`).
+- The model of the icon is a coin. Its first material has four triangles:
+  two for the front face (z 1.08, counter-clockwise on screen) and two for
+  the back face (z -1.05, clockwise, the picture mirrored), which is not
+  drawn because the material culls its back faces. Its second material has
+  no texture: the 36 triangles of the rim, black by the per-vertex colours of
+  the model ([`FORMATS/models.md`](FORMATS/models.md#rmd-subchunks),
+  `diffuse`) and edge-on while the icon does not spin.
 
 Which gift is selected when a level starts:
 
@@ -275,7 +279,7 @@ Not ported:
   The blend is the original's.
 - The dark gift icon. Its rule is read (see "Rage and dark gifts"); the
   port lacks the stealth start state, the texture list of a material and the
-  per-vertex colours of a model.
+  culling of back faces.
 - What changes the rage (blocks, dodges, the drain of `FUN_004300d0`) and
   the selection and ownership of the gifts.
 - The enemy health bar and the enemy icon (mode 3 only), the pause fade
