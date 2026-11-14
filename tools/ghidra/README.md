@@ -13,6 +13,7 @@ live in `external/ghidra` (gitignored) and are analysed as
 | `ListStrings.java` | Export defined strings and their code references to TSV |
 | `DecompileAt.java` | Decompile the function at or containing each address |
 | `XrefsTo.java` | List references to each address |
+| `ExportCalls.java` | Export every reference to a function entry (callers and data words such as vtable slots) to TSV |
 | `MakeFunction.java` | Disassemble and create a function missed by auto-analysis |
 | `RecoverFunctions.java` | Recover all executable targets referenced by instructions |
 | `RecoverFunctionsFiltered.java` | Recover call/jump targets only |
@@ -42,10 +43,24 @@ BO2_EXPORT_DIR=external/ghidra/exports_installer \
   -process install2.dat \
   -scriptPath tools/ghidra/ghidra_scripts \
   -postScript ListStrings.java -readOnly -noanalysis
+
+# Export the references to every function (writes the file given as argument)
+"$GHIDRA/support/analyzeHeadless" external/ghidra bo2 -process bo2.exe \
+  -scriptPath tools/ghidra/ghidra_scripts \
+  -postScript ExportCalls.java re/decomp/bo2_calls/calls.tsv -readOnly -noanalysis
 ```
 
 `analyzeHeadless` prefixes script output with `INFO  <Script>.java> `;
 strip that prefix when saving the output.
+
+`ExportCalls.java` writes one row per reference: `to`, `to_name`, `from`,
+`from_function` (empty when the reference is a data word) and `type`. On
+`bo2.exe` it takes about ten seconds and writes 132,543 references to 45,760
+functions: 95,553 direct calls and 31,880 data words. With the table, "who
+calls this" and "what does this call" are a text search instead of a Ghidra
+run. It knows direct calls and data words only: a call through a vtable shows
+as the slot that holds the address, not as its caller, and a function Ghidra
+did not create is not in it. The table is a local file under `re/decomp/`.
 
 ## PyGhidra (optional)
 

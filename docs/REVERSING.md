@@ -85,6 +85,11 @@ with `MAXMEM=3G`. Inventory exported with
 | Exception artifacts (`Catch@*`) | 84 | excluded |
 | Total exported | 35,767 | - |
 
+The references to every function (callers and vtable slots) can be exported
+once with `tools/ghidra/ghidra_scripts/ExportCalls.java`
+([`tools/ghidra/README.md`](../tools/ghidra/README.md)), so that following a
+call chain does not need a Ghidra run per question.
+
 The `.text` section spans `0x401000`-`0x83e7e2` (4.4 MB of code), so the
 game-candidate count is proportionate. The game/CRT split is a heuristic
 based on the name; subsystem triage refines it as evidence appears.
