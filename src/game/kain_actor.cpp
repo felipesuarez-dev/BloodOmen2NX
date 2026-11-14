@@ -90,6 +90,25 @@ void KainActor::pose(const bo2::engine::Vec3& position, float yaw,
     }
     std::vector<bo2::engine::BoneTransform> pose = bo2::engine::sample_pose(
         model_.skeleton, clip->reel, clip->channels, machine.reel_time() * kReelFramesPerSecond);
+    // The run: the cross blend layer sums the run (layer 0) and the walk
+    // (layer 1) by the stick (FUN_005d4300 with the weights of FUN_00445ba0).
+    // The original blends each input in its own sampler first; here the blend
+    // into a new clip is applied after the sum.
+    const float walk_weight = 1.0f - animation_.run_weight();
+    if (animation_.state() == kain_anim::kRun && animation_.cross_blend() &&
+        walk_weight >= 1.0e-4f) {
+        const bo2::engine::AnimMachine& walk = animation_.layers().layer(1);
+        const std::string walk_name = bo2::engine::anim_clip_reel_name(
+            graph_, graph_.clips[static_cast<std::size_t>(walk.clip())], archive_, graph_entry_);
+        const Clip* walk_clip = walk_name.empty() ? nullptr : load_clip(walk_name);
+        if (walk_clip != nullptr) {
+            pose = bo2::engine::cross_blend_poses(
+                pose, animation_.run_weight(),
+                bo2::engine::sample_pose(model_.skeleton, walk_clip->reel, walk_clip->channels,
+                                         walk.reel_time() * kReelFramesPerSecond),
+                walk_weight);
+        }
+    }
     if (machine.clip_starts() != shown_clip_start_) {
         // A clip started since the last drawn pose: that pose is where its
         // blend begins (the snapshot the blend sampler takes).

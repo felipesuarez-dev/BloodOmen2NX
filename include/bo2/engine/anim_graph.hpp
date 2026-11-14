@@ -55,6 +55,12 @@ struct AnimTransition {
 
 struct AnimState {
     std::vector<AnimTransition> transitions;
+    // The state function (+0x10, a condition id, -1 for none) with its operand
+    // (+0x0c): while the state is the requested one it is checked every
+    // advance, and when it fails the machine starts `child` (+0x14).
+    std::uint32_t function_variant_tag = 0;
+    std::int32_t function = -1;
+    std::int32_t child = -1;
     std::uint32_t blend_tag = 0;  // state +0x18
     std::string name;             // `st_*`
 };

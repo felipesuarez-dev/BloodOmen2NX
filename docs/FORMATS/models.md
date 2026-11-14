@@ -764,10 +764,11 @@ not decoded: the factor is linear.
 
 - The LOD collapse: FUN_005e43e0 gives a bone its parent's matrix when the
   bone's LOD level is below a threshold of the instance.
-- The other matrix sources. FUN_00638690 ranks up to 16 sources per bone,
-  and the code at 0x5d1b50 is another source that ends in FUN_00637710
-  (*inferred* from the RTTI names next to it: the `goe::*MatrixMap` classes).
-  The layers that feed them are BO2NX-74.
+- The ranking of the matrix sources. FUN_00638690 ranks up to 16 sources per
+  bone by the layer masks, and the code at 0x5d1b50 is another source that
+  ends in FUN_00637710 (*inferred* from the RTTI names next to it: the
+  `goe::*MatrixMap` classes). The cross blend of the run is drawn as a sum of
+  two poses over every bone ([`animatio.md`](animatio.md), Kain's run state).
 - The transition filter of a blend record.
 - The vertex colour of the skinning routine.
 

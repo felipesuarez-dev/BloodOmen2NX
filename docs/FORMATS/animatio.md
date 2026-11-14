@@ -246,9 +246,20 @@ That restart is how a clip loops and how one state follows another:
 FUN_00723620 writes the rate at +0x10 from outside (the run state does it
 every frame, see below); a clip that starts later takes its node speed again.
 
-The port (`AnimMachine`) runs this for one layer: kinds 1 and 2, conditions
-0, 1, 7 and the three combinators. The other layers (kinds 3 and 4), the layer
-entity (kind 5), the callbacks (kind 6) and the clip events are not ported.
+**Layers.** Action kind 3 starts a state on another layer (FUN_005e3b80,
+which creates that layer's machine when it has none) and kind 4 plays a
+sequence there (FUN_005e3e50). Condition 5 (FUN_006136b0) reads another
+layer: its operands are a layer and, in the next variant, a state, and it
+holds when that layer's machine is in that state. A state may carry a
+function (`+0x10`, a condition id, with its operand at `+0x0c`): after every
+advance FUN_00643030 runs the function of the requested state and, when it
+fails, starts the state's child (`+0x14`; none stops the layer). That is how
+the blend layers of the run end by themselves (Kain's run state, below).
+
+The port runs kinds 1 to 4, conditions 0, 1, 5, 7 and the three combinators,
+and the state function (`AnimMachine`, with `AnimLayers` for the layers). The
+layer entity (kind 5), the callbacks (kind 6) and the clip events are not
+ported.
 The pose blend is drawn from the machine's blend factor
 ([`models.md`](models.md), Pose blend), without the transition filter a blend
 record may name. The game conditions (ids 8 and
@@ -270,12 +281,44 @@ condition 1):
 | `st_walkblend` | 1 | Plays `sq_walk` (`cl_walk`, reel `kain/walk`) or, when its OR condition is false, `sq_rdy2walk` (`cl_rdy2walk`, frame 0 of the walk reel, 0.2 s blend) |
 | `st_moveblend` | 2 | One kind 5 action: creates the layer entity from layer type 0 (type id 5) |
 
+`st_walkblend`, `st_moveblend` and `st_movelean` carry the state function
+"layer 0 is in `st_run` or layer 0 is in `st_rdy2run`" (two condition 5
+bindings under an OR). `st_walkblend` uses the same test as its first
+transition: started by `st_rdy2run` it still sees the state layer 0 is
+leaving, so it holds frame 0 of the walk reel; started again by `st_run` it
+plays the walk clip. When layer 0 leaves the run the three layers stop
+(`st_moveblend` through its child `st_moveblend_end`).
+
+The cross blend entity keeps 16 inputs and 16 weights (vtable 0x86ea7c). Its
+pose for a bone is the sum over the inputs whose weight is at least 1e-4 of
+the input's translation, angles and scale, each times the weight
+(FUN_005d4300); the matrix is then the usual FUN_00637710 (FUN_005d42c0). So
+the run and the walk are mixed component by component, angles included, not
+through quaternions.
+
 Layer type 5 resolves to the global at 0xa6abc4, whose value is the vtable of
 `CrossBlendAFSFactory` (RTTI at vtable 0x86ea98). FUN_005d4880 requires that
 class on layer 2 before it writes the blend weights, which is what FUN_00445ba0
 does with `s` and `1 - s` (inputs 0 and 1: layers 0 and 1). The variant of the
 kind 5 action is a float (0.01), copied into the first weight when the entity is
 created (FUN_005d4670).
+
+FUN_00445ba0, every frame of the run state, with `s` the stick magnitude
+clamped to 1 and `R` the run clip rate of the tuning (1.15):
+
+| What | Value |
+|---|---|
+| weight of input 0 (layer 0, run) | `s` |
+| weight of input 1 (layer 1, walk) | `1 - s` |
+| rate of layer 0 | `(0.5 s + 0.5) R` |
+| rate of layer 1 | `(s + 1) R` |
+| the state's `+0x3c` | `rate0 * s * 250 + rate1 * (1 - s) * 93.75` |
+
+The port applies the weights and the rates (`KainAnimation`) and draws the sum
+(`cross_blend_poses`, `KainActor`). It does not create the entity: layer 2
+holding a state means the cross blend is on. The entity's masks and the
+ranking of the matrix sources (FUN_00638690) are not ported, so the sum
+covers every bone.
 
 What this says about the rates FUN_00445ba0 writes:
 

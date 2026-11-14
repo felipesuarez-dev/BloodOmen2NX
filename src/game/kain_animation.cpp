@@ -1,5 +1,7 @@
 #include "bo2/game/kain_animation.hpp"
 
+#include <cmath>
+
 namespace bo2::game {
 
 namespace {
@@ -9,7 +11,7 @@ constexpr float kTakeoffTime = 0.2f;  // 0x3e4ccccd, the timer FUN_004436e0 sets
 }  // namespace
 
 KainAnimation::KainAnimation(const bo2::engine::AnimGraph& graph, const KainTuning& tuning)
-    : machine_(graph), deadzone_(tuning.stick_deadzone), run_rate_(tuning.run_clip_rate) {
+    : layers_(graph), deadzone_(tuning.stick_deadzone), run_rate_(tuning.run_clip_rate) {
     const JumpTuning& jump = tuning.jump;
     if (jump.gravity_up < 0.0f && jump.gravity_down < 0.0f && jump.height_tap > 0.0f) {
         const JumpDerived derived = derive_jump(jump);
@@ -22,7 +24,7 @@ KainAnimation::KainAnimation(const bo2::engine::AnimGraph& graph, const KainTuni
 void KainAnimation::request(std::int32_t state) {
     // Every state enter stores the index and starts the state on layer 0.
     state_ = state;
-    machine_.start_state(state);
+    layers_.start_state(0, state);
 }
 
 void KainAnimation::step(const PlayerInput& input, const PlayerState& state, double seconds) {
@@ -69,9 +71,13 @@ void KainAnimation::step(const PlayerInput& input, const PlayerState& state, dou
     was_grounded_ = state.grounded;
 
     if (state_ == kain_anim::kRun) {
-        machine_.set_rate(run_rate_);
+        // FUN_00445ba0: the stick magnitude drives the run/walk cross blend.
+        const float magnitude = std::sqrt(input.move_x * input.move_x + input.move_y * input.move_y);
+        run_weight_ = magnitude > 1.0f ? 1.0f : magnitude;
+        layers_.layer(0).set_rate((run_weight_ * 0.5f + 0.5f) * run_rate_);
+        layers_.layer(1).set_rate((run_weight_ + 1.0f) * run_rate_);
     }
-    const bool sequence_ended = machine_.advance(seconds);
+    const bool sequence_ended = layers_.advance(seconds);
     if (landing_ && sequence_ended) {
         landing_ = false;
     }

@@ -20,7 +20,9 @@ namespace bo2::game {
 // reel of the clip node on layer 0, at the machine's reel time (30 frames per
 // second). While a clip blends in, the pose goes from the one drawn last to
 // the first frame of the new clip, as the blend sampler does (FUN_00639990).
-// The other layers are not drawn (docs/GAMEPLAY.md, "Animation state").
+// In the run the pose is the cross blend of the run and the walk clips by the
+// stick magnitude (layers 0 to 2). The lean of layer 3 is not drawn
+// (docs/GAMEPLAY.md, "Animation state").
 class KainActor {
 public:
     // `archive` is the Kain container: it holds the `kain` animation graph and

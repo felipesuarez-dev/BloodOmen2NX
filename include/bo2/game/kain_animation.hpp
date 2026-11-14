@@ -33,7 +33,10 @@ constexpr std::int32_t kRunLanding = 87;     // st_run_landing
 //     passed too;
 //   - in the air the state is then st_fallingup while the vertical velocity is
 //     not negative and st_fallingdn after that (FUN_00442800, FUN_00442ae0);
-//   - the run state writes the run clip rate every frame (FUN_00445ba0).
+//   - the run state, every frame (FUN_00445ba0), takes the stick magnitude s
+//     (at most 1) and writes the weights s and 1 - s of the cross blend of
+//     layers 0 (run) and 1 (walk), and their rates (0.5 s + 0.5) and (s + 1)
+//     times the run clip rate.
 // Read from the oracle, not from the code: a landing is st_run_landing when
 // forward is held and st_normal_landing otherwise, and it lasts until its
 // sequence ends.
@@ -50,10 +53,18 @@ public:
     // KainState+0x458: the state the player asked for last, -1 before the
     // first step. The machine may be in another one (st_rdy2run before st_run).
     std::int32_t state() const { return state_; }
-    const bo2::engine::AnimMachine& machine() const { return machine_; }
+    // Layer 0, the one the movement states drive.
+    const bo2::engine::AnimMachine& machine() const { return layers_.layer(0); }
+    const bo2::engine::AnimLayers& layers() const { return layers_; }
+    // The cross blend of the run: on while layer 2 holds a state (the graph
+    // starts st_moveblend there, which creates the cross blend entity), with
+    // the weight of layer 0; layer 1 has the rest.
+    bool cross_blend() const { return layers_.state_of(2) >= 0 && layers_.layer(1).clip() >= 0; }
+    float run_weight() const { return run_weight_; }
 
 private:
-    bo2::engine::AnimMachine machine_;
+    bo2::engine::AnimLayers layers_;
+    float run_weight_ = 1.0f;
     float deadzone_ = 0.0f;
     float run_rate_ = 1.0f;
     std::int32_t state_ = -1;

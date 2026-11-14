@@ -8,6 +8,7 @@ namespace {
 
 constexpr std::int32_t kAlways = 0;          // FUN_006135d0
 constexpr std::int32_t kPreviousState = 1;   // FUN_006135e0
+constexpr std::int32_t kLayerInState = 5;    // FUN_006136b0
 constexpr std::int32_t kClipAtEnd = 7;       // FUN_00613770
 constexpr std::int32_t kNot = 0x400;         // FUN_006134e0
 constexpr std::int32_t kOr = 0x401;          // FUN_00613510
@@ -15,6 +16,8 @@ constexpr std::int32_t kAnd = 0x402;         // FUN_00613570
 
 constexpr std::int32_t kPlaySequence = 1;
 constexpr std::int32_t kContinueWithState = 2;
+constexpr std::int32_t kStartOnLayer = 3;  // FUN_005e3b80
+constexpr std::int32_t kPlayOnLayer = 4;   // FUN_005e3e50
 
 // Port-only bounds: the original loops without one, on data that always ends.
 constexpr int kMaxStateChain = 64;
@@ -25,7 +28,8 @@ constexpr float kTimeEpsilon = 1.0e-6f;
 
 }  // namespace
 
-AnimMachine::AnimMachine(const AnimGraph& graph) : graph_(graph) {}
+AnimMachine::AnimMachine(const AnimGraph& graph, AnimLayers* layers)
+    : graph_(graph), layers_(layers) {}
 
 bool AnimMachine::at_end() const {
     // FUN_00613770 and FUN_00643030: a clip played backwards ends at `in`.
@@ -80,6 +84,20 @@ bool AnimMachine::condition(std::int32_t id, std::uint32_t variant_tag, int dept
         const std::int32_t wanted = graph_.variants[index].value;
         const bool valid = wanted >= 0 && static_cast<std::size_t>(wanted) < graph_.states.size();
         return (valid ? wanted : -1) == state_;
+    }
+    if (id == kLayerInState) {
+        // The operands are a layer and, in the next variant, a state. A layer
+        // without a machine fails.
+        if (layers_ == nullptr || index + 1 >= graph_.variants.size()) {
+            return false;
+        }
+        const std::int32_t layer = graph_.variants[index].value;
+        if (layer < 0 || static_cast<std::size_t>(layer) >= layers_->size()) {
+            return false;
+        }
+        const std::int32_t wanted = graph_.variants[index + 1].value;
+        const bool valid = wanted >= 0 && static_cast<std::size_t>(wanted) < graph_.states.size();
+        return (valid ? wanted : -1) == layers_->state_of(layer);
     }
     // A combinator's operands are bindings: the value of its variant and, for
     // the two-operand ones, of the variant after it.
@@ -145,6 +163,10 @@ void AnimMachine::start_state(std::int32_t state) {
                     }
                     moved = true;
                     state = action.target;
+                } else if (action.kind == kStartOnLayer && layers_ != nullptr) {
+                    layers_->start_state(action.arg, action.target);
+                } else if (action.kind == kPlayOnLayer && layers_ != nullptr) {
+                    layers_->play_sequence(action.arg, action.target, action.blend_tag);
                 }
             }
         }
@@ -297,7 +319,54 @@ bool AnimMachine::advance(double seconds) {
             break;  // a clip of no length used no time: wait for the next call
         }
     }
+    // FUN_00643030: the function of the requested state; when it fails the
+    // machine goes to the state's child (none stops the layer).
+    if (requested_ >= 0 && static_cast<std::size_t>(requested_) < graph_.states.size()) {
+        const AnimState& wanted = graph_.states[static_cast<std::size_t>(requested_)];
+        if (wanted.function >= 0 && wanted.function_variant_tag != 0 &&
+            !condition(wanted.function, wanted.function_variant_tag, 0)) {
+            start_state(wanted.child);
+        }
+    }
     return sequence_ended;
+}
+
+AnimLayers::AnimLayers(const AnimGraph& graph, std::size_t count) {
+    machines_.reserve(count);
+    for (std::size_t index = 0; index < count; ++index) {
+        machines_.emplace_back(graph, this);
+    }
+}
+
+std::int32_t AnimLayers::state_of(std::int32_t layer) const {
+    if (layer < 0 || static_cast<std::size_t>(layer) >= machines_.size()) {
+        return -1;
+    }
+    return machines_[static_cast<std::size_t>(layer)].state();
+}
+
+void AnimLayers::start_state(std::int32_t layer, std::int32_t state) {
+    if (layer >= 0 && static_cast<std::size_t>(layer) < machines_.size()) {
+        machines_[static_cast<std::size_t>(layer)].start_state(state);
+    }
+}
+
+void AnimLayers::play_sequence(std::int32_t layer, std::int32_t sequence,
+                               std::uint32_t blend_tag) {
+    if (layer >= 0 && static_cast<std::size_t>(layer) < machines_.size()) {
+        machines_[static_cast<std::size_t>(layer)].play_sequence(sequence, blend_tag);
+    }
+}
+
+bool AnimLayers::advance(double seconds) {
+    bool ended = false;
+    for (std::size_t index = 0; index < machines_.size(); ++index) {
+        const bool result = machines_[index].advance(seconds);
+        if (index == 0) {
+            ended = result;
+        }
+    }
+    return ended;
 }
 
 }  // namespace bo2::engine

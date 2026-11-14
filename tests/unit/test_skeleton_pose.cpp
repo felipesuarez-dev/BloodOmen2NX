@@ -358,6 +358,30 @@ void test_blend_poses() {
     CHECK(near(bo2::engine::blend_poses(from, longer, 0.5f)[1].translation, 4.0f, 0.0f, 8.0f));
 }
 
+void test_cross_blend_poses() {
+    std::vector<BoneTransform> run(2);
+    std::vector<BoneTransform> walk(1);
+    run[0].translation = {10.0f, 0.0f, 0.0f};
+    run[0].rotation = {1.0f, 0.0f, -2.0f};
+    run[1].translation = {0.0f, 0.0f, 8.0f};
+    walk[0].translation = {2.0f, 4.0f, 0.0f};
+    walk[0].rotation = {0.0f, 3.0f, 2.0f};
+    walk[0].scale = {3.0f, 1.0f, 1.0f};
+    // FUN_005d4300: every component is the weighted sum, the angles included.
+    std::vector<BoneTransform> pose = bo2::engine::cross_blend_poses(run, 0.75f, walk, 0.25f);
+    CHECK(pose.size() == 2 && !pose[0].has_orientation);
+    CHECK(near(pose[0].translation, 8.0f, 1.0f, 0.0f));
+    CHECK(near(pose[0].rotation, 0.75f, 0.75f, -1.0f));
+    CHECK(near(pose[0].scale, 1.5f, 1.0f, 1.0f));
+    // A bone the second pose lacks only gets the first input's share.
+    CHECK(near(pose[1].translation, 0.0f, 0.0f, 6.0f) && near(pose[1].scale, 0.75f, 0.75f, 0.75f));
+    // An input below 1e-4 is left out; a weight of 1 returns the pose.
+    pose = bo2::engine::cross_blend_poses(run, 1.0f, walk, 0.00005f);
+    CHECK(near(pose[0].translation, 10.0f, 0.0f, 0.0f, 1.0e-7f));
+    CHECK(near(pose[0].rotation, 1.0f, 0.0f, -2.0f, 1.0e-7f));
+    CHECK(near(pose[0].scale, 1.0f, 1.0f, 1.0f, 1.0e-7f));
+}
+
 void test_loop_frame() {
     AnimReel reel = reel_of({}, 25);  // 24 frame steps: 0.8 s
     CHECK(bo2::engine::loop_frame(reel, 0.0) == 0.0f);
@@ -373,6 +397,7 @@ void test_loop_frame() {
 int main() {
     test_actor_is_posed_and_placed();
     test_blend_poses();
+    test_cross_blend_poses();
     test_loop_frame();
     test_bind_uses_the_bone_id();
     test_missing_channels_give_the_rest_pose();

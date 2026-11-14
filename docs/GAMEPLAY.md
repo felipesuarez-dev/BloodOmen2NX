@@ -269,8 +269,12 @@ Open:
 - What is drawn: `KainActor` (`src/game/kain_actor.cpp`) skins the model with
   the reel of the layer 0 clip at the machine's reel time, and while a clip
   blends in it goes from the pose drawn last to the clip's first frame
-  (`FORMATS/models.md`, Pose blend). The transition filters and the walk/run
-  cross blend of layers 1 and 2 are not ported.
+  (`FORMATS/models.md`, Pose blend). In the run the pose is the cross blend
+  of the run and the walk clips by the stick magnitude
+  (`FORMATS/animatio.md`, Kain's run state); with a keyboard the stick is
+  full and the walk has no weight. The transition filters, the lean of layer
+  3 and the layer masks are not ported, and no capture has a partial stick to
+  compare the mix against.
 
 ## Movement collision (BO2NX-72, decoded live)
 

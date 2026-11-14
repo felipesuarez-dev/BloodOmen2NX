@@ -109,7 +109,9 @@ std::vector<AnimState> read_states(Cursor& in, std::vector<std::uint32_t>& name_
                 action = read_action(in);
             }
         }
-        in.skip_ints(3);  // variant, factory, child
+        state.function_variant_tag = static_cast<std::uint32_t>(in.i32());
+        state.function = in.i32();
+        state.child = in.i32();
         state.blend_tag = static_cast<std::uint32_t>(in.i32());
         in.i32();  // object
         name_tags.push_back(static_cast<std::uint32_t>(in.i32()));

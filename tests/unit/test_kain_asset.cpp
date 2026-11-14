@@ -255,6 +255,18 @@ void check_kain_actor(const std::string& path, const bo2::game::KainTuning& tuni
         actor.pose({0.0f, 0.0f, 0.0f}, 0.0f, positions, normals);
     }
     CHECK(farthest(run_start) > 5.0f);
+    // Half stick: the run and the walk clips are summed by the stick, so the
+    // pose is neither the full run nor what it was a moment ago.
+    bo2::game::PlayerInput half;
+    half.move_y = 0.5f;
+    const std::vector<Vec3> full_run = positions;
+    actor.step(half, ground, 0.0);
+    actor.pose({0.0f, 0.0f, 0.0f}, 0.0f, positions, normals);
+    CHECK(actor.clip_name() == "kain/run");
+    CHECK(farthest(full_run) > 1.0f);
+    actor.step(forward, ground, 0.0);
+    actor.pose({0.0f, 0.0f, 0.0f}, 0.0f, positions, normals);
+    CHECK(farthest(full_run) < 1.0e-3f);  // full stick again: the run alone
     // A jump: the takeoff pose, the rising pose after the timer, the falling pose.
     actor.step(forward, rising, 0.02);
     actor.pose({0.0f, 0.0f, 0.0f}, 0.0f, positions, normals);

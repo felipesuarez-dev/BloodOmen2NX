@@ -57,6 +57,16 @@ std::vector<BoneTransform> sample_pose(const ModelSkeleton& skeleton, const Anim
 std::vector<BoneTransform> blend_poses(const std::vector<BoneTransform>& from,
                                        const std::vector<BoneTransform>& to, float factor);
 
+// The pose of a cross blend layer (FUN_005d4300): the sum of its inputs, each
+// multiplied by its weight; an input below a weight of 1e-4 is left out. The
+// translation, the three angles and the scale are summed as they are, so the
+// inputs must not carry quaternions. The result has one entry per bone of
+// `first`; a bone `second` lacks counts as zero there.
+std::vector<BoneTransform> cross_blend_poses(const std::vector<BoneTransform>& first,
+                                             float first_weight,
+                                             const std::vector<BoneTransform>& second,
+                                             float second_weight);
+
 // The inverse scale FUN_00637710 stores for a bone's children: 1 for a scale
 // of exactly 1, 1 / s from 0.01 up and 100 below that.
 Vec3 inverse_bone_scale(const Vec3& scale);

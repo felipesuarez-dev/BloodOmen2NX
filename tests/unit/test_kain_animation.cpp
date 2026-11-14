@@ -108,6 +108,17 @@ void test_run_plays_at_the_run_rate() {
     // FUN_00445ba0 replaces the node speed 1.5 by 1.15: 0.2 s of game time.
     CHECK(std::fabs(animation.machine().rate() - 1.15f) < 1.0e-6f);
     CHECK(std::fabs(animation.machine().time() - 0.2f * 1.15f) < 1.0e-3f);
+    CHECK(animation.run_weight() == 1.0f);
+    // Half stick: the weight of the run is the stick magnitude and the run
+    // layer plays at (0.5 s + 0.5) of the run rate, the walk layer at (s + 1).
+    animation.step(stick(0.5f), on_ground(), kTick);
+    CHECK(std::fabs(animation.run_weight() - 0.5f) < 1.0e-6f);
+    CHECK(std::fabs(animation.machine().rate() - 0.75f * 1.15f) < 1.0e-6f);
+    CHECK(std::fabs(animation.layers().layer(1).rate() - 1.5f * 1.15f) < 1.0e-6f);
+    // A diagonal stick is clamped to 1. This graph has no layer states, so the
+    // cross blend is off.
+    animation.step(stick(1.0f, 1.0f), on_ground(), kTick);
+    CHECK(animation.run_weight() == 1.0f && !animation.cross_blend());
 }
 
 void test_jump_and_landing() {

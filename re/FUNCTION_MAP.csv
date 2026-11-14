@@ -1223,7 +1223,7 @@ address,name,subsystem,status,notes
 00445800,FUN_00445800,unknown,todo,ghidra
 004458a0,FUN_004458a0,unknown,todo,ghidra
 004458d0,FUN_004458d0,unknown,todo,ghidra
-00445ba0,FUN_00445ba0,player,wip,src/game/player.cpp: partial-stick run/walk blend ported; src/game/kain_animation.cpp writes the run clip rate every frame; the 0.18 s start ramp and Shift speed are measured approximations
+00445ba0,FUN_00445ba0,player,wip,src/game/player.cpp: partial-stick run/walk blend ported; src/game/kain_animation.cpp writes the cross blend weight and the rates of layers 0 and 1 every frame; the 0.18 s start ramp and Shift speed are measured approximations
 00445d10,FUN_00445d10,unknown,todo,ghidra
 00445db0,FUN_00445db0,unknown,todo,ghidra
 00445e00,FUN_00445e00,unknown,todo,ghidra
@@ -7892,12 +7892,12 @@ address,name,subsystem,status,notes
 005d4250,FUN_005d4250,unknown,todo,ghidra
 005d4290,FUN_005d4290,unknown,todo,ghidra
 005d42b0,FUN_005d42b0,unknown,todo,ghidra
-005d4300,FUN_005d4300,unknown,todo,ghidra
+005d4300,FUN_005d4300,animation,wip,src/engine/skeleton_pose.cpp: cross_blend_poses sums the translation and angles and scale of two inputs by their weights with the 1e-4 minimum; the 16 input slots are not kept; test_cross_blend_poses in tests/unit/test_skeleton_pose.cpp
 005d44f0,FUN_005d44f0,unknown,todo,ghidra
 005d4670,FUN_005d4670,unknown,todo,ghidra
 005d4850,FUN_005d4850,unknown,todo,ghidra
 005d4870,FUN_005d4870,unknown,todo,ghidra
-005d4880,FUN_005d4880,unknown,todo,ghidra
+005d4880,FUN_005d4880,animation,wip,src/game/kain_animation.cpp: the weight of the run input is kept as run_weight; the weight table of the cross blend entity is not ported
 005d48c0,FUN_005d48c0,unknown,todo,ghidra
 005d4950,FUN_005d4950,unknown,todo,ghidra
 005d4b00,FUN_005d4b00,unknown,todo,ghidra
@@ -8214,10 +8214,10 @@ address,name,subsystem,status,notes
 005e3930,FUN_005e3930,unknown,todo,ghidra
 005e3960,FUN_005e3960,unknown,todo,ghidra
 005e3aa0,FUN_005e3aa0,unknown,todo,ghidra
-005e3b80,FUN_005e3b80,unknown,todo,ghidra
+005e3b80,FUN_005e3b80,animation,wip,src/engine/anim_machine.cpp: AnimLayers::start_state starts a state on a layer; the machines exist from the start instead of being created on demand; test_layers in tests/unit/test_anim_machine.cpp
 005e3bf0,FUN_005e3bf0,unknown,todo,ghidra
 005e3c80,FUN_005e3c80,unknown,todo,ghidra
-005e3e50,FUN_005e3e50,unknown,todo,ghidra
+005e3e50,FUN_005e3e50,animation,wip,src/engine/anim_machine.cpp: AnimLayers::play_sequence plays a sequence on a layer; the state reset before it is not ported
 005e3eb2,FUN_005e3eb2,unknown,todo,ghidra
 005e43e0,FUN_005e43e0,animation,wip,src/engine/skeleton_pose.cpp: bone_matrices multiplies the local matrix by the parent's with the parentless bone at identity; the per-bone cache and the LOD collapse and the entity matrix are not ported
 005e49b0,FUN_005e49b0,unknown,todo,ghidra
@@ -9938,11 +9938,11 @@ address,name,subsystem,status,notes
 006429b0,FUN_006429b0,unknown,todo,ghidra
 00642a80,FUN_00642a80,unknown,todo,ghidra
 00642bc0,FUN_00642bc0,unknown,todo,ghidra
-00642c00,FUN_00642c00,animation,wip,src/engine/anim_machine.cpp: AnimMachine::start_state runs the first true transition with its play-sequence and continue-with-state actions on one layer; the other layers (kinds 3 and 4) and the layer entity (5) and the callbacks (6) are not ported
+00642c00,FUN_00642c00,animation,wip,src/engine/anim_machine.cpp: AnimMachine::start_state runs the first true transition with its play-sequence and continue-with-state actions and the actions on other layers (kinds 1 to 4); the layer entity (5) and the callbacks (6) are not ported
 00642e30,FUN_00642e30,unknown,todo,ghidra
 00642e50,FUN_00642e50,unknown,todo,ghidra
 00642ea0,FUN_00642ea0,unknown,todo,ghidra
-00643030,FUN_00643030,animation,wip,src/engine/anim_machine.cpp: AnimMachine::advance restarts the requested state when the sequence has finished and reports the finish; the state function with its child state and the layer entity are not ported
+00643030,FUN_00643030,animation,wip,src/engine/anim_machine.cpp: AnimMachine::advance restarts the requested state when the sequence has finished and reports the finish and runs the state function with its child state; the layer entity is not ported
 00643170,FUN_00643170,unknown,todo,ghidra
 006431b0,FUN_006431b0,unknown,todo,ghidra
 00643200,FUN_00643200,unknown,todo,ghidra

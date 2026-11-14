@@ -79,7 +79,7 @@ The original is used as a reference, not shipped.
 | Levels completable (campaign chapters) | 30% | 0 / 11 | 0.00% |
 | Platform features | 10% | 10 / 13 + 1 partial | 80.77% |
 
-Function map: 35,523 rows: 24 translated, 70 in progress, 16,827 to do, 18,602 external (not game code).
+Function map: 35,523 rows: 24 translated, 74 in progress, 16,823 to do, 18,602 external (not game code).
 
 The chapter list is in [`docs/LEVELS.md`](docs/LEVELS.md). Chapter flags and platform features are in [`tools/gen/progress_data.py`](tools/gen/progress_data.py).
 <!-- progress:end -->
@@ -116,7 +116,7 @@ Source of truth: [`STATE.md`](STATE.md) and [`ROADMAP.md`](ROADMAP.md).
 |---|---|
 | Chapters | None is completable; there is no level flow, no menus and no front end |
 | Gameplay systems | Combat, enemies and AI, dark gifts, weapons and inventory, scripting and triggers are not translated. Glide, ledge falls and the run start phase are pending |
-| Animation and collision | Skeleton evaluation, skinning and the state machine of the animation graph (`animatio`) are ported for one layer. The pose blend between clips is ported too, without the transition filters. The other layers (the walk/run blend and the lean), the clip events, combat mode and the attacks are missing. Collision is ported: the `collmodc` decodes (points, packed triangles, spheres and faces), `CollisionWorld` uses the exact hull and the collision manager sweeps Kain's body sphere. The W run in `sl01` slides at 162 u/s on model 57's chamfer and stops at x = 326.38, y = 44.18 (oracle: 326.35 / 44.14) |
+| Animation and collision | Skeleton evaluation, skinning and the state machine of the animation graph (`animatio`) are ported for one layer. The pose blend between clips, without the transition filters, and the layers of the run with the walk/run blend by the stick are ported too. The lean on a turn, the layer masks, the clip events, combat mode and the attacks are missing. Collision is ported: the `collmodc` decodes (points, packed triangles, spheres and faces), `CollisionWorld` uses the exact hull and the collision manager sweeps Kain's body sphere. The W run in `sl01` slides at 162 u/s on model 57's chamfer and stops at x = 326.38, y = 44.18 (oracle: 326.35 / 44.14) |
 | Lighting and materials | The `.slm` palette is a shadow map; at the `sl01` spawn the world error is 8.69/255. Kain, the HUD, the green `bo2cinematic001` marker and the exact palette texture format remain; fog is disabled in `sl01` |
 | Audio events and video | The `sound` and `strmfile` event table is not wired to gameplay; there is no Bink playback |
 | Switch | The libnx and deko3d backend has not started |

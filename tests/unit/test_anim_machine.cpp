@@ -235,6 +235,61 @@ void test_conditions() {
     CHECK(fourth.state() == 4 && fourth.clip() == -1);
 }
 
+void test_layers() {
+    using bo2::engine::AnimLayers;
+    AnimGraph graph = ground_graph();
+    // Variants 7 and 8: "layer 0", "state 1". Binding 2: condition 5 on them.
+    graph.variants.push_back({2, 0});
+    graph.variants.push_back({2, 1});
+    graph.bindings.push_back({tag(7), 5});
+    graph.variants.push_back({8, static_cast<std::int32_t>(tag(2))});  // variant 9: that binding
+    // State 4 lives on layer 1 while layer 0 is in state 1. A state function is
+    // a condition id with one operand, so "layer 0 is in state 1" is written
+    // here as NOT(NOT(binding 2)).
+    graph.bindings.push_back({tag(9), 0x400});                          // binding 3: NOT(binding 2)
+    graph.variants.push_back({8, static_cast<std::int32_t>(tag(3))});  // variant 10: binding 3
+    AnimState follower;
+    follower.name = "st_follower";
+    follower.function = 0x400;  // NOT(NOT(layer 0 in state 1))
+    follower.function_variant_tag = tag(10);
+    follower.child = -1;
+    follower.transitions = {when(5, tag(7), {play(0)}), when(0, 0, {play(3)})};
+    graph.states.push_back(follower);
+    // State 1 (run) also starts the follower on layer 1 and a sequence on layer 2.
+    AnimAction start_follower;
+    start_follower.kind = 3;
+    start_follower.target = 4;
+    start_follower.arg = 1;
+    AnimAction play_other;
+    play_other.kind = 4;
+    play_other.target = 0;
+    play_other.arg = 2;
+    graph.states[1].transitions[1].actions.push_back(start_follower);
+    graph.states[1].transitions[1].actions.push_back(play_other);
+
+    AnimLayers layers(graph, 4);
+    CHECK(layers.size() == 4 && layers.state_of(1) == -1 && layers.state_of(9) == -1);
+    layers.start_state(0, 2);  // "ready to run": nothing on the other layers yet
+    CHECK(layers.state_of(0) == 2 && layers.state_of(1) == -1);
+    layers.start_state(0, 1);  // run, from "ready to run": plays and starts the others
+    CHECK(layers.state_of(0) == 1);
+    // Layer 0 still reported state 2 while its actions ran, so the follower's
+    // first transition (layer 0 in state 1) failed and it took the fallback.
+    CHECK(layers.state_of(1) == 4 && layers.layer(1).sequence() == 3);
+    CHECK(layers.layer(2).sequence() == 0 && layers.layer(2).clip() == 0);
+    layers.advance(0.1);
+    CHECK(layers.state_of(1) == 4);  // the function holds: layer 0 is in state 1
+    // Layer 0 leaves the run: the follower's function fails on the next
+    // advance and its child, none, stops the layer.
+    layers.start_state(0, 0);
+    CHECK(layers.state_of(1) == 4);
+    layers.advance(0.02);
+    CHECK(layers.state_of(1) == -1 && layers.layer(1).clip() == -1);
+    // A layer out of range is ignored.
+    layers.start_state(7, 0);
+    layers.play_sequence(-1, 0, 0);
+}
+
 // Asset-gated: Kain's graph. The numbers are the ones the Wine oracle shows.
 void test_kain_states() {
     const char* root = std::getenv("BO2NX_ASSETS_DIR");
@@ -307,6 +362,28 @@ void test_kain_states() {
     CHECK(reel(machine) == "kain/run_landing");
     CHECK(!machine.advance(0.30));
     CHECK(machine.advance(0.02));
+
+    // The layers of the run: st_rdy2run starts st_walkblend on layer 1,
+    // st_moveblend on layer 2 and st_movelean on layer 3; they last while
+    // layer 0 is in st_run or st_rdy2run.
+    bo2::engine::AnimLayers layers(graph);
+    layers.start_state(0, 0);
+    CHECK(layers.state_of(1) == -1 && layers.state_of(2) == -1);
+    layers.start_state(0, 1);
+    CHECK(layers.state_of(0) == 4);
+    CHECK(layers.state_of(1) == graph.find_state("st_walkblend"));
+    CHECK(layers.state_of(2) == graph.find_state("st_moveblend"));
+    CHECK(layers.state_of(3) == graph.find_state("st_movelean"));
+    CHECK(reel(layers.layer(1)) == "kain/walk");
+    CHECK(layers.layer(1).blending());  // sq_rdy2walk: frame 0 behind a blend
+    layers.advance(0.25);
+    CHECK(layers.state_of(0) == 1 && layers.state_of(1) == graph.find_state("st_walkblend"));
+    const float walk_time = layers.layer(1).time();
+    layers.advance(0.1);
+    CHECK(reel(layers.layer(1)) == "kain/walk" && layers.layer(1).time() > walk_time);
+    layers.start_state(0, 0);  // st_run2rdy
+    layers.advance(0.02);
+    CHECK(layers.state_of(1) == -1 && layers.state_of(2) == -1 && layers.state_of(3) == -1);
 }
 
 }  // namespace
@@ -318,6 +395,7 @@ int main() {
         test_clip_runs_at_its_rate_and_loops();
         test_sequence_chain_and_finish();
         test_conditions();
+        test_layers();
         test_kain_states();
     } catch (const std::exception& error) {
         std::cerr << "anim machine test: " << error.what() << '\n';

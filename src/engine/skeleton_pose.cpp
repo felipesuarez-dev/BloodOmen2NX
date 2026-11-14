@@ -275,6 +275,30 @@ std::vector<BoneTransform> blend_poses(const std::vector<BoneTransform>& from,
     return result;
 }
 
+std::vector<BoneTransform> cross_blend_poses(const std::vector<BoneTransform>& first,
+                                             float first_weight,
+                                             const std::vector<BoneTransform>& second,
+                                             float second_weight) {
+    constexpr float kMinimumWeight = 1.0e-4f;  // float at 0x86664c
+    std::vector<BoneTransform> result(first.size());
+    for (BoneTransform& transform : result) {
+        transform.scale = {0.0f, 0.0f, 0.0f};
+    }
+    const auto add = [&](const std::vector<BoneTransform>& pose, float weight) {
+        if (weight < kMinimumWeight) {
+            return;
+        }
+        for (std::size_t index = 0; index < result.size() && index < pose.size(); ++index) {
+            result[index].translation = result[index].translation + pose[index].translation * weight;
+            result[index].rotation = result[index].rotation + pose[index].rotation * weight;
+            result[index].scale = result[index].scale + pose[index].scale * weight;
+        }
+    };
+    add(first, first_weight);
+    add(second, second_weight);
+    return result;
+}
+
 Mat4 local_matrix(const SkeletonBone& bone, const BoneTransform& transform,
                   const Vec3* parent_inverse_scale) {
     // Row order of FUN_00637710, applied right to left on a column vector.
