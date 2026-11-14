@@ -272,6 +272,10 @@ struct LevelGeometry {
     std::vector<Image> model_lightmaps;
     std::vector<LevelTriangle> triangles;
     std::vector<MaterialLayer> materials;
+    // Textures of each material in the order of its `texture` record, as
+    // indices of texture_names; indexed like LevelTriangle::material. Empty
+    // for a material without a texture.
+    std::vector<std::vector<std::int32_t>> material_textures;
     std::vector<CellAttributeTable> level_attributes;
     std::vector<ModelRange> model_ranges;
     std::vector<LevelCollision> collisions;

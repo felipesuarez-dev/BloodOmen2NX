@@ -685,7 +685,8 @@ void read_cell_tail(const common::Reader& reader, std::size_t start, std::size_t
 
 std::vector<std::int32_t> read_material_textures(
     const common::Reader& reader, const Chunk* chunk, const std::vector<std::uint16_t>& symbols,
-    const std::vector<std::string>& names, LevelGeometry& geometry) {
+    const std::vector<std::string>& names, std::uint32_t material_base,
+    LevelGeometry& geometry) {
     std::vector<std::int32_t> result;
     if (chunk == nullptr || chunk->data_size < 8) {
         return result;
@@ -695,17 +696,40 @@ std::vector<std::int32_t> read_material_textures(
     if (count == 0 || count > 4096 || start > 65536) {
         return result;
     }
-    const std::size_t record_size = (chunk->data_size - 8) / count;
-    if (record_size < 4) {
-        return result;
-    }
     result.assign(static_cast<std::size_t>(start) + count, -1);
+    const std::size_t first = static_cast<std::size_t>(material_base) + start;
+    if (geometry.material_textures.size() < first + count) {
+        geometry.material_textures.resize(first + count);
+    }
+    if (geometry.material_textures.size() < geometry.materials.size()) {
+        geometry.material_textures.resize(geometry.materials.size());
+    }
+    const std::size_t end = chunk->data_offset + chunk->data_size;
+    std::size_t position = chunk->data_offset + 8;
     for (std::uint32_t index = 0; index < count; ++index) {
-        const std::size_t record = chunk->data_offset + 8 + static_cast<std::size_t>(index) * record_size;
-        const std::uint32_t relative =
-            (record_size >= 6) ? reader.u16(record + 4) : reader.u32(record);
-        result[static_cast<std::size_t>(start) + index] =
-            add_texture_name(geometry, resolve_symbol_name(relative, symbols, names));
+        if (position + 4 > end) {
+            throw common::ParseError("texture record is truncated");
+        }
+        const std::uint32_t textures = reader.u32(position);
+        const std::size_t record_size =
+            4 + static_cast<std::size_t>(textures) * 2 + ((textures & 1U) != 0U ? 2 : 0);
+        if (record_size > end - position) {
+            throw common::ParseError("texture record overruns its chunk");
+        }
+        std::vector<std::int32_t>& list = geometry.material_textures[first + index];
+        for (std::uint32_t texture = 0; texture < textures; ++texture) {
+            const std::uint16_t relative =
+                reader.u16(position + 4 + static_cast<std::size_t>(texture) * 2);
+            list.push_back(
+                add_texture_name(geometry, resolve_symbol_name(relative, symbols, names)));
+        }
+        if (!list.empty()) {
+            result[static_cast<std::size_t>(start) + index] = list.front();
+        }
+        position += record_size;
+    }
+    if (position != end) {
+        throw common::ParseError("texture chunk has a trailer");
     }
     return result;
 }
@@ -811,6 +835,9 @@ void parse_prims(const common::Reader& reader, const Chunk& chunk, std::uint32_t
             const std::uint32_t global_material = material_base + material;
             if (global_material >= geometry.materials.size()) {
                 geometry.materials.resize(static_cast<std::size_t>(global_material) + 1);
+                if (geometry.material_textures.size() < geometry.materials.size()) {
+                    geometry.material_textures.resize(geometry.materials.size());
+                }
             }
             geometry.triangles.push_back({vertex_base + a, vertex_base + b, vertex_base + c,
                                           global_material, model, 0xFFFFFFFFU, texture, -1});
@@ -914,8 +941,8 @@ void parse_model(const common::Reader& reader, const Chunk& rmd, std::uint32_t m
     const std::vector<MaterialLayer> material_layers = read_material_layers(reader, chunks);
     geometry.materials.insert(geometry.materials.end(), material_layers.begin(),
                               material_layers.end());
-    const std::vector<std::int32_t> material_texture =
-        read_material_textures(reader, find_chunk(chunks, "texture"), symbols, names, geometry);
+    const std::vector<std::int32_t> material_texture = read_material_textures(
+        reader, find_chunk(chunks, "texture"), symbols, names, material_base, geometry);
     parse_prims(reader, *prims, base, static_cast<std::uint32_t>(vertices.size()), model,
                 material_base, material_texture, geometry);
     // The skin weights and joint indices live inside the rmd on character

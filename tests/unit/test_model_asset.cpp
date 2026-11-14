@@ -21,6 +21,90 @@ int failures = 0;
 
 }  // namespace
 
+// The `texture` chunk of the HUD and of sl01: every record is read as it is
+// and the whole list of each material is kept.
+void test_texture_lists_of_the_game_data(const std::filesystem::path& root) {
+    const std::filesystem::path code = root / "media/gogames/bo2/code.big";
+    if (!std::filesystem::exists(code)) {
+        return;
+    }
+    const bo2::engine::BigArchive ui = bo2::engine::BigArchive::load(code.string());
+    const bo2::engine::BigEntry* hud = nullptr;
+    for (const bo2::engine::BigEntry& entry : ui.entries()) {
+        if (entry.type == "cellgrup" && entry.name == "ui/hud") {
+            hud = &entry;
+            break;
+        }
+    }
+    CHECK(hud != nullptr);
+    if (hud == nullptr) {
+        return;
+    }
+    const bo2::engine::LevelGeometry scene =
+        bo2::engine::parse_cell_group(ui.extract(*hud), hud->symbols, ui.names());
+    std::size_t multiple = 0;
+    std::size_t total = 0;
+    const std::vector<std::int32_t>* icon = nullptr;
+    for (const std::vector<std::int32_t>& list : scene.material_textures) {
+        if (list.size() > 1) {
+            ++multiple;
+        }
+        total += list.size();
+        if (!list.empty() && list.front() >= 0 &&
+            static_cast<std::size_t>(list.front()) < scene.texture_names.size() &&
+            scene.texture_names[static_cast<std::size_t>(list.front())] == "ui/hud/icon_none") {
+            icon = &list;
+        }
+    }
+    CHECK(multiple == 7);
+    CHECK(total == 646);
+    CHECK(icon != nullptr);
+    if (icon != nullptr) {
+        const std::vector<std::string> expected = {
+            "ui/hud/icon_none",    "ui/hud/icon_charm", "ui/hud/icon_jump",
+            "ui/hud/icon_speed",   "ui/hud/icon_telekinesis", "ui/hud/icon_stealth",
+            "ui/hud/icon_rupture", "ui/hud/icon_fury", "ui/hud/icon_slord"};
+        CHECK(icon->size() == expected.size());
+        for (std::size_t index = 0; index < expected.size() && index < icon->size(); ++index) {
+            const std::int32_t texture = (*icon)[index];
+            CHECK(texture >= 0);
+            if (texture >= 0) {
+                CHECK(scene.texture_names[static_cast<std::size_t>(texture)] == expected[index]);
+            }
+        }
+    }
+
+    const std::filesystem::path level =
+        root / "media/gogames/bo2/resources/levels/slums/sl01.big";
+    if (!std::filesystem::exists(level)) {
+        return;
+    }
+    const bo2::engine::BigArchive archive = bo2::engine::BigArchive::load(level.string());
+    const bo2::engine::BigEntry* cell = nullptr;
+    for (const bo2::engine::BigEntry& entry : archive.entries()) {
+        if (entry.type == "cellgrup" && entry.name == "slums/sl01") {
+            cell = &entry;
+            break;
+        }
+    }
+    CHECK(cell != nullptr);
+    if (cell == nullptr) {
+        return;
+    }
+    const bo2::engine::LevelGeometry geometry =
+        bo2::engine::parse_cell_group(archive.extract(*cell), cell->symbols, archive.names());
+    multiple = 0;
+    total = 0;
+    for (const std::vector<std::int32_t>& list : geometry.material_textures) {
+        if (list.size() > 1) {
+            ++multiple;
+        }
+        total += list.size();
+    }
+    CHECK(multiple == 1);
+    CHECK(total == 1112);
+}
+
 int main() {
     const char* root = std::getenv("BO2NX_ASSETS_DIR");
     if (root == nullptr) {
@@ -96,6 +180,7 @@ int main() {
                 }
             }
         }
+        test_texture_lists_of_the_game_data(root);
     } catch (const std::exception& error) {
         std::cerr << "model asset test: " << error.what() << '\n';
         return 1;

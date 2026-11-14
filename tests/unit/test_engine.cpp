@@ -250,8 +250,9 @@ void append_cell_bsp(std::vector<std::uint8_t>& out) {
     put16(out, 3);
 }
 
-std::vector<std::uint8_t> build_cell_group(bool with_instances = false,
-                                           bool with_collision = false) {
+std::vector<std::uint8_t> build_cell_group(
+    bool with_instances = false, bool with_collision = false,
+    const std::vector<std::uint8_t>& texture_payload = {}) {
     std::vector<std::uint8_t> positions;
     put32(positions, 4);
     for (const auto& point : std::vector<std::array<float, 3>>{{0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0}}) {
@@ -312,11 +313,15 @@ std::vector<std::uint8_t> build_cell_group(bool with_instances = false,
         put_float(lightmap_uvs, uv[1]);
     }
     std::vector<std::uint8_t> material_texture;
-    put32(material_texture, 0);
-    put32(material_texture, 1);
-    put32(material_texture, 1);
-    put16(material_texture, 0);
-    put16(material_texture, 0xFFFF);
+    if (!texture_payload.empty()) {
+        material_texture = texture_payload;
+    } else {
+        put32(material_texture, 0);
+        put32(material_texture, 1);
+        put32(material_texture, 1);
+        put16(material_texture, 0);
+        put16(material_texture, 0xFFFF);
+    }
 
     std::vector<std::uint8_t> layer_colors;
     put32(layer_colors, 0);
@@ -999,6 +1004,54 @@ void test_cell_group() {
     CHECK(textured.triangles[0].texture == 0);
 }
 
+// The `texture` chunk holds one variable-length record per material: the
+// count, that many symbols and a 0xffff pad when the count is odd.
+void test_material_texture_lists() {
+    std::vector<std::uint8_t> textures;
+    put32(textures, 0);
+    put32(textures, 2);
+    put32(textures, 3);
+    put16(textures, 0);
+    put16(textures, 1);
+    put16(textures, 2);
+    put16(textures, 0xFFFF);
+    put32(textures, 1);
+    put16(textures, 3);
+    put16(textures, 0xFFFF);
+
+    const std::vector<std::uint16_t> symbols = {100, 101, 102, 103};
+    std::vector<std::string> names(104);
+    names[100] = "synthetic/a";
+    names[101] = "synthetic/b";
+    names[102] = "synthetic/c";
+    names[103] = "synthetic/d";
+    const std::vector<std::uint8_t> data = build_cell_group(false, false, textures);
+    const bo2::engine::LevelGeometry geometry =
+        bo2::engine::parse_cell_group(data, symbols, names);
+    CHECK(geometry.texture_names.size() == 4);
+    CHECK(geometry.texture_names[0] == "synthetic/a");
+    CHECK(geometry.texture_names[1] == "synthetic/b");
+    CHECK(geometry.texture_names[2] == "synthetic/c");
+    CHECK(geometry.texture_names[3] == "synthetic/d");
+    CHECK(geometry.material_textures.size() == 2);
+    CHECK(geometry.material_textures[0].size() == 3);
+    CHECK(geometry.material_textures[0][0] == 0);
+    CHECK(geometry.material_textures[0][1] == 1);
+    CHECK(geometry.material_textures[0][2] == 2);
+    CHECK(geometry.material_textures[1].size() == 1);
+    CHECK(geometry.material_textures[1][0] == 3);
+    CHECK(geometry.triangles.size() == 3);
+    CHECK(geometry.triangles[0].texture == 0);
+    CHECK(geometry.triangles[1].texture == 0);
+    CHECK(geometry.triangles[2].texture == 3);
+
+    std::vector<std::uint8_t> trailing = textures;
+    trailing.push_back(0);
+    CHECK(throws([&] {
+        bo2::engine::parse_cell_group(build_cell_group(false, false, trailing), symbols, names);
+    }));
+}
+
 // The modlskel record is 104 bytes (FUN_0067bdd0), not the old guessed
 // count + pairs + 96 bytes layout.
 void test_skeleton_bones() {
@@ -1056,6 +1109,7 @@ int main() {
     test_dds();
     test_math();
     test_cell_group();
+    test_material_texture_lists();
     test_skeleton_bones();
     test_collision_chunk();
     test_cell_animations();

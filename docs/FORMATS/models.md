@@ -112,8 +112,9 @@ texture count: `code.big` 0: 11, 1: 42, 6: 1, 8: 14, 9: 2, 147: 4;
 `sl01.big` 0: 8, 1: 1,125, 3: 7, 12: 2, 33: 1; `kain.big` 0: 1, 1: 28, 6: 1,
 147: 1.
 
-The host reads one symbol per material and takes every record of a chunk to
-have the same size, which holds only when every material has one texture.
+The host reads the records as they are and keeps the whole list of each
+material in `LevelGeometry::material_textures`, indexed like the material of
+a triangle; a surface draws the first texture of its list.
 
 ### `diffuse`
 
