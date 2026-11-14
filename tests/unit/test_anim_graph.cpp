@@ -115,7 +115,7 @@ Bytes make_graph(std::int32_t version = 0, std::size_t tail = 0) {
     w.f32(0.25f);
     w.f32(1.0f);
     w.f32(1.7f);
-    for (std::int32_t value : {0, 0, 0, 0, 0, tag(5)}) {
+    for (std::int32_t value : {0, 0, tag(0), 0, 0, tag(5)}) {
         w.i32(value);
     }
     w.i32(2);  // second reel table: a pair of references, then an empty slot
@@ -160,7 +160,7 @@ Bytes make_graph(std::int32_t version = 0, std::size_t tail = 0) {
     w.i32(tag(1));
     w.i32(2);  // blends
     w.f32(0.2f);
-    w.i32(7);
+    w.i32(tag(0));
     w.i32(1);
     w.i32(0);
     w.f32(0.5f);
@@ -236,6 +236,17 @@ void test_states_and_tables() {
     CHECK(graph.blend_seconds(static_cast<std::uint32_t>(tag(0))) == 0.2f);
     CHECK(graph.blend_seconds(static_cast<std::uint32_t>(tag(1))) == 0.5f);
     CHECK(graph.blend_seconds(0) == 0.0f && graph.blend_seconds(99) == 0.0f);
+    // The transforms: translation, rotation and scale, named by a clip node
+    // and by the second word of a blend record.
+    CHECK(graph.transforms.size() == 1);
+    CHECK(graph.transforms[0].translation.x == 0.0f && graph.transforms[0].translation.z == 2.0f);
+    CHECK(graph.transforms[0].rotation.x == 3.0f && graph.transforms[0].rotation.z == 5.0f);
+    CHECK(graph.transforms[0].scale.x == 6.0f && graph.transforms[0].scale.z == 8.0f);
+    CHECK(graph.clips[0].transform_tag == 0);
+    CHECK(graph.transform(graph.clips[1].transform_tag) == &graph.transforms[0]);
+    CHECK(graph.blend_transform(static_cast<std::uint32_t>(tag(0))) == &graph.transforms[0]);
+    CHECK(graph.blend_transform(static_cast<std::uint32_t>(tag(1))) == nullptr);
+    CHECK(graph.blend_transform(0) == nullptr && graph.transform(99) == nullptr);
     CHECK(graph.variants.size() == 3);
     CHECK(graph.variants[0].type == 2 && graph.variants[0].value == 1);
     CHECK(graph.variants[2].type == 9 && graph.variants[2].value == 300);

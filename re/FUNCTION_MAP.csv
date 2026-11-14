@@ -7795,7 +7795,7 @@ address,name,subsystem,status,notes
 005ced80,FUN_005ced80,unknown,todo,ghidra
 005cedd0,FUN_005cedd0,unknown,todo,ghidra
 005cee20,FUN_005cee20,unknown,todo,ghidra
-005ceef0,FUN_005ceef0,unknown,todo,ghidra
+005ceef0,FUN_005ceef0,animation,wip,src/engine/anim_machine.cpp: AnimMachine::advance_clip gives the part of the blend transform that matches the blend time played; the blend events and the scale are not ported
 005cf180,FUN_005cf180,unknown,todo,ghidra
 005cf1d0,FUN_005cf1d0,unknown,todo,ghidra
 005cf200,FUN_005cf200,unknown,todo,ghidra
@@ -8176,7 +8176,7 @@ address,name,subsystem,status,notes
 005e1a10,FUN_005e1a10,unknown,todo,ghidra
 005e1b60,FUN_005e1b60,unknown,todo,ghidra
 005e1d80,FUN_005e1d80,animation,wip,src/engine/anim_machine.cpp: AnimMachine::start_clip starts the clock the blend time before the clip; the blend sampler and the resume flags and the root channel slots are not ported
-005e1f80,FUN_005e1f80,animation,wip,src/engine/anim_machine.cpp: AnimMachine::advance_clip moves the clock in real time during the blend and at the clip rate after it and clamps at the end; the root motion output and the events are not ported
+005e1f80,FUN_005e1f80,animation,wip,src/engine/anim_machine.cpp: AnimMachine::advance_clip moves the clock in real time during the blend and at the clip rate after it and clamps at the end and gives the root motion of blends and of clips with a transform; the root channels of the reel and the events are not ported
 005e26a0,FUN_005e26a0,unknown,todo,ghidra
 005e26c0,FUN_005e26c0,unknown,todo,ghidra
 005e2750,FUN_005e2750,unknown,todo,ghidra
@@ -8314,7 +8314,7 @@ address,name,subsystem,status,notes
 005e8550,FUN_005e8550,unknown,todo,ghidra
 005e8590,FUN_005e8590,unknown,todo,ghidra
 005e8970,FUN_005e8970,unknown,todo,ghidra
-005e8ab0,FUN_005e8ab0,unknown,todo,ghidra
+005e8ab0,FUN_005e8ab0,animation,wip,src/engine/anim_graph.cpp: AnimGraph::transforms keeps translation rotation and scale of every record; no test compares against the dump of the reader
 005e8e00,FUN_005e8e00,animation,translated,src/engine/anim_graph.cpp: an action is four ints plus a fifth for kinds 1 to 6 (AnimAction); test_states_and_tables in tests/unit/test_anim_graph.cpp
 005e8ee0,FUN_005e8ee0,animation,wip,src/engine/anim_graph.cpp: the whole version 0 stream is read and must end with the graph; masks and layer types and the symbol map and objects and transforms and event lists are read and dropped (tools/bo2fmt/animatio.py keeps them)
 005e9170,FUN_005e9170,unknown,todo,ghidra
@@ -8385,7 +8385,7 @@ address,name,subsystem,status,notes
 005eb8c0,FUN_005eb8c0,unknown,todo,ghidra
 005eb900,FUN_005eb900,unknown,todo,ghidra
 005eba10,FUN_005eba10,unknown,todo,ghidra
-005eba40,FUN_005eba40,animation,wip,src/engine/anim_graph.cpp: a blend record keeps its time in seconds; the three ints are dropped
+005eba40,FUN_005eba40,animation,wip,src/engine/anim_graph.cpp: a blend record keeps its time in seconds and its transform tag; the event list and the transition filter are dropped
 005ebb60,FUN_005ebb60,unknown,todo,ghidra
 005ebba0,FUN_005ebba0,unknown,todo,ghidra
 005ebbf0,FUN_005ebbf0,unknown,todo,ghidra
@@ -9819,7 +9819,7 @@ address,name,subsystem,status,notes
 0063ce20,FUN_0063ce20,animation,wip,src/engine/anim_reel.cpp: find_channel returns the descriptor of a key; the bisection and its forward cursor are replaced by a first-match scan which differs on the repeated keys of the 0x1000 nodes; test_find_channel in tests/unit/test_anim_reel.cpp
 0063cf70,FUN_0063cf70,unknown,todo,ghidra
 0063cfe0,FUN_0063cfe0,unknown,todo,ghidra
-0063d080,FUN_0063d080,unknown,todo,ghidra
+0063d080,FUN_0063d080,animation,wip,src/engine/anim_machine.cpp: a clip without a transform reports the reel time it played in AnimRootMotion::spans; the difference of the root channels is left to the owner of the reels
 0063d0f0,FUN_0063d0f0,unknown,todo,ghidra
 0063d150,FUN_0063d150,unknown,todo,ghidra
 0063d280,FUN_0063d280,unknown,todo,ghidra
@@ -9954,7 +9954,7 @@ address,name,subsystem,status,notes
 00643820,FUN_00643820,unknown,todo,ghidra
 00643d60,FUN_00643d60,unknown,todo,ghidra
 00643f10,FUN_00643f10,animation,wip,src/engine/anim_machine.cpp: AnimMachine::play_sequence starts the first chain link with the given blend or its own; the event flush is not ported
-00643f80,FUN_00643f80,animation,wip,src/engine/anim_machine.cpp: AnimMachine::advance moves to the next chain link or its terminator when a clip ends; the sequence clock and the events are not ported
+00643f80,FUN_00643f80,animation,wip,src/engine/anim_machine.cpp: AnimMachine::advance moves the clip once and starts the next chain link or rests on the terminator when it ends; the sequence clock and the events are not ported
 006440b0,FUN_006440b0,unknown,todo,ghidra
 006440c0,FUN_006440c0,unknown,todo,ghidra
 00644110,FUN_00644110,unknown,todo,ghidra

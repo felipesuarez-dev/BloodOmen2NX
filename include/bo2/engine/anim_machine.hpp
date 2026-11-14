@@ -20,6 +20,31 @@ class AnimLayers;
 // layer entity (kind 5), the callbacks (kind 6) and the clip events. Condition
 // ids other than 0, 1, 5, 7 and the three combinators are game functions that
 // are not decoded; they evaluate to false.
+// A stretch of reel time a clip played: [from, to] of the clip node `clip`.
+struct AnimRootSpan {
+    std::int32_t clip = -1;
+    float from = 0.0f;
+    float to = 0.0f;
+};
+
+// What the root moved by in one advance of a layer: the nine floats that
+// FUN_005e1f80 writes for the layer (translation, rotation and scale; the
+// scale is not kept).
+//   - While a clip blends in, the root gets the part of the blend's transform
+//     that matches the blend time played (FUN_005ceef0). When the blend ends
+//     inside the call, the original counts 0.001 s more of it, and the clip
+//     time played after it in the same call moves the root by nothing.
+//   - A clip whose node names a transform gives the part of it that matches
+//     the clip time played; a clip of no length gives none.
+//   - A clip without a transform moves the root by the difference of the
+//     root channels of its reel between the two clock values (FUN_0063d080).
+//     The machine holds no reels: it reports the stretch in `spans`.
+struct AnimRootMotion {
+    Vec3 translation;
+    Vec3 rotation;
+    std::vector<AnimRootSpan> spans;
+};
+
 class AnimMachine {
 public:
     // `graph` must outlive the machine; so must `layers`, when given.
@@ -31,12 +56,14 @@ public:
     void start_state(std::int32_t state);
 
     // FUN_00643030 with FUN_00643f80 and FUN_005e1f80: restarts the requested
-    // state when its sequence has finished, then moves the clip clock. Returns
-    // true when the sequence played its last clip to the end during the call
-    // (the original reports it as bit 4 of its result). The time a finished
-    // clip leaves over is spent in the same call, on the restarted state (the
-    // original hands it back to its caller).
+    // state when its sequence has finished, then moves the clock of the clip
+    // in play once. When the clip reaches its end the next clip of the chain
+    // starts, but it does not move in this call: the time the finished clip
+    // left over is dropped, as the callers of the original drop it. Returns
+    // true when the sequence played its last clip to the end during the call.
     bool advance(double seconds);
+    // The root motion of the last advance.
+    const AnimRootMotion& root_motion() const { return root_; }
 
     // FUN_00723620: replaces the rate of the clip in play (the run state
     // writes its own every frame). The next clip starts at its node speed.
@@ -82,6 +109,8 @@ private:
     float out_ = 0.0f;       // machine+0x0c
     float rate_ = 1.0f;      // machine+0x10
     float blend_ = 0.0f;     // the blend time of the clip in play
+    std::uint32_t blend_tag_ = 0;  // the blend record of the clip in play
+    AnimRootMotion root_;
     std::uint32_t starts_ = 0;
     std::uint32_t clip_starts_ = 0;
 
@@ -89,7 +118,7 @@ private:
 
     bool condition(std::int32_t id, std::uint32_t variant_tag, int depth) const;
     void start_clip(std::int32_t clip, std::uint32_t blend_tag);
-    bool advance_clip(float& seconds);
+    bool advance_clip(float seconds);
     bool at_end() const;
 };
 

@@ -1,5 +1,6 @@
 #include "bo2/engine/anim_machine.hpp"
 
+#include <cmath>
 #include <cstddef>
 
 namespace bo2::engine {
@@ -22,9 +23,9 @@ constexpr std::int32_t kPlayOnLayer = 4;   // FUN_005e3e50
 // Port-only bounds: the original loops without one, on data that always ends.
 constexpr int kMaxStateChain = 64;
 constexpr int kMaxConditionDepth = 16;
-constexpr int kMaxAdvanceSteps = 64;
-// FUN_005e1f80 drops a remainder below the float at 0x8612b0.
-constexpr float kTimeEpsilon = 1.0e-6f;
+// The float at 0x8612b0: FUN_005e1f80 adds it to the blend time played when
+// the blend ends inside the call.
+constexpr float kBlendEndSlack = 0.001f;
 
 }  // namespace
 
@@ -201,7 +202,8 @@ void AnimMachine::start_clip(std::int32_t clip, std::uint32_t blend_tag) {
         return;
     }
     const AnimClipNode& node = graph_.clips[static_cast<std::size_t>(clip)];
-    float blend = graph_.blend_seconds(blend_tag != 0 ? blend_tag : node.blend_tag);
+    blend_tag_ = blend_tag != 0 ? blend_tag : node.blend_tag;
+    float blend = graph_.blend_seconds(blend_tag_);
     if (!(blend > 0.0f)) {
         blend = 0.0f;
     }
@@ -215,15 +217,16 @@ void AnimMachine::start_clip(std::int32_t clip, std::uint32_t blend_tag) {
     time_ = rate_ < 0.0f ? boundary_ + blend : boundary_ - blend;
 }
 
-// FUN_005e1f80. Returns true when the clip reached its end; `seconds` keeps
-// what the clip did not use.
-bool AnimMachine::advance_clip(float& seconds) {
+// FUN_005e1f80: moves the clock by `seconds` and adds the root motion of that
+// move. Returns true when the clip reached its end.
+bool AnimMachine::advance_clip(float seconds) {
     const float before = time_;
     bool blended = false;
+    bool blend_ended = false;
+    float blend_stop = time_;  // the clock where the blend time played stops
     bool ended = false;
     if (rate_ == 0.0f) {
         if (boundary_ <= time_) {
-            seconds = 0.0f;
             return false;
         }
         blended = true;
@@ -231,7 +234,9 @@ bool AnimMachine::advance_clip(float& seconds) {
         if (time_ >= boundary_) {
             time_ = boundary_;
             boundary_ = in_;
+            blend_ended = true;
         }
+        blend_stop = time_;
     } else if (rate_ < 0.0f) {
         if (time_ <= boundary_) {
             time_ += rate_ * seconds;
@@ -239,10 +244,13 @@ bool AnimMachine::advance_clip(float& seconds) {
             blended = true;
             const float next = time_ - seconds;
             if (next <= boundary_) {
+                blend_stop = boundary_;
+                blend_ended = true;
                 time_ = (boundary_ - next) * rate_ + boundary_;
                 boundary_ = out_;
             } else {
                 time_ = next;
+                blend_stop = next;
             }
         }
         if (time_ <= in_) {
@@ -256,10 +264,13 @@ bool AnimMachine::advance_clip(float& seconds) {
             blended = true;
             const float next = time_ + seconds;
             if (next >= boundary_) {
+                blend_stop = boundary_;
+                blend_ended = true;
                 time_ = (next - boundary_) * rate_ + boundary_;
                 boundary_ = in_;
             } else {
                 time_ = next;
+                blend_stop = next;
             }
         }
         if (out_ <= time_) {
@@ -267,56 +278,52 @@ bool AnimMachine::advance_clip(float& seconds) {
             ended = true;
         }
     }
-    if (rate_ != 0.0f) {
-        // The time the clock used: a blend runs in real time, a clip at its rate.
-        float used = time_ - before;
-        if (!blended) {
-            used /= rate_;
-        } else if (rate_ < 0.0f) {
-            used = -used;
+    if (blended) {
+        // FUN_005ceef0 over the blend interval, whose length is the blend time.
+        const AnimTransform* motion = graph_.blend_transform(blend_tag_);
+        if (motion != nullptr && blend_ != 0.0f) {
+            const float played = (blend_ended ? blend_stop + kBlendEndSlack : blend_stop) - before;
+            const float part = played / blend_;
+            root_.translation = root_.translation + motion->translation * part;
+            root_.rotation = root_.rotation + motion->rotation * part;
         }
-        seconds -= used;
-        if (seconds < kTimeEpsilon) {
-            seconds = 0.0f;
+        return ended;
+    }
+    const AnimClipNode& node = graph_.clips[static_cast<std::size_t>(clip_)];
+    const AnimTransform* motion = graph_.transform(node.transform_tag);
+    if (motion == nullptr) {
+        if (time_ != before) {
+            root_.spans.push_back({clip_, before, time_});
         }
-    } else {
-        seconds = 0.0f;
+    } else if (out_ - in_ != 0.0f) {
+        const float part = std::fabs(time_ - before) / (out_ - in_);
+        root_.translation = root_.translation + motion->translation * part;
+        root_.rotation = root_.rotation + motion->rotation * part;
     }
     return ended;
 }
 
 bool AnimMachine::advance(double seconds) {
-    float left = static_cast<float>(seconds);
+    root_ = AnimRootMotion{};
     bool sequence_ended = false;
-    for (int step = 0; step < kMaxAdvanceSteps && left > 0.0f; ++step) {
-        if (state_ < 0 || clip_ < 0) {
-            break;
-        }
-        if (finished()) {
-            start_state(requested_);
-            if (state_ < 0 || clip_ < 0) {
-                break;
-            }
-        }
-        const float before = left;
-        if (advance_clip(left) && link_ >= 0 &&
-            static_cast<std::size_t>(link_) < graph_.chain.size() &&
-            graph_.chain[static_cast<std::size_t>(link_)].clip >= 0) {
-            // FUN_00643f80: the next link, started with its own blend, or the
-            // terminator, which FUN_00643030 finds on its next call.
-            const std::size_t next = static_cast<std::size_t>(link_) + 1;
-            if (next >= graph_.chain.size()) {
-                break;
-            }
+    if (state_ >= 0 && clip_ >= 0 && finished()) {
+        // FUN_00643030: the sequence is over, the requested state starts again.
+        start_state(requested_);
+    }
+    if (state_ >= 0 && clip_ >= 0 && seconds > 0.0 &&
+        advance_clip(static_cast<float>(seconds)) && link_ >= 0 &&
+        static_cast<std::size_t>(link_) < graph_.chain.size() &&
+        graph_.chain[static_cast<std::size_t>(link_)].clip >= 0) {
+        // FUN_00643f80: the next link starts with its own blend and waits for
+        // the next call; the terminator ends the sequence.
+        const std::size_t next = static_cast<std::size_t>(link_) + 1;
+        if (next < graph_.chain.size()) {
             link_ = static_cast<std::int32_t>(next);
             if (graph_.chain[next].clip >= 0) {
                 start_clip(graph_.chain[next].clip, graph_.chain[next].blend_tag);
             } else {
                 sequence_ended = true;
             }
-        }
-        if (left == before) {
-            break;  // a clip of no length used no time: wait for the next call
         }
     }
     // FUN_00643030: the function of the requested state; when it fails the

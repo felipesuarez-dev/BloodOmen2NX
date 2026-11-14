@@ -185,7 +185,8 @@ AnimGraph parse_anim_graph(const std::vector<std::uint8_t>& bytes) {
         clip.out_time = in.f32();
         clip.speed = in.f32();
         clip.reel_tag = static_cast<std::uint32_t>(in.i32());
-        in.skip_ints(2);  // events, transform
+        in.i32();  // events
+        clip.transform_tag = static_cast<std::uint32_t>(in.i32());
         clip.blend_tag = static_cast<std::uint32_t>(in.i32());
         in.i32();  // mask
         clip_names.push_back(static_cast<std::uint32_t>(in.i32()));
@@ -242,11 +243,18 @@ AnimGraph parse_anim_graph(const std::vector<std::uint8_t>& bytes) {
         }
     }
     graph.blends.resize(in.count(16));  // +0xd8, FUN_005eba40
-    for (float& seconds : graph.blends) {
-        seconds = in.f32();
-        in.skip_ints(3);
+    graph.blend_transforms.resize(graph.blends.size());
+    for (std::size_t index = 0; index < graph.blends.size(); ++index) {
+        graph.blends[index] = in.f32();
+        graph.blend_transforms[index] = static_cast<std::uint32_t>(in.i32());
+        in.skip_ints(2);  // events, transition filter
     }
-    in.skip_ints(in.count(36) * 9);  // +0xe4 transforms, FUN_005e8ab0
+    graph.transforms.resize(in.count(36));  // +0xe4, FUN_005e8ab0
+    for (AnimTransform& transform : graph.transforms) {
+        transform.translation = {in.f32(), in.f32(), in.f32()};
+        transform.rotation = {in.f32(), in.f32(), in.f32()};
+        transform.scale = {in.f32(), in.f32(), in.f32()};
+    }
     const std::size_t event_lists = in.count(4);  // +0xf0, FUN_005ebbf0
     for (std::size_t index = 0; index < event_lists; ++index) {
         in.skip_ints(in.count(16) * 4);
@@ -280,6 +288,19 @@ AnimGraph parse_anim_graph(const std::vector<std::uint8_t>& bytes) {
 float AnimGraph::blend_seconds(std::uint32_t tag) const {
     const std::size_t index = tag >> 1;
     return tag != 0 && index < blends.size() ? blends[index] : 0.0f;
+}
+
+const AnimTransform* AnimGraph::transform(std::uint32_t tag) const {
+    const std::size_t index = tag >> 1;
+    return tag != 0 && index < transforms.size() ? &transforms[index] : nullptr;
+}
+
+const AnimTransform* AnimGraph::blend_transform(std::uint32_t blend_tag) const {
+    const std::size_t index = blend_tag >> 1;
+    if (blend_tag == 0 || index >= blend_transforms.size()) {
+        return nullptr;
+    }
+    return transform(blend_transforms[index]);
 }
 
 std::int32_t AnimGraph::find_state(const std::string& name) const {

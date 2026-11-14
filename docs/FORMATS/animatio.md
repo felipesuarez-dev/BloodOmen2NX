@@ -127,6 +127,27 @@ When a node starts, FUN_005e1d80 copies its first nine dwords to the state
 machine at +0x08, so the machine's rate (+0x10) starts as the node `speed`.
 FUN_00723620 writes that same field (see the run state below).
 
+## Blend records and transforms
+
+A blend record is 16 bytes (FUN_005eba40) and a transform 36 (FUN_005e8ab0):
+
+| Record | Offset | Type | Field |
+|---|---:|---|---|
+| blend | 0x00 | f32 | blend time in seconds |
+| blend | 0x04 | tag | transform: the root motion of the blend, or 0 |
+| blend | 0x08 | tag | event list, or 0 |
+| blend | 0x0c | i32 | transition filter |
+| transform | 0x00 | f32 x 3 | translation |
+| transform | 0x0c | f32 x 3 | rotation, radians |
+| transform | 0x18 | f32 x 3 | scale |
+
+A transform is the whole root motion of the blend or the clip node that names
+it; the runtime hands out the part that matches the time played (State
+machine runtime, Root motion). The `kain` graph has 51 transforms; 14 of its
+130 blends and 37 of its 237 clip nodes name one. The blend that starts the
+run has (20, 0, 0), and `cl_turnright` and `cl_turnleft` have a rotation Z of
+-2.5 and 2.5.
+
 ## Sequences and chain
 
 A sequence (12 bytes, FUN_00643d60) is `head` (tag into the chain), `events`
@@ -233,6 +254,33 @@ link the chain pointer rests on the terminator and the call reports the end
 (bit 4 of the result). On the next call, a machine whose clock is at the end
 and whose link is the terminator starts the requested state again.
 
+A call moves one clip once: FUN_00643f80 calls FUN_005e1f80 a single time,
+and when the clip ends it only starts the next link. The frame time the
+finished clip did not use goes back to the caller, and the callers
+(FUN_005e3ea0, FUN_0041fb00) do not spend it. The Wine oracle shows it: at
+each end of the run clip one sample has a lower speed (132.98 instead of
+230 u/s in `wine_probe_20261111`).
+
+**Root motion** (FUN_005e1f80, FUN_005ceef0, FUN_0063d080). Every call also
+returns what the root moved by, nine floats: translation, rotation, scale.
+
+| The clip is | The root gets |
+|---|---|
+| blending in | the part of the blend's transform that matches the blend time played, `time / blend time` (FUN_005ceef0 over the interval `[in - blend, in]`). A blend without a transform gives nothing. When the blend ends inside the call, 0.001 s more of it counts (the float at `0x8612b0`) and the clip time played after it gives nothing |
+| playing, and its node names a transform | the part of the transform that matches the clip time played, `time / (out - in)`; nothing when `in == out` |
+| playing, without a transform | the difference of the root channels of the reel between the old and the new clock (FUN_0063d080) |
+
+FUN_005e3ea0 advances the sixteen layers and returns the nine floats of one
+of them, the layer whose index is at `+0x130` of the animation instance. That is what moves Kain
+on the ground: his states call FUN_0041f460, which adds the translation to
+the position and the rotation to the rotation of the entity (FUN_0041f7d0).
+
+It explains two things the Wine oracle shows. From rest, `st_rdy2run` plays
+a held frame behind blend 4, 0.2 s with the transform (20, 0, 0): the speed
+is exactly 100 u/s until the blend ends, one sample is lower, and then
+`cl_run` gives 230. `st_back` starts `sq_back` with blend 6, 0.1 s without a
+transform: Kain stands still for 0.1 s and then walks back at 106.25 u/s.
+
 That restart is how a clip loops and how one state follows another:
 
 | Input | What the machine does |
@@ -263,10 +311,11 @@ ported.
 The pose blend is drawn from the machine's blend factor
 ([`models.md`](models.md), Pose blend), without the transition filter a blend
 record may name. The game conditions (ids 8 and
-up, for example id 9 on the combat-mode transitions) evaluate to false. The
-time a finished clip leaves over is spent in the same call, on the restarted
-state; the original hands it back to its caller, whose loop is not
-decompiled.
+up, for example id 9 on the combat-mode transitions) evaluate to false.
+`AnimMachine::root_motion` gives the root motion of the last advance: the
+translation and the rotation that come from transforms, and the stretches of
+reel time played by clips without one (the machine holds no reels). The
+scale of a transform is not kept.
 
 ## Kain's run state
 
@@ -398,8 +447,8 @@ tag. Callback 2 (FUN_00613450) stores a value in the instance; callback 3
 `tools/bo2fmt/animatio.py` reads the whole stream and keeps unknown fields raw.
 The C++ reader (`include/bo2/engine/anim_graph.hpp`) reads the whole stream
 too and keeps what the state machine uses: states with their transitions and
-actions, bindings, sequences, the chain, clip nodes, reels, blend times and
-variants. Bytes after the graph are rejected. `anim_clip_reel_name` resolves
+actions, bindings, sequences, the chain, clip nodes, reels, blend times with
+their transform, the transforms and variants. Bytes after the graph are rejected. `anim_clip_reel_name` resolves
 a node's reel through the entry symbols.
 Port-only limits in both: an element count that cannot fit in the remaining
 bytes is rejected, and counts above 4M are rejected. The asset-gated test
@@ -408,12 +457,10 @@ speed 1.7 (`BO2NX_ASSETS_DIR` set; skipped otherwise).
 
 ## Open questions
 
-- The W start phase: oracle ground speed is 100 u/s (200 * 0.5) for the first
-  0.18 s and then 230. The machine explains the duration: `st_rdy2run` lasts
-  its 0.2 s blend and then `st_run` starts (State machine runtime). The
-  factor 0.5 is still open: it needs the root motion output of the clip
-  advance (FUN_005e1f80) during a blend and the cross blend entity (vtable
-  0x86eaa4).
+- The events of a blend record and of a clip (FUN_005ceef0 fires the first,
+  FUN_005cec80 the second) and the transition filter of a blend record.
+- How the cross blend entity (vtable 0x86eaa4) combines the root motion of
+  its two inputs on a partial stick.
 - `st_startjump` plays a 0.0333 s sequence, but the oracle holds the state
   for 3 to 5 samples on a tap and about 10 on a held jump: the jump state of
   the game decides when to leave it (FUN_00443a50, see

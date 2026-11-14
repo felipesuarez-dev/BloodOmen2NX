@@ -19,6 +19,7 @@ using bo2::engine::AnimGraph;
 using bo2::engine::AnimMachine;
 using bo2::engine::AnimSequence;
 using bo2::engine::AnimState;
+using bo2::engine::AnimTransform;
 using bo2::engine::AnimTransition;
 
 int failures = 0;
@@ -146,13 +147,17 @@ void test_goto_sees_the_state_being_left() {
     machine.advance(0.1);
     CHECK(machine.state() == 2 && near(machine.time(), -0.1f));
     CHECK(near(machine.blend_factor(), 0.5f) && machine.clip_starts() == clips);
-    // The blend ends, the sequence is over and the requested state restarts:
-    // now the state being left is "ready to run", so run plays its clip.
-    machine.advance(0.15);
-    CHECK(machine.state() == 1 && machine.clip() == 1);
-    // 0.05 s were left: at speed 2 the run clip is at 0.1.
-    CHECK(near(machine.time(), 0.1f));
+    // The blend ends inside this call. The held frame has no length, so the
+    // sequence is over, and what was left of the call is dropped (FUN_00643f80
+    // moves one clip per call).
+    CHECK(machine.advance(0.15));
+    CHECK(machine.state() == 2 && machine.finished());
     CHECK(!machine.blending() && machine.blend_factor() == 1.0f);
+    // The next call restarts the requested state: now the state being left is
+    // "ready to run", so run plays its clip, at speed 2.
+    machine.advance(0.05);
+    CHECK(machine.state() == 1 && machine.clip() == 1);
+    CHECK(near(machine.time(), 0.1f));
     CHECK(machine.clip_starts() == clips + 1);
 }
 
@@ -165,8 +170,12 @@ void test_clip_runs_at_its_rate_and_loops() {
     machine.advance(0.1);
     CHECK(machine.state() == 1 && near(machine.time(), 0.2f));
     const std::uint32_t starts = machine.starts();
-    // 0.8 s of clip at speed 2 last 0.4 s; after 0.45 s the clip has wrapped.
-    machine.advance(0.35);
+    // 0.8 s of clip at speed 2 last 0.4 s. The clip stops at its end and the
+    // rest of the call is dropped; the state restarts on the next call.
+    CHECK(machine.advance(0.35));
+    CHECK(machine.finished() && near(machine.time(), 0.8f));
+    CHECK(machine.starts() == starts);
+    machine.advance(0.05);
     CHECK(machine.state() == 1 && near(machine.time(), 0.1f));
     CHECK(machine.starts() == starts + 1);
     // FUN_00723620: the run state replaces the rate of the clip in play.
@@ -175,6 +184,7 @@ void test_clip_runs_at_its_rate_and_loops() {
     CHECK(near(machine.time(), 0.2f) && machine.rate() == 1.0f);
     // The next clip starts at its node speed again.
     machine.advance(0.7);
+    machine.advance(0.01);
     CHECK(machine.rate() == 2.0f);
 }
 
@@ -184,17 +194,69 @@ void test_sequence_chain_and_finish() {
     machine.start_state(3);
     CHECK(machine.clip() == 3 && machine.time() == 0.5f);
     CHECK(!machine.finished());
-    // The first clip ends after 0.5 s; the second starts with the link's blend.
+    // The first clip ends after 0.5 s; the second starts with the link's blend
+    // and waits for the next call.
     CHECK(!machine.advance(0.6));  // the chain goes on
     CHECK(machine.clip() == 4 && machine.blending());
-    CHECK(near(machine.time(), -0.4f));
-    machine.advance(0.4);
+    CHECK(near(machine.time(), -0.5f));
+    machine.advance(0.5);
     CHECK(near(machine.time(), 0.0f) && !machine.blending());
     CHECK(machine.advance(0.25));
     CHECK(machine.finished() && machine.clip() == 4 && near(machine.time(), 0.25f));
     // The next advance restarts the requested state from its first clip.
     machine.advance(0.1);
     CHECK(machine.clip() == 3 && near(machine.time(), 0.6f) && !machine.finished());
+}
+
+void test_root_motion() {
+    AnimGraph graph = ground_graph();
+    // Blend 0 (0.2 s) moves the root 20 u forward and turns it 0.5 rad; clip 3
+    // (0.5 s long) moves it 10 u sideways over its length.
+    graph.transforms = {AnimTransform{{20.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.5f}, {1.0f, 1.0f, 1.0f}},
+                        AnimTransform{{0.0f, 10.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}}};
+    graph.blend_transforms = {tag(0), 0};
+    graph.clips[3].transform_tag = tag(1);
+    AnimMachine machine(graph);
+    machine.start_state(0);
+    machine.advance(0.1);
+    // A clip without a transform: the machine reports the reel time it played.
+    CHECK(machine.root_motion().spans.size() == 1);
+    CHECK(machine.root_motion().spans[0].clip == 0);
+    CHECK(near(machine.root_motion().spans[0].from, 0.0f));
+    CHECK(near(machine.root_motion().spans[0].to, 0.1f));
+    CHECK(machine.root_motion().translation.x == 0.0f);
+
+    machine.start_state(1);  // "ready to run": the held frame behind blend 0
+    machine.advance(0.05);
+    // FUN_005ceef0: a quarter of the blend gives a quarter of its transform.
+    CHECK(near(machine.root_motion().translation.x, 5.0f));
+    CHECK(near(machine.root_motion().rotation.z, 0.125f));
+    CHECK(machine.root_motion().spans.empty());
+    machine.advance(0.1);
+    CHECK(near(machine.root_motion().translation.x, 10.0f));
+    // The blend ends inside the call: 0.001 s more of it counts, and the clip
+    // time after it moves the root by nothing.
+    machine.advance(0.1);
+    CHECK(near(machine.root_motion().translation.x, (0.05f + 0.001f) / 0.2f * 20.0f));
+    CHECK(machine.root_motion().spans.empty());
+    // Every advance starts from nothing; the restarted run clip plays at speed 2.
+    machine.advance(0.05);
+    CHECK(machine.root_motion().translation.x == 0.0f);
+    CHECK(machine.root_motion().spans.size() == 1 && machine.root_motion().spans[0].clip == 1);
+    CHECK(near(machine.root_motion().spans[0].to, 0.1f));
+
+    // A clip with a transform gives the part that matches the time it played.
+    machine.start_state(3);
+    machine.advance(0.1);
+    CHECK(near(machine.root_motion().translation.y, 2.0f));
+    CHECK(machine.root_motion().spans.empty());
+    // It ends 0.4 s later: only that time counts, the rest of the call is dropped.
+    machine.advance(0.6);
+    CHECK(near(machine.root_motion().translation.y, 8.0f));
+    // A stopped machine moves nothing.
+    machine.start_state(40);
+    machine.advance(0.1);
+    CHECK(machine.root_motion().translation.y == 0.0f && machine.root_motion().spans.empty());
 }
 
 void test_conditions() {
@@ -317,6 +379,35 @@ void test_kain_states() {
     CHECK(graph.find_state("st_back") == 59 && graph.find_state("st_startjump") == 76);
     CHECK(graph.find_state("st_fallingup") == 78 && graph.find_state("st_fallingdn") == 79);
     CHECK(graph.find_state("st_normal_landing") == 86 && graph.find_state("st_run_landing") == 87);
+
+    // The start of the run: the 0.2 s blend into the held first frame of the
+    // run carries a root translation of 20 u, which is 100 u/s. The walk back
+    // starts with a 0.1 s blend that carries none.
+    bool found_run_start = false;
+    for (const auto& sequence : graph.sequences) {
+        if (sequence.name != "sq_rdy2run") {
+            continue;
+        }
+        const auto& link = graph.chain[sequence.head_tag >> 1];
+        const auto* motion = graph.blend_transform(link.blend_tag);
+        CHECK(std::fabs(graph.blend_seconds(link.blend_tag) - 0.2f) < 1.0e-6f);
+        CHECK(motion != nullptr && motion->translation.x == 20.0f &&
+              motion->translation.y == 0.0f && motion->translation.z == 0.0f);
+        found_run_start = true;
+    }
+    CHECK(found_run_start);
+    bool found_back_start = false;
+    for (const auto& transition : graph.states[59].transitions) {
+        for (const auto& action : transition.actions) {
+            if (action.kind != 1 || action.blend_tag == 0) {
+                continue;
+            }
+            CHECK(std::fabs(graph.blend_seconds(action.blend_tag) - 0.1f) < 1.0e-6f);
+            CHECK(graph.blend_transform(action.blend_tag) == nullptr);
+            found_back_start = true;
+        }
+    }
+    CHECK(found_back_start);
     const auto reel = [&](const AnimMachine& machine) {
         return bo2::engine::anim_clip_reel_name(
             graph, graph.clips[static_cast<std::size_t>(machine.clip())], archive, *entry);
@@ -332,7 +423,11 @@ void test_kain_states() {
     CHECK(reel(machine) == "kain/run" && near(machine.time(), -0.2f));
     machine.advance(0.18);
     CHECK(machine.state() == 4);
-    machine.advance(0.04);
+    // The blend ends, and with it the sequence of the held frame; the next
+    // call starts st_run.
+    CHECK(machine.advance(0.04));
+    CHECK(machine.state() == 4);
+    machine.advance(0.02);
     CHECK(machine.state() == 1 && reel(machine) == "kain/run" && near(machine.rate(), 1.5f));
     // FUN_00445ba0 plays it at the run rate; one cycle is 0.8 / 1.15 s.
     machine.set_rate(1.15f);
@@ -377,6 +472,7 @@ void test_kain_states() {
     CHECK(reel(layers.layer(1)) == "kain/walk");
     CHECK(layers.layer(1).blending());  // sq_rdy2walk: frame 0 behind a blend
     layers.advance(0.25);
+    layers.advance(0.02);
     CHECK(layers.state_of(0) == 1 && layers.state_of(1) == graph.find_state("st_walkblend"));
     const float walk_time = layers.layer(1).time();
     layers.advance(0.1);
@@ -394,7 +490,8 @@ int main() {
         test_goto_sees_the_state_being_left();
         test_clip_runs_at_its_rate_and_loops();
         test_sequence_chain_and_finish();
-        test_conditions();
+        test_root_motion();
+    test_conditions();
         test_layers();
         test_kain_states();
     } catch (const std::exception& error) {

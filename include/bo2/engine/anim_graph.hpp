@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "bo2/engine/big_archive.hpp"
+#include "bo2/engine/math.hpp"
 
 namespace bo2::engine {
 
@@ -17,6 +18,10 @@ struct AnimClipNode {
     float speed = 1.0f;
     // Tagged reel reference, (index << 1) | 1, or 0 for none (FUN_005e1b60).
     std::uint32_t reel_tag = 0;
+    // Tagged index into AnimGraph::transforms: what the clip moves the root by
+    // over its whole length. 0 for none: the root then follows the channels of
+    // the reel (FUN_005e1f80).
+    std::uint32_t transform_tag = 0;
     // Tagged index into AnimGraph::blends; the blend a clip starts with when
     // neither the action nor the chain link names one (FUN_005e1d80).
     std::uint32_t blend_tag = 0;
@@ -90,6 +95,16 @@ struct AnimVariant {
     std::int32_t value = 0;
 };
 
+// A root transform (FUN_005e8ab0, 36 bytes): the translation, the rotation in
+// radians and the scale that a clip or a blend gives the root over its whole
+// length. The clip advance hands out the part that matches the time it
+// played (FUN_005e1f80, FUN_005ceef0).
+struct AnimTransform {
+    Vec3 translation;
+    Vec3 rotation;
+    Vec3 scale{1.0f, 1.0f, 1.0f};
+};
+
 struct AnimGraph {
     std::vector<AnimState> states;
     std::vector<AnimBinding> bindings;
@@ -98,10 +113,18 @@ struct AnimGraph {
     std::vector<AnimClipNode> clips;
     std::vector<AnimReelRef> reels;
     std::vector<float> blends;  // the blend time in seconds of each 16-byte record
+    // The second word of each blend record: a tagged index into `transforms`,
+    // the root motion of the blend, or 0. Empty or as long as `blends`.
+    std::vector<std::uint32_t> blend_transforms;
+    std::vector<AnimTransform> transforms;
     std::vector<AnimVariant> variants;
 
     // The blend time a tag names; 0 for no tag or one out of range.
     float blend_seconds(std::uint32_t tag) const;
+    // The transform a tag names; nullptr for no tag or one out of range.
+    const AnimTransform* transform(std::uint32_t tag) const;
+    // The root motion of the blend a tag names; nullptr when it has none.
+    const AnimTransform* blend_transform(std::uint32_t blend_tag) const;
     // The index of the state with this name, or -1.
     std::int32_t find_state(const std::string& name) const;
 };
