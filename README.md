@@ -297,6 +297,7 @@ La documentación técnica está en inglés.
 | [`docs/LEVELS.md`](docs/LEVELS.md) | Los 11 capítulos de la campaña, su fuente en `bo2.exe` y la correspondencia con las regiones |
 | [`docs/GAMEPLAY.md`](docs/GAMEPLAY.md) | Sistemas de juego traducidos |
 | [`docs/HUD.md`](docs/HUD.md) | El HUD: proyección, visibilidad y reglas de las barras |
+| [`docs/TEXT.md`](docs/TEXT.md) | El texto: comandos de una cadena y colocación de los glifos |
 | [`docs/RUNNING.md`](docs/RUNNING.md) | Compilación del host, destino Switch y el oráculo |
 | [`docs/TESTING.md`](docs/TESTING.md) | Pirámide de pruebas y reglas |
 | [`docs/GAME_DATA.md`](docs/GAME_DATA.md) | Archivos del juego, estructura y dónde viven |

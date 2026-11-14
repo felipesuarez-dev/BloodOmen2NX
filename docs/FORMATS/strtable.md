@@ -114,20 +114,16 @@ the five languages, outside the control codes and the space, has one.
 return the accented letters in lower case; they also turn the raw Latin-1
 bytes into UTF-8.
 
-Control codes appear in the text. All the ones seen are lower case, so the
-accent mapping leaves them alone (no upper-case letter follows `@`, `\` or `%` in
-any Spanish record):
+Control codes appear in the text. They are lower case, so the accent codes
+leave them alone. The text parser of the game reads them
+([`../TEXT.md`](../TEXT.md)): `@n` is a new row, `@c`, `@l` and `@r` align
+the row, and `\` with a character is one glyph, most of them a controller
+button (`\x` the cross, `\q` the square). Counted over every table of the
+five languages: `@c` 1,106, `@n` 1,026, `\x` 132, `\q` 88, `\` and a space
+18, `%d` 12, `\2` 4 and `\c` 4.
 
-| Code | Count in Spanish | Likely meaning (inferred from use) |
-|---|---:|---|
-| `@c` | 188 | centre the line |
-| `@n` | 175 | line break |
-| `\x`, `\q`, `\c`, `\2` | 21, 14, 1, 1 | button icon placeholder |
-| `\` and a space | 3 | unknown |
-| `%d` | 2 | number substituted at run time |
-
-Neither the control codes nor the glyph rendering are interpreted by the
-reader; they are the job of the text renderer.
+Neither the control codes nor the glyphs are interpreted by the reader; they
+are the job of the text code.
 
 ## Engine side
 
@@ -140,7 +136,5 @@ decoder behind it is a generic record reader that was not followed.
 
 - The constants `1` and `2` of the header.
 - The encoding of the irregular record and the tag `0x0107`.
-- The glyph table of the font, to confirm or correct the accent mapping
-  and to map the other languages.
 - Which of two same-named tables the manager keeps; the port prefers the
   locale entry (`big.md`).
