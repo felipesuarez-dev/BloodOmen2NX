@@ -212,9 +212,14 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   Save states serialize the level name, player transform, HUD and tick
   with a versioned binary format; checkpoint slots, checkpoint triggers,
   F5/F9 save/load and corruption checks are implemented. The original HUD
-  scene (frame, health vial, lore vial) is drawn over a `--level` frame and
-  in the `--play` window with `--hud` (`docs/HUD.md`); its counters do not
-  change yet. Combat has attack cooldown,
+  scene (frame, health vial, lore vial, rage bar and the dark gift icon of
+  the gift Kain starts with) is drawn over a `--level` frame and in the
+  `--play` window with `--hud`, in the original's order of
+  `RenderPriority` (`docs/HUD.md`); its counters do not change yet. The game
+  font and the accent codes of the five languages are read
+  (`docs/FORMATS/textures.md`, `docs/FORMATS/strtable.md`) and the text
+  commands and the placing of glyphs are documented (`docs/TEXT.md`); no
+  text is drawn yet. Combat has attack cooldown,
   combo state, entity health/damage and a forward hit-sphere query; the
   faithful original values and animation/weapon effects are still pending.
   The compressed `collmodc` runtime and game-specific entities remain
@@ -257,7 +262,7 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   (`--kain-model kain.big --kain-at x,y,z`: 2,846 triangles, 3 DDS
   textures, 104 bones and 1,988 skin weights) and a clip can pose it
   (`--kain-clip`), but the gate frame does not yet draw him in the oracle's
-  pose; that, the dark gift icon of the HUD, the green
+  pose; that, the green
   `bo2cinematic001` marker and the exact palette texture format remain
   (BO2NX-68).
 - Gameplay parity beyond turning, ground speeds, partial stick, jumping,
@@ -288,8 +293,10 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
    table (BO2NX-34), and find what hides the remaining pyramid-model helpers
    and lights `sl01` (BO2NX-68).
 4. Compare the port against a Wine `state.csv` route tick by tick
-   (BO2NX-37), then wire the Spanish string tables into the front end and
-   HUD (BO2NX-44).
+   (BO2NX-37), then draw the first text of the game from the string tables,
+   in the five languages of the data (BO2NX-44).
+5. Check every reader of the port against all 179 containers, not only the
+   first level (BO2NX-105 onwards).
 
 ## Rules
 
