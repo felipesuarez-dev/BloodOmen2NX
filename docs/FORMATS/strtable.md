@@ -81,31 +81,39 @@ table when it exists, else the `default` copy.
 
 ## Text encoding
 
-The stored text is lower case and almost all ASCII: one Spanish record of
-`code.big` `ui/UI` and one German `sl04_hints` record carry a raw Latin-1
-byte (0xE9 and 0xFC), which `display_text` converts to UTF-8 in every locale.
-**Upper-case letters stand for
-accented glyphs** of the game font (`fonts/revised`), which has no separate
-per-language font. Spanish uses seven placeholders:
+The stored text is lower case and ASCII, and the game font draws a lower-case
+code as the capital letter ([`textures.md`](textures.md#font)): text is shown
+in capitals. **An upper-case code is a different glyph**: an accented capital
+or an inverted mark. The font is the same for every language, so the table is
+too. It is read from the glyph art of the font:
 
-| Stored | Displayed | Unicode |
-|---|---|---|
-| `T` | a with acute | U+00E1 |
-| `C` | e with acute | U+00E9 |
-| `U` | i with acute | U+00ED |
-| `V` | o with acute | U+00F3 |
-| `W` | u with acute | U+00FA |
-| `X` | n with tilde | U+00F1 |
-| `Y` | inverted question mark | U+00BF |
+| Stored | Glyph | Stored | Glyph | Stored | Glyph |
+|---|---|---|---|---|---|
+| `A` | Ç | `J` | È | `S` | ? (the rectangle of `?`) |
+| `B` | Ü | `K` | Ï | `T` | Á |
+| `C` | É | `L` | Î | `U` | Í |
+| `D` | Â | `M` | Ì | `V` | Ó |
+| `E` | Ä | `N` | Ô | `W` | Ú |
+| `F` | À | `O` | Ö | `X` | Ñ |
+| `G` | ß | `P` | Ò | `Y` | ¿ |
+| `H` | Ê | `Q` | Û | `Z` | ¡ |
+| `I` | Ë | `R` | Ù | | |
 
-**Inferred, not decoded.** The mapping comes from word evidence: in all 238
-records of the Spanish tables the only upper-case letters outside control codes are
-exactly these seven, and each one turns the surrounding word into correct
-Spanish. The glyph art was not read, so the mapping is not confirmed against
-the font. `display_text` / `display_text()` apply it for the `spanish` locale
-and return the text unchanged for other locales. French, German and Italian
-use their own placeholder letters; they are not mapped because the port runs
-the Spanish build.
+The upper-case codes each language uses, over the 15 tables of every
+container (238 values per language, 236 in Italian): French `C F H J L Q`,
+German `B D E O`, Italian `B F J M O P R`, Spanish `C T U V W X Y`. English
+uses none in text the font draws; its only capitals are in the two
+`savedgame_ps2icon_*` values of `ui/UI`, a title for the memory card of the
+console version.
+
+Three stored bytes have no glyph: a raw 0xE9 in one Spanish value of `ui/UI`,
+and a raw 0xFC and a `[` in German values. Every other byte of every value in
+the five languages, outside the control codes and the space, has one.
+
+`display_text` / `display_text()` apply the seven Spanish codes for the
+`spanish` locale only and return the text unchanged for the others; they
+also turn the raw Latin-1 bytes into UTF-8. They do not have the full table
+yet.
 
 Control codes appear in the text. All the ones seen are lower case, so the
 accent mapping leaves them alone (no upper-case letter follows `@`, `\` or `%` in

@@ -11,10 +11,52 @@ A `texture` chunk is a DDS file without any extra wrapper. The sample
 from `sanctuary.big` is a 32x16 DXT5 image with six mip levels. The
 header and payload can be handed to a DDS loader.
 
-The font is an uncompressed A8R8G8B8 256x256 DDS plus `texfont` glyph
-records: a 24-byte table header and 87 records of 20 bytes (`u8 code`,
-three `0xFF`, four floats for x, y, w, h). The Spanish build uses the
-same glyph codes for accented characters.
+## Font
+
+The game has one font for every language: the `texfont` entry `main/main`
+of `code.big` (a second entry, `main/main.fnt`, has the same bytes) and the
+texture it names, `fonts/revised`, an uncompressed A8R8G8B8 image of
+256 x 256. The loader is `FUN_005df900`.
+
+```
+char[8] "texfont"
+u32     size of the entry (1,780)
+u32     0
+u16     texture (a symbol of the entry), u16 0xffff
+f32     20.0
+f32     2.0
+f32     5.0
+f32     8.0
+u8      upper-case-only flag (0), u8 0xff
+u16     glyph count (87)
+glyph[count], 20 bytes each:
+  u8   code, three 0xff
+  f32  x, y, width, height   (texels)
+```
+
+- The glyph rectangle is measured from the bottom of the image: the loader
+  keeps `texture height - y`. In the rows of the DDS, a glyph covers rows
+  `256 - y - height` to `256 - y`.
+- The shape of a glyph is in the alpha channel. The colour channels are white
+  under the letters and carry the colours of the controller buttons.
+- The loader stores the four floats at font `+0x10`, `+0x18`, `+0x1c` and
+  `+0x14`, in file order. What they mean (line height, spacing) is not read.
+- With the flag set, the loader gives every code from `A` to `Z` a second
+  code 0x20 above it and warns when that lower-case code already exists.
+  This font has the flag clear and defines both cases itself.
+
+The 87 codes:
+
+| Codes | Glyphs |
+|---|---|
+| `a` to `z` | the capital letters A to Z: the font has no lower-case shapes |
+| `0` to `9`, `! % ' ( ) + , - . / : ; ?` | themselves |
+| `A` to `Z` | accented capitals and inverted marks, see [`strtable.md`](strtable.md#text-encoding) |
+| `0xc8` to `0xd3` | controller buttons: square, triangle, circle, cross, L1, L2, R1, R2, up, down, right, left |
+
+There is no glyph for the space, for `"`, `#`, `$`, `&`, `*`, `<`, `=`, `>`,
+`@`, `[`, `\`, `]`, `^`, `_`, `` ` ``, `{`, `|`, `}`, `~`, or for any other
+byte above 0x7f. Widths go from 4 to 28 texels and heights are 19 or 20.
 
 ## Inspection
 
