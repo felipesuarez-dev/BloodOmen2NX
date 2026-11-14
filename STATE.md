@@ -253,7 +253,11 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   `libvorbisfile`, floor-1 via the bundled fallback), one music voice and
   one-shot events mix to SDL, and `--event-ogg`/`--music-ogg` demonstrate
   it. Wiring the `sound`/`strmfile` event table to gameplay is pending.
-- `planinfo`, `bpackage`, `musicbnk`, `texfont` and `liteinfo`.
+- `planinfo`, `musicbnk` and `liteinfo`. The layout of `bpackage` (the
+  compiled script packages) is read from the writer of the executable
+  (`docs/FORMATS/bpackage.md`), but its instructions are not interpreted
+  and the port has no reader for it. The layout of `texfont` is read
+  (`docs/FORMATS/textures.md`) and the port has no reader for it yet.
 - Oracle state beyond position, velocity, health, lore, the animation id
   and the camera: the logic tick and the grounded flag are not located.
 - The `sl01` port frame: helper objects are hidden and the `.slm` palette is
