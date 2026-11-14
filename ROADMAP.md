@@ -17,7 +17,7 @@ comparison.
 | M3 | Playable slice | First level playable start to finish; route replay test and state comparison | WIP — fixed tick, entity world, frustum culling and cell streaming foundations landed; headless oracle replay and state comparison harness landed, full route/state parity pending; the collision mesh is the decoded `collmodc` hull and the player volume is the remaining W gap (BO2NX-72); game systems pending |
 | M4 | Complete systems | Enemies, combat, dark gifts, scripting, menus, saves, audio and videos | TODO |
 | M5 | Complete content | All levels, bosses and unlockables; parity battery green | TODO |
-| M6 | Release | Performance, handheld/docked, packaging, docs, licence decision | TODO |
+| M6 | Release | Performance, handheld/docked, packaging, docs | TODO |
 
 ## Platform features
 

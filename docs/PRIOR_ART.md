@@ -26,10 +26,10 @@ fixtures.
 | [`DKDave/Scripts`](https://github.com/DKDave/Scripts) | none | No rights granted; useful to confirm the RKV sector formula |
 | [`MeinerI/Blood-Omen-2-Legacy-of-Kain`](https://github.com/MeinerI/Blood-Omen-2-Legacy-of-Kain) | none | No rights granted; resource taxonomy and experimental model notes |
 
-Reading a GPL implementation to learn a format is legitimate. Copying or
-closely translating it would relicense the port, which is planned as MIT.
-Our parsers are written from the documented offsets and tested with
-synthetic fixtures.
+Reading a GPL implementation to learn a format is legitimate. The port is
+licensed under GPL-3.0-or-later, but none of these projects has been copied
+or translated: our parsers are written from the documented offsets and
+tested with synthetic fixtures.
 
 ## What does not apply
 
@@ -90,5 +90,8 @@ Direct3D 8, DirectInput, Bink and FMOD; the game data does not.
   expressive content, but code, comments and text are.
 - No game assets, textures, fonts, audio, text, binaries or decompiled
   dumps are published in this repository.
+- The port is licensed under GPL-3.0-or-later (`LICENSE`). The license
+  covers the original work of its authors and nothing of the game.
+
 - The project is unaffiliated with Crystal Dynamics, Eidos Interactive or
   Square Enix. Names are used nominatively.

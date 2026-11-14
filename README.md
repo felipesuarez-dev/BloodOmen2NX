@@ -30,7 +30,7 @@ English version: [README.en.md](README.en.md)
 [cpp-badge]: https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white
 [cmake-badge]: https://img.shields.io/badge/build-CMake%20presets-064F8C?logo=cmake&logoColor=white
 [platform-badge]: https://img.shields.io/badge/plataforma-Linux%20desarrollo%20%7C%20Switch%20destino-lightgrey
-[license-badge]: https://img.shields.io/badge/licencia-pendiente-red
+[license-badge]: https://img.shields.io/badge/licencia-GPL--3.0--or--later-blue
 
 ---
 
@@ -95,7 +95,7 @@ La lista de capítulos está en [`docs/LEVELS.md`](docs/LEVELS.md). Los capítul
 | M3 | Porción jugable: el primer nivel jugable de principio a fin, repetición de ruta y comparación de estado | **En curso** |
 | M4 | Sistemas completos: enemigos, combate, dotes oscuras, scripts, menús, guardado, audio, video | Sin iniciar |
 | M5 | Contenido completo: todos los capítulos, jefes y desbloqueables | Sin iniciar |
-| M6 | Lanzamiento: rendimiento, modo portátil y dock, empaquetado, decisión de licencia | Sin iniciar |
+| M6 | Lanzamiento: rendimiento, modo portátil y dock, empaquetado | Sin iniciar |
 
 Fuente de verdad: [`STATE.md`](STATE.md) y [`ROADMAP.md`](ROADMAP.md) (en inglés).
 
@@ -342,6 +342,12 @@ Juego original de Crystal Dynamics, publicado por Eidos Interactive. Sin afiliac
 
 ## Licencia
 
-**Todavía no se ha elegido una licencia.** El archivo `LICENSE` es un marcador de posición; no se concede ningún derecho hasta que se reemplace. La decisión está programada para el hito M6. La opción recomendada es MIT para el código original de este repositorio.
+El código y la documentación originales de este repositorio se publican bajo la **GNU General Public License, versión 3 o posterior** (`GPL-3.0-or-later`). El texto completo está en [`LICENSE`](LICENSE).
 
-Esta licencia no concede ningún derecho sobre el código, los datos, los recursos ni las marcas del juego de Crystal Dynamics, Eidos Interactive o Square Enix.
+Copyright (C) 2026 felipesuarez-dev y colaboradores.
+
+- Puedes usar, estudiar, modificar y redistribuir el programa. Si distribuyes una versión modificada o un binario, tienes que ofrecer su código fuente bajo la misma licencia.
+- El programa se entrega sin ninguna garantía.
+- `third_party/stb_vorbis.c` conserva su propia licencia (dominio público / MIT).
+
+La licencia cubre solo el trabajo original de los autores de este repositorio. **No concede ningún derecho** sobre *Blood Omen 2*: su código, sus datos, sus recursos, sus nombres y sus marcas pertenecen a sus propietarios (Crystal Dynamics, Eidos Interactive, Square Enix o sus sucesores).

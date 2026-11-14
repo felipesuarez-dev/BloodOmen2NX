@@ -30,7 +30,7 @@ Lee esto en español: [README.md](README.md)
 [cpp-badge]: https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white
 [cmake-badge]: https://img.shields.io/badge/build-CMake%20presets-064F8C?logo=cmake&logoColor=white
 [platform-badge]: https://img.shields.io/badge/platform-Linux%20dev%20%7C%20Switch%20target-lightgrey
-[license-badge]: https://img.shields.io/badge/license-TBD-red
+[license-badge]: https://img.shields.io/badge/license-GPL--3.0--or--later-blue
 
 ---
 
@@ -95,7 +95,7 @@ The chapter list is in [`docs/LEVELS.md`](docs/LEVELS.md). Chapter flags and pla
 | M3 | Playable slice: the first level playable from start to finish, route replay and state comparison | **In progress** |
 | M4 | Complete systems: enemies, combat, dark gifts, scripting, menus, saves, audio, video | Not started |
 | M5 | Complete content: all chapters, bosses and unlockables | Not started |
-| M6 | Release: performance, handheld and docked, packaging, license decision | Not started |
+| M6 | Release: performance, handheld and docked, packaging | Not started |
 
 Source of truth: [`STATE.md`](STATE.md) and [`ROADMAP.md`](ROADMAP.md).
 
@@ -340,6 +340,12 @@ Original game by Crystal Dynamics, published by Eidos Interactive. Not affiliate
 
 ## License
 
-**No license has been chosen yet.** The `LICENSE` file is a placeholder; no rights are granted until it is replaced. The decision is scheduled for milestone M6. The recommended option is MIT for the original code in this repository.
+The original code and documentation of this repository are released under the **GNU General Public License, version 3 or later** (`GPL-3.0-or-later`). The full text is in [`LICENSE`](LICENSE).
 
-This license does not grant any rights to the game code, data, assets or trademarks of Crystal Dynamics, Eidos Interactive or Square Enix.
+Copyright (C) 2026 felipesuarez-dev and contributors.
+
+- You may use, study, modify and redistribute the program. If you distribute a modified version or a binary, you must offer its source code under the same license.
+- The program comes with no warranty.
+- `third_party/stb_vorbis.c` keeps its own license (public domain / MIT).
+
+The license covers only the original work of the authors of this repository. It **grants no rights** over *Blood Omen 2*: its code, data, assets, names and trademarks belong to their owners (Crystal Dynamics, Eidos Interactive, Square Enix or their successors).
