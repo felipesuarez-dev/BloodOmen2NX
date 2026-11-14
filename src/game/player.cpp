@@ -8,21 +8,17 @@ namespace bo2::game {
 
 namespace {
 
-// Ground speed is animation root motion in the original (FUN_0041f7d0 adds
-// the root delta of FUN_0041fb00 to the position). Two speeds are derived from
-// the clips (docs/FORMATS/animreel.md, docs/GAMEPLAY.md):
+// Ground movement is animation root motion in the original: FUN_0041f7d0 adds
+// the root delta of FUN_0041fb00 to the position. `step` takes that delta as
+// `ground_advance`, which KainAnimation works out from the animation state
+// machine (docs/FORMATS/animatio.md, Root motion). Without it the controller
+// falls back to the steady speeds of the clips (docs/FORMATS/animreel.md):
 //   W at full stick: kain/run root speed (200 u/s) * the run clip rate
-//     A+0x40 (1.15), FUN_00445ba0 slot 0. Confirmed by the Wine oracle.
+//     A+0x40 (1.15), FUN_00445ba0 slot 0.
 //   S: kain/walk_backwards root speed (62.5 u/s) * the speed of its clip node
-//     in the `kain` animatio graph (1.7, docs/FORMATS/animatio.md). Confirmed
-//     by the Wine oracle (106.25).
-// Partial stick (FUN_00445ba0 blends cl_run on layer 0 with cl_walk on
-// layer 1) is not ported.
-// The rest are measured in the Wine oracle
-// (external/captures/wine_20261029_0052/state.csv, world-frame |vel_xy|) and
-// not explained by a decompiled function yet.
-constexpr float kRunStartSpeed = 100.0f;   // measured, W for the first kRunStartTime (= 200 * 0.5, unexplained)
-constexpr float kRunStartTime = 0.18f;     // measured
+//     in the `kain` animatio graph (1.7).
+// The fallback has no start of the run and no pause before the walk back:
+// those come from the blends of the graph.
 // Measured but unverified: Kain was probably blocked for part of that capture
 // (docs/ORACLE_WINE.md), so this is not a confirmed top speed. 200 = 200 * 1.0
 // is unexplained.
@@ -115,11 +111,6 @@ constexpr float kRunProbeRadius = 8.0f;
 constexpr float kRunProbeLength = 32.0f;
 constexpr float kRunProbeHeight = 48.0f;
 constexpr float kRunProbeFacing = 0.9f;  // tunedata wallhug triggerDPThresh
-// Measured in `sl01_basic` (`wine_20261029_0043`): after the S press the
-// oracle's x stays constant for 100 ms (frames 2381-2385) and only then moves
-// at the 106.25 u/s walk-back speed. The clip's own windup has no decompiled
-// source yet; the port keeps the measured pause.
-constexpr float kBackStartTime = 0.1f;
 constexpr float kLookSpeed = 2.0f;  // port debug aid (mouse and right stick look)
 constexpr float kAttackCooldown = 0.45f;
 constexpr float kAttackRange = 2.2f;
@@ -182,7 +173,8 @@ PlayerController::PlayerController(bo2::engine::CollisionWorld& collision,
     state_.position = start;
 }
 
-void PlayerController::step(const PlayerInput& input, double seconds) {
+void PlayerController::step(const PlayerInput& input, double seconds,
+                            const float* ground_advance) {
     if (!std::isfinite(seconds) || seconds <= 0.0) {
         return;
     }
@@ -217,38 +209,25 @@ void PlayerController::step(const PlayerInput& input, double seconds) {
     state_.pitch += input.look_y * kLookSpeed * dt;
     state_.pitch = std::clamp(state_.pitch, -1.2f, 1.2f);
 
-    // Ground speed. A jump has its own horizontal velocity (steer_in_air); a
-    // plain fall keeps the ground speed of the held input. A jump leaves
-    // forward_time_ as it was, so a running jump lands at the run speed while
-    // a standing one goes through the start phase: the `kain` animatio graph
-    // enters st_run without st_rdy2run when the previous state is a run
-    // landing, and Wine capture wine_air_1 (jump_w_hold) reads 230 u/s right
-    // after the landing clip. Inferred from those two; the landing clip's own
-    // root motion is not modeled.
+    // Ground speed. A jump has its own horizontal velocity (steer_in_air). On
+    // the ground the animation moves Kain (FUN_0041f460): the caller hands in
+    // the forward distance of this tick. A plain fall, and a caller without
+    // an animation, keep the steady speed of the held input.
     float speed = 0.0f;
     if (air_jump_) {
         // Horizontal motion comes from steer_in_air.
+    } else if (forward_held && input.run) {
+        speed = kShiftSpeed;
+    } else if (ground_advance != nullptr && state_.grounded) {
+        speed = dt > 0.0f ? *ground_advance / dt : 0.0f;
     } else if (forward_held) {
-        if (input.run) {
-            speed = kShiftSpeed;
-        } else if (forward_time_ < kRunStartTime) {
-            speed = kRunStartSpeed;
-        } else {
-            const float stick =
-                std::min(1.0f, std::sqrt(input.move_x * input.move_x + input.move_y * input.move_y));
-            speed = partial_forward_speed(stick, tuning_.run_clip_rate, tuning_.run_root_speed,
-                                          tuning_.walk_root_speed);
-        }
-        forward_time_ += dt;
-    } else {
-        forward_time_ = 0.0f;
-        back_time_ = back_held ? back_time_ + dt : 0.0f;
-        if (back_held && back_time_ > kBackStartTime) {
-            speed = -back_speed_;
-        }
+        const float stick =
+            std::min(1.0f, std::sqrt(input.move_x * input.move_x + input.move_y * input.move_y));
+        speed = partial_forward_speed(stick, tuning_.run_clip_rate, tuning_.run_root_speed,
+                                      tuning_.walk_root_speed);
+    } else if (back_held) {
+        speed = -back_speed_;
     }
-    // Released input stops at once. The measured trace shows a short slide
-    // that is not modeled.
 
     const bo2::engine::Vec3 heading{std::cos(state_.yaw), std::sin(state_.yaw), 0.0f};
     // The step of this tick: the jump velocity, or the ground speed along the yaw.
@@ -486,8 +465,6 @@ void PlayerController::look(float yaw_delta, float pitch_delta) {
 void PlayerController::restore(const PlayerState& state) {
     state_ = state;
     state_.vertical_velocity = 0.0f;
-    forward_time_ = 0.0f;
-    back_time_ = 0.0f;
     air_time_ = 0.0f;
     boost_armed_ = false;
     jump_was_down_ = false;

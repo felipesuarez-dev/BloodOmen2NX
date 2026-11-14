@@ -351,14 +351,15 @@ python3 tools/oracle/compare_state.py \
 Measured:
 
 - `wine_20261029_0043` (`sl01_basic`, 2,991 rows): `spawn_idle` player max
-  0.048 u (mean 0); the first divergence is frame 2258 (`after_w`, 2.497 u,
-  the W start phase). `after_w` is **mean 0.398 u / max 2.497 u**. The W speed
+  0.048 u (mean 0); the first divergence is frame 2255 (`after_w`, 5.0 u,
+  the switch from the start of the run to the run speed, about one row late).
+  `after_w` is **mean 1.829 u / max 5.699 u**. The W speed
   is 230 u/s until the slide, then 162 u/s at -45 degrees on model 57's upper
   chamfer, back to 230 and 0 at the stop: x = 326.38, y = 44.18 against the
   oracle's 326.35 / 44.14. The camera columns are empty in this capture. The
   oracle's post-stop drift down the wall (y 44.14 -> 42.84) is modeled only
-  by the run probe flag; the S phase now matches the oracle's measured 100 ms
-  windup (after_s mean 0.812 / max 1.733 u) and A/D are 0.25 u. The run/jump/
+  by the run probe flag; the S phase stands still for the 0.1 s blend that starts the
+  walk back (after_s mean 0.940 / max 1.648 u) and A/D are 1.77 u. The run/jump/
   attack phases still diverge (about 118 u) because the A+D net yaw is 12
   degrees short: the input edges carry 20-30 ms of 30 fps / 50 Hz sampling
   noise, which is the open route gate (BO2NX-37).

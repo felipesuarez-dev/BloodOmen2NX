@@ -65,6 +65,13 @@ struct KainTuning {
     // (docs/FORMATS/animatio.md): 1.7. Nothing overrides it while walking back,
     // unlike the run rate that FUN_00445ba0 writes every frame.
     float walk_back_clip_speed = 0.0f;
+    // The forward (local x) root speed of the reel of every clip node of the
+    // `kain` graph, in u per second of reel time, signed; 0 for a node without
+    // a reel. Filled by apply_kain_clip_speeds. A clip whose node names no
+    // transform moves the root by the root channels of its reel
+    // (FUN_0063d080); for a linear channel, as in kain/run and
+    // kain/walk_backwards, that is this speed times the reel time played.
+    std::vector<float> clip_forward_speed;
 };
 
 // Values FUN_00451d00 derives from the jump block.

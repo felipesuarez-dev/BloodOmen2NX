@@ -61,14 +61,14 @@ a number:
 | Turning | In place, no strafe | measured, oracle |
 | Run clip rate | 1.15, the playback rate of the run clip at full stick | B+0xB14 -> A+0x40 (FUN_00428fe0); read by FUN_00445ba0 (slot 0 gets rate `(0.5 s + 0.5) * A+0x40` at stick `s`, so `A+0x40` at `s = 1`) |
 | Run root speed | 200 u/s | `kain/run` animreel, node 0 translation x: 0 to 160 over 24 frames (0.8 s) |
-| W, first 0.18 s | 100 u/s (= 200 * 0.5; the start phase is unexplained) | measured, oracle |
-| W, after 0.18 s | 230 u/s = run root speed 200 * run clip rate 1.15 | FUN_00445ba0; oracle-confirmed: 230 measured. Periodic peaks in `external/captures/wine_20261029_0110/state.csv` (W down at mono_ms 41388469): world \|vel_xy\| reads 300 at about +191, +892 and +1572 ms, spaced by the run cycle 0.8 / 1.15 = 0.696 s. That slot 0 is the run clip is inferred from this match |
+| W, first 0.2 s | 100 u/s. From rest the graph plays `st_rdy2run`, a held frame behind a 0.2 s blend whose transform is (20, 0, 0); while a clip blends in, the root gets the part of the blend's transform that matches the blend time played. When the blend ends Kain is 20.1 u ahead: the original counts 0.001 s more of the blend | FUN_005ceef0, blend 4 of the `kain` graph ([`FORMATS/animatio.md`](FORMATS/animatio.md), Root motion); oracle: x is the rest position plus 20.100 when the blend ends (`wine_probe_20261111`, frame 2253) |
+| W, after it | 230 u/s = run root speed 200 * run clip rate 1.15. The tick where the run clip ends drops what is left of it, and the first tick of every restart plays at the node speed 1.5 (300 u/s): the run state writes the rate before the advance that restarts the clip | FUN_00445ba0, FUN_00445930, FUN_00643f80; oracle: world \|vel_xy\| reads 300 at about +191, +892 and +1572 ms after W in `external/captures/wine_20261029_0110/state.csv`, spaced by the run cycle 0.8 / 1.15 = 0.696 s, and 132.98 at the end of a cycle in `wine_probe_20261111` |
 | Shift+W | 200 u/s (= 200 * 1.0, unexplained), no start ramp. Unverified: Kain was probably blocked for part of that phase | measured, oracle (`docs/ORACLE_WINE.md`) |
 | Walk root speed | 56.3485 u/s forward | `kain/walk` animreel, node 0 translation x: 0 to 86.4010 over 47 frames (1.5333 s) |
 | Walk-back root speed | 62.5 u/s backward | `kain/walk_backwards` animreel, node 0 translation x: -2.0833 to -100 over 47 frames (1.5667 s) |
-| Partial stick | At stick magnitude s (clamped to 1): run rate `(0.5 s + 0.5) * 1.15`, walk rate `(s + 1) * 1.15`; speed = `run_rate * s * 200 + walk_rate * (1 - s) * 56.3485`. At s = 0.5 it is 134.85 u/s; at s = 1, 230 | FUN_00445ba0; the 0.18 s start phase is still the full-stick approximation |
-| S | 106.25 u/s = walk-back root speed 62.5 * clip node speed 1.7, yaw unchanged | The 1.7 is the `speed` of the only clip node on `kain/walk_backwards` in the `kain` animatio graph (docs/FORMATS/animatio.md; read by `apply_kain_clip_speeds`). Unlike the run, nothing overrides it: FUN_00723620 rewrites the rate of the run layers only. The oracle confirms 62.5 * 1.7 = 106.25 u/s. The clip starts with a measured 100 ms windup: the oracle's x stays constant for frames 2381-2385 of `sl01_basic` after the S press, and the port models it with `kBackStartTime` |
-| Release | Stops at once | measured, oracle shows a short slide that is not modeled |
+| Partial stick | At stick magnitude s (clamped to 1): run rate `(0.5 s + 0.5) * 1.15`, walk rate `(s + 1) * 1.15`; speed = `run_rate * s * 200 + walk_rate * (1 - s) * 56.3485`. At s = 0.5 it is 134.85 u/s; at s = 1, 230 | FUN_00445ba0; with the animation the port sums the root motion of layers 0 and 1 by these weights, which gives the same speed. The root output of the cross blend entity is not decompiled |
+| S | 106.25 u/s = walk-back root speed 62.5 * clip node speed 1.7, yaw unchanged. `sq_back` starts with blend 6, 0.1 s without a transform, so Kain stands still for 0.1 s first (FUN_005ceef0) | The 1.7 is the `speed` of the only clip node on `kain/walk_backwards` in the `kain` animatio graph (docs/FORMATS/animatio.md; read by `apply_kain_clip_speeds`). Unlike the run, nothing overrides it: FUN_00723620 rewrites the rate of the run layers only. The oracle confirms 62.5 * 1.7 = 106.25 u/s. The clip starts with a measured 100 ms windup: the oracle's x stays constant for frames 2381-2385 of `sl01_basic` after the S press, and the port models it with `kBackStartTime` |
+| Release | 50 u/s for 0.2 s, then still: `st_ready` from `st_run` goes through `st_run2rdy`, whose 0.2 s blend carries the transform (10, 0, 0) | FUN_005ceef0, blend 0 of the `kain` graph; oracle: 50.0 u/s for ten samples after W is released (`wine_camera_1`, frames 3461 to 3470) |
 
 ### Air
 
@@ -192,7 +192,7 @@ These have no original source. They are development aids or placeholders.
 | Eye height 1.7 | Provisional for the camera eye and the ground raycast. The original's r=1 ground/step probe is not ported: its hit is a 3D correction inside the slide state (`FUN_00430820`), and the vertical part alone drops the body into small pits |
 | Attack range 2.2, radius 1.0, cooldown 0.45 s | Provisional, same reason |
 | Move sub-steps | A tick of travel is up to 230 / 60 = 3.8 units, ten times the body radius, so a move is walked in steps of one radius to keep thin walls solid |
-| Forward and back | Forward uses the FUN_00445ba0 partial-stick blend; back is still on or off past the deadzone, after the measured 0.1 s windup. The platform layer also zeroes sticks below 0.25 before the deadzone applies |
+| Forward and back | On the ground the root motion of the animation moves Kain (`KainAnimation::ground_advance`): the start of the run, the 0.1 s without movement before the walk back and the slide after W is released are blends of the graph. Without an animation the controller keeps the steady clip speeds. The platform layer also zeroes sticks below 0.25 before the deadzone applies |
 | Step cap | A step is cut to 0.1 s (the cap the SDL loop already uses) and a move to 64 sub-steps, so a stalled frame cannot tunnel through a wall or the floor |
 | Deadzone edge | Turning starts at exactly the deadzone (FUN_0041ecf0 compares `deadzone <= ax`); the forward/back gate is not traced and the port uses past-the-deadzone |
 | Run button | `run` is Shift and gives 200 u/s, which is slower than plain W (230). That is what the oracle measured (unverified, see above); the name is kept from the input layer. In the oracle prefix Shift is the `autoface` row, not a run (`docs/ORACLE_WINE.md`, Input bindings), so this speed is probably that action |
@@ -202,14 +202,14 @@ These have no original source. They are development aids or placeholders.
 | Item | State |
 |---|---|
 | Root motion | Decoded for the `kain/run` and `kain/walk_backwards` clips and used for the W and S speeds above; the walk-back clip node speed is read from the `kain` animatio graph. Clip blending, events and the landing clips are not ported |
-| Start phase, Shift+W | The 100 u/s start phase (0.18 s) and the 200 u/s of Shift+W are measured constants with no decompiled source yet; the start phase at partial stick is not measured |
+| Shift+W | The 200 u/s of Shift+W is a measured constant with no decompiled source: Shift is combat mode (BO2NX-83). The start of the run at partial stick has no oracle capture; the port sums the root motion of the run and walk layers by the weights of the cross blend |
 | Air control extras | The run flag (a running jump with an off-axis stick counts as forward), the 0.25 stick scale, the platform velocity at takeoff and the blocked forward and back flags are not ported. The sideways rise (69.0 in the oracle against 64.0) is unexplained |
 | Air step rate | The original applies the air damping (0.96 per call) and the 1 degree turn rule once per frame, and so does the port; the port steps once per rendered frame, so the air feel follows the frame rate until the fixed logic tick lands (BO2NX-37) |
-| Landing | A running jump lands at the run speed and a standing one goes through the start phase (inferred from the graph and `wine_air_1`); the run_landing clip's own root motion is not modeled |
+| Landing | On the ground a landing clip moves Kain by the root of its reel, like any other clip; that is not compared with the oracle beyond the jump phases |
 | Glide | Not implemented. `g_glide` (-128) and `termGlide` (160) are parsed only |
 | Ledge fall | Not implemented. Walking off an edge only applies gravity and keeps the ground speed of the held input; the original fall state (FUN_00442800, FUN_00442ae0) has the same air control as a jump but its takeoff velocity was not traced |
 | Wall slide and stop | Ported: the body is Kain's chest sphere (r 19.8 at `z+51.98`), and `CollisionWorld::slide_body` (FUN_005ccb60) sweeps it, stops at the earliest contact and slides the rest of the tick. On `sl01` the W run slides at 162 u/s on model 57's upper chamfer and stops at x = 326.38, y = 44.18 (oracle 326.35 / 44.14). The post-stop drift down the wall (oracle y 44.14 -> 42.84) is not modeled |
-| Release slide | The short slide after releasing W is not modeled |
+| Release slide | Ported with the root motion: the blend of `st_run2rdy` moves Kain 10 u in 0.2 s |
 | Camera setups | The range, pitch, pivot height and yaw limit are those of one live setup; the code or data that builds the setups (including the jump setup with delay 0.1 and blend 0.6) was not traced. The range blend itself is ported |
 
 ## Animation state
@@ -253,8 +253,8 @@ Gate: `bo2nx --replay` writes the port's index as the `anim` column and
 
 | Capture | Rows that match | Where it differs |
 |---|---:|---|
-| `wine_probe_20261111` | 2,998 / 3,109 (96.4%) | `run` 31/139: Shift is combat mode, which the port does not model; `jump` 159/161 |
-| `wine_camera_1` | 3,609 / 3,611 (99.9%) | `jump` 153/155 |
+| `wine_probe_20261111` | 2,999 / 3,109 (96.5%) | `run` 31/139: Shift is combat mode, which the port does not model; `jump` 160/161 |
+| `wine_camera_1` | 3,608 / 3,611 (99.9%) | `jump` 152/155 |
 | `wine_air_1`, first five jump phases | 832 / 981 (84.8%) | the landing choice and the jump physics (the port's position leaves the route in these phases); from `air_w` on it is far off, so the later phases say nothing about the animation |
 
 W is 137/137, S 50/51 and A/D 51/51 in `wine_probe_20261111`.
@@ -361,11 +361,16 @@ prefers a cell whose bounds contain the instance and that lists its model,
 then the bounds alone, then the list. The portal **symbols** still link the
 neighbour graph (`sl01` cell01 symbol 925, portal 930 <-> 931 = cell02).
 
-On `sl01_basic` the W run is now within 0.4 u on average: the slide starts at
+On `sl01_basic` the W run follows the oracle's path: the slide starts at
 the chamfer with 162 u/s at -45 degrees, and the stop is x = 326.38,
 y = 44.18 (oracle x = 326.35, y = 44.14). `after_w` goes from mean 13.31 /
-max 29.18 to **mean 0.398 / max 2.497**; the max is the W start phase at frame
-2258, not the wall. The oracle's post-stop drift down the wall (y 44.14 ->
+max 29.18 to mean 0.398 / max 2.497 with the start of the run fitted to the
+capture (100 u/s for 0.18 s). With the ground movement taken from the root
+motion of the graph (BO2NX-82) the distance is the oracle's, but the replay
+moves one 20 ms capture row per tick and its inputs are stamped up to a row
+late, so the switch to 230 u/s lands about a row later: `after_w` is **mean
+1.829 / max 5.699** and `after_s` **mean 0.940 / max 1.648**. That is the
+baseline now. The oracle's post-stop drift down the wall (y 44.14 ->
 42.84) and the S/A/D phases that follow it are still open (BO2NX-37). Entity
 collision is ruled out: `staticcollision` / `collisionresponse_stop` are
 parsed and `sl01` has 0 static collision entities.

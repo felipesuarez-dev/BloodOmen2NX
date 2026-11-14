@@ -24,7 +24,7 @@ Lee esto en español: [README.md](README.md)
 <!-- badges:start -->
 [status-badge]: https://img.shields.io/badge/phase-M3%20in%20progress-orange
 [overall-badge]: https://img.shields.io/badge/overall-8.2%25-yellow
-[fn-badge]: https://img.shields.io/badge/functions-24%20%2F%2016921-lightgrey
+[fn-badge]: https://img.shields.io/badge/functions-24%20%2F%2016924-lightgrey
 [levels-badge]: https://img.shields.io/badge/levels-0%20%2F%2011-lightgrey
 <!-- badges:end -->
 [cpp-badge]: https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white
@@ -75,11 +75,11 @@ The original is used as a reference, not shipped.
 
 | Component | Weight | Progress | Score |
 |---|---:|---:|---:|
-| Functions translated / in scope | 60% | 24 / 16,921 | 0.14% |
+| Functions translated / in scope | 60% | 24 / 16,924 | 0.14% |
 | Levels completable (campaign chapters) | 30% | 0 / 11 | 0.00% |
 | Platform features | 10% | 10 / 13 + 1 partial | 80.77% |
 
-Function map: 35,523 rows: 24 translated, 80 in progress, 16,817 to do, 18,602 external (not game code).
+Function map: 35,526 rows: 24 translated, 86 in progress, 16,814 to do, 18,602 external (not game code).
 
 The chapter list is in [`docs/LEVELS.md`](docs/LEVELS.md). Chapter flags and platform features are in [`tools/gen/progress_data.py`](tools/gen/progress_data.py).
 <!-- progress:end -->
@@ -115,7 +115,7 @@ Source of truth: [`STATE.md`](STATE.md) and [`ROADMAP.md`](ROADMAP.md).
 | Area | State |
 |---|---|
 | Chapters | None is completable; there is no level flow, no menus and no front end |
-| Gameplay systems | Combat, enemies and AI, dark gifts, weapons and inventory, scripting and triggers are not translated. Glide, ledge falls and the run start phase are pending |
+| Gameplay systems | Combat, enemies and AI, dark gifts, weapons and inventory, scripting and triggers are not translated. Glide and ledge falls are pending |
 | Animation and collision | Skeleton evaluation, skinning and the state machine of the animation graph (`animatio`) are ported for one layer. The pose blend between clips, without the transition filters, and the layers of the run with the walk/run blend by the stick are ported too. The lean on a turn, the layer masks, the clip events, combat mode and the attacks are missing. Collision is ported: the `collmodc` decodes (points, packed triangles, spheres and faces), `CollisionWorld` uses the exact hull and the collision manager sweeps Kain's body sphere. The W run in `sl01` slides at 162 u/s on model 57's chamfer and stops at x = 326.38, y = 44.18 (oracle: 326.35 / 44.14) |
 | Lighting and materials | The `.slm` palette is a shadow map; at the `sl01` spawn the world error is 8.69/255. Kain, the HUD, the green `bo2cinematic001` marker and the exact palette texture format remain; fog is disabled in `sl01` |
 | Audio events and video | The `sound` and `strmfile` event table is not wired to gameplay; there is no Bink playback |

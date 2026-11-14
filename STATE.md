@@ -118,12 +118,15 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   through the turns and diverges at the jump (11 u). A ±2-row shift search
   picks 0 for both captures: the jump apex (281.35) and landing frame (3265)
   match, but the port starts about one row late. The W gate (BO2NX-77) is
-  closed: `after_w` is **mean 0.398 u / max 2.497 u**, the max at frame 2258
-  (the W start phase). The slide is 162 u/s at -45 degrees on model 57's upper
+  closed. `after_w` is **mean 1.829 u / max 5.699 u** since the ground
+  movement comes from the root motion of the animation graph (BO2NX-82): the
+  distance is the oracle's, and the replay switches to the run speed about one
+  20 ms capture row late (it was 0.398 / 2.497 with a start phase fitted to
+  the capture). The slide is 162 u/s at -45 degrees on model 57's upper
   chamfer and the stop is x = 326.38, y = 44.18 against the oracle's
   326.35 / 44.14. The oracle's post-stop drift down the wall (y 44.14 ->
-  42.84) is not modeled. The S phase now carries the measured 100 ms walk-back
-  windup (after_s mean 0.812 / max 1.733 u) and A/D are 0.25 u; the
+  42.84) is not modeled. The S phase stands still for the 0.1 s blend that starts
+  the walk back (after_s mean 0.940 / max 1.648 u) and A/D are 1.77 u; the
   run/jump/attack phases still differ by about 118 u because the A+D net yaw
   is 12 degrees short from the capture's 20-30 ms input-edge sampling, so the
   full route gate stays open (BO2NX-37). The `collmodc` payload is decoded: a 6-byte point list,
@@ -186,8 +189,10 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   back is the `kain/walk_backwards` root speed (62.5) x its clip node speed
   in the `kain` animatio graph (1.7) = 106.25 u/s (`docs/FORMATS/animreel.md`,
   `docs/FORMATS/animatio.md`). Partial stick runs the FUN_00445ba0 run/walk
-  blend (walk root speed 56.3485 u/s); at s = 0.5 it gives 134.85 u/s. The 100 u/s start phase and Shift+W speed are
-  still measured in the Wine oracle. Jumps have the original air control
+  blend (walk root speed 56.3485 u/s); at s = 0.5 it gives 134.85 u/s. The start of the run (100 u/s for 0.2 s), the 0.1 s
+  before the walk back and the 50 u/s slide after W is released are blends of
+  the graph that carry a root transform; the Shift+W speed is still measured
+  in the Wine oracle. Jumps have the original air control
   (`FUN_004436e0`, `FUN_00441f20`, `FUN_00442240`, `FUN_004423b0`, launch
   blocks from `FUN_00452030`): 323/205/203 u/s forward/back/side, as the
   oracle measures. The follow camera follows the yaw with a limited
@@ -220,7 +225,7 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   the `animatio` state machine (`src/engine/anim_machine.cpp`:
   FUN_00642c00, FUN_00643030, FUN_005e1f80) and the state Kain's movement
   starts (`src/game/kain_animation.cpp`, `docs/GAMEPLAY.md`). The replay
-  writes that state and it equals the oracle's `anim` in 96.4% of
+  writes that state and it equals the oracle's `anim` in 96.5% of
   `wine_probe_20261111` and 99.9% of `wine_camera_1`; Kain is drawn with the
   clip of the state in `--replay` and `--play`, with the pose blend between
   clips (FUN_00639990, FUN_00638310, FUN_0069b640) and the layers of the
@@ -250,7 +255,7 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   pose; that, the HUD, the green `bo2cinematic001` marker and the exact
   palette texture format remain (BO2NX-68).
 - Gameplay parity beyond turning, ground speeds, partial stick, jumping,
-  air control and the camera range blend: the start phase and Shift speed,
+  air control and the camera range blend: the Shift speed,
   glide, ledge falls, combat (it needs combat mode; map in BO2NX-34) and
   weapon values are pending.
 - The installer's native RAR decoder is not ported; development

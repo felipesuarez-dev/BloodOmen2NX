@@ -12,8 +12,9 @@ Rules:
 - Every behaviour claim needs a local decompile under `re/decomp/`.
 - Keep the code testable without assets; asset-dependent paths are gated.
 
-Status: Kain movement is in (`kain_tuning`, `player`, `camera`). Run and
-walk-back speeds come from the root motion of the `kain/run` and
-`kain/walk_backwards` animreel clips (`docs/FORMATS/animreel.md`); the start
-phase and Shift+W speeds are still measured in the Wine oracle. See
-`docs/GAMEPLAY.md`.
+Status: Kain movement is in (`kain_tuning`, `player`, `camera`,
+`kain_animation`). On the ground the root motion of the animation moves him
+(`KainAnimation::ground_advance`, `docs/FORMATS/animatio.md`): the blends of
+the graph give the start of the run, the pause before the walk back and the
+slide after the run, and the clips give the run and walk-back speeds. The
+Shift+W speed is still measured in the Wine oracle. See `docs/GAMEPLAY.md`.

@@ -11,7 +11,10 @@ constexpr float kTakeoffTime = 0.2f;  // 0x3e4ccccd, the timer FUN_004436e0 sets
 }  // namespace
 
 KainAnimation::KainAnimation(const bo2::engine::AnimGraph& graph, const KainTuning& tuning)
-    : layers_(graph), deadzone_(tuning.stick_deadzone), run_rate_(tuning.run_clip_rate) {
+    : layers_(graph),
+      deadzone_(tuning.stick_deadzone),
+      run_rate_(tuning.run_clip_rate),
+      clip_forward_speed_(tuning.clip_forward_speed) {
     const JumpTuning& jump = tuning.jump;
     if (jump.gravity_up < 0.0f && jump.gravity_down < 0.0f && jump.height_tap > 0.0f) {
         const JumpDerived derived = derive_jump(jump);
@@ -27,9 +30,55 @@ void KainAnimation::request(std::int32_t state) {
     layers_.start_state(0, state);
 }
 
-void KainAnimation::step(const PlayerInput& input, const PlayerState& state, double seconds) {
+void KainAnimation::request_ground_state(const PlayerInput& input) {
     const bool forward = input.move_y > deadzone_;
     const bool back = input.move_y < -deadzone_;
+    const std::int32_t wanted =
+        forward ? kain_anim::kRun : (back ? kain_anim::kBack : kain_anim::kReady);
+    if (state_ != wanted) {
+        request(wanted);
+    }
+}
+
+float KainAnimation::layer_advance(const bo2::engine::AnimMachine& machine) const {
+    const bo2::engine::AnimRootMotion& root = machine.root_motion();
+    float distance = root.translation.x;
+    for (const bo2::engine::AnimRootSpan& span : root.spans) {
+        if (span.clip >= 0 && static_cast<std::size_t>(span.clip) < clip_forward_speed_.size()) {
+            distance += (span.to - span.from) * clip_forward_speed_[static_cast<std::size_t>(span.clip)];
+        }
+    }
+    return distance;
+}
+
+void KainAnimation::begin(const PlayerInput& input, const PlayerState& state, double seconds) {
+    const bool on_ground = state.grounded && was_grounded_;
+    if (on_ground && !landing_) {
+        request_ground_state(input);
+    }
+    if (state_ == kain_anim::kRun) {
+        // FUN_00445ba0: the stick magnitude drives the run/walk cross blend.
+        const float magnitude = std::sqrt(input.move_x * input.move_x + input.move_y * input.move_y);
+        run_weight_ = magnitude > 1.0f ? 1.0f : magnitude;
+        layers_.layer(0).set_rate((run_weight_ * 0.5f + 0.5f) * run_rate_);
+        layers_.layer(1).set_rate((run_weight_ + 1.0f) * run_rate_);
+    }
+    const bool sequence_ended = layers_.advance(seconds);
+    float advance = layer_advance(layers_.layer(0));
+    if (state_ == kain_anim::kRun && cross_blend()) {
+        advance = run_weight_ * advance + (1.0f - run_weight_) * layer_advance(layers_.layer(1));
+    }
+    ground_advance_ = advance;
+    if (landing_ && sequence_ended) {
+        landing_ = false;
+    }
+    if (on_ground && !landing_) {
+        request_ground_state(input);
+    }
+}
+
+void KainAnimation::end(const PlayerInput& input, const PlayerState& state, double seconds) {
+    const bool forward = input.move_y > deadzone_;
     const float dt = static_cast<float>(seconds);
     if (!state.grounded) {
         landing_ = false;
@@ -69,25 +118,11 @@ void KainAnimation::step(const PlayerInput& input, const PlayerState& state, dou
         }
     }
     was_grounded_ = state.grounded;
+}
 
-    if (state_ == kain_anim::kRun) {
-        // FUN_00445ba0: the stick magnitude drives the run/walk cross blend.
-        const float magnitude = std::sqrt(input.move_x * input.move_x + input.move_y * input.move_y);
-        run_weight_ = magnitude > 1.0f ? 1.0f : magnitude;
-        layers_.layer(0).set_rate((run_weight_ * 0.5f + 0.5f) * run_rate_);
-        layers_.layer(1).set_rate((run_weight_ + 1.0f) * run_rate_);
-    }
-    const bool sequence_ended = layers_.advance(seconds);
-    if (landing_ && sequence_ended) {
-        landing_ = false;
-    }
-    if (state.grounded && !landing_) {
-        const std::int32_t wanted =
-            forward ? kain_anim::kRun : (back ? kain_anim::kBack : kain_anim::kReady);
-        if (state_ != wanted) {
-            request(wanted);
-        }
-    }
+void KainAnimation::step(const PlayerInput& input, const PlayerState& state, double seconds) {
+    begin(input, state, seconds);
+    end(input, state, seconds);
 }
 
 }  // namespace bo2::game

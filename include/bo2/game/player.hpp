@@ -36,7 +36,10 @@ public:
     PlayerController(bo2::engine::CollisionWorld& collision, const bo2::engine::Vec3& start,
                      const KainTuning& tuning);
 
-    void step(const PlayerInput& input, double seconds);
+    // `ground_advance` is the forward distance the animation moves Kain by in
+    // this tick while he is on the ground (KainAnimation::ground_advance,
+    // negative backwards); nullptr falls back to the steady clip speeds.
+    void step(const PlayerInput& input, double seconds, const float* ground_advance = nullptr);
     void look(float yaw_delta, float pitch_delta);
     bool attack(std::vector<std::uint64_t>& targets, const bo2::engine::EntityWorld& world) const;
     void restore(const PlayerState& state);
@@ -61,8 +64,6 @@ private:
     AirSteerDerived steer_back_;
     float back_speed_ = 0.0f;  // walk-back root speed * clip node speed
     PlayerState state_;
-    float forward_time_ = 0.0f;  // seconds forward has been held (ground speed ramp)
-    float back_time_ = 0.0f;     // seconds back has been held (walk-back windup)
     float air_time_ = 0.0f;      // seconds since takeoff
     bool boost_armed_ = false;   // jump held since takeoff
     bool jump_was_down_ = false;  // jump input of the previous step (press edge)

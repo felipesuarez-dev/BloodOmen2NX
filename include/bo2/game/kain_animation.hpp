@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
 
 #include "bo2/engine/anim_graph.hpp"
 #include "bo2/engine/anim_machine.hpp"
@@ -47,8 +48,27 @@ public:
     // `graph` is Kain's `animatio` graph and must outlive this object.
     KainAnimation(const bo2::engine::AnimGraph& graph, const KainTuning& tuning);
 
-    // One tick: the input the controller just used and its state after it.
+    // The first half of a tick, before the player moves: starts the ground
+    // state the input asks for, advances the layers and works out how far the
+    // animation moves Kain forward (`ground_advance`). `state` is the player
+    // at the start of the tick.
+    void begin(const PlayerInput& input, const PlayerState& state, double seconds);
+    // The second half, after the player moved: the takeoff, the fall and the
+    // landing, from the player at the end of the tick.
+    void end(const PlayerInput& input, const PlayerState& state, double seconds);
+    // Both halves with one player state, for a caller that only draws.
     void step(const PlayerInput& input, const PlayerState& state, double seconds);
+
+    // The forward distance the root motion of the last `begin` moves Kain by,
+    // negative backwards. The updates of his ground states (FUN_00445930 for
+    // the run, FUN_00446270 for the walk back) add the root translation of the
+    // animation to his position (FUN_0041f460, FUN_0041f7d0): the transform of
+    // the blend while a clip blends in, the root of the reel after it
+    // (docs/FORMATS/animatio.md, Root motion). In the run with a partial
+    // stick it is the sum of layers 0 and 1 by the weights of the cross
+    // blend, as the pose is; the root output of the cross blend entity is not
+    // decompiled.
+    float ground_advance() const { return ground_advance_; }
 
     // KainState+0x458: the state the player asked for last, -1 before the
     // first step. The machine may be in another one (st_rdy2run before st_run).
@@ -67,6 +87,8 @@ private:
     float run_weight_ = 1.0f;
     float deadzone_ = 0.0f;
     float run_rate_ = 1.0f;
+    std::vector<float> clip_forward_speed_;  // KainTuning::clip_forward_speed
+    float ground_advance_ = 0.0f;
     std::int32_t state_ = -1;
     bool was_grounded_ = true;
     bool landing_ = false;
@@ -80,6 +102,8 @@ private:
     bool jump_released_ = false;
 
     void request(std::int32_t state);
+    void request_ground_state(const PlayerInput& input);
+    float layer_advance(const bo2::engine::AnimMachine& machine) const;
 };
 
 }  // namespace bo2::game

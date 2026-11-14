@@ -182,12 +182,11 @@ void test_forward_speed() {
     bo2::game::PlayerInput input;
     input.move_y = 1.0f;
     run(player, input, 60);
-    // 100 u/s for 0.18 s (measured), then run root speed * run clip rate
-    // (FUN_00445ba0), which is 230 u/s.
+    // Without an animation the controller keeps the steady speed of the clip:
+    // run root speed * run clip rate (FUN_00445ba0), which is 230 u/s.
     const float run_speed = kRunRootSpeed * 1.15f;
     CHECK(std::fabs(run_speed - 230.0f) < 1.0e-3f);
-    const float expected = 0.18f * 100.0f + 0.82f * run_speed;
-    CHECK(std::fabs(player.state().position.x - expected) < 2.5f);
+    CHECK(std::fabs(player.state().position.x - run_speed) < 0.5f);
     CHECK(std::fabs(player.state().position.y) < 1.0e-3f);
     CHECK(std::fabs(player.state().position.z) < 1.0e-4f);
     CHECK(player.state().grounded);
@@ -227,15 +226,44 @@ void test_shift_speed() {
     CHECK(std::fabs(player.state().position.x - 200.0f) < 0.5f);
 }
 
+void test_ground_advance_moves_the_player() {
+    // On the ground the animation moves Kain (FUN_0041f460): the distance the
+    // caller hands in replaces the steady speed, whatever the input is.
+    const bo2::engine::LevelGeometry floor = make_floor();
+    bo2::engine::CollisionWorld collision(floor);
+    bo2::game::PlayerController player(collision, {0.0f, 0.0f, 0.0f}, kain_tuning());
+    run(player, {}, 2);
+    CHECK(player.state().grounded);
+    bo2::game::PlayerInput input;
+    input.move_y = 1.0f;
+    const float start = 2.0f;  // 100 u/s for one 20 ms tick, the start of the run
+    player.step(input, 0.02, &start);
+    CHECK(std::fabs(player.state().position.x - 2.0f) < 1.0e-4f);
+    const float still = 0.0f;  // the pause before the walk back
+    input.move_y = -1.0f;
+    player.step(input, 0.02, &still);
+    CHECK(std::fabs(player.state().position.x - 2.0f) < 1.0e-4f);
+    const float back = -2.125f;
+    player.step(input, 0.02, &back);
+    CHECK(std::fabs(player.state().position.x + 0.125f) < 1.0e-4f);
+    // A released stick still moves by what the animation gives (the slide of
+    // a blend that carries a transform).
+    const float slide = 1.0f;
+    player.step({}, 0.02, &slide);
+    CHECK(std::fabs(player.state().position.x - 0.875f) < 1.0e-4f);
+    CHECK(std::fabs(player.state().position.y) < 1.0e-4f);
+}
+
 void test_backward_speed() {
     const bo2::engine::LevelGeometry floor = make_floor();
     bo2::engine::CollisionWorld collision(floor);
     bo2::game::PlayerController player(collision, {0.0f, 0.0f, 0.0f}, kain_tuning());
     bo2::game::PlayerInput input;
     input.move_y = -1.0f;
-    // Measured walk-back windup: the first 100 ms do not move.
+    // Without an animation there is no pause before the walk back: that
+    // pause is the blend the graph starts the clip with.
     run(player, input, 6);
-    CHECK(player.state().position.x == 0.0f);
+    CHECK(player.state().position.x < 0.0f);
     const float before = player.state().position.x;
     run(player, input, 1);
     const float back_speed = kWalkBackRootSpeed * kWalkBackClipSpeed;
@@ -671,10 +699,10 @@ void test_landing_ends_the_jump_velocity() {
     }
     CHECK(player.state().grounded);
     CHECK(player.air_velocity().x == 0.0f && player.air_velocity().y == 0.0f);
-    // A standing jump lands into the 100 u/s start phase of W.
+    // After the landing the held W moves him at the steady run speed.
     const float before = player.state().position.x;
     player.step(input, kTick);
-    CHECK(std::fabs(player.state().position.x - before - 100.0f / 60.0f) < 1.0e-3f);
+    CHECK(std::fabs(player.state().position.x - before - 230.0f / 60.0f) < 1.0e-3f);
 }
 
 void test_running_jump_lands_at_run_speed() {
@@ -723,7 +751,7 @@ void test_a_fall_keeps_the_ground_speed() {
     input.move_y = 1.0f;
     run(player, input, 6);
     CHECK(!player.state().grounded);
-    CHECK(std::fabs(player.state().position.x - 10.0f) < 0.1f);
+    CHECK(std::fabs(player.state().position.x - 23.0f) < 0.1f);
     CHECK(player.air_velocity().x == 0.0f);
 }
 
@@ -754,8 +782,8 @@ void test_huge_step_is_capped() {
     bo2::engine::CollisionWorld open(floor);
     bo2::game::PlayerController runner(open, {0.0f, 0.0f, 0.0f}, kain_tuning());
     runner.step(input, 1.0e30);
-    // Capped at 0.1 s of the 100 u/s start speed.
-    CHECK(std::fabs(runner.state().position.x - 10.0f) < 0.1f);
+    // Capped at 0.1 s of the 230 u/s run speed.
+    CHECK(std::fabs(runner.state().position.x - 23.0f) < 0.1f);
 
     bo2::game::PlayerController faller(open, {0.0f, 0.0f, 3.0f}, kain_tuning());
     faller.step({}, 1.0e9);
@@ -866,6 +894,7 @@ int main() {
     test_forward_speed();
     test_partial_stick_speed();
     test_shift_speed();
+    test_ground_advance_moves_the_player();
     test_backward_speed();
     test_speeds_follow_the_tuning();
     test_wall_blocks_the_walk();

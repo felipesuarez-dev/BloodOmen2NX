@@ -1,5 +1,6 @@
 #include "bo2/game/kain_tuning.hpp"
 
+#include <map>
 #include <cmath>
 #include <cstring>
 #include <stdexcept>
@@ -130,6 +131,35 @@ void apply_kain_clip_speeds(KainTuning& tuning, const bo2::engine::BigArchive& a
     tuning.walk_root_speed = clip_root_speed(archive, "kain/walk");
     tuning.walk_back_root_speed = clip_root_speed(archive, "kain/walk_backwards");
     tuning.walk_back_clip_speed = clip_node_speed(archive, "kain/walk_backwards");
+
+    const bo2::engine::BigEntry* entry = archive.find("animatio", "kain");
+    if (entry == nullptr) {
+        throw common::ParseError("no animatio entry named kain");
+    }
+    const bo2::engine::AnimGraph graph = bo2::engine::parse_anim_graph(archive.extract(*entry));
+    std::map<std::string, float> speeds;  // by reel name
+    tuning.clip_forward_speed.assign(graph.clips.size(), 0.0f);
+    for (std::size_t index = 0; index < graph.clips.size(); ++index) {
+        const std::string name =
+            bo2::engine::anim_clip_reel_name(graph, graph.clips[index], archive, *entry);
+        if (name.empty()) {
+            continue;
+        }
+        auto found = speeds.find(name);
+        if (found == speeds.end()) {
+            float speed = 0.0f;
+            const bo2::engine::BigEntry* reel_entry = archive.find("animreel", name);
+            if (reel_entry != nullptr) {
+                const bo2::engine::AnimReel reel =
+                    bo2::engine::parse_anim_reel(archive.extract(*reel_entry));
+                if (reel.duration > 0.0f) {
+                    speed = bo2::engine::root_displacement(reel).x / reel.duration;
+                }
+            }
+            found = speeds.emplace(name, speed).first;
+        }
+        tuning.clip_forward_speed[index] = found->second;
+    }
 }
 
 // Port of FUN_00451d00. The original runs in x87 single precision; this runs

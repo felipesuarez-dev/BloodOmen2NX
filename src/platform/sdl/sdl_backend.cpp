@@ -591,10 +591,18 @@ int run_level(const engine::LevelGeometry& geometry,
             player_input.run = state.action(InputAction::Run);
             player_input.jump = state.action(InputAction::Jump);
             player_input.attack = state.action(InputAction::Attack);
-            player->step(player_input, static_cast<double>(dt));
+            // With Kain's animation the root motion moves him on the ground
+            // (FUN_0041f460); without it the player keeps the steady clip speeds.
+            float ground_advance = 0.0f;
+            if (actor) {
+                ground_advance = options.kain_actor->begin(player_input, player->state(),
+                                                           static_cast<double>(dt));
+            }
+            player->step(player_input, static_cast<double>(dt),
+                         actor ? &ground_advance : nullptr);
             follow->update(player->state(), *collision, static_cast<double>(dt));
             if (actor) {
-                options.kain_actor->step(player_input, player->state(), static_cast<double>(dt));
+                options.kain_actor->end(player_input, player->state(), static_cast<double>(dt));
             }
             update_actor();
             ++play_tick;

@@ -1160,9 +1160,13 @@ int run_replay(const Options& options) {
         input.run = tick.run;
         input.jump = tick.jump;
         input.attack = tick.attack;
-        player.step(input, tick.seconds);
+        // The order of a ground state of the original: the animation advances
+        // and its root motion moves Kain (FUN_0041f460).
+        animation.begin(input, player.state(), tick.seconds);
+        const float ground_advance = animation.ground_advance();
+        player.step(input, tick.seconds, &ground_advance);
         camera.update(player.state(), collision, tick.seconds);
-        animation.step(input, player.state(), tick.seconds);
+        animation.end(input, player.state(), tick.seconds);
         if (actor) {
             actor->step(input, player.state(), tick.seconds);
         }

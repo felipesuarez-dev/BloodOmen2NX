@@ -105,9 +105,10 @@ void test_run_plays_at_the_run_rate() {
     for (int tick = 0; tick < 10; ++tick) {
         animation.step(stick(1.0f), on_ground(), kTick);
     }
-    // FUN_00445ba0 replaces the node speed 1.5 by 1.15: 0.2 s of game time.
+    // FUN_00445ba0 replaces the node speed 1.5 by 1.15. The state starts and
+    // moves in the same tick: eleven ticks, 0.22 s of game time.
     CHECK(std::fabs(animation.machine().rate() - 1.15f) < 1.0e-6f);
-    CHECK(std::fabs(animation.machine().time() - 0.2f * 1.15f) < 1.0e-3f);
+    CHECK(std::fabs(animation.machine().time() - 0.22f * 1.15f) < 1.0e-3f);
     CHECK(animation.run_weight() == 1.0f);
     // Half stick: the weight of the run is the stick magnitude and the run
     // layer plays at (0.5 s + 0.5) of the run rate, the walk layer at (s + 1).
@@ -119,6 +120,49 @@ void test_run_plays_at_the_run_rate() {
     // cross blend is off.
     animation.step(stick(1.0f, 1.0f), on_ground(), kTick);
     CHECK(animation.run_weight() == 1.0f && !animation.cross_blend());
+}
+
+void test_ground_advance() {
+    // The run clip moves the root 200 u per second of reel time and the walk
+    // back clip -62.5. The walk back starts with a 0.1 s blend whose transform
+    // is 5 u backwards.
+    bo2::engine::AnimGraph graph = movement_graph();
+    graph.blends = {0.1f};
+    graph.blend_transforms = {1};
+    graph.transforms = {bo2::engine::AnimTransform{
+        {-5.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}}};
+    graph.states[59].transitions[0].actions[0].blend_tag = 1;
+    bo2::game::KainTuning value = tuning();
+    value.clip_forward_speed.assign(graph.clips.size(), 0.0f);
+    value.clip_forward_speed[1] = 200.0f;
+    value.clip_forward_speed[59] = -62.5f;
+    KainAnimation animation(graph, value);
+
+    // W: the run starts and moves in the same tick, at the run rate.
+    animation.begin(stick(1.0f), on_ground(), kTick);
+    CHECK(animation.state() == anim::kRun);
+    CHECK(std::fabs(animation.ground_advance() - 200.0f * 1.15f * 0.02f) < 1.0e-4f);
+    animation.end(stick(1.0f), on_ground(), kTick);
+    // Nothing held: the idle clip does not move him.
+    animation.begin(stick(0.0f), on_ground(), kTick);
+    CHECK(animation.state() == anim::kReady && animation.ground_advance() == 0.0f);
+    animation.end(stick(0.0f), on_ground(), kTick);
+    // S: the blend gives its transform over its 0.1 s (FUN_005ceef0)...
+    animation.begin(stick(-1.0f), on_ground(), kTick);
+    CHECK(animation.state() == anim::kBack);
+    CHECK(std::fabs(animation.ground_advance() + 1.0f) < 1.0e-4f);
+    animation.end(stick(-1.0f), on_ground(), kTick);
+    // ...and then the clip moves him by the root of its reel.
+    for (int tick = 0; tick < 7; ++tick) {
+        animation.begin(stick(-1.0f), on_ground(), kTick);
+        animation.end(stick(-1.0f), on_ground(), kTick);
+    }
+    CHECK(std::fabs(animation.ground_advance() + 62.5f * 0.02f) < 1.0e-4f);
+    // In the air `begin` asks for no ground state: `end` owns the jump.
+    animation.end(stick(-1.0f), in_air(200.0f), kTick);
+    CHECK(animation.state() == anim::kStartJump);
+    animation.begin(stick(1.0f), in_air(200.0f), kTick);
+    CHECK(animation.state() == anim::kStartJump);
 }
 
 void test_jump_and_landing() {
@@ -222,6 +266,7 @@ void test_run_landing_and_fall() {
 int main() {
     test_ground_states();
     test_run_plays_at_the_run_rate();
+    test_ground_advance();
     test_jump_and_landing();
     test_takeoff_ends_with_the_boost_window();
     test_run_landing_and_fall();

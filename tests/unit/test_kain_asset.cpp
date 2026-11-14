@@ -298,6 +298,71 @@ void check_kain_actor(const std::string& path, const bo2::game::KainTuning& tuni
 
 }  // namespace
 
+// The ground movement of the original through the real graph. The Wine oracle
+// shows 100 u/s from rest until Kain is 20.1 u ahead and 230 u/s after it, and
+// 0.1 s without moving before he walks back at 106.25 u/s
+// (docs/FORMATS/animatio.md, Root motion).
+void check_kain_ground_motion(const bo2::engine::BigArchive& archive,
+                              const bo2::game::KainTuning& tuning) {
+    const bo2::engine::BigEntry* entry = archive.find("animatio", "kain");
+    CHECK(entry != nullptr);
+    if (entry == nullptr) {
+        return;
+    }
+    const bo2::engine::AnimGraph graph = bo2::engine::parse_anim_graph(archive.extract(*entry));
+    bo2::game::KainAnimation animation(graph, tuning);
+    bo2::game::PlayerState ground;
+    ground.grounded = true;
+    const bo2::game::PlayerInput idle;
+    bo2::game::PlayerInput forward;
+    forward.move_y = 1.0f;
+    bo2::game::PlayerInput back;
+    back.move_y = -1.0f;
+    const double tick = 0.007;  // not a divisor of the blend times
+    const auto step = [&](const bo2::game::PlayerInput& input) {
+        animation.begin(input, ground, tick);
+        animation.end(input, ground, tick);
+        return animation.ground_advance();
+    };
+    step(idle);
+
+    // W: st_rdy2run blends in for 0.2 s and its blend carries 20 u.
+    float travelled = 0.0f;
+    int ticks = 0;
+    for (; ticks < 40; ++ticks) {
+        const float advance = step(forward);
+        travelled += advance;
+        if (std::fabs(advance - 100.0f * 0.007f) > 1.0e-3f) {
+            break;  // the blend ended inside this tick
+        }
+    }
+    CHECK(ticks == 28);
+    CHECK(std::fabs(travelled - 20.1f) < 1.0e-3f);
+    // The run clip starts at its node speed, 1.5: the run state writes the run
+    // rate before the advance that restarts the clip (FUN_00445930 calls
+    // FUN_00445ba0 and then FUN_0041f460), so the rate takes one more tick.
+    CHECK(std::fabs(step(forward) - 300.0f * 0.007f) < 1.0e-3f);
+    CHECK(std::fabs(step(forward) - 230.0f * 0.007f) < 1.0e-3f);
+
+    // Back to rest, then S: 0.1 s of a blend without a transform, then the
+    // walk back clip at its node speed.
+    for (int index = 0; index < 150; ++index) {
+        step(idle);
+    }
+    CHECK(animation.state() == bo2::game::kain_anim::kReady);
+    CHECK(std::fabs(step(idle)) < 1.0e-4f);
+    int pause = 0;
+    float advance = 0.0f;
+    for (; pause < 40; ++pause) {
+        advance = step(back);
+        if (advance != 0.0f) {
+            break;
+        }
+    }
+    CHECK(pause == 15);
+    CHECK(std::fabs(advance + 106.25f * 0.007f) < 1.0e-3f);
+}
+
 int main() {
     const char* root = std::getenv("BO2NX_ASSETS_DIR");
     if (root == nullptr) {
@@ -331,6 +396,7 @@ int main() {
             CHECK(std::fabs(tuning.run_clip_rate - 1.15f) < 1.0e-6f);
             bo2::game::apply_kain_clip_speeds(tuning, archive);
             check_kain_actor(path.string(), tuning);
+            check_kain_ground_motion(archive, tuning);
             CHECK(std::fabs(tuning.run_root_speed - 200.0f) < 1.0e-3f);
             CHECK(std::fabs(tuning.walk_root_speed - 56.3485f) < 1.0e-3f);
             CHECK(std::fabs(tuning.walk_back_root_speed - 62.5f) < 1.0e-3f);

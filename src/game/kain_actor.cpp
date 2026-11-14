@@ -55,6 +55,16 @@ void KainActor::step(const PlayerInput& input, const PlayerState& state, double 
     fixed_seconds_ += seconds;
 }
 
+float KainActor::begin(const PlayerInput& input, const PlayerState& state, double seconds) {
+    animation_.begin(input, state, seconds);
+    fixed_seconds_ += seconds;
+    return animation_.ground_advance();
+}
+
+void KainActor::end(const PlayerInput& input, const PlayerState& state, double seconds) {
+    animation_.end(input, state, seconds);
+}
+
 void KainActor::pose(const bo2::engine::Vec3& position, float yaw,
                      std::vector<bo2::engine::Vec3>& positions,
                      std::vector<bo2::engine::Vec3>& normals) {

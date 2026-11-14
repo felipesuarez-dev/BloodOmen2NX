@@ -610,11 +610,11 @@ address,name,subsystem,status,notes
 0041f220,FUN_0041f220,unknown,todo,ghidra
 0041f250,FUN_0041f250,unknown,todo,ghidra
 0041f280,FUN_0041f280,unknown,todo,ghidra
-0041f460,FUN_0041f460,unknown,todo,ghidra
+0041f460,FUN_0041f460,player,wip,src/game/player.cpp: PlayerController::step moves Kain by the forward root translation of the animation; the root rotation and the blocker response FUN_0041ee60 and the wall mode 0x45c are not ported
 0041f690,FUN_0041f690,unknown,todo,ghidra
 0041f6c0,FUN_0041f6c0,unknown,todo,ghidra
-0041f7d0,FUN_0041f7d0,unknown,todo,ghidra
-0041fb00,FUN_0041fb00,unknown,todo,ghidra
+0041f7d0,FUN_0041f7d0,player,wip,src/game/player.cpp: the ground advance is added along the yaw; the translation and rotation scales and the blocker flags and the entity-relative path are not ported
+0041fb00,FUN_0041fb00,animation,wip,src/game/kain_animation.cpp: KainAnimation::begin advances the layers and reads their root motion; the pose update after it is done by KainActor
 0041fc20,FUN_0041fc20,unknown,todo,ghidra
 0041fc60,FUN_0041fc60,unknown,todo,ghidra
 0041ff20,FUN_0041ff20,unknown,todo,ghidra
@@ -1223,6 +1223,7 @@ address,name,subsystem,status,notes
 00445800,FUN_00445800,unknown,todo,ghidra
 004458a0,FUN_004458a0,unknown,todo,ghidra
 004458d0,FUN_004458d0,unknown,todo,ghidra
+00445930,FUN_00445930,player,wip,src/game/kain_animation.cpp: KainAnimation::begin writes the run rates and then advances as the run state update does; the transition check and the lean of layer 3 are not ported
 00445ba0,FUN_00445ba0,player,wip,src/game/player.cpp: partial-stick run/walk blend ported; src/game/kain_animation.cpp writes the cross blend weight and the rates of layers 0 and 1 every frame; the 0.18 s start ramp and Shift speed are measured approximations
 00445d10,FUN_00445d10,unknown,todo,ghidra
 00445db0,FUN_00445db0,unknown,todo,ghidra
@@ -1234,6 +1235,7 @@ address,name,subsystem,status,notes
 00446160,FUN_00446160,unknown,todo,ghidra
 004461f0,FUN_004461f0,unknown,todo,ghidra
 00446220,FUN_00446220,unknown,todo,ghidra
+00446270,FUN_00446270,player,wip,src/game/kain_animation.cpp: KainAnimation::begin advances the walk-back clip and the player turns after it; the transition check is not ported
 00446300,FUN_00446300,unknown,todo,ghidra
 004463e0,FUN_004463e0,unknown,todo,ghidra
 004464f0,FUN_004464f0,unknown,todo,ghidra
@@ -8218,6 +8220,7 @@ address,name,subsystem,status,notes
 005e3bf0,FUN_005e3bf0,unknown,todo,ghidra
 005e3c80,FUN_005e3c80,unknown,todo,ghidra
 005e3e50,FUN_005e3e50,animation,wip,src/engine/anim_machine.cpp: AnimLayers::play_sequence plays a sequence on a layer; the state reset before it is not ported
+005e3ea0,FUN_005e3ea0,animation,wip,src/engine/anim_machine.cpp: AnimLayers::advance moves every layer and each keeps its root motion; the root layer index at +0x130 and the callback of a finished instance are not ported
 005e3eb2,FUN_005e3eb2,unknown,todo,ghidra
 005e43e0,FUN_005e43e0,animation,wip,src/engine/skeleton_pose.cpp: bone_matrices multiplies the local matrix by the parent's with the parentless bone at identity; the per-bone cache and the LOD collapse and the entity matrix are not ported
 005e49b0,FUN_005e49b0,unknown,todo,ghidra
