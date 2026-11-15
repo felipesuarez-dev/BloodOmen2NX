@@ -6266,7 +6266,7 @@ address,name,subsystem,status,notes
 0057d290,FUN_0057d290,unknown,todo,ghidra
 0057d320,FUN_0057d320,unknown,todo,ghidra
 0057d3c0,FUN_0057d3c0,unknown,todo,ghidra
-0057d3e0,FUN_0057d3e0,unknown,todo,ghidra
+0057d3e0,FUN_0057d3e0,script,wip,src/engine/script_machine.cpp: ScriptMachine::call builds the frame of a script body with its result address and parameters and locals
 0057d550,FUN_0057d550,unknown,todo,ghidra
 0057d5c0,FUN_0057d5c0,unknown,todo,ghidra
 0057d690,FUN_0057d690,unknown,todo,ghidra
@@ -6277,11 +6277,11 @@ address,name,subsystem,status,notes
 0057daf0,FUN_0057daf0,unknown,todo,ghidra
 0057dbe0,FUN_0057dbe0,unknown,todo,ghidra
 0057dc80,FUN_0057dc80,unknown,todo,ghidra
-0057dcf0,FUN_0057dcf0,unknown,todo,ghidra
+0057dcf0,FUN_0057dcf0,script,wip,src/engine/script_machine.cpp: ScriptMachine::run_thread interprets and removes the frames that end; child threads are not ported
 0057de60,FUN_0057de60,unknown,todo,ghidra
-0057de80,FUN_0057de80,script,wip,src/engine/script_machine.cpp: ScriptMachine::interpret runs the value and arithmetic and logic and jump instructions and the loop guard; calls and threads and state changes are not ported
+0057de80,FUN_0057de80,script,wip,src/engine/script_machine.cpp: ScriptMachine::interpret runs the value and arithmetic and logic and jump instructions and the loop guard and the calls that return; child threads and tasks and state changes are not ported
 0057f560,FUN_0057f560,unknown,todo,ghidra
-0057f580,FUN_0057f580,unknown,todo,ghidra
+0057f580,FUN_0057f580,script,wip,src/engine/script_machine.cpp: ScriptMachine::call runs a native body at once or pushes the frame of a script body
 0057f6d0,FUN_0057f6d0,unknown,todo,ghidra
 0057f830,FUN_0057f830,unknown,todo,ghidra
 0057f9f0,FUN_0057f9f0,unknown,todo,ghidra
@@ -6514,7 +6514,7 @@ address,name,subsystem,status,notes
 00587a00,FUN_00587a00,unknown,todo,ghidra
 00587a10,FUN_00587a10,unknown,todo,ghidra
 00587a40,FUN_00587a40,unknown,todo,ghidra
-00587ac0,FUN_00587ac0,unknown,todo,ghidra
+00587ac0,FUN_00587ac0,script,wip,src/engine/script_machine.cpp: ScriptMachine::bind_native binds a native body by class name and body index
 00587b00,FUN_00587b00,unknown,todo,ghidra
 00587b60,FUN_00587b60,unknown,todo,ghidra
 00587b70,FUN_00587b70,unknown,todo,ghidra
@@ -6530,9 +6530,9 @@ address,name,subsystem,status,notes
 00587d90,FUN_00587d90,unknown,todo,ghidra
 00587dd0,FUN_00587dd0,unknown,todo,ghidra
 00587fa0,FUN_00587fa0,unknown,todo,ghidra
-00587fc0,FUN_00587fc0,unknown,todo,ghidra
+00587fc0,FUN_00587fc0,script,wip,src/engine/script_machine.cpp: ScriptMachine::copy_argument stores a value by the kind of its type; kinds 6 and 9 are not ported
 005882f0,FUN_005882f0,unknown,todo,ghidra
-00588390,FUN_00588390,unknown,todo,ghidra
+00588390,FUN_00588390,script,wip,src/engine/script_machine.cpp: ScriptMachine::init_variable gives a variable its initial value by kind; kinds 6 and 9 are not ported
 00588570,FUN_00588570,unknown,todo,ghidra
 00588670,FUN_00588670,unknown,todo,ghidra
 00588740,FUN_00588740,unknown,todo,ghidra

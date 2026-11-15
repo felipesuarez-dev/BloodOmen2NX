@@ -12,8 +12,10 @@ Port: `src/engine/script_package.cpp` (the packages),
 `src/engine/script_program.cpp` (linking), `src/engine/script_memory.cpp`
 and `src/engine/script_machine.cpp` (the machine: objects, strings, frames
 and the instructions of "Values and variables", "Arithmetic and logic" and
-"Flow", with the loop guard; calls, child threads (`0x59` to `0x5b`) and the
-change of state (`0x5e`) are not ported yet).
+"Flow", with the loop guard, the calls that return (`0x47` to `0x4c`) and
+the binding of native functions; child threads and tasks (`0x4d` to `0x52`,
+`0x55`, `0x56`, `0x59` to `0x5b`) and the change of state (`0x5e`) are not
+ported yet).
 
 ## Objects, classes and states
 

@@ -474,7 +474,11 @@ void test_unported_code() {
         MachineRun run(machine_class({op(0x61), op(0x5C)}));
         run.machine->interpret(run.thread);
     }));
-    CHECK(throws([] {  // a call: not ported yet
+    CHECK(throws([] {  // a call that starts a thread: not ported yet
+        MachineRun run(machine_class({op(0x4E), 1, op(0x5C)}));
+        run.machine->interpret(run.thread);
+    }));
+    CHECK(throws([] {  // a call word that names no body
         MachineRun run(machine_class({op(0x48), 0, op(0x5C)}));
         run.machine->interpret(run.thread);
     }));
@@ -702,6 +706,178 @@ void test_cast() {
     CHECK(run.cell(3) == 1);  // its own class
 }
 
+// Calls (BO2NX-154).
+using bo2::engine::ScriptAddress;
+using bo2::engine::ScriptType;
+using bo2::engine::ScriptVariable;
+
+ScriptVariable variable(std::uint16_t kind, std::uint32_t offset) {
+    ScriptVariable out;
+    out.type.kind = kind;
+    out.offset = offset;
+    return out;
+}
+
+ScriptMethod method_with(const std::string& name, std::uint16_t slot, std::vector<ScriptVariable> params,
+                         std::uint16_t result_kind) {
+    ScriptMethod method = make_method(name, slot);
+    method.params = std::move(params);
+    method.result.kind = result_kind;
+    return method;
+}
+
+ScriptBody native_body(std::uint16_t method) {
+    ScriptBody body = make_body(method, 0, {});
+    body.flags = 1;
+    return body;
+}
+
+ScriptBody script_body(std::uint16_t method, std::uint16_t state, std::vector<std::uint32_t> code,
+                       std::uint16_t locals_size = 16) {
+    ScriptBody body = make_body(method, state, std::move(code));
+    body.locals_size = locals_size;
+    body.stack_size = 8;
+    return body;
+}
+
+// data + offset += 1, then the frame ends.
+std::vector<std::uint32_t> count_into(std::int32_t offset) {
+    return {op(0x0B, offset), op(0x0A, offset), op(0x03, 1), op(0x28), op(0x1D), op(0x5C)};
+}
+
+struct NativeSeen {
+    ScriptObjectId self = 0;
+    std::uint32_t argc = 0;
+    std::uint32_t first = 0;
+    std::uint32_t second = 0;
+} native_seen;
+
+void native_sum(ScriptMachine& machine, ScriptObjectId self, std::uint32_t argc, ScriptAddress args,
+                ScriptAddress result) {
+    native_seen = {self, argc, machine.memory().u32(args), machine.memory().u32(args + 4)};
+    machine.memory().set_u32(result, native_seen.first + native_seen.second);
+}
+
+void test_native_call() {
+    ScriptClass cls = machine_class(
+        {op(0x03, 0x55), op(0x03, 5), op(0x03, 7), op(0x07, 0), op(0x02), 2, op(0x47), 0, op(0x5C)},
+        {make_reference(4, 7, "alpha", 1)});
+    cls.methods.push_back(method_with("sum", bo2::engine::kScriptNoSlot,
+                                      {variable(2, 4), variable(2, 8)}, 2));
+    cls.bodies.push_back(native_body(1));
+    MachineRun run(cls);
+    CHECK(throws([&] { run.machine->bind_native("alpha", 0, native_sum); }));  // a script body
+    CHECK(throws([&] { run.machine->bind_native("beta", 1, native_sum); }));
+    CHECK(throws([&] { run.machine->bind_native("alpha", 2, native_sum); }));
+    run.machine->bind_native("alpha", 1, native_sum);
+    CHECK(run.machine->interpret(run.thread));
+    CHECK(native_seen.self == 2);
+    CHECK(native_seen.argc == 2);
+    CHECK(native_seen.first == 5);
+    CHECK(native_seen.second == 7);
+    CHECK(run.machine->memory().u32(run.frame().locals) == 12);
+    CHECK(run.frame().top == 0);
+    CHECK(run.cell(0) == 0x55);
+}
+
+// The callee writes its argument times two into the result; the caller then
+// yields so that its frame can be read.
+void test_script_call() {
+    ScriptClass cls = machine_class({op(0x03, 21), op(0x07, 8), op(0x48), 0, op(0x5D), op(0x5C)},
+                                    {make_reference(4, 3, "alpha", 1)});
+    cls.methods.push_back(method_with("twice", bo2::engine::kScriptNoSlot, {variable(2, 4)}, 2));
+    cls.bodies.push_back(script_body(1, 0, {op(0x06, 0), op(0x06, 4), op(0x06, 4), op(0x28), op(0x1D), op(0x5C)}, 8));
+    MachineRun run(cls);
+    const std::size_t blocks = run.machine->memory().live_blocks();
+    CHECK(run.machine->run_thread(run.thread));
+    CHECK(run.thread.frames.size() == 1);
+    CHECK(run.machine->memory().u32(run.frame().locals + 8) == 42);
+    CHECK(run.frame().top == -1);
+    CHECK(run.machine->memory().live_blocks() == blocks);  // the callee's stack and locals are freed
+    CHECK(!run.machine->run_thread(run.thread));
+    CHECK(run.thread.frames.empty());
+}
+
+// 0x4a picks the body in the slot of the method in the table of the current
+// state, or of state 0 with bit 0 of imm.
+void test_virtual_call() {
+    ScriptClass cls = machine_class(
+        {op(0x4A), 0, op(0x0B, 0), op(0x03, 1), op(0x1C), op(0x4A), 0, op(0x4A, 1), 0, op(0x5D), op(0x5C)},
+        {make_reference(3, 1, "alpha", 1), make_reference(3, 6, "alpha", 1), make_reference(3, 8, "alpha", 1)});
+    cls.states = {"default", "busy"};
+    cls.state_owners = {"", ""};
+    cls.slot_count = 2;
+    cls.methods.push_back(make_method("act", 1));
+    cls.bodies.push_back(script_body(1, 0, count_into(4)));
+    cls.bodies.push_back(script_body(1, 1, count_into(8)));
+    cls.slots = {{0, 0, "alpha", 0}, {0, 1, "alpha", 1}, {1, 1, "alpha", 2}};
+    MachineRun run(cls);
+    CHECK(run.machine->run_thread(run.thread));
+    const ScriptAddress data = run.machine->data_of(1);
+    CHECK(run.machine->memory().u32(data + 4) == 2);  // state 0, then state 0 by bit 0
+    CHECK(run.machine->memory().u32(data + 8) == 1);  // state 1
+}
+
+// 0x49: the tables of another class (base) and one of its methods.
+void test_table_call() {
+    ScriptClass cls = machine_class(
+        {op(0x49), 0, 0,                                // state 0: body 1 of base
+         op(0x0B, 0), op(0x03, 1), op(0x1C), op(0x49), 0, 0,  // state 1: body 2
+         op(0x0B, 0), op(0x03, 5), op(0x1C), op(0x49), 0, 0,  // state 5: base has 2, so state 0
+         op(0x49), 0, 0,                                // slot 0 with state 5: no body
+         op(0x5D), op(0x5C)},
+        {make_reference(5, 1, "base", 1, "base"), make_reference(5, 7, "base", 1, "base"),
+         make_reference(5, 13, "base", 1, "base"), make_reference(5, 16, "base", 0, "base")});
+    ScriptClass base = make_class("base", "", {"default", "busy"}, 2);
+    base.methods = {make_method("start", 0), make_method("act", 1)};
+    base.bodies = {script_body(0, 0, {op(0x5C)}), script_body(1, 0, count_into(4)), script_body(1, 1, count_into(8))};
+    base.slots = {{0, 0, "base", 0}, {0, 1, "base", 1}, {1, 1, "base", 2}};
+    MachineRun run(std::vector<ScriptClass>{cls, base});
+    CHECK(run.machine->run_thread(run.thread));
+    const ScriptAddress data = run.machine->data_of(1);
+    CHECK(run.machine->memory().u32(data + 4) == 2);
+    CHECK(run.machine->memory().u32(data + 8) == 1);
+    CHECK(run.frame().top == -1);
+}
+
+// A call on object 0 only removes its cells.
+void test_call_on_null() {
+    ScriptClass cls = machine_class(
+        {op(0x03, 0x55), op(0x03, 9), op(0x03, 0), op(0x4B), 0,
+         op(0x03, 9), op(0x03, 0), op(0x4C), 0, op(0x5C)},
+        {make_reference(4, 4, "alpha", 1), make_reference(3, 8, "alpha", 1)});
+    cls.methods.push_back(method_with("take", bo2::engine::kScriptNoSlot, {variable(2, 4)}, 0));
+    cls.bodies.push_back(script_body(1, 0, {op(0x5C)}));
+    MachineRun run(cls);
+    CHECK(run.machine->interpret(run.thread));
+    CHECK(run.thread.frames.size() == 1);
+    CHECK(run.frame().top == 0);
+    CHECK(run.cell(0) == 0x55);
+}
+
+// A string parameter shares the record of its argument, counted; a string
+// local starts as the shared empty string.
+void test_string_param() {
+    ScriptClass cls = machine_class({0, op(0x48), 0, op(0x5C)},
+                                    {make_reference(0, 0, "hello"), make_reference(4, 2, "alpha", 1)});
+    cls.methods.push_back(method_with("hear", bo2::engine::kScriptNoSlot, {variable(4, 4)}, 0));
+    ScriptBody hear = script_body(1, 0, {op(0x5D), op(0x5C)}, 12);
+    hear.locals = {variable(4, 8)};
+    cls.bodies.push_back(hear);
+    MachineRun run(cls);
+    ScriptMachine& machine = *run.machine;
+    const ScriptAddress record = machine.memory().u32(machine.name_cell(0));
+    CHECK(machine.memory().u32(record) == 1);
+    CHECK(machine.run_thread(run.thread));
+    CHECK(run.thread.frames.size() == 2);
+    const ScriptAddress locals = run.frame().locals;
+    CHECK(machine.memory().u32(locals + 4) == record);
+    CHECK(machine.memory().u32(record) == 2);
+    CHECK(machine.string_at(locals + 4) == "hello");
+    CHECK(machine.string_at(locals + 8).empty());
+    CHECK(machine.memory().u32(locals + 8) != 0);
+}
+
 // The game data. Containers are read with one sized read: the stream
 // iterator of BigArchive::load takes over a minute for the whole game in a
 // debug build.
@@ -880,6 +1056,12 @@ int main() {
     test_loop_guard();
     test_yield();
     test_cast();
+    test_native_call();
+    test_script_call();
+    test_virtual_call();
+    test_table_call();
+    test_call_on_null();
+    test_string_param();
 
     const char* root = std::getenv("BO2NX_ASSETS_DIR");
     if (root == nullptr) {

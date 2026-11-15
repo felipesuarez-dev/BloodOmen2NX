@@ -34,6 +34,14 @@ struct ScriptThread {
     std::vector<ScriptFrame> frames;
 };
 
+class ScriptMachine;
+
+// A native function (docs/SCRIPTS.md, "Native functions"): the machine, the
+// object, the argument count, the address of the cell of the first argument
+// and the address of the result (0 when the method has none).
+using ScriptNative = void (*)(ScriptMachine& machine, ScriptObjectId self, std::uint32_t argc,
+                              ScriptAddress args, ScriptAddress result);
+
 class ScriptMachine {
 public:
     // The program must outlive the machine.
@@ -57,8 +65,19 @@ public:
     ScriptFrame make_frame(ScriptObjectId object, std::uint32_t body);
 
     // Runs the last frame of the thread (FUN_0057de80). Returns true when the
-    // frame ended and false when the thread must stop until its next run.
+    // frame ended or when a call pushed a new frame, and false when the thread
+    // must stop until its next run.
     bool interpret(ScriptThread& thread);
+
+    // Runs a thread (FUN_0057dcf0, without child threads): interpret until it
+    // stops; a frame that ended is removed and its caller continues. Returns
+    // true while the thread has frames.
+    bool run_thread(ScriptThread& thread);
+
+    // Binds the native function of the body `body_index` of the class named
+    // `class_name` (FUN_00587ac0). Throws when the class or the body does not
+    // exist or the body is not native.
+    void bind_native(const std::string& class_name, std::uint16_t body_index, ScriptNative native);
 
     // Strings: a record is a block {u32 count, the bytes, 0}; a string cell
     // is a 4-byte block that holds the address of a record, and a string on
@@ -83,11 +102,21 @@ private:
     void release_record(ScriptAddress record);
 
     bool is_a(std::uint32_t class_id, const std::string& name) const;
+    std::uint32_t method_of_body(std::uint32_t body) const;
+    std::uint32_t body_in_state(ScriptObjectId object, std::uint32_t method, bool state_zero) const;
+    void init_variable(ScriptAddress address, const ScriptType& type);
+    void copy_argument(ScriptAddress address, const ScriptType& type, ScriptAddress cell);
+    // Pops the cells of a call and makes it; returns true when it pushed a
+    // frame.
+    bool call(ScriptThread& thread, std::uint32_t op, ScriptObjectId object, std::uint32_t body,
+              std::uint32_t method);
 
     const ScriptProgram& program_;
     ScriptMemory memory_;
     std::vector<Object> objects_;
     ScriptAddress name_table_ = 0;
+    std::vector<ScriptNative> natives_;  // one per body of the program
+    ScriptAddress empty_record_ = 0;      // the shared empty string
     std::vector<std::string> warnings_;
     std::uint32_t loop_count_ = 0;  // DAT_00a6a57c
     int depth_ = 0;                 // DAT_00a6a578: interpreters running

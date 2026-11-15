@@ -127,7 +127,9 @@ private:
 
 }  // namespace
 
-ScriptMachine::ScriptMachine(const ScriptProgram& program) : program_(program) {
+ScriptMachine::ScriptMachine(const ScriptProgram& program)
+    : program_(program), natives_(program.bodies().size(), nullptr) {
+    empty_record_ = new_record("");
     const std::vector<std::string>& names = program_.names();
     name_table_ = memory_.allocate(static_cast<std::uint32_t>(names.size() * 4));
     for (std::size_t index = 0; index < names.size(); ++index) {
@@ -159,6 +161,179 @@ const ScriptMachine::Object& ScriptMachine::object_at(ScriptObjectId object) con
 ScriptAddress ScriptMachine::data_of(ScriptObjectId object) const { return object_at(object).data; }
 ScriptAddress ScriptMachine::handle_of(ScriptObjectId object) const { return object_at(object).handle; }
 std::uint32_t ScriptMachine::class_of(ScriptObjectId object) const { return object_at(object).class_id; }
+
+void ScriptMachine::bind_native(const std::string& class_name, std::uint16_t body_index,
+                                ScriptNative native) {
+    const std::uint32_t id = program_.find_class(class_name);
+    if (id == 0) {
+        throw ScriptError("script class " + class_name + " does not exist");
+    }
+    const ScriptProgramClass& cls = program_.classes()[id - 1];
+    if (body_index >= cls.bodies.size()) {
+        throw ScriptError("script class " + class_name + " has no body " + std::to_string(body_index));
+    }
+    const std::uint32_t body = cls.bodies[body_index];
+    if (!program_.bodies()[body].source->native()) {
+        throw ScriptError("script body " + std::to_string(body_index) + " of " + class_name + " is not native");
+    }
+    natives_[body] = native;
+}
+
+std::uint32_t ScriptMachine::method_of_body(std::uint32_t body) const {
+    const ScriptProgramBody& record = program_.bodies().at(body);
+    return program_.classes()[record.owner].methods[record.source->method];
+}
+
+// The body in the slot of `method`, in the table of the current state of the
+// object (its first data byte) or of state 0; id + 1, 0 for none.
+std::uint32_t ScriptMachine::body_in_state(ScriptObjectId object, std::uint32_t method,
+                                           bool state_zero) const {
+    const ScriptProgramClass& cls = program_.classes()[class_of(object)];
+    const std::uint32_t state = state_zero ? 0 : memory_.u8(data_of(object));
+    const std::uint16_t slot = program_.methods().at(method).source->slot;
+    if (state >= cls.states.size() || slot >= cls.states[state].size()) {
+        throw ScriptError("script call finds no slot " + std::to_string(slot) + " in state " +
+                          std::to_string(state) + " of " + cls.name);
+    }
+    return cls.states[state][slot];
+}
+
+// The initial value of a variable (FUN_00588390) by the kind of its type.
+void ScriptMachine::init_variable(ScriptAddress address, const ScriptType& type) {
+    switch (type.kind) {
+    case 1:
+    case 5:
+        memory_.set_u8(address, 0);
+        break;
+    case 2:
+    case 3:
+    case 10:
+    case 11:
+        memory_.set_u32(address, 0);
+        break;
+    case 4:
+        memory_.set_u32(address, empty_record_);
+        memory_.set_u32(empty_record_, memory_.u32(empty_record_) + 1);
+        break;
+    case 6:
+    case 9:
+        throw ScriptError("script variable of kind " + std::to_string(type.kind) + " is not ported");
+    default:
+        throw ScriptError("script variable of kind " + std::to_string(type.kind) +
+                          " is not used by the game data");
+    }
+}
+
+// A parameter of a new frame takes the value of its argument cell
+// (FUN_00587fc0) by the kind of its type.
+void ScriptMachine::copy_argument(ScriptAddress address, const ScriptType& type, ScriptAddress cell) {
+    const std::uint32_t value = memory_.u32(cell);
+    switch (type.kind) {
+    case 1:
+    case 5:
+        memory_.set_u8(address, static_cast<std::uint8_t>(value & 0xFFU));
+        break;
+    case 2:
+    case 3:
+    case 11:
+        memory_.set_u32(address, value);
+        break;
+    case 10: {
+        const ScriptAddress handle = value != 0 ? handle_of(value) : 0;
+        memory_.set_u32(address, handle);
+        if (handle != 0) {
+            memory_.set_u32(handle + 4, memory_.u32(handle + 4) + 1);
+        }
+        break;
+    }
+    case 4: {
+        const ScriptAddress record = value != 0 ? memory_.u32(value) : 0;
+        memory_.set_u32(address, record);
+        if (record != 0) {
+            memory_.set_u32(record, memory_.u32(record) + 1);
+        }
+        break;
+    }
+    case 6:
+    case 9:
+        throw ScriptError("script parameter of kind " + std::to_string(type.kind) + " is not ported");
+    default:
+        throw ScriptError("script parameter of kind " + std::to_string(type.kind) +
+                          " is not used by the game data");
+    }
+}
+
+// FUN_0057f580 (and 0x47): pops the arguments, the result address and, for
+// the codes that take it from the stack, the object; then calls the native
+// function at once or pushes the frame of a script body (FUN_0057d3e0).
+bool ScriptMachine::call(ScriptThread& thread, std::uint32_t op, ScriptObjectId object,
+                         std::uint32_t body, std::uint32_t method) {
+    ScriptFrame& frame = thread.frames.back();
+    Stack stack(memory_, frame);
+    const ScriptMethod& source = *program_.methods().at(method).source;
+    const bool popped_object = op == 0x47 || op == 0x4B || op == 0x4C;
+    const bool has_result = source.result.kind != 0;
+    const auto argc = static_cast<std::uint32_t>(source.params.size());
+    if (popped_object) {
+        object = stack.pop();
+    }
+    const ScriptAddress result = has_result ? stack.pop() : 0;
+    frame.top -= static_cast<std::int32_t>(argc);
+    if (frame.top < -1) {
+        throw ScriptError("script call pops more cells than its stack holds");
+    }
+    const ScriptAddress args = frame.stack + static_cast<std::uint32_t>(frame.top + 1) * 4U;
+    if (object == 0) {
+        return false;
+    }
+    if (op == 0x4A || op == 0x4C) {
+        // The body comes from the slot of the method (state table).
+        body = body_in_state(object, method, false);
+        if (body == 0) {
+            return false;
+        }
+        --body;
+    }
+    const ScriptProgramBody& target = program_.bodies().at(body);
+    if (op == 0x47 || target.source->native()) {
+        const ScriptNative native = natives_[body];
+        if (native == nullptr) {
+            throw ScriptError("native body " + std::to_string(target.index) + " of " +
+                              program_.classes()[target.owner].name + " is not bound");
+        }
+        native(*this, object, argc, args, result);
+        return false;
+    }
+    ScriptFrame callee = make_frame(object, body);
+    if (has_result) {
+        memory_.set_u32(callee.locals, result);
+    }
+    for (std::uint32_t index = 0; index < argc; ++index) {
+        const ScriptVariable& param = source.params[index];
+        copy_argument(callee.locals + param.offset, param.type, args + index * 4U);
+    }
+    for (const ScriptVariable& local : target.source->locals) {
+        init_variable(callee.locals + local.offset, local.type);
+    }
+    thread.frames.push_back(callee);
+    return true;
+}
+
+bool ScriptMachine::run_thread(ScriptThread& thread) {
+    while (!thread.frames.empty()) {
+        const std::size_t frames = thread.frames.size();
+        if (!interpret(thread)) {
+            return true;
+        }
+        if (thread.frames.size() == frames) {
+            const ScriptFrame ended = thread.frames.back();
+            thread.frames.pop_back();
+            memory_.release(ended.stack);
+            memory_.release(ended.locals);
+        }
+    }
+    return false;
+}
 
 ScriptFrame ScriptMachine::make_frame(ScriptObjectId object, std::uint32_t body) {
     if (body >= program_.bodies().size()) {
@@ -259,6 +434,14 @@ bool ScriptMachine::interpret(ScriptThread& thread) {
             throw ScriptError("script frame ran past the end of its code");
         }
         return code[frame.ip++];
+    };
+    // A linked word that holds an id + 1 (docs/ARCHITECTURE.md).
+    const auto next_id = [&](std::size_t count, const char* what) {
+        const std::uint32_t value = next_word();
+        if (value == 0 || value > count) {
+            throw ScriptError(std::string("script call names no ") + what);
+        }
+        return value - 1;
     };
     for (;;) {
         const std::uint32_t word = next_word();
@@ -493,6 +676,61 @@ bool ScriptMachine::interpret(ScriptThread& thread) {
             }
             frame.ip += static_cast<std::uint32_t>(simm);
             break;
+        case 0x47:
+        case 0x48:
+        case 0x4B: {
+            // The next word names a body (id + 1).
+            const std::uint32_t body = next_id(program_.bodies().size(), "body");
+            if (call(thread, op, op == 0x48 ? frame.object : 0, body, method_of_body(body))) {
+                return true;
+            }
+            break;
+        }
+        case 0x4A:
+        case 0x4C: {
+            // The next word names a method (id + 1); the body is in its slot.
+            // In 0x4a, bit 0 of imm picks the table of state 0.
+            const std::uint32_t method = next_id(program_.methods().size(), "method");
+            if (op == 0x4A && (imm & 1U) != 0) {
+                const std::uint32_t body = frame.object != 0 ? body_in_state(frame.object, method, true) : 0;
+                if (body == 0) {
+                    call(thread, op, 0, 0, method);
+                    break;
+                }
+                if (call(thread, 0x48, frame.object, body - 1, method)) {
+                    return true;
+                }
+                break;
+            }
+            if (call(thread, op, op == 0x4A ? frame.object : 0, 0, method)) {
+                return true;
+            }
+            break;
+        }
+        case 0x49: {
+            // The tables of a class (id + 1) and a method (id + 1).
+            const std::uint32_t tables = next_id(program_.classes().size(), "class");
+            const std::uint32_t method = next_id(program_.methods().size(), "method");
+            const ScriptProgramClass& owner = program_.classes()[tables];
+            const std::uint16_t slot = program_.methods().at(method).source->slot;
+            std::uint32_t body = 0;
+            if (frame.object != 0 && !owner.states.empty() && slot < owner.states[0].size()) {
+                const std::uint32_t state = memory_.u8(data_of(frame.object));
+                if (state < owner.states.size()) {
+                    body = owner.states[state][slot];
+                } else if (slot != 0) {
+                    body = owner.states[0][slot];
+                }
+            }
+            if (body == 0) {
+                call(thread, op, 0, 0, method);
+                break;
+            }
+            if (call(thread, 0x48, frame.object, body - 1, method)) {
+                return true;
+            }
+            break;
+        }
         case 0x5C:
             return true;
         case 0x5D:
