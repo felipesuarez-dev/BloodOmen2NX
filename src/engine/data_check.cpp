@@ -14,6 +14,10 @@ void check_cellgrup(const BigArchive& archive, const BigEntry& entry) {
     static_cast<void>(parse_cell_group(archive.extract(entry), entry.symbols, archive.names()));
 }
 
+void check_model(const BigArchive& archive, const BigEntry& entry) {
+    static_cast<void>(parse_model_asset(archive.extract(entry), entry.symbols, archive.names()));
+}
+
 void check_texfont(const BigArchive& archive, const BigEntry& entry) {
     static_cast<void>(parse_pixmap_font(archive.extract(entry), entry.symbols, archive.names()));
 }
@@ -27,6 +31,7 @@ void check_texture(const BigArchive& archive, const BigEntry& entry) {
 const std::map<std::string, EntryCheck>& entry_checks() {
     static const std::map<std::string, EntryCheck> checks = {
         {"cellgrup", &check_cellgrup},
+        {"model", &check_model},
         {"texfont", &check_texfont},
         {"texture", &check_texture},
     };

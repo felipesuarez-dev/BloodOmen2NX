@@ -35,7 +35,7 @@ exit code is 2.
 | lipsync | 71,182 | 0 | 0 |
 | litedata | 142 | 0 | 0 |
 | liteinfo | 1 | 0 | 0 |
-| model | 5,168 | 0 | 0 |
+| model | 5,168 | 5,168 | 146 |
 | musicbnk | 11 | 0 | 0 |
 | planinfo | 159 | 0 | 0 |
 | region | 165 | 0 | 0 |
@@ -47,10 +47,10 @@ exit code is 2.
 | texture | 22,483 | 22,483 | 11 |
 | tunedata | 1,720 | 0 | 0 |
 
-`cellgrup`, `texfont` and `texture` have a registered reader. The other
-types are counted but not read yet; each following issue adds the reader of
-one type and its row here. The four `texfont` entries are read without a
-failure.
+`cellgrup`, `model`, `texfont` and `texture` have a registered reader. The
+other types are counted but not read yet; each following issue adds the
+reader of one type and its row here. The four `texfont` entries are read
+without a failure.
 
 ## cellgrup
 
@@ -86,6 +86,45 @@ from. Reading them is still open. The first 20 failures:
 | `resources/levels/eternal prison/ep07.big` | `eternal prison/cinematics/mad_vampire` |
 | `resources/levels/hyldencity/hc_01.big` | `hyldencity/cinematics/kain_arrives` |
 | `resources/levels/hyldencity/hc_10.big` | `hyldencity/cinematics/calvary_arrives` |
+
+## model
+
+146 of the 5,168 entries fail:
+
+| Message | Entries |
+|---|---|
+| `model asset has no rmd chunk` | 144 |
+| `prim index count does not match the triangle count` | 2 |
+
+The 144 are the `particles/pmarker` model of one container each: it has no
+`rmd` chunk. The two others are `hyldencity/t_lamp/t_lamp` and
+`hyldencity/t_lampb/t_lampb` in `hc_10.big`. The first 20 `pmarker`
+failures and the two others:
+
+| Container | Entry |
+|---|---|
+| `resources/levels/bossrooms/CharmVampireArena/cvarena.big` | `particles/pmarker` |
+| `resources/levels/bossrooms/jumpvampirearena/jvarena.big` | `particles/pmarker` |
+| `resources/levels/bossrooms/jumpvampirearena/jvarena01.big` | `particles/pmarker` |
+| `resources/levels/bossrooms/madvampirearena/mvarena.big` | `particles/pmarker` |
+| `resources/levels/bossrooms/sarafanlordarena/slarena.big` | `particles/pmarker` |
+| `resources/levels/bossrooms/speedvampirearena/svarena.big` | `particles/pmarker` |
+| `resources/levels/canyons/cy01.big` | `particles/pmarker` |
+| `resources/levels/canyons/cy01a.big` | `particles/pmarker` |
+| `resources/levels/canyons/cy02.big` | `particles/pmarker` |
+| `resources/levels/canyons/cy02a.big` | `particles/pmarker` |
+| `resources/levels/canyons/cy03.big` | `particles/pmarker` |
+| `resources/levels/canyons/cy04.big` | `particles/pmarker` |
+| `resources/levels/canyons/cy04a.big` | `particles/pmarker` |
+| `resources/levels/canyons/cy04a1.big` | `particles/pmarker` |
+| `resources/levels/canyons/cy04b.big` | `particles/pmarker` |
+| `resources/levels/canyons/cy05.big` | `particles/pmarker` |
+| `resources/levels/canyons/cy06.big` | `particles/pmarker` |
+| `resources/levels/canyons/cy07.big` | `particles/pmarker` |
+| `resources/levels/canyons/cydv.big` | `particles/pmarker` |
+| `resources/levels/device/devicesanctuary.big` | `particles/pmarker` |
+| `resources/levels/hyldencity/hc_10.big` | `hyldencity/t_lamp/t_lamp` |
+| `resources/levels/hyldencity/hc_10.big` | `hyldencity/t_lampb/t_lampb` |
 
 ## texture
 

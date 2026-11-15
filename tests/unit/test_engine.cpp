@@ -252,6 +252,42 @@ void append_cell_bsp(std::vector<std::uint8_t>& out) {
     put16(out, 3);
 }
 
+// A model asset with four vertices and no triangle group. It is the smallest
+// payload that parse_model_asset accepts.
+std::vector<std::uint8_t> build_model_asset() {
+    std::vector<std::uint8_t> positions;
+    put32(positions, 4);
+    for (const auto& point :
+         std::vector<std::array<float, 3>>{{0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0}}) {
+        put_float(positions, point[0]);
+        put_float(positions, point[1]);
+        put_float(positions, point[2]);
+    }
+    std::vector<std::uint8_t> prims;
+    put32(prims, 0);
+    std::vector<std::uint8_t> record;
+    append_chunk(record, "position", positions);
+    append_chunk(record, "prims", prims);
+    std::vector<std::uint8_t> rmd;
+    put32(rmd, 2);
+    std::string name = "default";
+    name.resize(8, '\0');
+    append(rmd, name);
+    put32(rmd, static_cast<std::uint32_t>(16 + record.size()));
+    put32(rmd, 0);
+    rmd.insert(rmd.end(), record.begin(), record.end());
+    std::vector<std::uint8_t> chunk;
+    append_chunk(chunk, "rmd", rmd);
+    std::vector<std::uint8_t> model;
+    put32(model, 105);
+    append(model, "default");
+    model.push_back(0);
+    put32(model, static_cast<std::uint32_t>(16 + chunk.size()));
+    put32(model, 0);
+    model.insert(model.end(), chunk.begin(), chunk.end());
+    return model;
+}
+
 std::vector<std::uint8_t> build_cell_group(
     bool with_instances = false, bool with_collision = false,
     const std::vector<std::uint8_t>& texture_payload = {},
@@ -1335,6 +1371,29 @@ void test_data_check_cellgrup() {
     CHECK(report.failures[0].entry == "level/cut");
 }
 
+// A model asset that the reader rejects is one failure; the entries after it
+// are still checked (docs/DATA_COVERAGE.md, "model").
+void test_data_check_model() {
+    const std::vector<std::uint8_t> model = build_model_asset();
+    std::vector<std::uint8_t> cut = model;
+    cut.resize(cut.size() / 2);
+    const std::vector<std::uint8_t> data = build_big({
+        {"model", "model/cut", cut, {}},
+        {"model", "model/ok", model, {}},
+    });
+    const bo2::engine::BigArchive archive = bo2::engine::BigArchive::parse(data);
+    bo2::engine::DataReport report;
+    bo2::engine::check_archive(archive, "test.big", report);
+    CHECK(report.containers == 1);
+    const bo2::engine::TypeCount& count = report.types.at("model");
+    CHECK(count.entries == 2);
+    CHECK(count.checked == 2);
+    CHECK(count.failed == 1);
+    CHECK(report.failures.size() == 1);
+    CHECK(report.failures[0].type == "model");
+    CHECK(report.failures[0].entry == "model/cut");
+}
+
 // A texture entry that the DDS reader rejects is one failure; the entries
 // after it are still checked (docs/DATA_COVERAGE.md, "texture").
 void test_data_check_texture() {
@@ -1426,6 +1485,7 @@ int main() {
     test_pixmap_font();
     test_data_check();
     test_data_check_cellgrup();
+    test_data_check_model();
     test_data_check_texture();
     test_skeleton_bones();
     test_collision_chunk();
