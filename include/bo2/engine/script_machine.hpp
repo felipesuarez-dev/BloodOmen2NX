@@ -64,6 +64,42 @@ public:
     void finish(ScriptMachine& machine) override;                   // FUN_0057dc80
 };
 
+// The native type of a value class (docs/SCRIPTS.md, "Values"): a slot of
+// kind 9 holds the address of a block the type owns.
+class ScriptValueType {
+public:
+    virtual ~ScriptValueType() = default;
+    // Virtual +0x18: a new block in the slot, a copy of the block at
+    // `source`, or the type's empty value when `source` is 0.
+    virtual void init(ScriptMachine& machine, ScriptAddress slot, ScriptAddress source) = 0;
+    // Virtual +0x1c: frees the block and leaves 0 in the slot.
+    virtual void destroy(ScriptMachine& machine, ScriptAddress slot) = 0;
+    // Virtual +0x20: the block of the slot takes the value of the block at
+    // `source` (the empty value for 0); a slot with no block is initialised.
+    virtual void assign(ScriptMachine& machine, ScriptAddress slot, ScriptAddress source) = 0;
+    // The default of a field: the value the type reads from the chunk of the
+    // package (virtual +0x10), copied into a new block (+0x18).
+    virtual void read_default(ScriptMachine& machine, ScriptAddress slot,
+                              const std::vector<std::uint8_t>& chunk) = 0;
+};
+
+// A value type whose value is a block of `size` bytes and whose default is
+// `floats` little-endian floats: position and rotation (12 bytes, 3 floats),
+// color (16, 4) and gridposition (8, none: its default is the empty value).
+class ScriptBlockType final : public ScriptValueType {
+public:
+    ScriptBlockType(std::uint32_t size, std::uint32_t floats) : size_(size), floats_(floats) {}
+
+    void init(ScriptMachine& machine, ScriptAddress slot, ScriptAddress source) override;
+    void destroy(ScriptMachine& machine, ScriptAddress slot) override;
+    void assign(ScriptMachine& machine, ScriptAddress slot, ScriptAddress source) override;
+    void read_default(ScriptMachine& machine, ScriptAddress slot, const std::vector<std::uint8_t>& chunk) override;
+
+private:
+    std::uint32_t size_;
+    std::uint32_t floats_;
+};
+
 // A native function (docs/SCRIPTS.md, "Native functions"): the machine, the
 // object, the argument count, the address of the cell of the first argument
 // and the address of the result (0 when the method has none).
@@ -142,6 +178,12 @@ public:
     void bind_native(const std::string& class_name, std::uint16_t body_index, ScriptNative native);
     // The same for a native function that returns a task (FUN_00587b00).
     void bind_task_native(const std::string& class_name, std::uint16_t body_index, ScriptTaskNative native);
+
+    // The native type of the value class `name`. The machine starts with
+    // position, rotation, color and gridposition; a value class with no
+    // type stops the machine when one of its values is needed.
+    void register_value_type(const std::string& name, std::unique_ptr<ScriptValueType> type);
+    ScriptValueType& value_type(const std::string& name);
 
     // Strings: a record is a block {u32 count, the bytes, 0}; a string cell
     // is a 4-byte block that holds the address of a record, and a string on
@@ -224,6 +266,7 @@ private:
     // The record of each name a field defaults to, held once like the
     // original's global name table.
     std::map<std::string, ScriptAddress> default_names_;
+    std::map<std::string, std::unique_ptr<ScriptValueType>> value_types_;
     std::uint32_t loop_count_ = 0;  // DAT_00a6a57c
     int depth_ = 0;                 // DAT_00a6a578: interpreters running
 };

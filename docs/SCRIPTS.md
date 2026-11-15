@@ -13,8 +13,10 @@ Port: `src/engine/script_package.cpp` (the packages),
 and `src/engine/script_machine.cpp` (the machine: objects with the initial
 values of their fields, their main thread and their states, strings,
 frames and every instruction the game data uses, with the loop guard, the
-calls, the child threads and tasks, the binding of native functions and
-the end of a frame; the value types (kind 9) are not ported yet).
+calls, the child threads and tasks, the binding of native functions, the
+end of a frame and the value types `position`, `rotation`, `color` and
+`gridposition`; the other value types and the native functions are not
+ported yet).
 
 ## Objects, classes and states
 
@@ -266,6 +268,18 @@ The blocks of the value types read so far:
 | `color` | `0x878d10` | 16 bytes, four floats | zeroed (`FUN_0079ddd0`) | four floats (`FUN_0079dd50`) |
 | `gridposition` | `0x878bb0` | 8 bytes | left as the allocator gives it (`FUN_0079b080`) | none: +0x10 returns 0 (`FUN_0079b060`) |
 | `timer` | `0x878c34` | a counted timer object of 0x14 bytes (`FUN_0079cac0`); assign shares it (`FUN_0079cca0`) | a new timer (`0x79cc30`) | not read |
+
+For the four block types, +0x18 with a source copies the source block into
+a new one; +0x1c frees the block and leaves 0 in the slot (`FUN_0079e430`,
+`FUN_0079e110`, `FUN_0079de50`, `FUN_0079b0d0`); +0x20 does nothing when the
+slot already holds the source block, initialises a slot with no block,
+zeroes the block for a source of 0 and copies otherwise (`FUN_0079e450`,
+`FUN_0079e130`, `FUN_0079de70`, `FUN_0079b0f0`). A field of kind 9 starts
+with +0x18 on the block +0x10 read from its default chunk at load time, or
+on 0 when it has none (`FUN_0057fa20`). In the fields of the region package
+of `sl01` the other value types are `sound` (56), `waypoints` (18),
+`soundgroup` (5) and arrays of `color` (2); its locals of kind 9 are
+`creature` (64) and `color` (3).
 
 Assign (+0x20) of the block types copies the block, or zeroes it when the
 source is null, or initialises the slot when it is empty (`FUN_0079de70`,

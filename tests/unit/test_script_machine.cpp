@@ -330,10 +330,12 @@ struct MachineRun {
     std::unique_ptr<ScriptMachine> machine;
     ScriptThread thread;
 
-    explicit MachineRun(ScriptClass cls) : MachineRun(std::vector<ScriptClass>{std::move(cls)}) {}
+    explicit MachineRun(ScriptClass cls, const std::vector<std::string>& native_types = {})
+        : MachineRun(std::vector<ScriptClass>{std::move(cls)}, native_types) {}
 
     // The objects and the thread belong to the first class.
-    explicit MachineRun(std::vector<ScriptClass> classes) : linked(make_program(std::move(classes))) {
+    explicit MachineRun(std::vector<ScriptClass> classes, const std::vector<std::string>& native_types = {})
+        : linked(make_program(std::move(classes), native_types)) {
         machine = std::make_unique<ScriptMachine>(linked.program);
         const ScriptObjectId self = machine->create_object(0);
         machine->create_object(0);
@@ -1268,6 +1270,169 @@ void test_stop() {
     CHECK(machine.memory().live_blocks() == blocks);
 }
 
+// Value types (BO2NX-157).
+using bo2::engine::ScriptValueType;
+
+void set_floats(bo2::engine::ScriptMemory& memory, ScriptAddress block, std::vector<float> values) {
+    for (std::size_t index = 0; index < values.size(); ++index) {
+        memory.set_f32(block + static_cast<std::uint32_t>(index * 4), values[index]);
+    }
+}
+
+bool floats_are(const bo2::engine::ScriptMemory& memory, ScriptAddress block, std::vector<float> values) {
+    for (std::size_t index = 0; index < values.size(); ++index) {
+        if (memory.f32(block + static_cast<std::uint32_t>(index * 4)) != values[index]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+std::vector<std::uint8_t> float_chunk(std::vector<float> values) {
+    std::vector<std::uint8_t> out(values.size() * 4);
+    std::memcpy(out.data(), values.data(), out.size());
+    return out;
+}
+
+// init, assign and destroy of position (FUN_0079e3c0, FUN_0079e450,
+// FUN_0079e430).
+void test_position_type() {
+    MachineRun run(machine_class({op(0x5C)}));
+    ScriptMachine& machine = *run.machine;
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    ScriptValueType& position = machine.value_type("position");
+    const ScriptAddress first = memory.allocate(4);
+    const ScriptAddress second = memory.allocate(4);
+    const std::size_t blocks = memory.live_blocks();
+    position.init(machine, first, 0);
+    const ScriptAddress block = memory.u32(first);
+    CHECK(memory.block_size(block) == 12);
+    CHECK(floats_are(memory, block, {0, 0, 0}));
+    set_floats(memory, block, {1, 2, 3});
+    position.init(machine, second, block);  // a copy
+    const ScriptAddress copy = memory.u32(second);
+    CHECK(copy != block);
+    CHECK(floats_are(memory, copy, {1, 2, 3}));
+    position.assign(machine, second, 0);
+    CHECK(memory.u32(second) == copy);
+    CHECK(floats_are(memory, copy, {0, 0, 0}));
+    position.assign(machine, second, block);
+    CHECK(floats_are(memory, copy, {1, 2, 3}));
+    position.assign(machine, first, block);  // its own block: nothing
+    CHECK(memory.u32(first) == block);
+    position.destroy(machine, second);
+    CHECK(memory.u32(second) == 0);
+    CHECK(memory.live_blocks() == blocks + 1);
+    position.assign(machine, second, block);  // no block yet: a new one
+    CHECK(memory.u32(second) != 0);
+    CHECK(floats_are(memory, memory.u32(second), {1, 2, 3}));
+}
+
+void test_color_and_grid_types() {
+    MachineRun run(machine_class({op(0x5C)}));
+    ScriptMachine& machine = *run.machine;
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    const ScriptAddress slot = memory.allocate(4);
+    machine.value_type("color").read_default(machine, slot, float_chunk({0.25f, 0.5f, 0.75f, 1.0f}));
+    CHECK(memory.block_size(memory.u32(slot)) == 16);
+    CHECK(floats_are(memory, memory.u32(slot), {0.25f, 0.5f, 0.75f, 1.0f}));
+    const ScriptAddress grid = memory.allocate(4);
+    machine.value_type("gridposition").read_default(machine, grid, float_chunk({5.0f, 6.0f}));
+    CHECK(memory.block_size(memory.u32(grid)) == 8);
+    CHECK(memory.u32(memory.u32(grid)) == 0);  // it reads nothing
+    CHECK(memory.u32(memory.u32(grid) + 4) == 0);
+    machine.value_type("rotation").read_default(machine, slot, float_chunk({1.0f, 2.0f, 3.0f}));
+    CHECK(throws([&] { machine.value_type("color").read_default(machine, slot, float_chunk({1.0f})); }));
+}
+
+// 0x21: the target slot takes the value of the source slot's block.
+void test_store_value() {
+    MachineRun run(machine_class({op(0x07, 4), op(0x07, 8), op(0x21), 0,       // locals + 4 = locals + 8
+                                  op(0x03, 0), op(0x07, 8), op(0x21), 0,       // no target: nothing
+                                  op(0x5D), op(0x5C)},
+                                 {make_reference(2, 3, "position"), make_reference(2, 7, "position")}),
+                   {"position"});
+    ScriptMachine& machine = *run.machine;
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    ScriptValueType& position = machine.value_type("position");
+    const ScriptAddress locals = run.frame().locals;
+    position.init(machine, locals + 4, 0);
+    position.init(machine, locals + 8, 0);
+    set_floats(memory, memory.u32(locals + 8), {4, 5, 6});
+    const ScriptAddress target = memory.u32(locals + 4);
+    CHECK(machine.run_thread(run.thread));
+    CHECK(memory.u32(locals + 4) == target);
+    CHECK(floats_are(memory, target, {4, 5, 6}));
+    CHECK(run.frame().top == -1);
+}
+
+// A parameter of kind 9 gets a block of its own with the argument's value; a
+// local starts with an empty block; both go when the frame ends.
+void test_value_param() {
+    ScriptClass cls = machine_class({op(0x07, 4), op(0x48), 0, op(0x5D), op(0x5C)},
+                                    {make_reference(4, 2, "alpha", 1)});
+    ScriptVariable param = variable(9, 4);
+    param.type.name = "position";
+    ScriptVariable local = variable(9, 8);
+    local.type.name = "position";
+    cls.methods.push_back(method_with("place", bo2::engine::kScriptNoSlot, {param}, 0));
+    ScriptBody place = script_body(1, 0, {op(0x5D), op(0x5C)}, 12);
+    place.locals = {local};
+    cls.bodies.push_back(place);
+    MachineRun run(cls, {"position"});
+    ScriptMachine& machine = *run.machine;
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    const ScriptAddress caller = run.frame().locals;
+    machine.value_type("position").init(machine, caller + 4, 0);
+    set_floats(memory, memory.u32(caller + 4), {7, 8, 9});
+    const std::size_t blocks = memory.live_blocks();
+    CHECK(machine.run_thread(run.thread));
+    CHECK(run.thread.frames.size() == 2);
+    const ScriptAddress callee = run.frame().locals;
+    CHECK(memory.u32(callee + 4) != memory.u32(caller + 4));
+    CHECK(floats_are(memory, memory.u32(callee + 4), {7, 8, 9}));
+    CHECK(floats_are(memory, memory.u32(callee + 8), {0, 0, 0}));
+    CHECK(machine.run_thread(run.thread));
+    CHECK(run.thread.frames.size() == 1);
+    CHECK(memory.live_blocks() == blocks);
+}
+
+// A field of kind 9 reads its default from the chunk of the package; without
+// a default it gets the empty value.
+void test_value_field_default() {
+    ScriptClass cls = make_class("holder", "", {"default"}, 1);
+    cls.data_size = 12;
+    ScriptField placed = field(9, 4, 0);
+    placed.type.name = "position";
+    placed.default_object = float_chunk({1.0f, 2.0f, 3.0f});
+    ScriptField empty = field(9, 8, 0);
+    empty.type.name = "position";
+    empty.default_flag = 0;
+    cls.fields = {placed, empty};
+    const Linked linked = make_program({cls}, {"position"});
+    ScriptMachine machine(linked.program);
+    const ScriptObjectId object = machine.create_object(0);
+    const ScriptAddress data = machine.data_of(object);
+    CHECK(floats_are(machine.memory(), machine.memory().u32(data + 4), {1, 2, 3}));
+    CHECK(floats_are(machine.memory(), machine.memory().u32(data + 8), {0, 0, 0}));
+}
+
+void test_unregistered_value_type() {
+    ScriptClass cls = make_class("holder", "", {"default"}, 1);
+    cls.data_size = 8;
+    ScriptField timer = field(9, 4, 0);
+    timer.type.name = "timer";
+    timer.default_flag = 0;
+    cls.fields = {timer};
+    const Linked linked = make_program({cls}, {"timer"});
+    ScriptMachine machine(linked.program);
+    CHECK(throws([&] { machine.create_object(0); }));
+    CHECK(throws([&] { static_cast<void>(machine.value_type("timer")); }));
+    machine.register_value_type("timer", std::make_unique<bo2::engine::ScriptBlockType>(4, 1));
+    const ScriptObjectId object = machine.create_object(0);
+    CHECK(machine.memory().u32(machine.data_of(object) + 4) != 0);
+}
+
 // 0x59: the copy runs, the frame skips the block and waits for it.
 void test_fork_waits() {
     MachineRun run(machine_class(join({{op(0x59, 2), op(0x5D), op(0x5C)}, mark(), {op(0x5D), op(0x5C)}})));
@@ -1477,6 +1642,12 @@ int main() {
     test_native_state_ends_frame();
     test_request_invalid_state();
     test_stop();
+    test_position_type();
+    test_color_and_grid_types();
+    test_store_value();
+    test_value_param();
+    test_value_field_default();
+    test_unregistered_value_type();
 
     const char* root = std::getenv("BO2NX_ASSETS_DIR");
     if (root == nullptr) {

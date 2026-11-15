@@ -132,6 +132,12 @@ ScriptMachine::ScriptMachine(const ScriptProgram& program)
       natives_(program.bodies().size(), nullptr),
       task_natives_(program.bodies().size(), nullptr) {
     empty_record_ = new_record("");
+    // NTposition (0x878d68), NTrotation (0x878d3c), NTcolor (0x878d10) and
+    // NTgridposition (0x878bb0); docs/SCRIPTS.md, "Values".
+    register_value_type("position", std::make_unique<ScriptBlockType>(12, 3));
+    register_value_type("rotation", std::make_unique<ScriptBlockType>(12, 3));
+    register_value_type("color", std::make_unique<ScriptBlockType>(16, 4));
+    register_value_type("gridposition", std::make_unique<ScriptBlockType>(8, 0));
     const std::vector<std::string>& names = program_.names();
     name_table_ = memory_.allocate(static_cast<std::uint32_t>(names.size() * 4));
     for (std::size_t index = 0; index < names.size(); ++index) {
@@ -219,7 +225,12 @@ void ScriptMachine::init_fields(ScriptObjectId object) {
                 init_variable(address, field.type);
                 break;
             case 9:
-                throw ScriptError("script field of kind 9 is not ported");
+                if (field.default_flag != 0) {
+                    value_type(field.type.name).read_default(*this, address, field.default_object);
+                } else {
+                    value_type(field.type.name).init(*this, address, 0);
+                }
+                break;
             default:
                 break;
             }
@@ -437,6 +448,82 @@ const ScriptType& element_of(const ScriptType& array) {
 
 }  // namespace
 
+void ScriptMachine::register_value_type(const std::string& name, std::unique_ptr<ScriptValueType> type) {
+    value_types_[name] = std::move(type);
+}
+
+ScriptValueType& ScriptMachine::value_type(const std::string& name) {
+    const auto found = value_types_.find(name);
+    if (found == value_types_.end() || found->second == nullptr) {
+        throw ScriptError("script value type " + name + " is not ported");
+    }
+    return *found->second;
+}
+
+// position FUN_0079e3c0, rotation FUN_0079e0a0, color FUN_0079ddd0,
+// gridposition FUN_0079b080. Without a source the original zeroes the block,
+// except gridposition, which leaves it as its allocator gives it; the arena
+// gives zeroed blocks.
+void ScriptBlockType::init(ScriptMachine& machine, ScriptAddress slot, ScriptAddress source) {
+    ScriptMemory& memory = machine.memory();
+    const ScriptAddress block = memory.allocate(size_);
+    if (source != 0) {
+        memory.copy(block, source, size_);
+    }
+    memory.set_u32(slot, block);
+}
+
+// FUN_0079e430, FUN_0079e110, FUN_0079de50, FUN_0079b0d0.
+void ScriptBlockType::destroy(ScriptMachine& machine, ScriptAddress slot) {
+    ScriptMemory& memory = machine.memory();
+    const ScriptAddress block = memory.u32(slot);
+    if (block != 0) {
+        memory.release(block);
+    }
+    memory.set_u32(slot, 0);
+}
+
+// FUN_0079e450, FUN_0079e130, FUN_0079de70, FUN_0079b0f0: nothing when the
+// slot already holds the source block.
+void ScriptBlockType::assign(ScriptMachine& machine, ScriptAddress slot, ScriptAddress source) {
+    ScriptMemory& memory = machine.memory();
+    const ScriptAddress block = memory.u32(slot);
+    if (block == source) {
+        return;
+    }
+    if (block == 0) {
+        init(machine, slot, source);
+        return;
+    }
+    if (source == 0) {
+        for (std::uint32_t offset = 0; offset < size_; offset += 4) {
+            memory.set_u32(block + offset, 0);
+        }
+        return;
+    }
+    memory.copy(block, source, size_);
+}
+
+// FUN_0079e350, FUN_0079e020, FUN_0079dd50: the floats of the chunk;
+// FUN_0079b060 reads nothing and returns no block.
+void ScriptBlockType::read_default(ScriptMachine& machine, ScriptAddress slot,
+                                   const std::vector<std::uint8_t>& chunk) {
+    if (floats_ == 0) {
+        init(machine, slot, 0);
+        return;
+    }
+    if (chunk.size() < floats_ * 4U) {
+        throw ScriptError("script value default holds " + std::to_string(chunk.size()) + " bytes, not " +
+                          std::to_string(floats_ * 4U));
+    }
+    init(machine, slot, 0);
+    ScriptMemory& memory = machine.memory();
+    const ScriptAddress block = memory.u32(slot);
+    for (std::uint32_t index = 0; index < floats_ * 4U; ++index) {
+        memory.set_u8(block + index, chunk[index]);
+    }
+}
+
 // The initial value of a variable (FUN_00588390) by the kind of its type.
 void ScriptMachine::init_variable(ScriptAddress address, const ScriptType& type) {
     switch (type.kind) {
@@ -466,7 +553,8 @@ void ScriptMachine::init_variable(ScriptAddress address, const ScriptType& type)
     case 7:
         collection_kind();
     case 9:
-        throw ScriptError("script variable of kind 9 is not ported");
+        value_type(type.name).init(*this, address, 0);
+        break;
     default:
         break;  // the original leaves a variable of any other kind as it is
     }
@@ -525,8 +613,15 @@ void ScriptMachine::store_value(ScriptAddress address, const ScriptType& type, s
     }
     case 7:
         collection_kind();
-    case 9:
-        throw ScriptError("script value of kind 9 is not ported");
+    case 9: {
+        // A new block, then the value of the block the slot at `value` holds.
+        ScriptValueType& kind = value_type(type.name);
+        kind.init(*this, address, 0);
+        if (value != 0) {
+            kind.assign(*this, address, memory_.u32(value));
+        }
+        break;
+    }
     default:
         break;
     }
@@ -563,7 +658,8 @@ void ScriptMachine::destroy_variable(ScriptAddress address, const ScriptType& ty
     case 7:
         collection_kind();
     case 9:
-        throw ScriptError("script value of kind 9 is not ported");
+        value_type(type.name).destroy(*this, address);
+        break;
     case 10: {
         const ScriptAddress handle = memory_.u32(address);
         if (handle != 0) {
@@ -888,7 +984,7 @@ bool ScriptMachine::is_a(std::uint32_t class_id, const std::string& name) const 
 
 // FUN_0057de80: read the word at ip, move ip past it and dispatch on the
 // high byte. The instructions are those of docs/SCRIPTS.md, "Instructions";
-// the change of state (0x5e) is not ported yet.
+// a value of a class needs the native type of the class.
 bool ScriptMachine::interpret(ScriptThread& thread) {
     if (thread.frames.empty()) {
         throw ScriptError("script thread has no frame");
@@ -927,7 +1023,7 @@ bool ScriptMachine::interpret(ScriptThread& thread) {
         const std::uint32_t imm = word & 0xFFFFFFU;
         const auto simm = static_cast<std::int32_t>(word << 8) >> 8;
         switch (op) {
-        case 0x00:  // mark: the original calls the object's debugger
+        case 0x00:  // mark: the object's debugger hook, always null (DAT_00a6a698 is never written)
             break;
         case 0x01:
             stack.pop();
@@ -1036,9 +1132,17 @@ bool ScriptMachine::interpret(ScriptThread& thread) {
             }
             break;
         }
-        case 0x21:
-            next_word();
-            throw ScriptError("script instruction 0x21: value types are not ported");
+        case 0x21: {
+            // A value of a class: pop the address of the source slot, then
+            // the target slot; the target takes the source's block value.
+            const std::uint32_t type = next_id(program_.value_types().size(), "value type");
+            const ScriptAddress source = stack.pop();
+            const ScriptAddress target = stack.pop();
+            if (target != 0 && source != 0) {
+                value_type(program_.value_types()[type]).assign(*this, target, memory_.u32(source));
+            }
+            break;
+        }
         case 0x27:
             stack.replace(0U - stack.top());
             break;

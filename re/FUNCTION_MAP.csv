@@ -6281,13 +6281,13 @@ address,name,subsystem,status,notes
 0057dc80,FUN_0057dc80,script,translated,src/engine/script_machine.cpp: ScriptMachine::end_thread ends the frames from the last one
 0057dcf0,FUN_0057dcf0,script,translated,src/engine/script_machine.cpp: ScriptMachine::run_thread runs the children of the last frame with the argument and then interprets and stops on a pending state of the owner
 0057de60,FUN_0057de60,unknown,todo,ghidra
-0057de80,FUN_0057de80,script,wip,src/engine/script_machine.cpp: ScriptMachine::interpret runs every instruction the game data uses but 0x21 (the value types are not ported)
+0057de80,FUN_0057de80,script,translated,src/engine/script_machine.cpp: ScriptMachine::interpret runs every instruction the game data uses; 0x00 calls a debugger hook that is always null (DAT_00a6a698 is never written)
 0057f560,FUN_0057f560,unknown,todo,ghidra
 0057f580,FUN_0057f580,script,translated,src/engine/script_machine.cpp: ScriptMachine::call pops the cells and runs a native body at once (ending the frame on a pending state) or pushes the frame of a script body with its parameters and locals
 0057f6d0,FUN_0057f6d0,script,translated,src/engine/script_machine.cpp: ScriptMachine::spawn pops the arguments and starts a script body as a thread of the same owner or calls a task native and runs the child once
-0057f830,FUN_0057f830,script,wip,src/engine/script_machine.cpp: ScriptMachine::create_object makes the data block and the handle the object counts once; the initial values and the manager lists are not ported
+0057f830,FUN_0057f830,script,wip,src/engine/script_machine.cpp: ScriptMachine::create_object makes the data block with the initial values and the handle the object counts once; the manager lists are not ported
 0057f9f0,FUN_0057f9f0,unknown,todo,ghidra
-0057fa20,FUN_0057fa20,script,wip,src/engine/script_machine.cpp: ScriptMachine::init_fields writes the defaults of the class and its ancestors once per offset; fields of kind 9 are not ported
+0057fa20,FUN_0057fa20,script,translated,src/engine/script_machine.cpp: ScriptMachine::init_fields writes the defaults of the class and its ancestors once per offset
 0057fd00,FUN_0057fd00,unknown,todo,ghidra
 0057fe90,FUN_0057fe90,unknown,todo,ghidra
 00580010,FUN_00580010,unknown,todo,ghidra
@@ -6528,14 +6528,14 @@ address,name,subsystem,status,notes
 00587cf0,FUN_00587cf0,unknown,todo,ghidra
 00587d00,FUN_00587d00,unknown,todo,ghidra
 00587d10,FUN_00587d10,unknown,todo,ghidra
-00587d30,FUN_00587d30,script,wip,src/engine/script_machine.cpp: type_size gives the size of each kind; no test pins the one-byte kinds
+00587d30,FUN_00587d30,script,translated,src/engine/script_machine.cpp: type_size gives the size of each kind
 00587d90,FUN_00587d90,unknown,todo,ghidra
 00587dd0,FUN_00587dd0,unknown,todo,ghidra
 00587fa0,FUN_00587fa0,unknown,todo,ghidra
-00587fc0,FUN_00587fc0,script,wip,src/engine/script_machine.cpp: ScriptMachine::store_value and copy_argument store every kind but 9 (not ported) and 7 (in no game data)
+00587fc0,FUN_00587fc0,script,translated,src/engine/script_machine.cpp: ScriptMachine::store_value and copy_argument store every kind; kind 7 is in no game data
 005882f0,FUN_005882f0,unknown,todo,ghidra
-00588390,FUN_00588390,script,wip,src/engine/script_machine.cpp: ScriptMachine::init_variable gives every kind but 9 (not ported) and 7 (in no game data) its initial value
-00588570,FUN_00588570,script,wip,src/engine/script_machine.cpp: ScriptMachine::destroy_variable releases strings and handles and walks arrays; kind 9 is not ported and kind 7 is in no game data
+00588390,FUN_00588390,script,translated,src/engine/script_machine.cpp: ScriptMachine::init_variable gives every kind its initial value; kind 7 is in no game data
+00588570,FUN_00588570,script,translated,src/engine/script_machine.cpp: ScriptMachine::destroy_variable gives back strings and handles and value blocks and walks arrays; kind 7 is in no game data
 00588670,FUN_00588670,unknown,todo,ghidra
 00588740,FUN_00588740,unknown,todo,ghidra
 005887d0,FUN_005887d0,unknown,todo,ghidra
@@ -16553,8 +16553,10 @@ address,name,subsystem,status,notes
 0079af50,FUN_0079af50,unknown,todo,ghidra
 0079afa0,FUN_0079afa0,unknown,todo,ghidra
 0079afc0,FUN_0079afc0,unknown,todo,ghidra
-0079b080,FUN_0079b080,unknown,todo,ghidra
-0079b0d0,FUN_0079b0d0,unknown,todo,ghidra
+0079b060,FUN_0079b060,script,translated,src/engine/script_machine.cpp: ScriptBlockType::read_default reads nothing for gridposition
+0079b080,FUN_0079b080,script,translated,src/engine/script_machine.cpp: ScriptBlockType::init makes the block of gridposition (zeroed by the arena where the original leaves the allocator's bytes) or copies it
+0079b0d0,FUN_0079b0d0,script,translated,src/engine/script_machine.cpp: ScriptBlockType::destroy frees the block of gridposition and leaves 0
+0079b0f0,FUN_0079b0f0,script,translated,src/engine/script_machine.cpp: ScriptBlockType::assign gives the block of gridposition the source value
 0079b130,FUN_0079b130,unknown,todo,ghidra
 0079b150,FUN_0079b150,unknown,todo,ghidra
 0079b170,FUN_0079b170,unknown,todo,ghidra
@@ -16670,18 +16672,22 @@ address,name,subsystem,status,notes
 0079dc60,FUN_0079dc60,unknown,todo,ghidra
 0079dc80,FUN_0079dc80,unknown,todo,ghidra
 0079dce0,FUN_0079dce0,unknown,todo,ghidra
+0079dd50,FUN_0079dd50,script,translated,src/engine/script_machine.cpp: ScriptBlockType::read_default reads the four floats of a color default
 0079dd90,FUN_0079dd90,unknown,todo,ghidra
-0079ddd0,FUN_0079ddd0,unknown,todo,ghidra
-0079de50,FUN_0079de50,unknown,todo,ghidra
+0079ddd0,FUN_0079ddd0,script,translated,src/engine/script_machine.cpp: ScriptBlockType::init makes the block of color zeroed or copied
+0079de50,FUN_0079de50,script,translated,src/engine/script_machine.cpp: ScriptBlockType::destroy frees the block of color and leaves 0
+0079de70,FUN_0079de70,script,translated,src/engine/script_machine.cpp: ScriptBlockType::assign gives the block of color the source value
 0079dee0,FUN_0079dee0,unknown,todo,ghidra
 0079df10,FUN_0079df10,unknown,todo,ghidra
 0079df30,FUN_0079df30,unknown,todo,ghidra
 0079df50,FUN_0079df50,unknown,todo,ghidra
 0079df70,FUN_0079df70,unknown,todo,ghidra
 0079dfc0,FUN_0079dfc0,unknown,todo,ghidra
+0079e020,FUN_0079e020,script,translated,src/engine/script_machine.cpp: ScriptBlockType::read_default reads the three floats of a rotation default
 0079e070,FUN_0079e070,unknown,todo,ghidra
-0079e0a0,FUN_0079e0a0,unknown,todo,ghidra
-0079e110,FUN_0079e110,unknown,todo,ghidra
+0079e0a0,FUN_0079e0a0,script,translated,src/engine/script_machine.cpp: ScriptBlockType::init makes the block of rotation zeroed or copied
+0079e110,FUN_0079e110,script,translated,src/engine/script_machine.cpp: ScriptBlockType::destroy frees the block of rotation and leaves 0
+0079e130,FUN_0079e130,script,translated,src/engine/script_machine.cpp: ScriptBlockType::assign gives the block of rotation the source value
 0079e180,FUN_0079e180,unknown,todo,ghidra
 0079e1a0,FUN_0079e1a0,unknown,todo,ghidra
 0079e1d0,FUN_0079e1d0,unknown,todo,ghidra
@@ -16690,9 +16696,11 @@ address,name,subsystem,status,notes
 0079e240,FUN_0079e240,unknown,todo,ghidra
 0079e2a0,FUN_0079e2a0,unknown,todo,ghidra
 0079e2f0,FUN_0079e2f0,unknown,todo,ghidra
+0079e350,FUN_0079e350,script,translated,src/engine/script_machine.cpp: ScriptBlockType::read_default reads the three floats of a position default
 0079e390,FUN_0079e390,unknown,todo,ghidra
-0079e3c0,FUN_0079e3c0,unknown,todo,ghidra
-0079e430,FUN_0079e430,unknown,todo,ghidra
+0079e3c0,FUN_0079e3c0,script,translated,src/engine/script_machine.cpp: ScriptBlockType::init makes the block of position zeroed or copied
+0079e430,FUN_0079e430,script,translated,src/engine/script_machine.cpp: ScriptBlockType::destroy frees the block of position and leaves 0
+0079e450,FUN_0079e450,script,translated,src/engine/script_machine.cpp: ScriptBlockType::assign gives the block of position the source value
 0079e4a0,FUN_0079e4a0,unknown,todo,ghidra
 0079e4c0,FUN_0079e4c0,unknown,todo,ghidra
 0079e4e0,FUN_0079e4e0,unknown,todo,ghidra
