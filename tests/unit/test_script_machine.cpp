@@ -1707,6 +1707,19 @@ struct FakeCreatures final : bo2::engine::ScriptCreatureHost {
     }
     std::uint32_t kain() override { return kain_creature; }
     ScriptObjectId hud_object() override { return hud; }
+
+    std::array<float, 3> creature_position(std::uint32_t) override { return {}; }
+    std::array<float, 3> creature_rotation(std::uint32_t) override { return {}; }
+    bool creature_has_package(std::uint32_t) override { return true; }
+    void hibernate_creature(std::uint32_t) override {}
+    void unhibernate_creature(std::uint32_t) override {}
+    void remove_creature(std::uint32_t) override {}
+    std::uint32_t creature_flags(std::uint32_t) override { return 0; }
+    void set_creature_flags(std::uint32_t, std::uint32_t) override {}
+    std::uint32_t drawn_frame(std::uint32_t) override { return 0; }
+    std::uint32_t frame() override { return 0; }
+    void leave_group(std::uint32_t, Group) override {}
+    void set_model_lod(bool) override {}
 };
 
 // A class with `count` native bodies, one method each.

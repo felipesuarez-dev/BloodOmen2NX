@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <functional>
 #include <map>
@@ -201,6 +202,33 @@ public:
     // The script object of the creature of the HUD (FUN_0052bd60,
     // FUN_00531420), 0 for none.
     virtual ScriptObjectId hud_object() = 0;
+
+    // The position (+0xb4) and the rotation (+0xc0) of a creature, three
+    // floats each.
+    virtual std::array<float, 3> creature_position(std::uint32_t creature) = 0;
+    virtual std::array<float, 3> creature_rotation(std::uint32_t creature) = 0;
+    // Whether a creature belongs to a script package (+0x144 is not 0).
+    virtual bool creature_has_package(std::uint32_t creature) = 0;
+    // The creature manager: hibernate (FUN_00718cf0), wake (FUN_00718d30)
+    // and remove (FUN_00718b80) a creature.
+    virtual void hibernate_creature(std::uint32_t creature) = 0;
+    virtual void unhibernate_creature(std::uint32_t creature) = 0;
+    virtual void remove_creature(std::uint32_t creature) = 0;
+    // The simulation flags of a creature (+0xf0; docs/SCRIPTS.md, "The
+    // update of the objects of a level").
+    virtual std::uint32_t creature_flags(std::uint32_t creature) = 0;
+    virtual void set_creature_flags(std::uint32_t creature, std::uint32_t flags) = 0;
+    // The last frame a creature was drawn in (+0x140) and the frame counter
+    // (DAT_008ff180).
+    virtual std::uint32_t drawn_frame(std::uint32_t creature) = 0;
+    virtual std::uint32_t frame() = 0;
+    // The update groups of the creature manager: `process_msg`
+    // (DAT_00a83754, FUN_00718490) and the second one (DAT_00a83744,
+    // FUN_007190e0). Takes a creature out of one (FUN_0072b550).
+    enum class Group { process, second };
+    virtual void leave_group(std::uint32_t creature, Group group) = 0;
+    // The switch of the level of detail of the models (DAT_00a79e75).
+    virtual void set_model_lod(bool on) = 0;
 };
 
 class ScriptMachine {
