@@ -23,7 +23,7 @@ English version: [README.en.md](README.en.md)
 
 <!-- badges:start -->
 [status-badge]: https://img.shields.io/badge/fase-M3%20en%20curso-orange
-[overall-badge]: https://img.shields.io/badge/global-8.2%25-yellow
+[overall-badge]: https://img.shields.io/badge/global-8.0%25-yellow
 [fn-badge]: https://img.shields.io/badge/funciones-37%20%2F%2016941-lightgrey
 [levels-badge]: https://img.shields.io/badge/niveles-0%20%2F%2011-lightgrey
 <!-- badges:end -->
@@ -72,15 +72,17 @@ El original se usa como referencia; no se distribuye.
 **Dónde está el proyecto: M0, M1 y M2 están completos y M3 está en curso.** La canalización de datos, el renderizador de niveles y el oráculo funcionan. Kain camina, corre y salta (con control en el aire) con los ajustes de movimiento originales y el port elige el español como el original, pero el combate, los enemigos y los scripts no están traducidos, así que **no se puede completar ningún capítulo**. Los números de abajo se generan y miden lo que el port traduce, no qué tan jugable se siente (consulta [qué miden los porcentajes](#qué-miden-los-porcentajes)).
 
 <!-- progress:start -->
-**Progreso global: 8.2%**
+**Progreso global: 8.0%**
 
 | Componente | Peso | Avance | Puntaje |
 |---|---:|---:|---:|
 | Funciones traducidas / en alcance | 60% | 37 / 16 941 | 0.22% |
 | Niveles completables (capítulos de la campaña) | 30% | 0 / 11 | 0.00% |
-| Características de plataforma | 10% | 10 / 13 + 1 parcial | 80.77% |
+| Características de plataforma | 10% | 9 / 12 + 1 parcial | 79.17% |
 
 Mapa de funciones: 35 543 filas: 37 traducidas, 156 en curso, 16 748 pendientes, 18 602 externas (no son código del juego).
+
+![Mapa del código del juego: un rectángulo por cada 64 KiB de bo2.exe, del tamaño de su código, más verde cuanto más traducido y ámbar si solo está en curso](docs/progress.svg)
 
 La lista de capítulos está en [`docs/LEVELS.md`](docs/LEVELS.md). Los capítulos completables y las características de plataforma se definen en [`tools/gen/progress_data.py`](tools/gen/progress_data.py).
 <!-- progress:end -->

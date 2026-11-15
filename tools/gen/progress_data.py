@@ -45,7 +45,6 @@ LEVELS = [
 PLATFORM_FEATURES = [
     ("Host build skeleton", "done"),
     ("Installer container (SFXI)", "done"),
-    ("Installer chunk decompressor", "done"),
     ("BIG/RKV parsers", "done"),
     ("Validated asset extraction", "done"),
     ("Headless host first frame", "done"),

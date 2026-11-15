@@ -127,5 +127,31 @@ class ReadmeTest(unittest.TestCase):
         )
 
 
+
+class TreemapTest(unittest.TestCase):
+    def test_squarify_fills_the_area_in_proportion(self):
+        rects = progress.squarify([6, 6, 4, 3, 2, 2, 1], 0, 0, 6, 4)
+        self.assertEqual(len(rects), 7)
+        self.assertAlmostEqual(sum(w * h for _, _, w, h in rects), 24.0)
+        self.assertAlmostEqual(rects[0][2] * rects[0][3], 6.0)
+        for x, y, w, h in rects:
+            self.assertGreaterEqual(x, -1e-9)
+            self.assertGreaterEqual(y, -1e-9)
+            self.assertLessEqual(x + w, 6 + 1e-9)
+            self.assertLessEqual(y + h, 4 + 1e-9)
+
+    def test_blocks_skip_external_rows_and_split_by_status(self):
+        rows = [(0x400000, "translated"), (0x400100, "wip"), (0x400300, "todo"),
+                (0x410000, "external"), (0x410040, "todo"), (0x410080, "external")]
+        blocks = progress.treemap_blocks(rows)
+        self.assertEqual([b["start"] for b in blocks], [0x400000, 0x410000])
+        self.assertEqual((blocks[0]["done"], blocks[0]["wip"], blocks[0]["bytes"]), (0x100, 0x200, 0x10000))
+        self.assertEqual((blocks[1]["functions"], blocks[1]["bytes"]), (1, 0x40))
+
+    def test_the_committed_map_is_current(self):
+        self.assertEqual(progress.TREEMAP.read_text(encoding="utf-8"),
+                         progress.build_treemap(progress.load_map_rows()))
+
+
 if __name__ == "__main__":
     unittest.main()

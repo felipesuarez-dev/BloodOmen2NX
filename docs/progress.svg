@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="300" viewBox="0 0 960 300" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+<rect width="960" height="300" fill="#0d1117"/>
+<text x="8" y="22" fill="#e6edf3" font-size="14">bo2.exe game code by 64 KiB block: 0.33% of the bytes translated, 3.11% in progress</text>
+<rect x="0.0" y="34.0" width="64.5" height="56.2" fill="#69501d" stroke="#0d1117" stroke-width="1"><title>0x400000: 324 functions, 61472 bytes, 0.00% translated, 7.60% in progress</title></rect>
+<text x="3.0" y="45.0" fill="#8b949e" font-size="9">0x400000</text>
+<rect x="0.0" y="90.2" width="64.5" height="59.9" fill="#614d21" stroke="#0d1117" stroke-width="1"><title>0x410000: 296 functions, 65536 bytes, 0.00% translated, 3.10% in progress</title></rect>
+<text x="3.0" y="101.2" fill="#8b949e" font-size="9">0x410000</text>
+<rect x="0.0" y="150.2" width="64.5" height="60.0" fill="#266335" stroke="#0d1117" stroke-width="1"><title>0x420000: 255 functions, 65568 bytes, 0.93% translated, 14.30% in progress</title></rect>
+<text x="3.0" y="161.2" fill="#8b949e" font-size="9">0x420000</text>
+<rect x="0.0" y="210.1" width="64.5" height="59.9" fill="#624d21" stroke="#0d1117" stroke-width="1"><title>0x430000: 271 functions, 65456 bytes, 0.00% translated, 3.25% in progress</title></rect>
+<text x="3.0" y="221.1" fill="#8b949e" font-size="9">0x430000</text>
+<rect x="64.5" y="34.0" width="65.5" height="60.0" fill="#6f531a" stroke="#0d1117" stroke-width="1"><title>0x440000: 238 functions, 66640 bytes, 0.00% translated, 12.77% in progress</title></rect>
+<text x="67.5" y="45.0" fill="#8b949e" font-size="9">0x440000</text>
+<rect x="64.5" y="94.0" width="65.5" height="58.1" fill="#5f4b22" stroke="#0d1117" stroke-width="1"><title>0x450000: 185 functions, 64592 bytes, 0.00% translated, 1.88% in progress</title></rect>
+<text x="67.5" y="105.0" fill="#8b949e" font-size="9">0x450000</text>
+<rect x="64.5" y="152.1" width="65.5" height="58.9" fill="#2d333b" stroke="#0d1117" stroke-width="1"><title>0x460000: 275 functions, 65472 bytes, 0.00% translated, 0.00% in progress</title></rect>
+<text x="67.5" y="163.1" fill="#8b949e" font-size="9">0x460000</text>
+<rect x="64.5" y="211.1" width="65.5" height="58.9" fill="#2d333b" stroke="#0d1117" stroke-width="1"><title>0x470000: 240 functions, 65488 bytes, 0.00% translated, 0.00% in progress</title></rect>
+<text x="67.5" y="222.1" fill="#8b949e" font-size="9">0x470000</text>
+<rect x="130.0" y="34.0" width="65.9" height="58.7" fill="#2d333b" stroke="#0d1117" stroke-width="1"><title>0x480000: 249 functions, 65504 bytes, 0.00% translated, 0.00% in progress</title></rect>
+<text x="133.0" y="45.0" fill="#8b949e" font-size="9">0x480000</text>
+<rect x="130.0" y="92.7" width="65.9" height="61.2" fill="#2d333b" stroke="#0d1117" stroke-width="1"><title>0x490000: 244 functions, 68320 bytes, 0.00% translated, 0.00% in progress</title></rect>
+<text x="133.0" y="103.7" fill="#8b949e" font-size="9">0x490000</text>
+<rect x="130.0" y="153.9" width="65.9" height="56.6" fill="#604c22" stroke="#0d1117" stroke-width="1"><title>0x4a0000: 249 functions, 63136 bytes, 0.00% translated, 2.36% in progress</title></rect>
+<text x="133.0" y="164.9" fill="#8b949e" font-size="9">0x4a0000</text>
+<rect x="130.0" y="210.4" width="65.9" height="59.6" fill="#2d333b" stroke="#0d1117" stroke-width="1"><title>0x4b0000: 269 functions, 66512 bytes, 0.00% translated, 0.00% in progress</title></rect>
+<text x="133.0" y="221.4" fill="#8b949e" font-size="9">0x4b0000</text>
+<rect x="195.9" y="34.0" width="65.5" height="57.8" fill="#2d333b" stroke="#0d1117" stroke-width="1"><title>0x4c0000: 221 functions, 64144 bytes, 0.00% translated, 0.00% in progress</title></rect>
+<text x="198.9" y="45.0" fill="#8b949e" font-size="9">0x4c0000</text>
+<rect x="195.9" y="91.8" width="65.5" height="59.1" fill="#2d333b" stroke="#0d1117" stroke-width="1"><title>0x4d0000: 351 functions, 65584 bytes, 0.00% translated, 0.00% in progress</title></rect>
+<text x="198.9" y="102.8" fill="#8b949e" font-size="9">0x4d0000</text>
+<rect x="195.9" y="150.8" width="65.5" height="59.0" fill="#2d333b" stroke="#0d1117" stroke-width="1"><title>0x4e0000: 297 functions, 65504 bytes, 0.00% translated, 0.00% in progress</title></rect>
+<text x="198.9" y="161.8" fill="#8b949e" font-size="9">0x4e0000</text>
+<rect x="195.9" y="209.8" width="65.5" height="60.2" fill="#2d333b" stroke="#0d1117" stroke-width="1"><title>0x4f0000: 283 functions, 66816 bytes, 0.00% translated, 0.00% in progress</title></rect>
+<text x="198.9" y="220.8" fill="#8b949e" font-size="9">0x4f0000</text>
+<rect x="261.4" y="34.0" width="65.2" height="61.8" fill="#2d333b" stroke="#0d1117" stroke-width="1"><title>0x500000: 134 functions, 68384 bytes, 0.00% translated, 0.00% in progress</title></rect>
+<text x="264.4" y="45.0" fill="#8b949e" font-size="9">0x500000</text>
+<rect x="261.4" y="95.8" width="65.2" height="55.7" fill="#2d333b" stroke="#0d1117" stroke-width="1"><title>0x510000: 266 functions, 61552 bytes, 0.00% translated, 0.00% in progress</title></rect>
+<text x="264.4" y="106.8" fill="#8b949e" font-size="9">0x510000</text>
+<rect x="261.4" y="151.5" width="65.2" height="62.7" fill="#245e33" stroke="#0d1117" stroke-width="1"><title>0x520000: 330 functions, 69312 bytes, 0.16% translated, 11.82% in progress</title></rect>
+<text x="264.4" y="162.5" fill="#8b949e" font-size="9">0x520000</text>
+<rect x="261.4" y="214.2" width="65.2" height="55.8" fill="#296d38" stroke="#0d1117" stroke-width="1"><title>0x530000: 276 functions, 61712 bytes, 3.94% translated, 4.07% in progress</title></rect>
+<text x="264.4" y="225.2" fill="#8b949e" font-size="9">0x530000</text>
+<rect x="326.6" y="34.0" width="65.5" height="59.1" fill="#256034" stroke="#0d1117" stroke-width="1"><title>0x540000: 306 functions, 65664 bytes, 0.34% translated, 0.00% in progress</title></rect>
+<text x="329.6" y="45.0" fill="#8b949e" font-size="9">0x540000</text>
+<rect x="326.6" y="93.1" width="65.5" height="60.6" fill="#2d333b" stroke="#0d1117" stroke-width="1"><title>0x550000: 257 functions, 67264 bytes, 0.00% translated, 0.00% in progress</title></rect>
+<text x="329.6" y="104.1" fill="#8b949e" font-size="9">0x550000</text>
+<rect x="326.6" y="153.7" width="65.5" height="59.1" fill="#745618" stroke="#0d1117" stroke-width="1"><title>0x560000: 169 functions, 65600 bytes, 0.00% translated, 18.51% in progress</title></rect>
+<text x="329.6" y="164.7" fill="#8b949e" font-size="9">0x560000</text>
+<rect x="326.6" y="212.8" width="65.5" height="57.2" fill="#614c21" stroke="#0d1117" stroke-width="1"><title>0x570000: 303 functions, 63520 bytes, 0.00% translated, 2.70% in progress</title></rect>
+<text x="329.6" y="223.8" fill="#8b949e" font-size="9">0x570000</text>
+<rect x="392.2" y="34.0" width="65.8" height="58.9" fill="#2d333b" stroke="#0d1117" stroke-width="1"><title>0x580000: 389 functions, 65648 bytes, 0.00% translated, 0.00% in progress</title></rect>
+<text x="395.2" y="45.0" fill="#8b949e" font-size="9">0x580000</text>
+<rect x="392.2" y="92.9" width="65.8" height="58.7" fill="#2d333b" stroke="#0d1117" stroke-width="1"><title>0x590000: 234 functions, 65440 bytes, 0.00% translated, 0.00% in progress</title></rect>
+<text x="395.2" y="103.9" fill="#8b949e" font-size="9">0x590000</text>
+<rect x="392.2" y="151.5" width="65.8" height="63.1" fill="#2d333b" stroke="#0d1117" stroke-width="1"><title>0x5a0000: 226 functions, 70384 bytes, 0.00% translated, 0.00% in progress</title></rect>
+<text x="395.2" y="162.5" fill="#8b949e" font-size="9">0x5a0000</text>
+<rect x="392.2" y="214.6" width="65.8" height="55.4" fill="#5a4924" stroke="#0d1117" stroke-width="1"><title>0x5b0000: 325 functions, 61744 bytes, 0.00% translated, 0.65% in progress</title></rect>
+<text x="395.2" y="225.6" fill="#8b949e" font-size="9">0x5b0000</text>
+<rect x="458.0" y="34.0" width="65.3" height="58.3" fill="#654e1f" stroke="#0d1117" stroke-width="1"><title>0x5c0000: 380 functions, 64464 bytes, 0.00% translated, 5.26% in progress</title></rect>
+<text x="461.0" y="45.0" fill="#8b949e" font-size="9">0x5c0000</text>
+<rect x="458.0" y="92.3" width="65.3" height="59.3" fill="#644e20" stroke="#0d1117" stroke-width="1"><title>0x5d0000: 296 functions, 65600 bytes, 0.00% translated, 4.41% in progress</title></rect>
+<text x="461.0" y="103.3" fill="#8b949e" font-size="9">0x5d0000</text>
+<rect x="458.0" y="151.6" width="65.3" height="59.4" fill="#286c38" stroke="#0d1117" stroke-width="1"><title>0x5e0000: 379 functions, 65728 bytes, 3.70% translated, 16.53% in progress</title></rect>
+<text x="461.0" y="162.6" fill="#8b949e" font-size="9">0x5e0000</text>
+<rect x="458.0" y="211.0" width="65.3" height="59.0" fill="#2d333b" stroke="#0d1117" stroke-width="1"><title>0x5f0000: 326 functions, 65280 bytes, 0.00% translated, 0.00% in progress</title></rect>
+<text x="461.0" y="222.0" fill="#8b949e" font-size="9">0x5f0000</text>
+<rect x="523.2" y="34.0" width="65.6" height="59.0" fill="#5b4924" stroke="#0d1117" stroke-width="1"><title>0x600000: 325 functions, 65520 bytes, 0.00% translated, 0.66% in progress</title></rect>
+<text x="526.2" y="45.0" fill="#8b949e" font-size="9">0x600000</text>
+<rect x="523.2" y="93.0" width="65.6" height="59.3" fill="#255f34" stroke="#0d1117" stroke-width="1"><title>0x610000: 259 functions, 65856 bytes, 0.29% translated, 0.78% in progress</title></rect>
+<text x="526.2" y="104.0" fill="#8b949e" font-size="9">0x610000</text>
+<rect x="523.2" y="152.2" width="65.6" height="58.7" fill="#634d20" stroke="#0d1117" stroke-width="1"><title>0x620000: 222 functions, 65264 bytes, 0.00% translated, 3.65% in progress</title></rect>
+<text x="526.2" y="163.2" fill="#8b949e" font-size="9">0x620000</text>
+<rect x="523.2" y="210.9" width="65.6" height="59.1" fill="#286a37" stroke="#0d1117" stroke-width="1"><title>0x630000: 245 functions, 65648 bytes, 2.80% translated, 9.46% in progress</title></rect>
+<text x="526.2" y="221.9" fill="#8b949e" font-size="9">0x630000</text>
+<rect x="588.8" y="34.0" width="65.5" height="59.1" fill="#624d21" stroke="#0d1117" stroke-width="1"><title>0x640000: 280 functions, 65568 bytes, 0.00% translated, 3.25% in progress</title></rect>
+<text x="591.8" y="45.0" fill="#8b949e" font-size="9">0x640000</text>
+<rect x="588.8" y="93.1" width="65.5" height="59.4" fill="#2d333b" stroke="#0d1117" stroke-width="1"><title>0x650000: 268 functions, 65904 bytes, 0.00% translated, 0.00% in progress</title></rect>
+<text x="591.8" y="104.1" fill="#8b949e" font-size="9">0x650000</text>
+<rect x="588.8" y="152.5" width="65.5" height="58.5" fill="#256034" stroke="#0d1117" stroke-width="1"><title>0x660000: 260 functions, 64960 bytes, 0.34% translated, 7.98% in progress</title></rect>
+<text x="591.8" y="163.5" fill="#8b949e" font-size="9">0x660000</text>
+<rect x="588.8" y="211.0" width="65.5" height="59.0" fill="#276736" stroke="#0d1117" stroke-width="1"><title>0x670000: 257 functions, 65504 bytes, 1.88% translated, 12.14% in progress</title></rect>
+<text x="591.8" y="222.0" fill="#8b949e" font-size="9">0x670000</text>
+<rect x="654.3" y="34.0" width="65.6" height="59.1" fill="#286a37" stroke="#0d1117" stroke-width="1"><title>0x680000: 305 functions, 65616 bytes, 3.00% translated, 8.53% in progress</title></rect>
+<text x="657.3" y="45.0" fill="#8b949e" font-size="9">0x680000</text>
+<rect x="654.3" y="93.1" width="65.6" height="58.9" fill="#256134" stroke="#0d1117" stroke-width="1"><title>0x690000: 303 functions, 65456 bytes, 0.59% translated, 4.25% in progress</title></rect>
+<text x="657.3" y="104.1" fill="#8b949e" font-size="9">0x690000</text>
+<rect x="654.3" y="152.0" width="65.6" height="59.0" fill="#245d33" stroke="#0d1117" stroke-width="1"><title>0x6a0000: 379 functions, 65552 bytes, 0.10% translated, 1.27% in progress</title></rect>
+<text x="657.3" y="163.0" fill="#8b949e" font-size="9">0x6a0000</text>
+<rect x="654.3" y="210.9" width="65.6" height="59.1" fill="#2d333b" stroke="#0d1117" stroke-width="1"><title>0x6b0000: 345 functions, 65616 bytes, 0.00% translated, 0.00% in progress</title></rect>
+<text x="657.3" y="221.9" fill="#8b949e" font-size="9">0x6b0000</text>
+<rect x="719.8" y="34.0" width="66.0" height="59.0" fill="#266435" stroke="#0d1117" stroke-width="1"><title>0x6c0000: 384 functions, 65936 bytes, 1.07% translated, 0.00% in progress</title></rect>
+<text x="722.8" y="45.0" fill="#8b949e" font-size="9">0x6c0000</text>
+<rect x="719.8" y="93.0" width="66.0" height="58.2" fill="#2d333b" stroke="#0d1117" stroke-width="1"><title>0x6d0000: 385 functions, 65120 bytes, 0.00% translated, 0.00% in progress</title></rect>
+<text x="722.8" y="104.0" fill="#8b949e" font-size="9">0x6d0000</text>
+<rect x="719.8" y="151.2" width="66.0" height="58.6" fill="#2d333b" stroke="#0d1117" stroke-width="1"><title>0x6e0000: 243 functions, 65504 bytes, 0.00% translated, 0.00% in progress</title></rect>
+<text x="722.8" y="162.2" fill="#8b949e" font-size="9">0x6e0000</text>
+<rect x="719.8" y="209.7" width="66.0" height="60.3" fill="#2d333b" stroke="#0d1117" stroke-width="1"><title>0x6f0000: 172 functions, 67392 bytes, 0.00% translated, 0.00% in progress</title></rect>
+<text x="722.8" y="220.7" fill="#8b949e" font-size="9">0x6f0000</text>
+<rect x="785.8" y="34.0" width="56.9" height="65.9" fill="#654e1f" stroke="#0d1117" stroke-width="1"><title>0x700000: 118 functions, 63616 bytes, 0.00% translated, 5.05% in progress</title></rect>
+<text x="788.8" y="45.0" fill="#8b949e" font-size="9">0x700000</text>
+<rect x="842.7" y="34.0" width="59.4" height="65.9" fill="#624d21" stroke="#0d1117" stroke-width="1"><title>0x710000: 430 functions, 66384 bytes, 0.00% translated, 3.13% in progress</title></rect>
+<text x="845.7" y="45.0" fill="#8b949e" font-size="9">0x710000</text>
+<rect x="902.1" y="34.0" width="57.9" height="65.9" fill="#245e33" stroke="#0d1117" stroke-width="1"><title>0x720000: 302 functions, 64656 bytes, 0.15% translated, 0.00% in progress</title></rect>
+<text x="905.1" y="45.0" fill="#8b949e" font-size="9">0x720000</text>
+<rect x="785.8" y="99.9" width="68.2" height="56.8" fill="#2d333b" stroke="#0d1117" stroke-width="1"><title>0x730000: 326 functions, 65728 bytes, 0.00% translated, 0.00% in progress</title></rect>
+<text x="788.8" y="110.9" fill="#8b949e" font-size="9">0x730000</text>
+<rect x="785.8" y="156.8" width="68.2" height="56.6" fill="#2d333b" stroke="#0d1117" stroke-width="1"><title>0x740000: 370 functions, 65424 bytes, 0.00% translated, 0.00% in progress</title></rect>
+<text x="788.8" y="167.8" fill="#8b949e" font-size="9">0x740000</text>
+<rect x="785.8" y="213.3" width="68.2" height="56.7" fill="#5f4b22" stroke="#0d1117" stroke-width="1"><title>0x750000: 369 functions, 65536 bytes, 0.00% translated, 1.88% in progress</title></rect>
+<text x="788.8" y="224.3" fill="#8b949e" font-size="9">0x750000</text>
+<rect x="854.0" y="99.9" width="53.0" height="73.1" fill="#2d333b" stroke="#0d1117" stroke-width="1"><title>0x760000: 346 functions, 65616 bytes, 0.00% translated, 0.00% in progress</title></rect>
+<text x="857.0" y="110.9" fill="#8b949e" font-size="9">0x760000</text>
+<rect x="907.0" y="99.9" width="53.0" height="73.1" fill="#245d33" stroke="#0d1117" stroke-width="1"><title>0x770000: 321 functions, 65648 bytes, 0.07% translated, 6.68% in progress</title></rect>
+<text x="910.0" y="110.9" fill="#8b949e" font-size="9">0x770000</text>
+<rect x="854.0" y="173.0" width="79.6" height="48.4" fill="#245d33" stroke="#0d1117" stroke-width="1"><title>0x780000: 232 functions, 65264 bytes, 0.10% translated, 4.81% in progress</title></rect>
+<text x="857.0" y="184.0" fill="#8b949e" font-size="9">0x780000</text>
+<rect x="854.0" y="221.4" width="79.6" height="48.6" fill="#2d333b" stroke="#0d1117" stroke-width="1"><title>0x790000: 435 functions, 65632 bytes, 0.00% translated, 0.00% in progress</title></rect>
+<text x="857.0" y="232.4" fill="#8b949e" font-size="9">0x790000</text>
+<rect x="933.6" y="173.0" width="26.4" height="27.7" fill="#2d333b" stroke="#0d1117" stroke-width="1"><title>0x7a0000: 84 functions, 12396 bytes, 0.00% translated, 0.00% in progress</title></rect>
+<rect x="933.6" y="200.7" width="26.4" height="69.3" fill="#2d333b" stroke="#0d1117" stroke-width="1"><title>0x7f0000: 133 functions, 30950 bytes, 0.00% translated, 0.00% in progress</title></rect>
+<rect x="8" y="280" width="12" height="12" fill="#2d333b"/>
+<text x="26" y="290" fill="#c9d1d9" font-size="12">to do</text>
+<rect x="138" y="280" width="12" height="12" fill="#7c5a14"/>
+<text x="156" y="290" fill="#c9d1d9" font-size="12">in progress</text>
+<rect x="268" y="280" width="12" height="12" fill="#3fb950"/>
+<text x="286" y="290" fill="#c9d1d9" font-size="12">translated</text>
+<text x="952" y="290" fill="#8b949e" font-size="11" text-anchor="end">generated by tools/gen/progress.py from re/FUNCTION_MAP.csv</text>
+</svg>
