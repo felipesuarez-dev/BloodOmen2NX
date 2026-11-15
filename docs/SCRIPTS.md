@@ -23,7 +23,12 @@ ported yet).
   `FUN_0057f830`) has a class (+0xc), a data block (+0x10), a pending state
   (+0x14), a main thread (+0x18) and a handle (+8). The handle is a small
   counted object (count at +4) that points back at the object (+8): a
-  script variable that refers to an object holds its handle.
+  script variable that refers to an object holds its handle. The object
+  counts its own handle (`FUN_0057f830`: the handle is made with count 0
+  and the object adds 1), so a new object's handle has count 1 and a
+  release by a variable never brings it to 0 while the object holds it.
+  When a release does bring it to 0, the handle's virtual +4 runs (vtable
+  `0x86df04`).
 - The data block has the size the class declares (`FUN_0057fa20`) and holds
   the fields at their offsets. Its first byte is the current state of the
   object. `FUN_0057fa20` fills the fields of the class and of its ancestors
@@ -59,6 +64,17 @@ ported yet).
   caller wants it. The parameters are copied to their offsets (a parameter
   of kind 10 as the handle of the object) and the locals of the body are
   initialised (`FUN_00587fc0`, `FUN_00588390`).
+- The end of a frame (`FUN_0057d690`, called by `FUN_0057dcf0` before it
+  frees the frame): a frame whose word 0 is not 1 destroys each parameter
+  of the method and then each local of the body at its offset in the
+  locals (`FUN_00588570`, by kind; see "Values"), then frees the stack and
+  the locals. Every frame then destroys its child threads (the virtual +0
+  of each) and frees their list. Word 0 is 1 for the copy of a frame
+  (`FUN_0057d5c0`), which shares the stack and the locals of the frame it
+  copies and frees neither; it is 2 for the frame of a call
+  (`FUN_0057f580`) and 2, 3 or 0 for the first frame of a thread, by the
+  byte +5 of the method (0, 1 or 2; `FUN_0057d810`). The word that holds
+  the address of the result is not a variable and is not destroyed.
 - `FUN_0057dcf0` (virtual +8) runs a thread once: first it runs the
   children of the last frame and destroys the ones that ended; if the frame
   is waiting and still has children, it returns; then it calls the
@@ -176,16 +192,27 @@ Every value takes 4 bytes in a local, a field or a stack cell, except a
 boolean and a byte, which take one (`FUN_00587d30`; an array takes its
 count times the size of its element). What the 4 bytes hold:
 
-| Kind | Holds | Initial value (`FUN_00588390`) | Store (`FUN_00587fc0`) |
-|---|---|---|---|
-| 1 boolean, 5 byte | the value, one byte | 0 | the low byte |
-| 2 integer, 3 float, 11 enumeration | the value | 0 | the word |
-| 8 | a word (no data uses it) | 0 | 0 |
-| 4 string | a pointer to a counted string | the shared empty string, counted | the string, counted |
-| 10 object | a pointer to the counted handle of an object | 0 | the handle, counted |
-| 9 value of a class | a pointer to a block the value type owns | the type's virtual +0x18 with no source | +0x18, then +0x20 with the source |
-| 6 array | the elements, one after the other | each element | each element |
-| 7 | a pointer to a collection object of 0x1c bytes (no data uses it) | an empty collection | a copy |
+| Kind | Holds | Initial value (`FUN_00588390`) | Store (`FUN_00587fc0`) | Destroy (`FUN_00588570`) |
+|---|---|---|---|---|
+| 1 boolean, 5 byte | the value, one byte | 0 | the low byte | nothing |
+| 2 integer, 3 float, 11 enumeration | the value | 0 | the word | nothing |
+| 8 | a word (no data uses it) | 0 | 0 | nothing |
+| 4 string | a pointer to a counted string | the shared empty string, counted | the string, counted | the string's count goes down by 1 and the string is freed at 0 (`FUN_0068e7e0`); then the 4-byte holder is freed |
+| 10 object | a pointer to the counted handle of an object | 0 | the handle, counted | when not 0, the handle's count goes down by 1; at 0 the handle's virtual +4 runs |
+| 9 value of a class | a pointer to a block the value type owns | the type's virtual +0x18 with no source | +0x18, then +0x20 with the source | the type's virtual +0x1c |
+| 6 array | the elements, one after the other | each element | each element | each element |
+| 7 | a pointer to a collection object of 0x1c bytes (no data uses it) | an empty collection | a copy | `FUN_00588670`, then `FUN_0070d050` |
+
+In the original a string variable holds a pointer to a 4-byte holder that
+points to the counted string (`FUN_00588390` allocates the holder); the
+port's variable is the holder itself (`docs/ARCHITECTURE.md`), so it has
+nothing to free but the string.
+
+Measured over the 480 packages and the 165 region packages: kinds 7 and 8
+appear nowhere. Arrays (kind 6) appear only as fields (123, of 10 or 20
+floats or values of a class) and as parameters of 168 native bodies (20
+floats or 20 values); no local and no parameter of a script body is an
+array, so a frame never initialises, stores or destroys one.
 
 A value type is the native type of a value class (`goe::NativeType`; one
 `NT<name>` class per value class: `NTposition`, `NTtimer`, ...). Its
@@ -403,8 +430,6 @@ owner, has the slot count of its class.
 - The properties `<class>.<field>` of an entity (for example
   `levelkeeperintro.commondata.farClip`), which look like overrides of the
   defaults of the fields of its object (`FUN_00737a80` applies them).
-- What the end of a frame does with the strings and handles its locals
-  hold (the destructor of the frame of `FUN_0057d3e0`).
 - The virtual +0x18 of a script object (`0x580880`), called after a state
   change.
 - The collection type (kind 7) and the type with kind 8: no data uses them.
