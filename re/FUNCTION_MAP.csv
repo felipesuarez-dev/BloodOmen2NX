@@ -15640,8 +15640,12 @@ address,name,subsystem,status,notes
 0076b0d0,FUN_0076b0d0,unknown,todo,ghidra
 0076b0e0,FUN_0076b0e0,unknown,todo,ghidra
 0076b0f0,FUN_0076b0f0,unknown,todo,ghidra
+0076b170,FUN_0076b170,script,translated,src/engine/script_machine.cpp: terrain has no natives to bind
 0076b180,FUN_0076b180,unknown,todo,ghidra
 0076b1b0,FUN_0076b1b0,unknown,todo,ghidra
+0076b1c0,FUN_0076b1c0,script,translated,src/engine/script_machine.cpp: ScriptWordType::init for terrain copies the word
+0076b1d0,FUN_0076b1d0,script,translated,src/engine/script_machine.cpp: ScriptWordType::destroy for terrain leaves 0
+0076b1e0,FUN_0076b1e0,script,translated,src/engine/script_machine.cpp: ScriptWordType::assign for terrain copies the word
 0076b220,FUN_0076b220,unknown,todo,ghidra
 0076b2b0,FUN_0076b2b0,unknown,todo,ghidra
 0076b2e0,FUN_0076b2e0,unknown,todo,ghidra

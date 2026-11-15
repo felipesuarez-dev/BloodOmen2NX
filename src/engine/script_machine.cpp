@@ -142,6 +142,9 @@ ScriptMachine::ScriptMachine(const ScriptProgram& program)
     register_value_type("waypoints", std::make_unique<ScriptWaypointsType>());
     // CreatureNativeType (0x878b58) and NTcreaturecontroller (0x878c60).
     register_value_type("creature", std::make_unique<ScriptWordType>());
+    // TerrainNativeType (0x878b2c): the same as creature (FUN_0076b1c0,
+    // FUN_0076b1d0, FUN_0076b1e0; no natives, FUN_0076b170).
+    register_value_type("terrain", std::make_unique<ScriptWordType>());
     register_value_type("creaturecontroller", std::make_unique<ScriptCountedType>());
     // NTsound (0x878c08), NTeffect (0x878ce4), NTsoundgroup (0x878bdc).
     register_value_type("sound", std::make_unique<ScriptEngineObjectType>(ScriptEngineObjectType::Kind::sound));
@@ -226,9 +229,7 @@ void ScriptMachine::init_fields(ScriptObjectId object) {
                 if (field.default_flag == 0) {
                     init_variable(address, field.type);
                 } else {
-                    const ScriptAddress record = name_record(field.default_name);
-                    memory_.set_u32(address, record);
-                    memory_.set_u32(record, memory_.u32(record) + 1);
+                    memory_.set_u32(address, new_holder(name_record(field.default_name)));
                 }
                 break;
             case 6:
@@ -823,8 +824,8 @@ void ScriptMachine::init_variable(ScriptAddress address, const ScriptType& type)
         memory_.set_u32(address, 0);
         break;
     case 4:
-        memory_.set_u32(address, empty_record_);
-        memory_.set_u32(empty_record_, memory_.u32(empty_record_) + 1);
+        // FUN_00588390: a new 4-byte holder of the shared empty string.
+        memory_.set_u32(address, new_holder(empty_record_));
         break;
     case 6: {
         const ScriptType& element = element_of(type);
@@ -858,15 +859,11 @@ void ScriptMachine::store_value(ScriptAddress address, const ScriptType& type, s
     case 8:
         memory_.set_u32(address, 0);
         break;
-    case 4: {
-        // The cell's string, counted; no cell gives the shared empty string.
-        const ScriptAddress record = value != 0 ? memory_.u32(value) : empty_record_;
-        memory_.set_u32(address, record);
-        if (record != 0) {
-            memory_.set_u32(record, memory_.u32(record) + 1);
-        }
+    case 4:
+        // FUN_00587fc0: a new holder of the string of the holder `value`,
+        // counted; no holder gives the shared empty string.
+        memory_.set_u32(address, new_holder(value != 0 ? memory_.u32(value) : empty_record_));
         break;
-    }
     case 10:
         memory_.set_u32(address, value);
         if (value != 0) {
@@ -923,11 +920,14 @@ void ScriptMachine::copy_argument(ScriptAddress address, const ScriptType& type,
 void ScriptMachine::destroy_variable(ScriptAddress address, const ScriptType& type) {
     switch (type.kind) {
     case 4: {
-        // The original also frees the 4-byte holder of the string; the
-        // port's variable is the holder (docs/ARCHITECTURE.md).
-        const ScriptAddress record = memory_.u32(address);
-        if (record != 0) {
-            release_record(record);
+        // The string of the holder is released, then the holder is freed.
+        const ScriptAddress holder = memory_.u32(address);
+        if (holder != 0) {
+            const ScriptAddress record = memory_.u32(holder);
+            if (record != 0) {
+                release_record(record);
+            }
+            memory_.release(holder);
         }
         break;
     }
@@ -1237,6 +1237,18 @@ ScriptAddress ScriptMachine::new_string_cell(std::string_view text) {
     const ScriptAddress cell = memory_.allocate(4);
     memory_.set_u32(cell, record);
     return cell;
+}
+
+// A string variable holds the address of a 4-byte holder of a counted
+// string record (FUN_00588390, FUN_00587fc0), the same thing a string cell
+// on the stack is.
+ScriptAddress ScriptMachine::new_holder(ScriptAddress record) {
+    const ScriptAddress holder = memory_.allocate(4);
+    memory_.set_u32(holder, record);
+    if (record != 0) {
+        memory_.set_u32(record, memory_.u32(record) + 1);
+    }
+    return holder;
 }
 
 std::string ScriptMachine::string_at(ScriptAddress cell) const {

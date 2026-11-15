@@ -891,8 +891,9 @@ void test_call_on_null() {
     CHECK(run.cell(0) == 0x55);
 }
 
-// A string parameter shares the record of its argument, counted; a string
-// local starts as the shared empty string.
+// A string parameter gets a holder of its own of the record of its
+// argument, counted (FUN_00587fc0); a string local starts as a holder of the
+// shared empty string (FUN_00588390).
 void test_string_param() {
     ScriptClass cls = machine_class({0, op(0x48), 0, op(0x5C)},
                                     {make_reference(0, 0, "hello"), make_reference(4, 2, "alpha", 1)});
@@ -907,11 +908,13 @@ void test_string_param() {
     CHECK(machine.run_thread(run.thread));
     CHECK(run.thread.frames.size() == 2);
     const ScriptAddress locals = run.frame().locals;
-    CHECK(machine.memory().u32(locals + 4) == record);
+    const ScriptAddress holder = machine.memory().u32(locals + 4);
+    CHECK(holder != 0 && holder != machine.name_cell(0));
+    CHECK(machine.memory().u32(holder) == record);
     CHECK(machine.memory().u32(record) == 2);
-    CHECK(machine.string_at(locals + 4) == "hello");
-    CHECK(machine.string_at(locals + 8).empty());
+    CHECK(machine.string_at(holder) == "hello");
     CHECK(machine.memory().u32(locals + 8) != 0);
+    CHECK(machine.string_at(machine.memory().u32(locals + 8)).empty());
 }
 
 ScriptVariable array_variable(std::uint16_t element_kind, std::uint32_t count, std::uint32_t offset) {
@@ -924,8 +927,8 @@ ScriptVariable array_variable(std::uint16_t element_kind, std::uint32_t count, s
 }
 
 // The end of a frame (FUN_0057d690, FUN_00588570): the parameters and the
-// locals give back the strings and the handles they hold, and the stack and
-// the locals are freed.
+// locals give back the strings (and free their holders) and the handles they
+// hold, and the stack and the locals are freed.
 void test_frame_end() {
     ScriptClass cls = machine_class({0, op(0x02), 2, op(0x48), 0, op(0x5D), op(0x5C)},
                                     {make_reference(0, 0, "hello"), make_reference(4, 4, "alpha", 1)});
@@ -941,7 +944,7 @@ void test_frame_end() {
     CHECK(machine.run_thread(run.thread));  // the callee yields
     CHECK(run.thread.frames.size() == 2);
     const ScriptAddress locals = run.frame().locals;
-    const ScriptAddress empty = memory.u32(locals + 12);
+    const ScriptAddress empty = memory.u32(memory.u32(locals + 12));  // the record of the local's holder
     const std::uint32_t empty_count = memory.u32(empty);
     CHECK(memory.u32(record) == 2);
     CHECK(run.handle_count(2) == 2);
@@ -985,9 +988,12 @@ void test_array_variables() {
     CHECK(machine.run_thread(run.thread));
     CHECK(run.thread.frames.size() == 2);  // now in names
     const ScriptAddress locals = run.frame().locals;
-    const ScriptAddress empty = memory.u32(locals + 4);
+    const ScriptAddress first = memory.u32(locals + 4);
+    const ScriptAddress second = memory.u32(locals + 8);
+    CHECK(first != 0 && second != 0 && first != second);  // a holder each
+    const ScriptAddress empty = memory.u32(first);
     CHECK(empty != 0);
-    CHECK(memory.u32(locals + 8) == empty);
+    CHECK(memory.u32(second) == empty);
     const std::uint32_t empty_count = memory.u32(empty);
     CHECK(machine.run_thread(run.thread));
     CHECK(memory.u32(empty) == empty_count - 2);
@@ -1242,18 +1248,20 @@ void test_field_defaults() {
     const ScriptAddress data = machine.data_of(object);
     CHECK(machine.state_of(object) == 0);
     CHECK(memory.u32(data + 4) == 22);  // the child's default wins
-    CHECK(machine.string_at(data + 8) == "basename");
+    CHECK(machine.string_at(memory.u32(data + 8)) == "basename");  // a string field holds a holder
     CHECK(memory.u8(data + 12) == 1);
     CHECK(memory.f32(data + 16) == 1.5f);
     CHECK(memory.u8(data + 20) == 0xFF);
     CHECK(memory.u8(data + 21) == 0);
-    CHECK(machine.string_at(data + 24) == "hello");
+    CHECK(machine.string_at(memory.u32(data + 24)) == "hello");
     CHECK(memory.u32(data + 28) == 0);
     CHECK(memory.u32(data + 32) == 3);
-    const ScriptAddress hello = memory.u32(data + 24);
+    const ScriptAddress hello = memory.u32(memory.u32(data + 24));  // the record
     CHECK(memory.u32(hello) == 2);  // the machine's own and the field's
     const ScriptObjectId second = machine.create_object(0);
-    CHECK(memory.u32(machine.data_of(second) + 24) == hello);
+    const ScriptAddress second_holder = memory.u32(machine.data_of(second) + 24);
+    CHECK(second_holder != memory.u32(data + 24));  // a holder per field
+    CHECK(memory.u32(second_holder) == hello);
     CHECK(memory.u32(hello) == 3);
 }
 
@@ -1568,6 +1576,15 @@ void test_creature_value_types() {
     creature.destroy(machine, slot);
     CHECK(memory.u32(slot) == 0);
     creature.read_default(machine, slot, {});
+    CHECK(memory.u32(slot) == 0);
+
+    // terrain (TerrainNativeType) is the same word type.
+    ScriptValueType& terrain = machine.value_type("terrain");
+    terrain.init(machine, slot, 0x77);
+    CHECK(memory.u32(slot) == 0x77);
+    terrain.assign(machine, slot, 0x78);
+    CHECK(memory.u32(slot) == 0x78);
+    terrain.destroy(machine, slot);
     CHECK(memory.u32(slot) == 0);
 
     ScriptValueType& controller = machine.value_type("creaturecontroller");

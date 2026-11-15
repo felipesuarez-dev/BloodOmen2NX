@@ -242,16 +242,19 @@ count times the size of its element). What the 4 bytes hold:
 | 1 boolean, 5 byte | the value, one byte | 0 | the low byte | nothing |
 | 2 integer, 3 float, 11 enumeration | the value | 0 | the word | nothing |
 | 8 | a word (no data uses it) | 0 | 0 | nothing |
-| 4 string | a pointer to a counted string | the shared empty string, counted | the string, counted | the string's count goes down by 1 and the string is freed at 0 (`FUN_0068e7e0`); then the 4-byte holder is freed |
+| 4 string | a pointer to a 4-byte holder of a counted string | a new holder of the shared empty string, counted | a new holder of the source holder's string, counted | the string's count goes down by 1 and the string is freed at 0 (`FUN_0068e7e0`); then the 4-byte holder is freed |
 | 10 object | a pointer to the counted handle of an object | 0 | the handle, counted | when not 0, the handle's count goes down by 1; at 0 the handle's virtual +4 runs |
 | 9 value of a class | a pointer to a block the value type owns | the type's virtual +0x18 with no source | +0x18, then +0x20 with the source | the type's virtual +0x1c |
 | 6 array | the elements, one after the other | each element | each element | each element |
 | 7 | a pointer to a collection object of 0x1c bytes (no data uses it) | an empty collection | a copy | `FUN_00588670`, then `FUN_0070d050` |
 
-In the original a string variable holds a pointer to a 4-byte holder that
-points to the counted string (`FUN_00588390` allocates the holder); the
-port's variable is the holder itself (`docs/ARCHITECTURE.md`), so it has
-nothing to free but the string.
+A string variable holds a pointer to a 4-byte holder that points to the
+counted string (`FUN_00588390` allocates the holder; `FUN_00587fc0` makes a
+new one for each store). A string on the stack is the address of a holder:
+`0x06`, `0x0a` and `0x0e` push the holder of a variable, `0x04` the holder of
+a name, and `0x1f`, `0x38` and the natives take holders. The code of the
+`bpackage` entries and of the regions pushes string fields by value (in
+`sl01`, 124 times `0x0a` against 2 times `0x0b`).
 
 Measured over the 480 packages and the 165 region packages: kinds 7 and 8
 appear nowhere. Arrays (kind 6) appear only as fields (123, of 10 or 20

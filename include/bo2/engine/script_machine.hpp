@@ -388,6 +388,7 @@ private:
     // A state is waiting on the owner of the thread.
     bool owner_pending(const ScriptThread& thread) const;
     ScriptAddress new_record(std::string_view text);
+    ScriptAddress new_holder(ScriptAddress record);
     void release_record(ScriptAddress record);
 
     std::uint32_t method_of_body(std::uint32_t body) const;

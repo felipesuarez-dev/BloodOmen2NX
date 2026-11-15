@@ -148,7 +148,8 @@ inside the machine instead of rewriting the code for 8-byte pointers.
   would read garbage or crash.
 - Everything a script can address lives in the arena: the data block of
   every object, the stack and the locals of every frame, the cells that
-  hold a string, the counted string records, the handles of the objects and
+  hold a string (a string variable holds the address of its cell, as in the
+  original), the counted string records, the handles of the objects and
   the blocks of the value types. The global name table is an arena block
   of 4-byte cells, one per name, each holding the address of the record of
   the name, so `0x04` pushes the address of a cell as in the original.
