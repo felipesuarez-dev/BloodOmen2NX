@@ -132,11 +132,13 @@ package of `sl01` gets its object with the initial values of its fields
 with sign. "Push" and "pop" act on the stack of the frame; "top" is its
 last cell. An address is a pointer to memory of the game: a local, a field
 or an element. A boolean is the low byte of a cell: the comparisons write
-only that byte. The codes in italics are not used by the game data: no
-body of the `bpackage` entries and none of the packages of the 165 regions
-has them. Eight codes are used only by the region packages: `0x0d` (342
-times), `0x17` and `0x18` (291 times each, in 61 classes: they index
-arrays), `0x37` (222), `0x53` (15), `0x54` (67), `0x57` (1) and `0x58` (24).
+only that byte. The codes in italics are not used by the game data: no body
+of the `bpackage` entries and none of the packages of the 165 regions has
+them. Eight codes are used only by the region packages: `0x0d` (342 times),
+`0x17` and `0x18` (291 times each, in 61 classes: they index arrays),
+`0x37` (222), `0x53` (15), `0x54` (67), `0x57` (1) and `0x58` (24). The
+region packages hold 16,104 script bodies: 345,637 words, 290,084
+instructions.
 
 ### Values and variables
 
@@ -493,6 +495,105 @@ gives 0:
 - the 15 monsters, which are `monsterscript` through `peasant`, `animal`
   or `sarafan`;
 - the 2 conversations, which are `conversationscript`.
+
+## The natives of sound, soundgroup and effect
+
+Each native of these three value classes passes its arguments to a helper
+of the class with the slot (the object of a native of a value class is the
+address of its slot, "The natives of the value classes"). Every helper
+starts from what the slot holds, and with 0 it does what the last column
+says. 0 is all the port has: no sound or effect system finds a name yet
+("Values"). A plain native passes the slot, then the argument cells as
+values: one (`*args`) or two (`args[0]`, `args[1]`), and a getter passes
+the address of the result. A task native (`*wait`, `play`) passes the slot,
+the owner, `args[0]` and `args[1]` (`FUN_0076bb20`, `FUN_0076c030`), and
+the effect `moverelative` and `moverelativetocreature` pass the slot and
+`args[0]`, `args[1]`, `args[2]` (`FUN_0076cc60`, `FUN_0076cc80`). A plain
+setter with a time (`setvolume` and the like) gets a task from the same
+helper as its `*wait` form and adds it to the script manager
+(`FUN_00583200`) when there is one.
+
+| Class | Body | Method | Native | Helper | With 0 in the slot |
+|---|---:|---|---|---|---|
+| `soundgroup` | 0 | `setmute(bool)` | `FUN_0076ba60` | `FUN_0079b460` | nothing |
+| `soundgroup` | 1 | `setpause(bool)` | `FUN_0076ba80` | `FUN_0079b480` | nothing |
+| `soundgroup` | 2 | `setvolume(float, float)` | `FUN_0076baa0` | `FUN_0079b4a0`, `FUN_0079b560` | nothing (no task to add) |
+| `soundgroup` | 3 | `setpan(float, float)` | `FUN_0076bac0` | `FUN_0079b4d0`, `FUN_0079b5f0` | nothing |
+| `soundgroup` | 4 | `setpitch(float, float)` | `FUN_0076bae0` | `FUN_0079b500`, `FUN_0079b680` | nothing |
+| `soundgroup` | 5 | `setmaxdist(float, float)` | `FUN_0076bb00` | `FUN_0079b530`, `FUN_0079b710` | nothing |
+| `soundgroup` | 6 | `setvolumewait(float, float), a task` | `FUN_0076bb20` | `FUN_0079b560` | no task |
+| `soundgroup` | 7 | `setpanwait(float, float), a task` | `FUN_0076bb40` | `FUN_0079b5f0` | no task |
+| `soundgroup` | 8 | `setpitchwait(float, float), a task` | `FUN_0076bb60` | `FUN_0079b680` | no task |
+| `soundgroup` | 9 | `setmaxdistwait(float, float), a task` | `FUN_0076bb80` | `FUN_0079b710` | no task |
+| `soundgroup` | 10 | `ismuted()` | `FUN_0076bba0` | `FUN_0079b7a0` | low byte of the result 0 |
+| `soundgroup` | 11 | `ispaused()` | `FUN_0076bbc0` | `FUN_0079b7c0` | low byte of the result 0 |
+| `soundgroup` | 12 | `getvolume()` | `FUN_0076bbe0` | `FUN_0079b7e0` | result 1.0 (`0x3f800000`) |
+| `soundgroup` | 13 | `getpan()` | `FUN_0076bc00` | `FUN_0079b800` | result 0 |
+| `soundgroup` | 14 | `getpitch()` | `FUN_0076bc20` | `FUN_0079b820` | result 0 |
+| `soundgroup` | 15 | `getmaxdist()` | `FUN_0076bc40` | `FUN_0079b840` | result 0 |
+| `sound` | 0 | `moverelative(basescript)` | `FUN_0076bf00` | `FUN_0079c200` | nothing |
+| `sound` | 1 | `startsound()` | `FUN_0076bf20` | `FUN_0079c220` | nothing |
+| `sound` | 2 | `stop()` | `FUN_0076bf30` | `FUN_0079c350` | nothing |
+| `sound` | 3 | `isrunning()` | `FUN_0076bf40` | `FUN_0079c360` | low byte of the result 0 |
+| `sound` | 4 | `spawnsound()` | `FUN_0076bf60` | `FUN_0079c3a0` | nothing |
+| `sound` | 5 | `startlipsound(...)` | `FUN_0076bf70` | `FUN_0079c2b0` | nothing |
+| `sound` | 6 | `play(), a task` | `FUN_0076bf90` | `FUN_0079c440` | no task |
+| `sound` | 7 | `setvolume(float, float)` | `FUN_0076bfb0` | `FUN_0079c460`, `FUN_0079c520` | nothing |
+| `sound` | 8 | `setpan(float, float)` | `FUN_0076bfd0` | `FUN_0079c490`, `FUN_0079c5c0` | nothing |
+| `sound` | 9 | `setpitch(float, float)` | `FUN_0076bff0` | `FUN_0079c4c0`, `FUN_0079c660` | nothing |
+| `sound` | 10 | `setmaxdist(float, float)` | `FUN_0076c010` | `FUN_0079c4f0`, `FUN_0079c700` | nothing |
+| `sound` | 11 | `setvolumewait(float, float), a task` | `FUN_0076c030` | `FUN_0079c520` | no task |
+| `sound` | 12 | `setpanwait(float, float), a task` | `FUN_0076c050` | `FUN_0079c5c0` | no task |
+| `sound` | 13 | `setpitchwait(float, float), a task` | `FUN_0076c070` | `FUN_0079c660` | no task |
+| `sound` | 14 | `setmaxdistwait(float, float), a task` | `FUN_0076c090` | `FUN_0079c700` | no task |
+| `sound` | 15 | `getvolume()` | `FUN_0076c0b0` | `FUN_0079c7a0` | result 1.0 (`0x3f800000`) |
+| `sound` | 16 | `getpan()` | `FUN_0076c0d0` | `FUN_0079c7d0` | result 0 |
+| `sound` | 17 | `getpitch()` | `FUN_0076c0f0` | `FUN_0079c800` | result 0 |
+| `sound` | 18 | `getmaxdist()` | `FUN_0076c110` | `FUN_0079c830` | result 0 |
+| `effect` | 0 | `move(...)` | `FUN_0076cc40` | `FUN_00515220` | nothing |
+| `effect` | 1 | `moverelative(...)` | `FUN_0076cc60` | `FUN_00515260` | nothing |
+| `effect` | 2 | `moverelativetocreature(...)` | `FUN_0076cc80` | `FUN_00515420` | nothing |
+| `effect` | 3 | `triggerevent()` | `FUN_0076cca0` | `FUN_00515610` | nothing |
+| `effect` | 4 | `setattractor(...)` | `FUN_0076ccb0` | `FUN_00515640` | nothing |
+| `effect` | 5 | `setattractortrackcreature(...)` | `FUN_0076ccd0` | `FUN_00515670` | nothing |
+| `effect` | 6 | `settrackbone(...)` | `FUN_0076ccf0` | `FUN_005155e0` | nothing |
+| `effect` | 7 | `starteffect(float)` | `FUN_0076cd10` | `FUN_00515730` | nothing |
+| `effect` | 8 | `stop()` | `FUN_0076cd30` | `FUN_005157b0` | nothing |
+| `effect` | 9 | `reset()` | `FUN_0076cd40` | `FUN_005157d0` | nothing |
+| `effect` | 10 | `isrunning()` | `FUN_0076cd50` | `FUN_005157e0` | low byte of the result 0 |
+| `effect` | 11 | `forceupdate()` | `FUN_0076cd70` | `FUN_00515780` | nothing |
+| `effect` | 12 | `play(float), a task` | `FUN_0076cd80` | `FUN_00515800` | no task |
+| `effect` | 13 | `clone()` | `FUN_0076cda0` | `FUN_005158b0` | the effect held by the result is released (its count at +4 down by 1, freed at 0) and the result becomes 0 |
+
+## More natives of creaturescript
+
+These read or change the creature of the object (+0x2c) or a creature in
+an argument. A creature argument is a value of a class: its cell holds the
+address of the slot, and the slot holds the creature (`*(*args)`). A
+boolean result is the low byte of the result, and only when the result
+address is not 0.
+
+| Body | Method | Native | Helper | What it does |
+|---:|---|---|---|---|
+| 1 | `getposition()` | `FUN_00767170` | `FUN_0075fa70` | When the result's slot holds a block, the block gets the position of the creature (+0xb4, three floats) |
+| 2 | `getrotation()` | `FUN_00767180` | `FUN_0075faa0` | The same with the rotation (+0xc0, three floats, as stored) |
+| 8 | `creaturevalid(creature)` | `FUN_00767320` | `FUN_00760810` | Whether the creature is not 0 |
+| 9 | `creatureequal(creature, creature)` | `FUN_00767340` | `FUN_00760850` | Whether the two creatures are the same |
+| 10 | `doesnamedcreatureexist(string)` | `FUN_00767360` | `FUN_00760870` | The name as for `creaturebyname`; with an empty name false, else whether the search (`FUN_00763050`) finds a creature. It logs nothing |
+| 11 | `killcreature(creature)` | `FUN_00767400` | `FUN_007603e0` | With a creature: one with a package (+0x144) hibernates (`FUN_00718cf0`), one without is removed (`FUN_00718b80`) |
+| 12 | `hibernatecreature(creature)` | `FUN_00767420` | `FUN_00760410` | With a creature, `FUN_00718cf0` |
+| 13 | `unhibernatecreature(creature)` | `FUN_00767440` | `FUN_00760430` | With a creature, `FUN_00718d30` |
+| 16 | `getscript(creature)` | `FUN_00767630` | `FUN_00760450` | The object of the creature (+0x130), or 0, stored as a handle, counted, whatever its class |
+| 47 | `wasdrawnlastframe()` | `FUN_00767f80` | `FUN_00760df0` | Whether the frame the creature was last drawn in (+0x140) is not below the frame counter (`DAT_008ff180`) less 1, compared unsigned |
+| 69 | `disablesimulate()` | `FUN_007686a0` | `FUN_00762480` | The creature leaves the group `process_msg` (`FUN_0072b550` with `DAT_00a83754`) |
+| 70 | `disableeotsimulate()` | `FUN_007686b0` | `FUN_00762420` | The creature leaves the second group (`DAT_00a83744`) |
+| 71 | `enablemodellod()` | `FUN_007686c0` | `FUN_00762440` | `DAT_00a79e75` = 1 |
+| 72 | `disablemodellod()` | `FUN_007686d0` | `FUN_00762450` | `DAT_00a79e75` = 0 |
+| 73 | `disableeditmodesimulate()` | `FUN_007686e0` | `FUN_00762460` | Flags +0xf0 lose 0x10 |
+| 74 | `enablesimtimeaccumulatewhileculled()` | `FUN_007686f0` | `FUN_00762470` | Flags +0xf0 gain 0x800 |
+| 75 | `disablesimcull()` | `FUN_00768700` | `FUN_007624a0` | Flags +0xf0 gain 4 (the creature always gets the whole frame time) |
+| 76 | `enablesimcull()` | `FUN_00768710` | `FUN_007624b0` | Flags +0xf0 lose 4, unless they have 8 |
+| 77 | `disablesimwhenscriptdone()` | `FUN_00768720` | `FUN_007624d0` | Flags +0xf0 gain 0x10000 (bit 0 of +0xf2: `FUN_00718340` takes the creature out of `process_msg` once its object has no main thread) |
 
 ## The update of the objects of a level
 

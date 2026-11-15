@@ -429,3 +429,13 @@ and `randomint` among them. It is an additive lagged generator:
 The sequence the game sees depends on every function that draws from it,
 so a script's random values match the original only when everything before
 it drew the same count.
+
+A second generator is the `rand` of the C library linked into the
+executable (`FUN_007a4289`): `state = state * 214013 + 2531011` (32 bits,
+wrapping), and the value is `(state >> 16) & 0x7fff`. Its state
+(`DAT_009158d0`) starts at 1 and nothing calls its seeding `srand`
+(`0x7a427f`), so the sequence is always the same: 41, 18467, 6334, 26500,
+19169, 15724, 11478, 29358, 26962, 24464; the 100th value is 16541 and the
+200th 9514. The simulation scheduler draws from it (`FUN_0073e840`;
+docs/SCRIPTS.md, "The update of the objects of a level"), and 47 call sites
+use it in all.
