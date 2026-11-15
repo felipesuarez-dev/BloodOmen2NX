@@ -1,9 +1,11 @@
 # Architecture
 
 Functional decompilation and native port of *Blood Omen 2* (PC, 2002).
-The game logic is a faithful C++17 translation of the original; the engine
-services are recovered behind interfaces; the platform layer is the only
-code that touches an operating system.
+The game logic is portable C++17 written from the specification in
+`docs/`: it reproduces the behaviour and the data formats of the original,
+not its code ([`PROVENANCE.md`](PROVENANCE.md), "Code provenance"). The
+engine services are recovered behind interfaces; the platform layer is the
+only code that touches an operating system.
 
 ## Host first
 
