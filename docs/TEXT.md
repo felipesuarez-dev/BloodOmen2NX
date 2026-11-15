@@ -149,6 +149,27 @@ one to the sixth decimal: x 270.75, 294.25, 299.5, 257.25, 273.0 and y
 216.45, 231.35, 246.25, 261.15, 276.05. In the captured frame the first
 item is red and the others white.
 
+## The text of a key and its format codes
+
+- `FUN_007556e0` gives the text of a keyword in a string table: it starts
+  from the keyword itself and looks it up (`FUN_006aef30`); when the table
+  has no such key it writes `ui: cannot get string by keyword '<key>' from
+  the existing string table resource '<table>'; defaulting its value` to
+  the log and the text stays the keyword.
+- `FUN_00755850` makes a text object (`FUN_00771c00`) from that text; 17
+  functions of the UI call it. `FUN_00755970` takes in addition a buffer
+  size and the caller's variable arguments: when the size is not 0 it
+  formats the text with the C library's `_vsnprintf` (`0x7a6675`) into a
+  buffer of that size and keeps the formatted bytes, then makes the text
+  object. The format codes are those of C's `printf`.
+- Measured over the 92 string tables of the game (1,438 records): the only
+  format code is `%d`, in two keys of `ui/UI`, `card_absent_menu_prompt`
+  and `card_full_menu_prompt`, in all six variants (every language holds
+  the same English PS2 memory card text). The three callers of
+  `FUN_00755970` (`FUN_00521e60`, `FUN_00522f60`, `FUN_0054bcf0`) pass the
+  size 0x100 and one integer, (n + 0x3ff) >> 10, the kilobytes of a value
+  that the virtual +8 of `DAT_0091f020` returns.
+
 ## Not read
 
 - Who builds the string, the pen start, the row height, the scale and the
@@ -157,7 +178,8 @@ item is red and the others white.
 - How the row alignment of a parsed string (control values 2, 3 and 4)
   moves the pen start: the menu does not parse its strings.
 - The second function that looks glyphs up (`0x56dfb8`).
-- `%d` and the other format codes of the strings.
+- What the virtual +8 of `DAT_0091f020` returns (the size the memory card
+  prompts show) and whether the PC build ever shows those prompts.
 - The input of the menu (which item is selected and how the selection
   moves) and the fade that gives the alpha.
 
