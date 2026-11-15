@@ -362,6 +362,36 @@ Read from their functions (dumps of `natives.py`'s table):
 
 Body 14, `wait`, is written in script.
 
+## The natives of the value classes
+
+A method of a value class runs on a value: the object a native function of
+`position`, `rotation`, `color` or `gridposition` gets is the address of
+the slot that holds the block (the code pushes it with `0x0b` or `0x07`
+just before the `0x47`: 5,559 and 2,779 times in the game data, 8,338
+calls). Each native calls one helper, and every helper does nothing (a
+getter writes 0 to the result) when the slot holds no block. Getters write
+the result cell; setters take their floats from the argument cells, in
+order.
+
+| Class | Body | Method | Native | Helper | What it does |
+|---|---|---|---|---|---|
+| `position` | 0, 1, 2 | `getx`, `gety`, `getz` | `FUN_0076d420`, `FUN_0076d440`, `FUN_0076d460` | `FUN_0079e4a0`, `FUN_0079e4c0`, `FUN_0079e4e0` | The float at +0, +4 or +8 |
+| `position` | 3, 4, 5 | `setx`, `sety`, `setz` | `FUN_0076d480`, `FUN_0076d4a0`, `FUN_0076d4c0` | `FUN_0079e500`, `FUN_0079e520`, `FUN_0079e540` | Writes the argument at +0, +4 or +8 |
+| `position` | 6 | `setvalue` | `FUN_0076d4e0` | `FUN_0079e560` | Writes the three arguments |
+| `rotation` | 0, 1, 2 | `getx`, `gety`, `getz` | `FUN_0076d190`, `FUN_0076d1b0`, `FUN_0076d1d0` | `FUN_0079e180`, `FUN_0079e1a0`, `FUN_0079e1d0` | The angle in degrees: `0x42652ee1` (57.2957802, `0x87a070`) times the float at +0, +4 or +8 |
+| `rotation` | 3, 4, 5 | `setx`, `sety`, `setz` | `FUN_0076d1f0`, `FUN_0076d210`, `FUN_0076d230` | `FUN_0079e200`, `FUN_0079e220`, `FUN_0079e240` | `0x3c8efa35` (0.0174532924, `0x87a06c`) times the argument, at +0, +4 or +8 |
+| `rotation` | 6 | `setvalue` | `FUN_0076d250` | `FUN_0079e260` | The three arguments, each times `0x3c8efa35` |
+| `rotation` | 7 | `rotatez` | `FUN_0076d270` | `FUN_0079e2a0` | +8 += `0x3c8efa35` times the argument (one rounding to float) |
+| `color` | 0 | `setvalue` | `FUN_0076cf30` | `FUN_0079dee0` | Writes the four arguments |
+| `color` | 1 to 4 | `setred`, `setgreen`, `setblue`, `setalpha` | `FUN_0076cf60`, `FUN_0076cf80`, `FUN_0076cfa0`, `FUN_0076cfc0` | `FUN_0079df10`, `FUN_0079df30`, `FUN_0079df50`, `FUN_0079df70` | Writes the argument at +0, +4, +8 or +0xc |
+| `gridposition` | 0, 1 | `getx`, `gety` | `FUN_0076b760`, `FUN_0076b780` | `FUN_0079b130`, `FUN_0079b150` | The word at +0 or +4 |
+| `gridposition` | 2, 3 | `setx`, `sety` | `FUN_0076b7a0`, `FUN_0076b7c0` | `FUN_0079b170`, `FUN_0079b190` | Writes the argument at +0 or +4 |
+| `gridposition` | 4 | `setvalue` | `FUN_0076b7e0` | `FUN_0079b1b0` | Writes the two arguments |
+
+The game data calls `position` 0 to 6, `rotation` 0 to 2, `color` 0 and
+`gridposition` 0, 1 and 4. The natives of `timer` (six, one a task) need
+the timer object and are not read.
+
 ## The classes of a level
 
 Every region carries, in its `packages` section, one more compiled package
