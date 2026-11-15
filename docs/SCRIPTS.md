@@ -587,7 +587,7 @@ address is not 0.
 | 12 | `hibernatecreature(creature)` | `FUN_00767420` | `FUN_00760410` | With a creature, `FUN_00718cf0` |
 | 13 | `unhibernatecreature(creature)` | `FUN_00767440` | `FUN_00760430` | With a creature, `FUN_00718d30` |
 | 16 | `getscript(creature)` | `FUN_00767630` | `FUN_00760450` | The object of the creature (+0x130), or 0, stored as a handle, counted, whatever its class |
-| 27 | `playanimation(string, kind 2)` (task) | `FUN_00767930` | `FUN_0075fbc0` | A name with no characters, or a creature with no animation instance (the slot +0x10 of its +0x90 gives 0), gives no task. Otherwise the name is looked up in that instance (its slot +4 on the name's symbol): when it is missing the log gets `<creature> : Animation <name> requested but ...` (`0x8ed1fc`) and the task is the one of a wait of 10 s (the object's slot +0x28 with `FUN_0073dd20`); when it is there the task is the one of a play behavior (slot +0x28 with `FUN_007965a0`, vtable `0x879b0c`) given the name and the second argument, which keeps it as its count of plays when it is 1 or more, else 0 (`FUN_00796720`). For a `creaturescript` the slot +0x28 is `FUN_00762df0`: the behavior is made on the creature (`FUN_007144b0`) and wrapped in a task (`FUN_007632a0`). When that task ends depends on the animation of the creature, which is not read. In `sl01`: `("default", 0)` from `glyphsmoke2marker` and `("idle", 1)` from `kainactor001` |
+| 27 | `playanimation(string, kind 2)` (task) | `FUN_00767930` | `FUN_0075fbc0` | A name with no characters, or a creature with no animation instance (the slot +0x10 of its +0x90 gives 0), gives no task. Otherwise the name is looked up in that instance (its slot +4 on the name's symbol): when it is missing the log gets `<creature> : Animation <name> requested but ...` (`0x8ed1fc`) and the task is the one of a wait of 10 s (the object's slot +0x28 with `FUN_0073dd20`); when it is there the task is the one of a play behavior (slot +0x28 with `FUN_007965a0`, vtable `0x879b0c`) given the name and the second argument, which keeps it as its count of plays when it is 1 or more, else 0 (`FUN_00796720`). The behavior is the task ("Creature behaviors" below); when a play ends depends on the creature's animation instance, whose slots are not read. In `sl01`: `("default", 0)` from `glyphsmoke2marker` and `("idle", 1)` from `kainactor001` |
 | 47 | `wasdrawnlastframe()` | `FUN_00767f80` | `FUN_00760df0` | Whether the frame the creature was last drawn in (+0x140) is not below the frame counter (`DAT_008ff180`) less 1, compared unsigned |
 | 69 | `disablesimulate()` | `FUN_007686a0` | `FUN_00762480` | The creature leaves the group `process_msg` (`FUN_0072b550` with `DAT_00a83754`) |
 | 70 | `disableeotsimulate()` | `FUN_007686b0` | `FUN_00762420` | The creature leaves the second group (`DAT_00a83744`) |
@@ -599,6 +599,74 @@ address is not 0.
 | 76 | `enablesimcull()` | `FUN_00768710` | `FUN_007624b0` | Flags +0xf0 lose 4, unless they have 8 |
 | 77 | `disablesimwhenscriptdone()` | `FUN_00768720` | `FUN_007624d0` | Flags +0xf0 gain 0x10000 (bit 0 of +0xf2: `FUN_00718340` takes the creature out of `process_msg` once its object has no main thread) |
 | 78 | `loadregion(string)` | `FUN_00768730` | `FUN_007621a0` | The name (empty when the cell holds no string), unless the debug option (5, 0x21) is on, goes as a request of kind 1 (`FUN_0074b270`) to `FUN_0074b3a0`: `\` becomes `/`, the letters lower case, and when the region will not be loaded (`FUN_0074b4a0`: it is in the map of loaded regions at `0xa83d70`, unless it is the region being unloaded, `DAT_00a83d60`, or it is the one being loaded, `DAT_00a83d64`; then the last request of the queue for it decides, 0 unload, 1 load) the request goes to the end of the queue (`DAT_00a83d6c`). Nothing waits. In `sl01`: `"slums/sl_music"` from `bo2creature_helperstatic001` and `"slums/sl02"` from `regionkeeper001` |
+
+## Creature behaviors
+
+A native that makes a creature do something over time (`playanimation`,
+the commands of `monsterscript`) gives the script a behavior of the
+creature as its task. The slot +0x28 of a creature's object makes it
+(`FUN_00762df0` for a `creaturescript`; `monsterscript` has its own,
+`0x4e4800`): `FUN_007144b0` calls the factory, gives the behavior the
+creature (+0x40, kept at +0x10) and the object (+0x44, kept at +0xc),
+keeps the factory at +8, gives it the data (+0x4c, its init) and then
++0x48 with the data and the creature's slot +0x74. The behavior goes at
+the front of the object's list +0x30 (`FUN_007632a0`) and is the task.
+
+- As a task (the machine's virtuals): +8, run, does nothing; +4 says it
+  runs while its byte +4 is 0. A behavior ends by its slot +0x10
+  (`0x7143f0`), which sets +4 to 1. When the machine destroys the task
+  (+0, `0x714540`), the object takes it out of its list (slot +0x20,
+  `FUN_00762e30`).
+- The object's slot +0x1c (`FUN_00760900` for a `creaturescript`) hands
+  every message of its creature to the behaviors of its list, the newest
+  first (`FUN_00762dc0`). `FUN_0070e7e0` skips a behavior that ended (+0x2c
+  gives +4) and walks its chain (+0x24 gives +0x14, 0 for these); an
+  update goes to the chain from the inner end until one takes it. The
+  update (`DAT_00910640`) reaches the behavior's slot +0x64 with the
+  message (its time at +4) through the table `DAT_00a834f8`
+  (`FUN_007153f0`, `FUN_00715a50`).
+- The object runs before its behaviors in an update (`FUN_0070ee70`), so a
+  script waiting on a behavior that ends in an update goes on in the next
+  update of its creature.
+
+The two behaviors `playanimation` uses:
+
+- Wait (`FUN_0073dd20`, vtable `0x877c5c`): its init (`FUN_0073de20`)
+  keeps the time (the first word of the data) at +0x18; each update
+  (`FUN_0073de30`) takes the message's time from it (a float operation) and
+  the behavior ends when it is 0 or less.
+- Play (`FUN_007965a0`, vtable `0x879b0c`): its init (`FUN_00796720`)
+  keeps the name (+0x1c) and the count (+0x20: the second word of the data
+  when it is 1 or more, else 0), starts the name on the creature's
+  animation instance (its slot +0x10) and sets the object's +0x4c to
+  whether it started. Each update (`FUN_00796ab0`), while the object's
+  +0x4c is set and time is left, the instance advances by the time left
+  (its slot +0x24 gives flags and leaves the time past the end of the clip;
+  at most 3 advances that leave the time as it was) and moves the creature
+  with the clip; when the flags have 4, the clip ended: with a count, the
+  count drops and at 0 the object's +0x4c is cleared. When the object's
+  +0x4c is clear, the behavior ends. A count of 0 plays for ever.
+
+The animation instance of a creature is `*(*(creature + 0x98) + 0x4c)`
+(the slot +0x10 of its member at +0x90, `FUN_005dcab0`; the member is made
+by `FUN_005dc790` with the creature's model and its set of animations).
+Read live in `sl01` (`re/decomp/creature/anim_probe.py`): 90 creatures of
+the active list have one, of two classes: vtable `0x86ec4c` (the
+characters, Kain, the gates, the doors and the levers) and `0x872164` (the
+birds, the boats, the spotlight, the cameras and the animated parts of the
+HUD). Which creature gets one, and what the instance's slots +4 (find a
+name), +0x10 (play) and +0x24 (advance) do, is not read.
+
+Traced (`re/decomp/creature/behaviors.gdb` on
+`tools/oracle/routes/sl01_watch.txt`): `glyphsmoke2marker` has no animation
+instance, so its `playanimation("default", 0)` gives no task;
+`kainactor001` has one and gets a play of `"idle"` with count 1, but the
+`kainactor` creatures hibernate and the behavior gets no update; the
+boats, the birds and the spotlight play their clips with count 0 (flags 7
+at each end, the time left carried into the next play); `leverf002` plays
+with count 1 on steps of 0.01 s; the wait of 1 s of `umahvf005` (a monster)
+counts down by the time the scheduler gives it, 0.1 s and then 0.01 s about
+every 3 s.
 
 ## The natives of monsterscript and detectorscript
 
