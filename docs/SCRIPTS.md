@@ -663,12 +663,60 @@ in-range event). An entry the scan no longer finds is dropped. Every scan,
 every entry and every new entry draws `rand`, so the sensors take part in
 the sequence the scheduler draws from.
 
-In `sl01` six objects have a sensor: `hint_proximity001` to `006` (class
-`hint_proximity`, only `onplayerinrange`), and they are the six that call
-native 5 and then native 6 twice when they start. `detector01` to `04` and
-`levelloader01` have none of the four events, so they get no sensor. Not
-read yet: who calls slot +0x24, what the state query asks and what Kain's
-creature answers, and when a scanned creature gets its first entry.
+Slot +0x24 runs when the object starts: `FUN_00762fe0`, the virtual +8 of
+a creature's object, calls it and then `FUN_00580730`, so the sensor
+exists before the script's `start` runs. The update of a creature reaches
+the sensor last: `FUN_0070ee70` first runs the object once
+(`FUN_0070e8b0`, which returns 0 for the update), then hands the message
+to the creature's behavior (+0x124) and then to the object (slot +0x1c,
+`FUN_004e1de0`, which goes to `FUN_004e1d50` and slot +0x50). The events'
+time (+0x5c) starts at `FLT_MAX` (`DAT_008662dc`), so the first update
+already sends them.
+
+The state query is a `CreatureStateMsg` (vtable `0x840814`, built by
+`FUN_0049bc50`: +4 = `0x1b`, +8 = 0, +0xc = 0.5). Its handler in the
+message table (`FUN_004a1a60`) calls the behavior's slot +0xe8. Kain's
+(`FUN_00430420`) answers yes with +4 = 0 and +0xc = `FUN_00424a80()`, and
+leaves +8 at 0; the entry keeps +4 at +0x18, +0xc at +0x1c and +8 at
++0x20, and resets them to `0x1b`, 0, 0 before each query. So for Kain the
+state never changes: after the first entry only the count of thresholds
+raises an in-range event (+0xc counts only for the sight events, against
+0.75, `0x840af0`). In the scan every new candidate draws `rand` once
+(`0x49b95c`) whether it answers or not; one that answers gets its entry,
+with that draw as its first timer, and the entry goes straight to the
+in-range list. The entries of a sensor are keyed by the name of their
+creature (`FUN_0049c4b0`).
+
+The in-range events (`0x4e1980`): `oncreatureinrange(string, float)` with
+the address of the creature's name (+0xb0, a string holder) and the
+distance, then, for an entry of kind 0, `onplayerinrange(creature, float)`
+with the address of the entry, whose first word is the creature (a
+`creature` value), and the distance.
+
+Traced in the oracle (`re/decomp/detector/sensor.gdb` on
+`tools/oracle/routes/sl01_watch.txt`: 45 s at the start of `sl01`, then
+12 s walking):
+
+- The six `hint_proximity` objects of `sl01` get their sensor when they
+  start (frame 3886, return address `0x762fea`), and set the thresholds
+  320 and 340, 320 and 330, 256 and 300, 230 and 240, 256 and 260, 192 and
+  200 (001 to 006).
+- `hint_proximity001` of `sl01` is not in the creature list read later
+  (`drawn_probe.py`; the one of that name there is `sl02`'s): something
+  removes it after it starts. 002 to 005 are farther than 1200 from Kain.
+- `hint_proximity006` (842 from Kain) finds Kain in its first scan (frame
+  3890: answered, state 0, +8 0, +0xc 0.5) and sends
+  `oncreatureinrange("kain", 841.906128)` and
+  `onplayerinrange(kain, 841.906128)` in the same update. Then it queries
+  Kain 217 times with the same answer and sends nothing more: both its
+  thresholds stay below the distance.
+- Kain has a sensor too (range 896, mask `0xff`, flags 3), and so has every
+  peasant, rat and umah of the level (range 800, flags 2); they are not
+  made by `FUN_004e13c0`. The trace has 12,059 draws of the sensors, every
+  one on the shared generator (the value is `(state >> 16) & 0x7fff` of
+  the state after it), and two draws of the sensors in one frame are always
+  one step of the generator apart. The sensors draw far more often than the
+  scheduler, so the port needs them to draw the same sequence.
 
 ## The update of the objects of a level
 
@@ -1089,8 +1137,10 @@ owner, has the slot count of its class.
 - Where `FUN_00699d90` gets its known root and its two lists of directory
   prefixes (+4, +0x250, +0x25c); no template model name of the slums
   regions needs them.
-- The AI of the monsters behind the `monsterscript` natives, and the open
-  points of the sensor of a `detectorscript` (its section above).
+- The AI of the monsters behind the `monsterscript` natives; the sight
+  part of a sensor (`FUN_004a4e50`, `FUN_0071cf40`) and who makes the
+  sensors of Kain and of the monsters; the mask `DAT_0091e2fc`; what
+  `FUN_00424a80` measures.
 - The visible cells and objects of a frame (`FUN_007f69e0`), which the
   drawn frame of a creature depends on ("The drawn frame").
 - What `FUN_006e20d0(0)` does to a scripted sound instance.
