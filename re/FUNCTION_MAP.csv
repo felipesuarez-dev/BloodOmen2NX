@@ -6279,7 +6279,7 @@ address,name,subsystem,status,notes
 0057dc80,FUN_0057dc80,unknown,todo,ghidra
 0057dcf0,FUN_0057dcf0,unknown,todo,ghidra
 0057de60,FUN_0057de60,unknown,todo,ghidra
-0057de80,FUN_0057de80,unknown,todo,ghidra
+0057de80,FUN_0057de80,script,wip,src/engine/script_machine.cpp: ScriptMachine::interpret runs the value and variable instructions; calls and threads and jumps and arithmetic are not ported
 0057f560,FUN_0057f560,unknown,todo,ghidra
 0057f580,FUN_0057f580,unknown,todo,ghidra
 0057f6d0,FUN_0057f6d0,unknown,todo,ghidra

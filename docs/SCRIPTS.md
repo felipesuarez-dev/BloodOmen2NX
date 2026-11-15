@@ -1,12 +1,18 @@
 # Scripts
 
-Status: **read, not ported**. The enemies, the doors, the cinematics, the
+Status: **read, being ported**. The enemies, the doors, the cinematics, the
 sounds and the triggers of the game are script classes compiled into the
 `bpackage` entries of the containers and into the `packages` section of
 every region ([`FORMATS/bpackage.md`](FORMATS/bpackage.md)). This page
 describes how the executable loads, binds and runs them, read from its
 interpreter (`FUN_0057de80`) and the functions around it, and what of it
-was checked in the running game. Nothing of this is in the port yet.
+was checked in the running game.
+
+Port: `src/engine/script_package.cpp` (the packages),
+`src/engine/script_program.cpp` (linking), `src/engine/script_memory.cpp`
+and `src/engine/script_machine.cpp` (the machine: objects, strings, frames
+and the instructions of "Values and variables"; calls, threads, jumps and
+arithmetic are not ported yet).
 
 ## Objects, classes and states
 
@@ -90,7 +96,7 @@ only that byte. The codes in italics are not used by the game data.
 | *`0x19`*, *`0x1a`*, *`0x1b`* | Pop a value; combine it with top through `FUN_005b4c10` or `FUN_005b4ca0` (not read) |
 | `0x1c`, `0x1d` | Pop a value, then pop an address: store the byte or the 32-bit value there when the address is not 0 |
 | `0x1e` | Pop an object, then pop an address: release the handle stored there and store the handle of the object, counting it |
-| `0x1f` | Pop the address of a string, then pop an address: the string stored there becomes that one (`FUN_0068eaa0`, counted) |
+| `0x1f` | Pop the address of a string, then pop an address: the string stored there becomes that one (`FUN_0068eaa0`, a method of the string at that address; counted) |
 | *`0x20`* | As `0x1f` through `FUN_005b4bd0` (not read) |
 | `0x21` | Pop the address of a value, then pop an address: the class in the next word copies the value there (its virtual +0x20) (2 words) |
 | *`0x22`* to *`0x26`* | Pop two addresses and copy `imm` bytes, handles, strings or values of a class (`0x26`, 2 words) from the first to the second |

@@ -10,6 +10,7 @@
 
 #include "bo2/engine/big_archive.hpp"
 #include "bo2/engine/region.hpp"
+#include "bo2/engine/script_machine.hpp"
 #include "bo2/engine/script_memory.hpp"
 #include "bo2/engine/script_program.hpp"
 
@@ -294,6 +295,198 @@ void test_link_errors() {
     CHECK(link_throws({base, caller}));      // the class does not exist
 }
 
+// The machine (BO2NX-152). An instruction word is (code << 24) | imm.
+constexpr std::uint32_t op(std::uint32_t code, std::int32_t imm = 0) {
+    return (code << 24) | (static_cast<std::uint32_t>(imm) & 0xFFFFFFU);
+}
+
+using bo2::engine::ScriptFrame;
+using bo2::engine::ScriptMachine;
+using bo2::engine::ScriptObjectId;
+using bo2::engine::ScriptThread;
+
+// One class, alpha, with 16 bytes of data and one body: 16 bytes of locals
+// and 8 stack cells.
+ScriptClass machine_class(std::vector<std::uint32_t> code,
+                          std::vector<ScriptReference> references = {}) {
+    ScriptClass cls = make_class("alpha", "", {"default"}, 1);
+    cls.data_size = 16;
+    cls.methods = {make_method("start", 0)};
+    ScriptBody body = make_body(0, 0, std::move(code));
+    body.locals_size = 16;
+    body.stack_size = 8;
+    cls.bodies = {body};
+    cls.slots = {{0, 0, "alpha", 0}};
+    cls.references = {std::move(references)};
+    return cls;
+}
+
+// A machine with two objects of alpha (ids 1 and 2) and a thread on the body
+// of the first.
+struct MachineRun {
+    Linked linked;
+    std::unique_ptr<ScriptMachine> machine;
+    ScriptThread thread;
+
+    explicit MachineRun(ScriptClass cls) : linked(make_program({std::move(cls)})) {
+        machine = std::make_unique<ScriptMachine>(linked.program);
+        const ScriptObjectId self = machine->create_object(0);
+        machine->create_object(0);
+        thread.frames.push_back(machine->make_frame(self, 0));
+    }
+
+    ScriptFrame& frame() { return thread.frames.back(); }
+    std::uint32_t cell(std::int32_t index) {
+        return machine->memory().u32(frame().stack + static_cast<std::uint32_t>(index) * 4U);
+    }
+    std::uint32_t handle_count(ScriptObjectId object) {
+        return machine->memory().u32(machine->handle_of(object) + 4);
+    }
+};
+
+void test_push() {
+    MachineRun run(machine_class(
+        {op(0x02), 0x12345678U, op(0x03, -5), op(0x03, 7), op(0x01), op(0x00, 3), op(0x5C)}));
+    CHECK(run.machine->interpret(run.thread));
+    CHECK(run.frame().top == 1);
+    CHECK(run.cell(0) == 0x12345678U);
+    CHECK(run.cell(1) == 0xFFFFFFFBU);
+    CHECK(run.frame().ip == 7);
+}
+
+void test_locals() {
+    MachineRun run(machine_class({op(0x05, 4), op(0x06, 4), op(0x07, 4), op(0x05, 8), op(0x5C)}));
+    run.machine->memory().set_u32(run.frame().locals + 4, 0x01020384U);
+    run.machine->memory().set_u8(run.frame().locals + 8, 0xFE);
+    CHECK(run.machine->interpret(run.thread));
+    CHECK(run.frame().top == 3);
+    CHECK(run.cell(0) == 0x84);  // the byte, without sign
+    CHECK(run.cell(1) == 0x01020384U);
+    CHECK(run.cell(2) == run.frame().locals + 4);
+    CHECK(run.cell(3) == 0xFE);
+}
+
+void test_self_fields() {
+    MachineRun run(machine_class({op(0x09, 4), op(0x0A, 4), op(0x0B, 8), op(0x5C)}));
+    const bo2::engine::ScriptAddress data = run.machine->data_of(1);
+    run.machine->memory().set_u32(data + 4, 0xA1B2C3D4U);
+    CHECK(run.machine->interpret(run.thread));
+    CHECK(run.cell(0) == 0xD4);
+    CHECK(run.cell(1) == 0xA1B2C3D4U);
+    CHECK(run.cell(2) == data + 8);
+}
+
+void test_object_fields() {
+    MachineRun run(machine_class(
+        {op(0x02), 2, op(0x0E, 12), op(0x02), 2, op(0x0F, 12), op(0x03, 0), op(0x0E, 12),
+         op(0x03, 0), op(0x0F, 12), op(0x5C)}));
+    run.machine->memory().set_u32(run.machine->data_of(2) + 12, 77);
+    CHECK(run.machine->interpret(run.thread));
+    CHECK(run.frame().top == 3);
+    CHECK(run.cell(0) == 77);
+    CHECK(run.cell(1) == run.machine->data_of(2) + 12);
+    CHECK(run.cell(2) == 0);
+    CHECK(run.cell(3) == 0);
+}
+
+void test_handles() {
+    MachineRun run(machine_class({op(0x08, 0), op(0x08, 4), op(0x0C, 0), op(0x0C, 4), op(0x5C)}));
+    bo2::engine::ScriptMemory& memory = run.machine->memory();
+    memory.set_u32(run.frame().locals + 4, run.machine->handle_of(2));
+    memory.set_u32(run.machine->data_of(1) + 4, run.machine->handle_of(1));
+    CHECK(run.machine->interpret(run.thread));
+    CHECK(run.cell(0) == 0);
+    CHECK(run.cell(1) == 2);
+    CHECK(run.cell(2) == 0);
+    CHECK(run.cell(3) == 1);
+}
+
+void test_store() {
+    MachineRun run(machine_class({
+        op(0x07, 0), op(0x02), 0xAABBCCDDU, op(0x1C),   // byte
+        op(0x07, 4), op(0x02), 0x11223344U, op(0x1D),   // word
+        op(0x03, 0), op(0x03, 9), op(0x1D),             // address 0: nothing
+        op(0x03, 0), op(0x03, 9), op(0x1C),
+        op(0x0B, 0), op(0x02), 2, op(0x1E),             // handle of object 2 into the data
+        op(0x07, 8), op(0x02), 2, op(0x1E),             // and into a local
+        op(0x0B, 0), op(0x02), 1, op(0x1E),             // the data now holds object 1
+        op(0x03, 0), op(0x02), 2, op(0x1E),             // address 0: nothing
+        op(0x5C)}));
+    bo2::engine::ScriptMemory& memory = run.machine->memory();
+    CHECK(run.handle_count(1) == 0);
+    CHECK(run.handle_count(2) == 0);
+    CHECK(run.machine->interpret(run.thread));
+    CHECK(run.frame().top == -1);
+    CHECK(memory.u32(run.frame().locals) == 0xDD);
+    CHECK(memory.u32(run.frame().locals + 4) == 0x11223344U);
+    CHECK(memory.u32(run.frame().locals + 8) == run.machine->handle_of(2));
+    CHECK(memory.u32(run.machine->data_of(1)) == run.machine->handle_of(1));
+    CHECK(run.handle_count(1) == 1);
+    CHECK(run.handle_count(2) == 1);
+}
+
+void test_store_null_object() {
+    MachineRun run(machine_class({op(0x07, 0), op(0x02), 2, op(0x1E), op(0x07, 0), op(0x03, 0),
+                                  op(0x1E), op(0x5C)}));
+    CHECK(run.machine->interpret(run.thread));
+    CHECK(run.machine->memory().u32(run.frame().locals) == 0);
+    CHECK(run.handle_count(2) == 0);
+}
+
+// 0x04 comes from a reference of kind 0; 0x1f takes the record of the name,
+// counted (FUN_0068eaa0).
+void test_strings() {
+    MachineRun run(machine_class(
+        {0, op(0x01), op(0x07, 0), 0, op(0x1F), op(0x07, 0), 0, op(0x1F), op(0x5C)},
+        {make_reference(0, 0, "first"), make_reference(0, 3, "second"), make_reference(0, 6, "second")}));
+    ScriptMachine& machine = *run.machine;
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    CHECK(run.linked.program.names() == (std::vector<std::string>{"first", "second"}));
+    CHECK(machine.string_at(machine.name_cell(0)) == "first");
+    CHECK(machine.string_at(machine.name_cell(1)) == "second");
+    const bo2::engine::ScriptAddress record = memory.u32(machine.name_cell(1));
+    CHECK(memory.u32(record) == 1);
+    // The local holds a string of its own, counted once.
+    const bo2::engine::ScriptAddress own = machine.new_string_cell("old");
+    const bo2::engine::ScriptAddress own_record = memory.u32(own);
+    memory.set_u32(run.frame().locals, own_record);
+    CHECK(machine.interpret(run.thread));
+    CHECK(memory.u32(run.frame().locals) == record);
+    CHECK(memory.u32(record) == 2);  // the second store found the same record
+    CHECK(machine.string_at(run.frame().locals) == "second");
+    // The old record was released when its count reached 0.
+    CHECK(throws([&] { static_cast<void>(memory.u32(own_record)); }));
+    CHECK(machine.string_at(0).empty());
+    CHECK(throws([&] { static_cast<void>(machine.name_cell(2)); }));
+}
+
+void test_unported_code() {
+    CHECK(throws([] {
+        MachineRun run(machine_class({op(0x03, 1), op(0x0D, 0), op(0x5C)}));
+        run.machine->interpret(run.thread);
+    }));
+    CHECK(throws([] {
+        MachineRun run(machine_class({op(0x61), op(0x5C)}));
+        run.machine->interpret(run.thread);
+    }));
+    CHECK(throws([] {
+        MachineRun run(machine_class({op(0x03, 1), op(0x03, 2), op(0x28), op(0x5C)}));
+        run.machine->interpret(run.thread);
+    }));
+    CHECK(throws([] {
+        MachineRun run(machine_class({op(0x07, 0), op(0x07, 4), op(0x21), 0, op(0x5C)}));
+        run.machine->interpret(run.thread);
+    }));
+    CHECK(throws([] {  // no 0x5c: the code runs out
+        MachineRun run(machine_class({op(0x00)}));
+        run.machine->interpret(run.thread);
+    }));
+    CHECK(throws([] {  // a pop from an empty stack
+        MachineRun run(machine_class({op(0x01), op(0x5C)}));
+        run.machine->interpret(run.thread);
+    }));
+}
+
 // The game data. Containers are read with one sized read: the stream
 // iterator of BigArchive::load takes over a minute for the whole game in a
 // debug build.
@@ -452,6 +645,15 @@ int main() {
     test_link_code_words();
     test_link_missing_value_type();
     test_link_errors();
+    test_push();
+    test_locals();
+    test_self_fields();
+    test_object_fields();
+    test_handles();
+    test_store();
+    test_store_null_object();
+    test_strings();
+    test_unported_code();
 
     const char* root = std::getenv("BO2NX_ASSETS_DIR");
     if (root == nullptr) {

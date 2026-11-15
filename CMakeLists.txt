@@ -37,6 +37,7 @@ add_library(bo2_engine STATIC
     src/engine/script_package.cpp
     src/engine/script_memory.cpp
     src/engine/script_program.cpp
+    src/engine/script_machine.cpp
     src/engine/string_table.cpp
     src/engine/text.cpp
     src/engine/tick.cpp
