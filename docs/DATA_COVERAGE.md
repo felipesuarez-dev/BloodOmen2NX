@@ -38,7 +38,7 @@ exit code is 2.
 | model | 5,168 | 5,168 | 146 |
 | musicbnk | 11 | 0 | 0 |
 | planinfo | 159 | 0 | 0 |
-| region | 165 | 0 | 0 |
+| region | 165 | 165 | 0 |
 | sample | 21,251 | 0 | 0 |
 | sound | 62,073 | 0 | 0 |
 | strmfile | 16,428 | 0 | 0 |
@@ -47,10 +47,11 @@ exit code is 2.
 | texture | 22,483 | 22,483 | 11 |
 | tunedata | 1,720 | 0 | 0 |
 
-`animatio`, `animreel`, `cellgrup`, `model`, `texfont` and `texture` have a
-registered reader. The other types are counted but not read yet; each following issue
-adds the reader of one type and its row here. The 32,791 `animreel` entries
-and the four `texfont` entries are read without a failure.
+`animatio`, `animreel`, `cellgrup`, `model`, `region`, `texfont` and
+`texture` have a registered reader. The other types are counted but not read
+yet; each following issue adds the reader of one type and its row here. The
+165 `region` entries, the 32,791 `animreel` entries and the four `texfont`
+entries are read without a failure.
 
 ## animatio
 

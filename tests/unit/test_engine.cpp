@@ -288,6 +288,15 @@ std::vector<std::uint8_t> build_model_asset() {
     return model;
 }
 
+// A region payload with no section: the smallest payload that
+// parse_region_entities accepts (docs/FORMATS/region.md).
+std::vector<std::uint8_t> build_region() {
+    std::vector<std::uint8_t> data;
+    put32(data, 1);
+    put32(data, 3);
+    return data;
+}
+
 // An animatio graph with every table empty: the smallest payload that
 // parse_anim_graph accepts (docs/FORMATS/animatio.md).
 std::vector<std::uint8_t> build_anim_graph() {
@@ -1477,6 +1486,29 @@ void test_data_check_animatio() {
     CHECK(report.failures[0].entry == "graph/cut");
 }
 
+// A region that the reader rejects is one failure; the entries after it are
+// still checked (docs/DATA_COVERAGE.md, "region").
+void test_data_check_region() {
+    const std::vector<std::uint8_t> region = build_region();
+    std::vector<std::uint8_t> cut = region;
+    cut.resize(cut.size() / 2);
+    const std::vector<std::uint8_t> data = build_big({
+        {"region", "region/cut", cut, {}},
+        {"region", "region/ok", region, {}},
+    });
+    const bo2::engine::BigArchive archive = bo2::engine::BigArchive::parse(data);
+    bo2::engine::DataReport report;
+    bo2::engine::check_archive(archive, "test.big", report);
+    CHECK(report.containers == 1);
+    const bo2::engine::TypeCount& count = report.types.at("region");
+    CHECK(count.entries == 2);
+    CHECK(count.checked == 2);
+    CHECK(count.failed == 1);
+    CHECK(report.failures.size() == 1);
+    CHECK(report.failures[0].type == "region");
+    CHECK(report.failures[0].entry == "region/cut");
+}
+
 // A texture entry that the DDS reader rejects is one failure; the entries
 // after it are still checked (docs/DATA_COVERAGE.md, "texture").
 void test_data_check_texture() {
@@ -1571,6 +1603,7 @@ int main() {
     test_data_check_model();
     test_data_check_animreel();
     test_data_check_animatio();
+    test_data_check_region();
     test_data_check_texture();
     test_skeleton_bones();
     test_collision_chunk();

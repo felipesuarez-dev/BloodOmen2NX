@@ -7,6 +7,7 @@
 #include "bo2/engine/cell_group.hpp"
 #include "bo2/engine/dds.hpp"
 #include "bo2/engine/pixmap_font.hpp"
+#include "bo2/engine/region.hpp"
 
 namespace bo2::engine {
 
@@ -32,6 +33,10 @@ void check_texfont(const BigArchive& archive, const BigEntry& entry) {
     static_cast<void>(parse_pixmap_font(archive.extract(entry), entry.symbols, archive.names()));
 }
 
+void check_region(const BigArchive& archive, const BigEntry& entry) {
+    static_cast<void>(parse_region_entities(archive.extract(entry)));
+}
+
 void check_texture(const BigArchive& archive, const BigEntry& entry) {
     static_cast<void>(decode_dds(archive.extract(entry)));
 }
@@ -44,6 +49,7 @@ const std::map<std::string, EntryCheck>& entry_checks() {
         {"animreel", &check_animreel},
         {"cellgrup", &check_cellgrup},
         {"model", &check_model},
+        {"region", &check_region},
         {"texfont", &check_texfont},
         {"texture", &check_texture},
     };
