@@ -444,7 +444,10 @@ HUD drawings.
 `texture_blend` (`include/bo2/engine/dds.hpp`) applies the rule of
 `FUN_0056f320` to the DDS header and returns whether the texture blends and
 whether it writes depth; the test with assets pins the counts of `code.big`
-and `slums/sl01`.
+and `slums/sl01`. `sort_value` and `sort_key`
+(`include/bo2/engine/render_order.hpp`) apply the arithmetic of
+`FUN_0056d130`, `FUN_0056ce80` and `FUN_00562e60`: the value orders a mesh by
+priority, SortBias and depth, and the key is the 24-bit value the flush sorts.
 
 ## Cell grid and visibility
 

@@ -5833,7 +5833,7 @@ address,name,subsystem,status,notes
 00562ce0,FUN_00562ce0,unknown,todo,ghidra
 00562d40,FUN_00562d40,unknown,todo,ghidra
 00562d90,FUN_00562d90,unknown,todo,ghidra
-00562e60,FUN_00562e60,unknown,todo,ghidra
+00562e60,FUN_00562e60,render,wip,src/engine/render_order.cpp: sort_key folds the value into the 24-bit key; the per-triangle list is not ported.
 00562f40,FUN_00562f40,unknown,todo,ghidra
 00562f70,FUN_00562f70,unknown,todo,ghidra
 00562fb0,FUN_00562fb0,unknown,todo,ghidra
@@ -5952,7 +5952,7 @@ address,name,subsystem,status,notes
 0056cc20,FUN_0056cc20,animation,wip,src/engine/skeleton_pose.cpp: skin_vertices walks the bones and skins each vertex range; the lit vertex pass and the per-bone view transform are not ported
 0056ce80,FUN_0056ce80,unknown,todo,ghidra
 0056d090,FUN_0056d090,unknown,todo,ghidra
-0056d130,FUN_0056d130,render,wip,src/engine/cell_group.cpp: read_render_priority reads the RenderPriority float of mdlattr; the depth sort key, SortBias and the facades are not ported
+0056d130,FUN_0056d130,render,wip,src/engine/render_order.cpp: sort_value applies the priority SortBias and depth rule; src/engine/cell_group.cpp: read_render_priority reads the RenderPriority. The facades are not ported.
 0056d9d0,FUN_0056d9d0,unknown,todo,ghidra
 0056db00,FUN_0056db00,unknown,todo,ghidra
 0056db70,FUN_0056db70,unknown,todo,ghidra

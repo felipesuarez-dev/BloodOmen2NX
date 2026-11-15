@@ -16,6 +16,7 @@
 #include "bo2/engine/erg.hpp"
 #include "bo2/engine/math.hpp"
 #include "bo2/engine/pixmap_font.hpp"
+#include "bo2/engine/render_order.hpp"
 
 namespace {
 
@@ -759,6 +760,53 @@ void test_texture_blend() {
     CHECK(throws([&] { bo2::engine::texture_blend(short_data); }));
     std::vector<std::uint8_t> no_mark(0x58, 0);
     CHECK(throws([&] { bo2::engine::texture_blend(no_mark); }));
+}
+
+// FUN_0056d130 and FUN_0056ce80 (the sort value) and FUN_00562e60 (the
+// 24-bit key): the controls of docs/FORMATS/models.md, "Render state and
+// draw order".
+void test_render_sort_order() {
+    struct Case {
+        float priority;
+        float bias;
+        float depth;
+        bool sky;
+        float value;
+        std::uint32_t key;
+    };
+    const Case cases[] = {
+        {30, 0.0f, 0.0f, false, -100030.0f, 9227706U},
+        {8, 0.0f, 0.0f, false, -100008.0f, 9227522U},
+        {9, 0.0f, 0.0f, false, -100009.0f, 9227530U},
+        {100, 0.0f, 0.0f, false, -100100.0f, 9228293U},
+        {-5, 0.0f, 0.0f, false, 99995.0f, 7549801U},
+        {0, 0.0f, 440.0f, false, 440.0f, 8384917U},
+        {0, 2.5f, 440.0f, false, 442.5f, 8384896U},
+        {0, 0.0f, 4000.0f, false, 4000.0f, 8355054U},
+        {0, 0.0f, 440.0f, true, 100000.0f, 7549759U},
+    };
+    for (const Case& item : cases) {
+        const float value =
+            bo2::engine::sort_value(item.priority, item.bias, item.depth, item.sky);
+        CHECK(value == item.value);
+        CHECK(bo2::engine::sort_key(value) == item.key);
+    }
+    CHECK(bo2::engine::sort_key(2000000.0f) == 0U);
+    CHECK(bo2::engine::sort_key(-2000000.0f) == 16777215U);
+    const std::uint32_t depth =
+        bo2::engine::sort_key(bo2::engine::sort_value(0, 0.0f, 440.0f, false));
+    const std::uint32_t p8 =
+        bo2::engine::sort_key(bo2::engine::sort_value(8, 0.0f, 0.0f, false));
+    const std::uint32_t p9 =
+        bo2::engine::sort_key(bo2::engine::sort_value(9, 0.0f, 0.0f, false));
+    const std::uint32_t p30 =
+        bo2::engine::sort_key(bo2::engine::sort_value(30, 0.0f, 0.0f, false));
+    const std::uint32_t p100 =
+        bo2::engine::sort_key(bo2::engine::sort_value(100, 0.0f, 0.0f, false));
+    CHECK(p8 < p9);
+    CHECK(p9 < p30);
+    CHECK(p30 < p100);
+    CHECK(depth < p8 && depth < p9 && depth < p30 && depth < p100);
 }
 
 void test_math() {
@@ -1791,6 +1839,7 @@ int main() {
     test_big();
     test_dds();
     test_texture_blend();
+    test_render_sort_order();
     test_math();
     test_cell_group();
     test_material_texture_lists();
