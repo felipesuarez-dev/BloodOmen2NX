@@ -141,7 +141,11 @@ python3 tools/bo2fmt/rkv.py extract \
 The event plays once and the music loops; `--audio-seconds` bounds the
 demo. The reference streams use the Vorbis floor-0 mode, which the host
 reads through `libvorbisfile.so.3`; the bundled `stb_vorbis` fallback
-covers floor-1 streams when the system library is unavailable. The mixer
+covers floor-1 streams when the system library is unavailable. Measured on
+2026-11-15: `stb_vorbis_open_memory` refuses all 2,666 streams of `pc.rkv`
+with `VORBIS_feature_not_supported` ("uses floor 0"), so without
+`libvorbisfile` the port has no audio at all; the Switch has no
+`libvorbisfile` (see "Switch build"). The mixer
 is unit-tested with synthetic PCM.
 
 ## SDL2 + OpenGL window
@@ -256,6 +260,24 @@ Planned with the level pipeline:
 
 The `.nro` is built with devkitPro once the platform backend lands. The
 SD card layout will be documented here before the first public build.
+
+Checked on 2026-11-15 with devkitA64 (GCC 16.1) and the devkitPro CMake
+toolchain:
+
+```sh
+DEVKITPRO=/opt/devkitpro cmake -S . -B build/switch-check -G Ninja \
+  -DCMAKE_TOOLCHAIN_FILE=/opt/devkitpro/cmake/Switch.cmake \
+  -DBO2NX_ENABLE_SDL=OFF -DCMAKE_BUILD_TYPE=Release
+ninja -C build/switch-check -k 0 bo2_common bo2_engine bo2_game \
+  bo2_platform_core bo2_platform_headless
+```
+
+Every source of those five libraries compiles for AArch64 with the
+project's warnings and no warning, except `src/engine/ogg.cpp`, which
+includes `<dlfcn.h>` to load `libvorbisfile` at run time; the Switch has no
+dynamic loader. The audio of the game needs a Vorbis decoder with floor 0
+on the Switch (devkitPro packages `libogg` and `libvorbis` as
+`switch-libogg` and `switch-libvorbis`; they are not installed here).
 
 ## Oracle
 
