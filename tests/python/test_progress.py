@@ -153,5 +153,37 @@ class TreemapTest(unittest.TestCase):
                          progress.build_treemap(progress.load_map_rows()))
 
 
+class SiteTest(unittest.TestCase):
+    """The progress page of GitHub Pages (tools/gen/progress_site.py)."""
+
+    def pages(self):
+        import progress_site  # noqa: PLC0415
+
+        levels, features, _ = progress.load_progress_data()
+        return progress_site.build_pages(progress.measure(), progress.FUNCTION_MAP, levels, features,
+                                         progress.number)
+
+    def test_the_committed_pages_are_current(self):
+        for relative, page in self.pages().items():
+            self.assertEqual((ROOT / "docs" / relative).read_text(encoding="utf-8"), page, relative)
+
+    def test_the_pages_load_nothing_from_another_site(self):
+        for relative, page in self.pages().items():
+            self.assertNotIn("<script", page, relative)
+            for url in re.findall(r'(?:src|href)="([^"]+)"', page):
+                if url.startswith("http"):
+                    self.assertTrue(url.startswith("https://github.com/felipesuarez-dev/BloodOmen2NX"), url)
+            self.assertIn('progress.svg"', page)
+
+    def test_the_pages_show_the_measured_numbers(self):
+        m = progress.measure()
+        pages = self.pages()
+        self.assertIn(f'{m["overall"] * 100:.1f}<small>%</small>', pages["index.html"])
+        self.assertIn(progress.number("es", m["done"]) + " de " + progress.number("es", m["in_scope"]),
+                      pages["index.html"])
+        self.assertIn(progress.number("en", m["done"]) + " of " + progress.number("en", m["in_scope"]),
+                      pages["en/index.html"])
+
+
 if __name__ == "__main__":
     unittest.main()

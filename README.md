@@ -17,7 +17,7 @@ English version: [README.en.md](README.en.md)
 [![Plataformas][platform-badge]](#compilar)
 [![Licencia][license-badge]](#licencia)
 
-[Estado](#estado) · [Aviso legal](#aviso-legal) · [Arquitectura](#arquitectura) · [Compilar](#compilar) · [Datos del juego](#datos-del-juego) · [Ejecutar](#ejecutar) · [Controles](#controles) · [Metodología](#metodología) · [Documentación](#documentación) · [Contribuir](#contribuir) · [Créditos](#créditos)
+[Página de progreso](https://felipesuarez-dev.github.io/BloodOmen2NX/) · [Estado](#estado) · [Aviso legal](#aviso-legal) · [Arquitectura](#arquitectura) · [Compilar](#compilar) · [Datos del juego](#datos-del-juego) · [Ejecutar](#ejecutar) · [Controles](#controles) · [Metodología](#metodología) · [Documentación](#documentación) · [Contribuir](#contribuir) · [Créditos](#créditos)
 
 </div>
 
@@ -316,6 +316,7 @@ La documentación técnica está en inglés.
 
 ## Seguimiento del progreso
 
+- Página de progreso: [https://felipesuarez-dev.github.io/BloodOmen2NX/](https://felipesuarez-dev.github.io/BloodOmen2NX/), generada con los mismos números que el bloque de estado.
 - Estado por función: [`re/FUNCTION_MAP.csv`](re/FUNCTION_MAP.csv). El bloque de estado de arriba y las insignias se generan con `python3 tools/gen/progress.py` para ambos README y los verifica `scripts/ci.sh`; nunca los edites a mano.
 - Los elementos de trabajo se siguen en un gestor de proyectos privado; el repositorio es la fuente de verdad del código y la documentación.
 

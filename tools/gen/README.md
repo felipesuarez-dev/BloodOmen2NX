@@ -5,6 +5,7 @@ Derived data and generators.
 | File | Purpose |
 |---|---|
 | `progress.py` | Rewrite the status block and the badge definitions of `README.md` (Spanish) and `README.en.md` (English) from `re/FUNCTION_MAP.csv` and `progress_data.py`: one data source, one template per language |
+| `progress_site.py` | The progress page served by GitHub Pages from `docs/` (`docs/index.html` in Spanish, `docs/en/index.html` in English), built by `progress.py` from the same numbers; static, with nothing loaded from another site |
 | `progress_data.py` | Phase, chapter list, platform feature states and the function status rule |
 
 ```sh

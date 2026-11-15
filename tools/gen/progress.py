@@ -7,7 +7,10 @@ generated regions, rewritten from the same numbers:
   <!-- progress:start --> ... <!-- progress:end -->   the progress block
   <!-- badges:start -->   ... <!-- badges:end -->     the badge definitions
 
-It also writes docs/progress.svg, a map of the game's code: one rectangle per
+It also writes the progress page served by GitHub Pages from docs/
+(docs/index.html in Spanish, docs/en/index.html in English; built by
+tools/gen/progress_site.py from the same numbers) and docs/progress.svg, a map of the
+game's code: one rectangle per
 64 KiB block of bo2.exe addresses, sized by the code bytes of its game
 functions (the span from each function to the next row of the map) and
 coloured by the share that is translated (green) or in progress (amber).
@@ -394,6 +397,23 @@ def main() -> int:
     elif svg != old_svg:
         TREEMAP.write_text(svg, encoding="utf-8")
         print("docs/progress.svg: updated")
+    sys.path.insert(0, str(ROOT / "tools" / "gen"))
+    import progress_site  # noqa: PLC0415
+
+    levels, features, _ = load_progress_data()
+    for relative, page in progress_site.build_pages(m, FUNCTION_MAP, levels, features, number).items():
+        path = ROOT / "docs" / relative
+        old = path.read_text(encoding="utf-8") if path.exists() else None
+        if check:
+            if page != old:
+                print(f"docs/{relative}: stale; run tools/gen/progress.py", file=sys.stderr)
+                status = 1
+            else:
+                print(f"docs/{relative}: up to date")
+        elif page != old:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(page, encoding="utf-8")
+            print(f"docs/{relative}: updated")
     for lang, t in TEXT.items():
         path = ROOT / t["file"]
         if not path.exists():

@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blood Omen 2 · Nintendo Switch port · Progress</title>
+<meta name="description" content="85 of 16951 game functions translated · 0 of 11 chapters completable">
+<style>:root{--bg:#0c0b0d;--card:#141216;--line:#262228;--text:#ece7e2;--muted:#9b938c;--accent:#b81d33;
+--accent-soft:#3a1519;--wip:#c4923a;--wip-soft:#3a2c14;--ok:#8fb996}
+@media (prefers-color-scheme:light){:root{--bg:#f7f4f1;--card:#fffdfb;--line:#e6dfd8;--text:#1f1b18;
+--muted:#6f675f;--accent:#9e1428;--accent-soft:#f3dadd;--wip:#a8721b;--wip-soft:#f3e6cf;--ok:#3f7a4a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 system-ui,-apple-system,"Segoe UI",
+Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+main{max-width:860px;margin:0 auto;padding:40px 16px 56px}
+a{color:inherit;text-decoration-color:var(--accent);text-underline-offset:3px}
+.top{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap}
+.kicker{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.lang{font-size:13px;color:var(--muted)}
+.hero{margin:28px 0 36px}
+.big{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;font-size:clamp(64px,14vw,112px);
+line-height:1;font-weight:400;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.big small{font-size:.38em;color:var(--muted);margin-left:.15em}
+.label{color:var(--muted);margin-top:6px}
+.bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin:22px 0 14px}
+.bar>span{display:block;height:100%;background:var(--accent)}
+.meta{display:flex;gap:10px;flex-wrap:wrap;font-size:14px;color:var(--muted)}
+.pill{border:1px solid var(--line);border-radius:999px;padding:2px 10px}
+.pill.now{border-color:var(--accent);color:var(--text)}
+section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px 22px 18px;margin:18px 0}
+h2{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;font-weight:400;font-size:22px;
+margin:0 0 14px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 16px;margin:12px 0}
+.row .name{font-weight:500}.row .value{font-variant-numeric:tabular-nums;color:var(--muted);text-align:right}
+.row .bar{grid-column:1/-1;margin:0;height:5px}
+.note{font-size:13px;color:var(--muted);margin:14px 0 0}
+.sys{display:grid;grid-template-columns:110px minmax(0,1fr) auto;gap:6px 14px;align-items:center;margin:8px 0}
+.stack{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--line)}
+.stack .t{background:var(--accent)}.stack .w{background:var(--wip)}
+.num{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px;white-space:nowrap}
+.legend{display:flex;gap:16px;font-size:13px;color:var(--muted);margin-bottom:6px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:baseline}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.cell{border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:14px}
+.cell span{display:block;font-size:12px;color:var(--muted)}
+.cell.done{border-color:var(--ok)}.cell.partial{border-color:var(--wip)}
+.map img{width:100%;height:auto;border-radius:8px;display:block}
+ol.steps{list-style:none;margin:0;padding:0}
+ol.steps li{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;padding:8px 0;
+border-top:1px solid var(--line);font-size:14px}
+ol.steps li:first-child{border-top:0}
+ol.steps b{font-variant-numeric:tabular-nums}
+ol.steps .s{color:var(--muted);font-size:13px}
+ol.steps .now .s{color:var(--accent)}ol.steps .done .s{color:var(--ok)}
+footer{margin-top:28px;font-size:13px;color:var(--muted)}
+footer p{margin:6px 0}
+@media (max-width:520px){section{padding:18px 16px 14px}.sys{grid-template-columns:84px minmax(0,1fr) auto}}</style>
+</head>
+<body>
+<main>
+<div class="top">
+<div class="kicker">Blood Omen 2 · native Nintendo Switch port</div>
+<a class="lang" href="../">Español</a>
+</div>
+<div class="hero">
+<div class="big">8.2<small>%</small></div>
+<div class="label">overall progress</div>
+<div class="bar"><span style="width:8.22%"></span></div>
+<div class="meta">
+<span class="pill now">Phase M3 in progress</span>
+<span>85 of 16,951 game functions translated · 0 of 11 chapters completable</span>
+</div>
+</div>
+<section>
+<h2>Components</h2>
+<div class="row">
+<span class="name">Functions translated <span class="num">· weight 60%</span></span>
+<span class="value">85 / 16,951 · 0.50%</span>
+<div class="bar"><span style="width:0.50%"></span></div>
+</div>
+<div class="row">
+<span class="name">Chapters completable <span class="num">· weight 30%</span></span>
+<span class="value">0 / 11 · 0.00%</span>
+<div class="bar"><span style="width:0.00%"></span></div>
+</div>
+<div class="row">
+<span class="name">Platform features <span class="num">· weight 10%</span></span>
+<span class="value">9 / 12 + 1 partial · 79.17%</span>
+<div class="bar"><span style="width:79.17%"></span></div>
+</div>
+<p class="note">35,553 functions in the map: 85 translated, 165 in progress, 16,701 to do and 18,602 external (not game code).</p>
+<p class="note">A function counts only when the port reproduces its whole contract and a test pins it; each one adds about 0.0035 points, a chapter 2.7 and a platform feature 0.8.</p>
+</section>
+<section>
+<h2>Functions by system</h2>
+<div class="legend"><span><i class="dot" style="background:var(--accent)"></i>translated</span><span><i class="dot" style="background:var(--wip)"></i>in progress</span></div>
+<div class="sys"><span>Animation</span><div class="stack" style="width:100.0%"><span class="t" style="flex:23"></span><span class="w" style="flex:60"></span></div><span class="num">23 · 60</span></div>
+<div class="sys"><span>Scripts</span><div class="stack" style="width:68.7%"><span class="t" style="flex:48"></span><span class="w" style="flex:9"></span></div><span class="num">48 · 9</span></div>
+<div class="sys"><span>Player</span><div class="stack" style="width:54.2%"><span class="t" style="flex:6"></span><span class="w" style="flex:39"></span></div><span class="num">6 · 39</span></div>
+<div class="sys"><span>Levels</span><div class="stack" style="width:37.3%"><span class="t" style="flex:7"></span><span class="w" style="flex:24"></span></div><span class="num">7 · 24</span></div>
+<div class="sys"><span>Camera</span><div class="stack" style="width:14.5%"><span class="t" style="flex:0"></span><span class="w" style="flex:12"></span></div><span class="num">0 · 12</span></div>
+<div class="sys"><span>Rendering</span><div class="stack" style="width:9.6%"><span class="t" style="flex:0"></span><span class="w" style="flex:8"></span></div><span class="num">0 · 8</span></div>
+<div class="sys"><span>Collision</span><div class="stack" style="width:6.0%"><span class="t" style="flex:0"></span><span class="w" style="flex:5"></span></div><span class="num">0 · 5</span></div>
+<div class="sys"><span>Entities</span><div class="stack" style="width:3.6%"><span class="t" style="flex:0"></span><span class="w" style="flex:3"></span></div><span class="num">0 · 3</span></div>
+<div class="sys"><span>Text</span><div class="stack" style="width:3.6%"><span class="t" style="flex:0"></span><span class="w" style="flex:3"></span></div><span class="num">0 · 3</span></div>
+<div class="sys"><span>Languages</span><div class="stack" style="width:3.6%"><span class="t" style="flex:1"></span><span class="w" style="flex:2"></span></div><span class="num">1 · 2</span></div>
+</section>
+<section>
+<h2>Campaign chapters</h2>
+<div class="grid">
+<div class="cell">Slums<span>not yet</span></div>
+<div class="cell">Smugglers Den<span>not yet</span></div>
+<div class="cell">Lower City<span>not yet</span></div>
+<div class="cell">Upper City<span>not yet</span></div>
+<div class="cell">Sarafan Keep<span>not yet</span></div>
+<div class="cell">Industrial Quarter<span>not yet</span></div>
+<div class="cell">Canyons<span>not yet</span></div>
+<div class="cell">Eternal Prison<span>not yet</span></div>
+<div class="cell">Device<span>not yet</span></div>
+<div class="cell">Wharves<span>not yet</span></div>
+<div class="cell">Hylden City<span>not yet</span></div>
+</div>
+</section>
+<section>
+<h2>Platform</h2>
+<div class="grid">
+<div class="cell done">Host build skeleton<span>done</span></div>
+<div class="cell done">Installer container (SFXI)<span>done</span></div>
+<div class="cell done">BIG/RKV parsers<span>done</span></div>
+<div class="cell done">Validated asset extraction<span>done</span></div>
+<div class="cell done">Headless host first frame<span>done</span></div>
+<div class="cell done">Level geometry (cellgrup)<span>done</span></div>
+<div class="cell done">Level textures (DDS binding)<span>done</span></div>
+<div class="cell done">Host renderer (OpenGL)<span>done</span></div>
+<div class="cell">Switch renderer (deko3d)<span>to do</span></div>
+<div class="cell partial">Audio<span>partial</span></div>
+<div class="cell done">Input<span>done</span></div>
+<div class="cell">Video (Bink)<span>to do</span></div>
+</div>
+</section>
+<section class="map">
+<h2>Code map</h2>
+<img src="../progress.svg" alt="Map of the bo2.exe code by 64 KiB block: green is translated, amber is in progress" width="960" height="300" loading="lazy">
+</section>
+<section>
+<h2>Milestones</h2>
+<ol class="steps">
+<li class="done"><b>M0</b><span>Lab and binary triage</span><span class="s">done</span></li>
+<li class="done"><b>M1</b><span>Containers and assets</span><span class="s">done</span></li>
+<li class="done"><b>M2</b><span>Host skeleton and first frame</span><span class="s">done</span></li>
+<li class="now"><b>M3</b><span>Playable slice</span><span class="s">in progress</span></li>
+<li class="next"><b>M4</b><span>Complete systems</span><span class="s">not started</span></li>
+<li class="next"><b>M5</b><span>Complete content</span><span class="s">not started</span></li>
+<li class="next"><b>M6</b><span>Switch release</span><span class="s">not started</span></li>
+</ol>
+</section>
+<footer>
+<p><a href="https://github.com/felipesuarez-dev/BloodOmen2NX">Repository</a> · <a href="https://github.com/felipesuarez-dev/BloodOmen2NX/blob/develop/README.en.md">README</a></p>
+<p>A fan project, not affiliated with the owners of Blood Omen 2. The repository does not include the game: an original PC copy is needed.</p>
+<p>Generated by tools/gen/progress.py from re/FUNCTION_MAP.csv.</p>
+</footer>
+</main>
+</body>
+</html>
