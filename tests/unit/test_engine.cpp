@@ -288,6 +288,23 @@ std::vector<std::uint8_t> build_model_asset() {
     return model;
 }
 
+// An animatio graph with every table empty: the smallest payload that
+// parse_anim_graph accepts (docs/FORMATS/animatio.md).
+std::vector<std::uint8_t> build_anim_graph() {
+    std::vector<std::uint8_t> data;
+    put32(data, 0);  // format id
+    put32(data, 0);  // version 0, a graph
+    put32(data, 0);  // flags
+    for (int index = 0; index < 9; ++index) {
+        put32(data, 0);  // nine opaque header values
+    }
+    for (int index = 0; index < 18; ++index) {
+        put32(data, 0);  // every table is empty
+    }
+    put32(data, 0);  // +0x70
+    return data;
+}
+
 // An animreel with no channels: the smallest payload that parse_anim_reel
 // accepts (docs/FORMATS/animreel.md).
 std::vector<std::uint8_t> build_anim_reel() {
@@ -1437,6 +1454,29 @@ void test_data_check_animreel() {
     CHECK(report.failures[0].entry == "reel/cut");
 }
 
+// An animatio that the reader rejects is one failure; the entries after it
+// are still checked (docs/DATA_COVERAGE.md, "animatio").
+void test_data_check_animatio() {
+    const std::vector<std::uint8_t> graph = build_anim_graph();
+    std::vector<std::uint8_t> cut = graph;
+    cut.resize(cut.size() / 2);
+    const std::vector<std::uint8_t> data = build_big({
+        {"animatio", "graph/cut", cut, {}},
+        {"animatio", "graph/ok", graph, {}},
+    });
+    const bo2::engine::BigArchive archive = bo2::engine::BigArchive::parse(data);
+    bo2::engine::DataReport report;
+    bo2::engine::check_archive(archive, "test.big", report);
+    CHECK(report.containers == 1);
+    const bo2::engine::TypeCount& count = report.types.at("animatio");
+    CHECK(count.entries == 2);
+    CHECK(count.checked == 2);
+    CHECK(count.failed == 1);
+    CHECK(report.failures.size() == 1);
+    CHECK(report.failures[0].type == "animatio");
+    CHECK(report.failures[0].entry == "graph/cut");
+}
+
 // A texture entry that the DDS reader rejects is one failure; the entries
 // after it are still checked (docs/DATA_COVERAGE.md, "texture").
 void test_data_check_texture() {
@@ -1530,6 +1570,7 @@ int main() {
     test_data_check_cellgrup();
     test_data_check_model();
     test_data_check_animreel();
+    test_data_check_animatio();
     test_data_check_texture();
     test_skeleton_bones();
     test_collision_chunk();

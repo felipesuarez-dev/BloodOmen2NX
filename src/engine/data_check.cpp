@@ -2,6 +2,7 @@
 
 #include <exception>
 
+#include "bo2/engine/anim_graph.hpp"
 #include "bo2/engine/anim_reel.hpp"
 #include "bo2/engine/cell_group.hpp"
 #include "bo2/engine/dds.hpp"
@@ -10,6 +11,10 @@
 namespace bo2::engine {
 
 namespace {
+
+void check_animatio(const BigArchive& archive, const BigEntry& entry) {
+    static_cast<void>(parse_anim_graph(archive.extract(entry)));
+}
 
 void check_animreel(const BigArchive& archive, const BigEntry& entry) {
     static_cast<void>(parse_anim_reel(archive.extract(entry)));
@@ -35,6 +40,7 @@ void check_texture(const BigArchive& archive, const BigEntry& entry) {
 
 const std::map<std::string, EntryCheck>& entry_checks() {
     static const std::map<std::string, EntryCheck> checks = {
+        {"animatio", &check_animatio},
         {"animreel", &check_animreel},
         {"cellgrup", &check_cellgrup},
         {"model", &check_model},
