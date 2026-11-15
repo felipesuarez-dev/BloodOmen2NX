@@ -23,6 +23,29 @@ A container that does not open is printed as `load-fail` and makes the exit
 code 1. A reader failure does not change the exit code. Without arguments the
 exit code is 2.
 
+## Cell group baseline
+
+`--cell-groups <file>` writes the load numbers of every cell group the reader
+accepts, one line per group: the container path relative to the directory the
+tool reads, the cell group name, `model_count`, `skipped_models`, the number
+of triangles and the number of vertices, separated by tabs and sorted by
+container and name.
+
+```sh
+./build/linux-debug/bo2nx_check_data "$BO2NX_ASSETS_DIR/media/gogames/bo2" \
+  --cell-groups tests/data/cell_group_baseline.tsv
+```
+
+The file has 206 lines: the 236 cell groups minus the 30 the reader rejects
+(see "cellgrup"). The controls are `slums/sl01` (608 models, 56 skipped,
+35,053 triangles and 55,954 vertices; the host prints 49,378 and 66,143
+because it adds the entity geometry) and `ui/hud` (42 models, 192 triangles
+and 277 vertices). `test_cell_group_baseline` in
+`tests/unit/test_model_asset.cpp` reads the file and compares the four
+numbers; to stay under its 60-second budget it checks the four cell groups of
+`code.big` and the nine of the slums levels, and the rest of the file is
+checked by the tool. Regenerate the file when a reader change is deliberate.
+
 ## Reads of 2026-11-15
 
 | Type | Entries | Checked | Failed |

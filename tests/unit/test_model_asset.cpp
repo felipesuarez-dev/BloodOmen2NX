@@ -1,7 +1,9 @@
 #include <cmath>
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -246,6 +248,68 @@ void test_cell_groups_with_attribute_arrays(const std::filesystem::path& root) {
     }
 }
 
+// The load numbers of every cell group the reader accepts, pinned in
+// tests/data/cell_group_baseline.tsv (docs/DATA_COVERAGE.md, "Cell group
+// baseline"). The container paths of the file are relative to the directory
+// bo2nx_check_data reads, so the test prefixes media/gogames/bo2. Reading the
+// 206 groups takes the test over its 60-second budget, so it checks the
+// slums levels and code.big and leaves the rest of the file to the tool.
+void test_cell_group_baseline(const std::filesystem::path& root) {
+    const std::filesystem::path source =
+        std::filesystem::path(__FILE__).parent_path().parent_path().parent_path();
+    const std::filesystem::path file = source / "tests/data/cell_group_baseline.tsv";
+    std::ifstream stream(file);
+    CHECK(stream.good());
+    if (!stream) {
+        return;
+    }
+    const std::filesystem::path game = root / "media/gogames/bo2";
+    std::string line;
+    std::string current;
+    std::optional<bo2::engine::BigArchive> archive;
+    std::size_t rows = 0;
+    while (std::getline(stream, line)) {
+        if (line.empty()) {
+            continue;
+        }
+        std::vector<std::string> fields;
+        std::size_t start = 0;
+        while (true) {
+            const std::size_t tab = line.find('\t', start);
+            fields.push_back(line.substr(start, tab - start));
+            if (tab == std::string::npos) {
+                break;
+            }
+            start = tab + 1;
+        }
+        CHECK(fields.size() == 6);
+        if (fields.size() != 6) {
+            continue;
+        }
+        if (fields[0] != "code.big" && fields[0].rfind("resources/levels/slums/", 0) != 0) {
+            continue;
+        }
+        if (fields[0] != current) {
+            archive = bo2::engine::BigArchive::load((game / fields[0]).string());
+            current = fields[0];
+        }
+        const bo2::engine::BigEntry* entry = archive->find("cellgrup", fields[1]);
+        CHECK(entry != nullptr);
+        if (entry == nullptr) {
+            continue;
+        }
+        const bo2::engine::LevelGeometry geometry = bo2::engine::parse_cell_group(
+            archive->extract(*entry), entry->symbols, archive->names());
+        CHECK(geometry.model_count == std::stoul(fields[2]));
+        CHECK(geometry.skipped_models == std::stoul(fields[3]));
+        CHECK(geometry.triangles.size() == std::stoul(fields[4]));
+        CHECK(geometry.positions.size() == std::stoul(fields[5]));
+        ++rows;
+    }
+    // The four cell groups of code.big and the nine of the slums levels.
+    CHECK(rows == 13);
+}
+
 int main() {
     const char* root = std::getenv("BO2NX_ASSETS_DIR");
     if (root == nullptr) {
@@ -325,6 +389,7 @@ int main() {
         }
         test_texture_lists_of_the_game_data(root);
         test_cell_groups_with_attribute_arrays(root);
+        test_cell_group_baseline(root);
     } catch (const std::exception& error) {
         std::cerr << "model asset test: " << error.what() << '\n';
         return 1;

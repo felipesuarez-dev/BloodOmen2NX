@@ -1,0 +1,206 @@
+code.big	ui/darkgifts	8	0	96	192
+code.big	ui/hud	42	0	192	277
+code.big	ui/optionscreen_01	1	0	99	125
+code.big	ui/pausemenu	1	0	99	125
+resources/levels/bossrooms/CharmVampireArena/cvarena.big	bossrooms/charmvampirearena/cvarena	268	45	18252	28758
+resources/levels/bossrooms/jumpvampirearena/jvarena.big	bossrooms/jumpvampirearena/jvarena	302	37	17206	24209
+resources/levels/bossrooms/jumpvampirearena/jvarena01.big	bossrooms/jumpvampirearena/jvarena01	330	19	12646	18543
+resources/levels/bossrooms/madvampirearena/mvarena.big	bossrooms/madvampirearena/mvarena	394	92	23536	40061
+resources/levels/bossrooms/sarafanlordarena/slarena.big	bossrooms/sarafanlordarena/slarena	273	8	6120	8250
+resources/levels/bossrooms/speedvampirearena/svarena.big	bossrooms/speedvampirearena/svarena	423	18	17042	19951
+resources/levels/canyons/cy01.big	canyons/cvweapons	1	0	12	24
+resources/levels/canyons/cy01.big	canyons/cy01	465	91	24572	42063
+resources/levels/canyons/cy01a.big	canyons/cvweapons	1	0	12	24
+resources/levels/canyons/cy01a.big	canyons/cy01a	221	44	12324	20398
+resources/levels/canyons/cy02.big	canyons/cvweapons	1	0	12	24
+resources/levels/canyons/cy02.big	canyons/cy02	163	27	6550	10017
+resources/levels/canyons/cy02a.big	canyons/cvweapons	1	0	12	24
+resources/levels/canyons/cy02a.big	canyons/cy02a	215	68	14740	24090
+resources/levels/canyons/cy03.big	canyons/cvweapons	1	0	12	24
+resources/levels/canyons/cy03.big	canyons/cy03	131	14	7387	10685
+resources/levels/canyons/cy04.big	canyons/cvweapons	1	0	12	24
+resources/levels/canyons/cy04.big	canyons/cy04	211	32	17451	22458
+resources/levels/canyons/cy04a.big	canyons/cvweapons	1	0	12	24
+resources/levels/canyons/cy04a.big	canyons/cy04a	111	4	7530	8611
+resources/levels/canyons/cy04a1.big	canyons/cvweapons	1	0	12	24
+resources/levels/canyons/cy04a1.big	canyons/cy04a1	17	8	1025	1500
+resources/levels/canyons/cy04b.big	canyons/cvweapons	1	0	12	24
+resources/levels/canyons/cy04b.big	canyons/cy04b	261	56	11684	20509
+resources/levels/canyons/cy05.big	canyons/cvweapons	1	0	12	24
+resources/levels/canyons/cy05.big	canyons/cy05	280	75	21549	36314
+resources/levels/canyons/cy06.big	canyons/cvweapons	1	0	12	24
+resources/levels/canyons/cy06.big	canyons/cy06	370	58	21373	32698
+resources/levels/canyons/cy07.big	canyons/cvweapons	1	0	12	24
+resources/levels/canyons/cy07.big	canyons/cy07	174	13	11859	18859
+resources/levels/canyons/cydv.big	canyons/cvweapons	1	0	12	24
+resources/levels/canyons/cydv.big	canyons/cydv	517	7	28262	35112
+resources/levels/canyons/cysky.big	canyons/cysky	2	0	128	144
+resources/levels/device/devicesanctuary.big	device/devicesanctuary	73	4	5096	7435
+resources/levels/device/dv01.big	device/dv01	171	9	9527	12068
+resources/levels/device/dv02.big	device/dv02	218	16	11222	15531
+resources/levels/device/dv03.big	device/dv03	685	43	29862	38369
+resources/levels/device/dv04.big	device/dv04	283	21	15217	22339
+resources/levels/device/dv05.big	device/dv05	335	26	12329	18122
+resources/levels/device/dv06.big	device/dv06	287	12	12466	16445
+resources/levels/device/dv07.big	device/dv07	317	20	18070	24519
+resources/levels/device/dv08.big	device/dv08	430	34	17875	25539
+resources/levels/device/dv09.big	device/dv09	277	62	17590	20278
+resources/levels/device/dv10.big	device/dv01	171	9	9527	12068
+resources/levels/eternal prison/ep01.big	eternal prison/ep01	285	69	21286	31665
+resources/levels/eternal prison/ep02.big	eternal prison/ep02	474	70	24726	38355
+resources/levels/eternal prison/ep04.big	eternal prison/ep04	174	47	8167	12335
+resources/levels/eternal prison/ep05.big	eternal prison/ep05	78	23	4794	6503
+resources/levels/eternal prison/ep06.big	eternal prison/ep06	340	94	20971	33544
+resources/levels/eternal prison/ep07.big	eternal prison/ep07	300	51	13115	21103
+resources/levels/eternal prison/ep08.big	eternal prison/ep08	247	33	13106	18337
+resources/levels/eternal prison/ep09.big	eternal prison/ep09	240	48	14248	21575
+resources/levels/eternal prison/ep10.big	eternal prison/ep10	540	41	18654	29371
+resources/levels/eternal prison/ep11.big	eternal prison/ep11	415	104	18348	27771
+resources/levels/eternal prison/ep12.big	eternal prison/ep12	130	16	6099	8743
+resources/levels/eternal prison/ep_fakeisle.big	eternal prison/ep_fakeisle	6	0	468	705
+resources/levels/eternal prison/ep_music.big	eternal prison/ep_music	1	0	2	4
+resources/levels/hubworld/hubworld.big	hubworld	192	12	24489	32702
+resources/levels/hyldencity/hc_01.big	hyldencity/hc_01	316	42	12369	17681
+resources/levels/hyldencity/hc_01.big	hyldencity/hc_weapons	1	0	12	24
+resources/levels/hyldencity/hc_04.big	hyldencity/hc_04	421	73	14456	21306
+resources/levels/hyldencity/hc_04.big	hyldencity/hc_weapons	1	0	12	24
+resources/levels/hyldencity/hc_04b.big	hyldencity/hc_04b	263	30	12866	16728
+resources/levels/hyldencity/hc_04b.big	hyldencity/hc_weapons	1	0	12	24
+resources/levels/hyldencity/hc_04c.big	hyldencity/hc_04c	320	27	11126	14781
+resources/levels/hyldencity/hc_04c.big	hyldencity/hc_weapons	1	0	12	24
+resources/levels/hyldencity/hc_04d.big	hyldencity/hc_04d	313	19	9980	14654
+resources/levels/hyldencity/hc_04d.big	hyldencity/hc_weapons	1	0	12	24
+resources/levels/hyldencity/hc_04e.big	hyldencity/hc_04e	47	0	1049	1665
+resources/levels/hyldencity/hc_04f.big	hyldencity/hc_04f	22	0	559	917
+resources/levels/hyldencity/hc_05.big	hyldencity/hc_05	216	25	10005	13509
+resources/levels/hyldencity/hc_05.big	hyldencity/hc_weapons	1	0	12	24
+resources/levels/hyldencity/hc_05b.big	hyldencity/hc_05b	68	10	2695	4008
+resources/levels/hyldencity/hc_05b.big	hyldencity/hc_weapons	1	0	12	24
+resources/levels/hyldencity/hc_05c.big	hyldencity/hc_05c	142	11	7937	11137
+resources/levels/hyldencity/hc_05c.big	hyldencity/hc_weapons	1	0	12	24
+resources/levels/hyldencity/hc_05d.big	hyldencity/hc_05d	272	25	17217	21863
+resources/levels/hyldencity/hc_05d.big	hyldencity/hc_weapons	1	0	12	24
+resources/levels/hyldencity/hc_05e.big	hyldencity/hc_05e	183	23	8428	11080
+resources/levels/hyldencity/hc_05e.big	hyldencity/hc_weapons	1	0	12	24
+resources/levels/hyldencity/hc_05f.big	hyldencity/hc_05f	191	12	8394	11971
+resources/levels/hyldencity/hc_05f.big	hyldencity/hc_weapons	1	0	12	24
+resources/levels/hyldencity/hc_05g.big	hyldencity/hc_05g	37	4	842	1365
+resources/levels/hyldencity/hc_05g.big	hyldencity/hc_weapons	1	0	12	24
+resources/levels/hyldencity/hc_06.big	hyldencity/hc_06	428	60	15742	21594
+resources/levels/hyldencity/hc_06.big	hyldencity/hc_weapons	1	0	12	24
+resources/levels/hyldencity/hc_07.big	hyldencity/hc_07	192	10	9698	14270
+resources/levels/hyldencity/hc_07.big	hyldencity/hc_weapons	1	0	12	24
+resources/levels/hyldencity/hc_10.big	hyldencity/hc_10	282	35	7571	12176
+resources/levels/hyldencity/hc_10.big	hyldencity/hc_weapons	1	0	12	24
+resources/levels/hyldencity/hc_weapons.big	hyldencity/hc_weapons	1	0	12	24
+resources/levels/industrial quarter/cinematics/after_iq.big	sanctuary	75	1	5095	7434
+resources/levels/industrial quarter/iq_01.big	industrial quarter/iq_01	205	23	11563	16458
+resources/levels/industrial quarter/iq_01a.big	industrial quarter/iq_01a	98	17	7828	10410
+resources/levels/industrial quarter/iq_02.big	industrial quarter/iq_02	305	66	12629	20547
+resources/levels/industrial quarter/iq_03.big	industrial quarter/iq_03	333	30	11317	16697
+resources/levels/industrial quarter/iq_04.big	industrial quarter/iq_04	486	53	20896	35224
+resources/levels/industrial quarter/iq_05.big	industrial quarter/iq_05	182	22	9699	15252
+resources/levels/industrial quarter/iq_06.big	industrial quarter/iq_06	95	21	4176	5750
+resources/levels/industrial quarter/iq_07.big	industrial quarter/iq_07	385	38	14711	20590
+resources/levels/industrial quarter/iq_08.big	industrial quarter/iq_08	137	46	6785	8440
+resources/levels/industrial quarter/iq_09.big	industrial quarter/iq_09	43	12	7427	13106
+resources/levels/industrial quarter/iq_10.big	industrial quarter/iq_10	166	80	8532	11082
+resources/levels/industrial quarter/iq_11.big	industrial quarter/iq_11	279	62	14309	19383
+resources/levels/industrial quarter/iq_12.big	industrial quarter/iq_12	288	19	14218	18068
+resources/levels/industrial quarter/iq_intro.big	industrial quarter/iq_intro	241	3	7209	11803
+resources/levels/industrial quarter/iq_music.big	industrial quarter/iq_music	1	0	2	4
+resources/levels/keep/cinematics/kaintakesumahtosanctuary.big	keep/cinematics/kaintakesumahtosanctuary	4	1	408	396
+resources/levels/keep/cinematics/kaintakesumahtosanctuary.big	sanctuary	75	1	5095	7434
+resources/levels/keep/sanctuary_keep.big	sanctuary	75	1	5095	7434
+resources/levels/keep/sk01.big	keep/sk01	474	14	25737	34068
+resources/levels/keep/sk02.big	keep/sk02	662	45	17882	23702
+resources/levels/keep/sk03a.big	keep/sk03a	1030	119	33409	48973
+resources/levels/keep/sk03b.big	keep/sk03b	798	49	34308	48417
+resources/levels/keep/sk03c.big	keep/sk03c	813	21	28868	38675
+resources/levels/keep/sk04.big	keep/sk04	360	20	11915	15848
+resources/levels/keep/sk05.big	keep/sk05	991	55	40771	63074
+resources/levels/keep/sk06.big	keep/sk06	472	20	12165	19000
+resources/levels/keep/sk07.big	keep/sk07	707	56	27273	40579
+resources/levels/lowercity/cinematics/kainmeetsvorador.big	sanctuary	75	1	5095	7434
+resources/levels/lowercity/lc01.big	lowercity/lc01	411	78	20360	31193
+resources/levels/lowercity/lc02a.big	lowercity/lc02a	226	31	11502	18397
+resources/levels/lowercity/lc02airlock.big	lowercity/lc02airlock	92	9	6019	10499
+resources/levels/lowercity/lc02b.big	lowercity/lc02b	451	69	19437	30362
+resources/levels/lowercity/lc03.big	lowercity/lc03	253	40	11824	21796
+resources/levels/lowercity/lc04.big	lowercity/lc04	75	33	8418	13127
+resources/levels/lowercity/lc05.big	lowercity/lc05	254	24	12802	22397
+resources/levels/lowercity/lc05a.big	lowercity/lc05a	373	38	19478	30845
+resources/levels/lowercity/lc06.big	lowercity/lc06	140	36	9277	14347
+resources/levels/lowercity/lc07.big	lowercity/lc07	189	43	6629	10381
+resources/levels/lowercity/lc10.big	lowercity/lc10	123	19	6157	7720
+resources/levels/lowercity/lc_music.big	lowercity/lc_music	1	0	2	4
+resources/levels/lowercity/lcsky.big	lowercity/lcsky	2	0	400	242
+resources/levels/sanctuary/sanctuary.big	sanctuary	75	1	5095	7434
+resources/levels/slums/sl01.big	slums/sl01	608	56	35053	55954
+resources/levels/slums/sl02.big	slums/sl02	219	51	12864	18382
+resources/levels/slums/sl03.big	slums/sl03	468	34	23404	36942
+resources/levels/slums/sl04.big	slums/sl04	220	37	20447	29043
+resources/levels/slums/sl05.big	slums/sl05	329	36	17337	27692
+resources/levels/slums/sl06.big	slums/sl06	264	24	14475	24191
+resources/levels/slums/sl07.big	slums/sl07	261	22	14767	24036
+resources/levels/slums/sl08.big	slums/sl08	586	37	30668	48096
+resources/levels/slums/sl_music.big	slums/sl_music	1	0	12	24
+resources/levels/smugglersden/RegionFiles/sd01.big	smugglersden/regionfiles/sd01	277	51	11965	21183
+resources/levels/smugglersden/RegionFiles/sd01.big	smugglersden/regionfiles/smweapons	1	0	12	24
+resources/levels/smugglersden/RegionFiles/sd02.big	smugglersden/regionfiles/sd02	397	102	18394	30871
+resources/levels/smugglersden/RegionFiles/sd02.big	smugglersden/regionfiles/smweapons	1	0	12	24
+resources/levels/smugglersden/RegionFiles/sd03.big	smugglersden/regionfiles/sd03	309	114	24943	35669
+resources/levels/smugglersden/RegionFiles/sd03.big	smugglersden/regionfiles/smweapons	1	0	12	24
+resources/levels/smugglersden/RegionFiles/sd04.big	smugglersden/regionfiles/sd04	609	130	31710	44124
+resources/levels/smugglersden/RegionFiles/sd04.big	smugglersden/regionfiles/smweapons	1	0	12	24
+resources/levels/smugglersden/RegionFiles/sd05.big	smugglersden/regionfiles/sd05	426	63	17801	28551
+resources/levels/smugglersden/RegionFiles/sd05.big	smugglersden/regionfiles/smweapons	1	0	12	24
+resources/levels/smugglersden/RegionFiles/sd06.big	smugglersden/regionfiles/sd06	54	16	2904	4725
+resources/levels/smugglersden/RegionFiles/sd06.big	smugglersden/regionfiles/smweapons	1	0	12	24
+resources/levels/smugglersden/RegionFiles/sd07.big	smugglersden/regionfiles/sd07	716	55	30481	45285
+resources/levels/smugglersden/RegionFiles/sd07.big	smugglersden/regionfiles/smweapons	1	0	12	24
+resources/levels/smugglersden/RegionFiles/sd_music.big	smugglersden/regionfiles/sd_music	1	0	12	24
+resources/levels/smugglersden/RegionFiles/smweapons.big	smugglersden/regionfiles/smweapons	1	0	12	24
+resources/levels/ui/mainmenu.big	ui/mainmenu	24	0	84	168
+resources/levels/ui/mainsky.big	ui/mainsky	1	0	2	4
+resources/levels/uppercitynew/skies.big	uppercitynew/skies	3	0	210	185
+resources/levels/uppercitynew/uc01a.big	uppercitynew/uc01a	279	42	12470	21881
+resources/levels/uppercitynew/uc01b.big	uppercitynew/uc01b	289	52	13268	20838
+resources/levels/uppercitynew/uc02a.big	uppercitynew/uc02a	557	92	18309	32613
+resources/levels/uppercitynew/uc02a2.big	uppercitynew/uc02a	557	92	18309	32613
+resources/levels/uppercitynew/uc02b.big	uppercitynew/uc02b	387	27	14990	23357
+resources/levels/uppercitynew/uc02b2.big	uppercitynew/uc02b2	49	6	2442	4058
+resources/levels/uppercitynew/uc03a.big	uppercitynew/uc03a	524	105	22762	37887
+resources/levels/uppercitynew/uc03a2.big	uppercitynew/uc03a	524	105	22762	37887
+resources/levels/uppercitynew/uc03b.big	uppercitynew/uc03b	253	33	10524	17296
+resources/levels/uppercitynew/uc04a.big	uppercitynew/uc04a	219	22	8297	13675
+resources/levels/uppercitynew/uc04b.big	uppercitynew/uc04b	597	76	19120	32870
+resources/levels/uppercitynew/uc05.big	uppercitynew/uc05	403	50	19252	30952
+resources/levels/uppercitynew/uc06a.big	uppercitynew/uc06a	383	57	14011	24636
+resources/levels/uppercitynew/uc06b.big	uppercitynew/uc06b	236	23	7532	13077
+resources/levels/uppercitynew/uc07.big	uppercitynew/uc07	541	62	17508	32087
+resources/levels/uppercitynew/uc07b.big	uppercitynew/uc07b	67	9	3344	5397
+resources/levels/wharves/regionfiles/wh01.big	wharves/regionfiles/wh01	305	109	21403	34802
+resources/levels/wharves/regionfiles/wh01.big	wharves/regionfiles/whweapons	1	0	12	24
+resources/levels/wharves/regionfiles/wh02.big	wharves/regionfiles/wh02	229	149	15995	27209
+resources/levels/wharves/regionfiles/wh02.big	wharves/regionfiles/whweapons	1	0	12	24
+resources/levels/wharves/regionfiles/wh03.big	wharves/regionfiles/wh03	45	42	3492	6010
+resources/levels/wharves/regionfiles/wh03.big	wharves/regionfiles/whweapons	1	0	12	24
+resources/levels/wharves/regionfiles/wh04.big	wharves/regionfiles/wh04	26	10	1420	2431
+resources/levels/wharves/regionfiles/wh04.big	wharves/regionfiles/whweapons	1	0	12	24
+resources/levels/wharves/regionfiles/wh05.big	wharves/regionfiles/wh05	385	78	24002	38573
+resources/levels/wharves/regionfiles/wh05.big	wharves/regionfiles/whweapons	1	0	12	24
+resources/levels/wharves/regionfiles/wh08.big	wharves/regionfiles/wh08	41	17	1712	2784
+resources/levels/wharves/regionfiles/wh08.big	wharves/regionfiles/whweapons	1	0	12	24
+resources/levels/wharves/regionfiles/wh09.big	wharves/regionfiles/wh09	336	121	25021	41633
+resources/levels/wharves/regionfiles/wh09.big	wharves/regionfiles/whweapons	1	0	12	24
+resources/levels/wharves/regionfiles/wh10.big	wharves/regionfiles/wh10	41	42	4006	5321
+resources/levels/wharves/regionfiles/wh10.big	wharves/regionfiles/whweapons	1	0	12	24
+resources/levels/wharves/regionfiles/wh11.big	wharves/regionfiles/wh11	438	69	16686	27757
+resources/levels/wharves/regionfiles/wh11.big	wharves/regionfiles/whweapons	1	0	12	24
+resources/levels/wharves/regionfiles/wh12.big	wharves/regionfiles/wh12	106	88	5992	9223
+resources/levels/wharves/regionfiles/wh12.big	wharves/regionfiles/whweapons	1	0	12	24
+resources/levels/wharves/regionfiles/wh13.big	wharves/regionfiles/wh13	362	61	15906	28281
+resources/levels/wharves/regionfiles/wh13.big	wharves/regionfiles/whweapons	1	0	12	24
+resources/levels/wharves/regionfiles/whsky.big	wharves/regionfiles/whsky	25	1	896	681
+resources/levels/wharves/regionfiles/whweapons.big	wharves/regionfiles/whweapons	1	0	12	24

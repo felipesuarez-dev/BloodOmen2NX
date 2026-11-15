@@ -3,12 +3,15 @@
 // reported; this tool never stops on the first failure.
 
 #include <algorithm>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <tuple>
 #include <vector>
 
+#include "bo2/engine/cell_group.hpp"
 #include "bo2/engine/data_check.hpp"
 
 namespace {
@@ -16,10 +19,23 @@ namespace {
 struct Options {
     std::filesystem::path root;
     std::filesystem::path failures;
+    std::filesystem::path cell_groups;
+};
+
+// The load numbers of one cell group the reader accepts. `--cell-groups`
+// writes them as a baseline (docs/DATA_COVERAGE.md, "Cell group baseline").
+struct CellGroupRow {
+    std::string container;
+    std::string entry;
+    std::uint32_t models = 0;
+    std::uint32_t skipped = 0;
+    std::size_t triangles = 0;
+    std::size_t positions = 0;
 };
 
 int usage() {
-    std::cerr << "usage: bo2nx_check_data <directory> [--failures <file>]\n";
+    std::cerr << "usage: bo2nx_check_data <directory> [--failures <file>] "
+                 "[--cell-groups <file>]\n";
     return 2;
 }
 
@@ -35,6 +51,8 @@ int main(int argc, char** argv) {
         const std::string argument = argv[index];
         if (argument == "--failures" && index + 1 < argc) {
             options.failures = argv[++index];
+        } else if (argument == "--cell-groups" && index + 1 < argc) {
+            options.cell_groups = argv[++index];
         } else {
             return usage();
         }
@@ -59,12 +77,31 @@ int main(int argc, char** argv) {
     std::sort(containers.begin(), containers.end());
 
     bo2::engine::DataReport report;
+    std::vector<CellGroupRow> cell_groups;
     bool load_failed = false;
     for (const std::filesystem::path& path : containers) {
         const std::string container = path.string();
         try {
             const bo2::engine::BigArchive archive = bo2::engine::BigArchive::load(container);
             bo2::engine::check_archive(archive, container, report);
+            if (!options.cell_groups.empty()) {
+                const std::string relative = path.lexically_relative(options.root).string();
+                for (const bo2::engine::BigEntry& entry : archive.entries()) {
+                    if (entry.type != "cellgrup") {
+                        continue;
+                    }
+                    try {
+                        const bo2::engine::LevelGeometry geometry = bo2::engine::parse_cell_group(
+                            archive.extract(entry), entry.symbols, archive.names());
+                        cell_groups.push_back(CellGroupRow{
+                            relative, entry.name, geometry.model_count, geometry.skipped_models,
+                            geometry.triangles.size(), geometry.positions.size()});
+                    } catch (const std::exception&) {
+                        // The failure is already in the report: the baseline
+                        // lists only the groups the reader accepts.
+                    }
+                }
+            }
         } catch (const std::exception& error) {
             std::cout << "load-fail " << container << ": " << error.what() << '\n';
             load_failed = true;
@@ -101,6 +138,24 @@ int main(int argc, char** argv) {
             stream << failure.container << '\t' << failure.type << '\t' << failure.entry << '\t'
                    << failure.message << '\n';
         }
+    }
+
+    if (!options.cell_groups.empty()) {
+        std::sort(cell_groups.begin(), cell_groups.end(),
+                  [](const CellGroupRow& left, const CellGroupRow& right) {
+                      return std::tie(left.container, left.entry) <
+                             std::tie(right.container, right.entry);
+                  });
+        std::ofstream stream(options.cell_groups);
+        if (!stream) {
+            std::cerr << "bo2nx_check_data: cannot write " << options.cell_groups.string() << '\n';
+            return 2;
+        }
+        for (const CellGroupRow& row : cell_groups) {
+            stream << row.container << '\t' << row.entry << '\t' << row.models << '\t'
+                   << row.skipped << '\t' << row.triangles << '\t' << row.positions << '\n';
+        }
+        std::cout << "cell groups " << cell_groups.size() << '\n';
     }
     return load_failed ? 1 : 0;
 }
