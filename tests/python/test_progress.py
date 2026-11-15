@@ -140,13 +140,13 @@ class TreemapTest(unittest.TestCase):
             self.assertLessEqual(x + w, 6 + 1e-9)
             self.assertLessEqual(y + h, 4 + 1e-9)
 
-    def test_blocks_skip_external_rows_and_split_by_status(self):
-        rows = [(0x400000, "translated"), (0x400100, "wip"), (0x400300, "todo"),
-                (0x410000, "external"), (0x410040, "todo"), (0x410080, "external")]
-        blocks = progress.treemap_blocks(rows)
-        self.assertEqual([b["start"] for b in blocks], [0x400000, 0x410000])
-        self.assertEqual((blocks[0]["done"], blocks[0]["wip"], blocks[0]["bytes"]), (0x100, 0x200, 0x10000))
-        self.assertEqual((blocks[1]["functions"], blocks[1]["bytes"]), (1, 0x40))
+    def test_functions_skip_external_rows_and_end_at_the_next_row(self):
+        rows = [(0x400000, "translated", "script"), (0x400100, "wip", "script"), (0x400300, "todo", "unknown"),
+                (0x410000, "external", "lib"), (0x410040, "todo", "unknown"), (0x410080, "external", "lib")]
+        functions = progress.treemap_functions(rows)
+        self.assertEqual([f["address"] for f in functions], [0x400000, 0x400100, 0x400300, 0x410040])
+        self.assertEqual([f["bytes"] for f in functions], [0x100, 0x200, 0xFD00, 0x40])
+        self.assertEqual([f["subsystem"] for f in functions], ["script", "script", "unknown", "unknown"])
 
     def test_the_committed_map_is_current(self):
         self.assertEqual(progress.TREEMAP.read_text(encoding="utf-8"),

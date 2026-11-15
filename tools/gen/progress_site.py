@@ -45,7 +45,7 @@ TEXT = {
         "features": "Plataforma",
         "state": {"done": "lista", "partial": "parcial", "todo": "pendiente"},
         "code_map": "Mapa del código",
-        "code_map_alt": "Mapa del código de bo2.exe por bloques de 64 KiB: verde lo traducido, ámbar lo que está en curso",
+        "code_map_alt": "Mapa del código de bo2.exe: un rectángulo por función, del tamaño de su código y agrupado por sistema; verde lo traducido, ámbar lo que está en curso",
         "milestones": "Hitos",
         "milestone_state": {"done": "completo", "now": "en curso", "next": "sin iniciar"},
         "milestone_names": [
@@ -110,7 +110,7 @@ TEXT = {
         "features": "Platform",
         "state": {"done": "done", "partial": "partial", "todo": "to do"},
         "code_map": "Code map",
-        "code_map_alt": "Map of the bo2.exe code by 64 KiB block: green is translated, amber is in progress",
+        "code_map_alt": "Map of the bo2.exe code: one rectangle per function, sized by its code and grouped by system; green is translated, amber is in progress",
         "milestones": "Milestones",
         "milestone_state": {"done": "done", "now": "in progress", "next": "not started"},
         "milestone_names": [
@@ -292,7 +292,7 @@ def build_page(lang: str, m: dict, systems: list[tuple[str, int, int]], levels: 
     out += ["</div>", "</section>"]
 
     out += ['<section class="map">', f"<h2>{_e(t['code_map'])}</h2>",
-            f'<img src="{t["root"]}progress.svg" alt="{_e(t["code_map_alt"])}" width="960" height="300" loading="lazy">',
+            f'<img src="{t["root"]}progress.svg" alt="{_e(t["code_map_alt"])}" width="960" height="480" loading="lazy">',
             "</section>"]
 
     out += ["<section>", f"<h2>{_e(t['milestones'])}</h2>", '<ol class="steps">']

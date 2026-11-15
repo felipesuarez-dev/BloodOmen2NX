@@ -80,7 +80,7 @@ El original se usa como referencia; no se distribuye.
 
 Mapa de funciones: 35 553 filas: 85 traducidas, 165 en curso, 16 701 pendientes, 18 602 externas (no son código del juego).
 
-![Mapa del código del juego: un rectángulo por cada 64 KiB de bo2.exe, del tamaño de su código, más verde cuanto más traducido y ámbar si solo está en curso](docs/progress.svg)
+![Mapa del código del juego: un rectángulo por cada función de bo2.exe, del tamaño de su código y agrupado por sistema; verde lo traducido y ámbar lo que está en curso](docs/progress.svg)
 
 La lista de capítulos está en [`docs/LEVELS.md`](docs/LEVELS.md). Los capítulos completables y las características de plataforma se definen en [`tools/gen/progress_data.py`](tools/gen/progress_data.py).
 <!-- progress:end -->

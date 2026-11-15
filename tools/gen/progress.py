@@ -9,11 +9,10 @@ generated regions, rewritten from the same numbers:
 
 It also writes the progress page served by GitHub Pages from docs/
 (docs/index.html in Spanish, docs/en/index.html in English; built by
-tools/gen/progress_site.py from the same numbers) and docs/progress.svg, a map of the
-game's code: one rectangle per
-64 KiB block of bo2.exe addresses, sized by the code bytes of its game
-functions (the span from each function to the next row of the map) and
-coloured by the share that is translated (green) or in progress (amber).
+tools/gen/progress_site.py from the same numbers) and docs/progress.svg, a
+treemap of the game's code: one rectangle per game function, sized by its
+code bytes (the span from the function to the next row of the map), grouped
+by subsystem and coloured by status (green translated, amber in progress).
 
 Inputs:
   re/FUNCTION_MAP.csv       address,name,subsystem,status,notes
@@ -36,7 +35,6 @@ from urllib.parse import quote
 ROOT = Path(__file__).resolve().parents[2]
 FUNCTION_MAP = ROOT / "re" / "FUNCTION_MAP.csv"
 TREEMAP = ROOT / "docs" / "progress.svg"
-BLOCK_BITS = 16  # one rectangle per 64 KiB of addresses
 PROGRESS = ("<!-- progress:start -->", "<!-- progress:end -->")
 BADGES = ("<!-- badges:start -->", "<!-- badges:end -->")
 
@@ -61,8 +59,8 @@ TEXT = {
             "platform features are in [`tools/gen/progress_data.py`](tools/gen/progress_data.py)."
         ),
         "treemap": (
-            "![Map of the game code: one rectangle per 64 KiB of bo2.exe, sized by code bytes, "
-            "the greener the more of it is translated, amber when it is only in progress](docs/progress.svg)"
+            "![Map of the game code: one rectangle per function of bo2.exe, sized by its code and grouped by "
+            "system; green is translated, amber is in progress](docs/progress.svg)"
         ),
         "phase": "phase",
         "phase_state": "in progress",
@@ -88,8 +86,8 @@ TEXT = {
             "[`tools/gen/progress_data.py`](tools/gen/progress_data.py)."
         ),
         "treemap": (
-            "![Mapa del código del juego: un rectángulo por cada 64 KiB de bo2.exe, del tamaño de "
-            "su código, más verde cuanto más traducido y ámbar si solo está en curso](docs/progress.svg)"
+            "![Mapa del código del juego: un rectángulo por cada función de bo2.exe, del tamaño de su "
+            "código y agrupado por sistema; verde lo traducido y ámbar lo que está en curso](docs/progress.svg)"
         ),
         "phase": "fase",
         "phase_state": "en curso",
@@ -186,34 +184,29 @@ def measure() -> dict:
     }
 
 
-def load_map_rows() -> list[tuple[int, str]]:
-    """(address, status) of every row of the function map, by address."""
+def load_map_rows() -> list[tuple[int, str, str]]:
+    """(address, status, subsystem) of every row of the function map, by address."""
     rows = []
     if not FUNCTION_MAP.exists():
         return rows
     with FUNCTION_MAP.open(newline="", encoding="utf-8") as fh:
         for row in csv.DictReader(fh):
-            rows.append((int(row["address"], 16), (row.get("status") or "").strip().lower()))
+            rows.append((int(row["address"], 16), (row.get("status") or "").strip().lower(),
+                         (row.get("subsystem") or "unknown").strip() or "unknown"))
     rows.sort()
     return rows
 
 
-def treemap_blocks(rows: list[tuple[int, str]]) -> list[dict]:
-    """Code bytes per 64 KiB block of the game functions, split by status."""
-    blocks: dict[int, dict] = {}
-    for (address, status), following in zip(rows, rows[1:] + [(rows[-1][0] + 16, "")] if rows else []):
+def treemap_functions(rows: list[tuple[int, str, str]]) -> list[dict]:
+    """The game functions with their code bytes (the span to the next row of
+    the map), status and subsystem; external rows only end a span."""
+    out = []
+    for (address, status, subsystem), following in zip(rows, rows[1:] + [(rows[-1][0] + 16, "", "")] if rows else []):
         if status == "external":
             continue
-        size = max(following[0] - address, 1)
-        block = blocks.setdefault(address >> BLOCK_BITS, {"start": address >> BLOCK_BITS << BLOCK_BITS,
-                                                           "bytes": 0, "done": 0, "wip": 0, "functions": 0})
-        block["bytes"] += size
-        block["functions"] += 1
-        if status in ("translated", "verified"):
-            block["done"] += size
-        elif status == "wip":
-            block["wip"] += size
-    return [blocks[key] for key in sorted(blocks)]
+        out.append({"address": address, "bytes": max(following[0] - address, 1), "status": status,
+                    "subsystem": subsystem})
+    return out
 
 
 def squarify(sizes: list[float], x: float, y: float, w: float, h: float) -> list[tuple[float, float, float, float]]:
@@ -262,46 +255,73 @@ def mix(low: tuple[int, int, int], high: tuple[int, int, int], t: float) -> str:
     return "#%02x%02x%02x" % tuple(round(a + (b - a) * t) for a, b in zip(low, high))
 
 
-def build_treemap(rows: list[tuple[int, str]]) -> str:
-    """The SVG of docs/progress.svg; deterministic for a given map."""
-    width, height, top, bottom = 960, 300, 34, 30
-    blocks = treemap_blocks(rows)
-    rects = squarify([b["bytes"] for b in blocks], 0, top, width, height - top - bottom)
-    grey, green_low, green_high, amber = (45, 51, 59), (35, 90, 50), (63, 185, 80), (158, 106, 3)
-    total = sum(b["bytes"] for b in blocks)
-    done = sum(b["done"] for b in blocks)
-    wip = sum(b["wip"] for b in blocks)
+def build_treemap(rows: list[tuple[int, str, str]]) -> str:
+    """The SVG of docs/progress.svg: one rectangle per game function, sized by
+    its code bytes and grouped by subsystem (the largest first), coloured by
+    status. Deterministic for a given map. Each colour is one path so the file
+    stays small; functions too small to see are left to their group's fill."""
+    width, height, top, bottom = 960, 480, 34, 30
+    functions = treemap_functions(rows)
+    grey, edge, amber, green = "#2d333b", "#0d1117", "#b07d1a", "#3fb950"
+    groups: dict[str, list[dict]] = {}
+    for function in functions:
+        groups.setdefault(function["subsystem"], []).append(function)
+    names = sorted(groups, key=lambda n: (-sum(f["bytes"] for f in groups[n]), n))
+    total = sum(f["bytes"] for f in functions)
+    done = sum(f["bytes"] for f in functions if f["status"] in ("translated", "verified"))
+    wip = sum(f["bytes"] for f in functions if f["status"] == "wip")
     out = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
         f'viewBox="0 0 {width} {height}" font-family="Segoe UI, Helvetica, Arial, sans-serif">',
-        f'<rect width="{width}" height="{height}" fill="#0d1117"/>',
-        f'<text x="8" y="22" fill="#e6edf3" font-size="14">bo2.exe game code by 64 KiB block: '
-        f"{done / total * 100:.2f}% of the bytes translated, {wip / total * 100:.2f}% in progress</text>"
+        f'<rect width="{width}" height="{height}" fill="{edge}"/>',
+        f'<text x="8" y="22" fill="#e6edf3" font-size="14">bo2.exe game code, one rectangle per function, grouped '
+        f"by system: {done / total * 100:.2f}% of the bytes translated, {wip / total * 100:.2f}% in progress</text>"
         if total else '<text x="8" y="22" fill="#e6edf3" font-size="14">no game functions</text>',
     ]
-    for block, (x, y, w, h) in zip(blocks, rects):
-        share = block["done"] / block["bytes"]
-        partial = block["wip"] / block["bytes"]
-        if share > 0:
-            fill = mix(green_low, green_high, share ** 0.5)
-        elif partial > 0:
-            fill = mix(grey, amber, 0.35 + 0.65 * partial ** 0.5)
-        else:
-            fill = mix(grey, grey, 0)
-        label = f'0x{block["start"]:06x}'
-        out.append(
-            f'<rect x="{x:.1f}" y="{y:.1f}" width="{w:.1f}" height="{h:.1f}" fill="{fill}" '
-            f'stroke="#0d1117" stroke-width="1"><title>{label}: {block["functions"]} functions, '
-            f'{block["bytes"]} bytes, {share * 100:.2f}% translated, {partial * 100:.2f}% in progress'
-            f"</title></rect>"
-        )
-        if w > 50 and h > 14:
-            out.append(f'<text x="{x + 3:.1f}" y="{y + 11:.1f}" fill="#8b949e" font-size="9">{label}</text>')
+    paths = {"todo": [], "wip": [], "done": []}
+    labels = []
+    outlines = []
+    group_rects = squarify([sum(f["bytes"] for f in groups[n]) for n in names], 0, top, width, height - top - bottom)
+    for name, (gx, gy, gw, gh) in zip(names, group_rects):
+        members = groups[name]
+        group_done = sum(f["bytes"] for f in members if f["status"] in ("translated", "verified"))
+        group_wip = sum(f["bytes"] for f in members if f["status"] == "wip")
+        group_bytes = sum(f["bytes"] for f in members)
+        outlines.append(
+            f'<rect x="{gx:.1f}" y="{gy:.1f}" width="{gw:.1f}" height="{gh:.1f}" fill="{grey}" stroke="{edge}" '
+            f'stroke-width="2"><title>{name}: {len(members)} functions, {group_bytes} bytes, '
+            f"{group_done / group_bytes * 100:.1f}% translated, {group_wip / group_bytes * 100:.1f}% in progress"
+            f"</title></rect>")
+        # A large group is split into regions of 64 KiB of addresses, near
+        # to the source files the linker laid out; inside a region (or a small
+        # group) the functions go from the largest down.
+        regions: dict[int, list[dict]] = {}
+        for function in members:
+            regions.setdefault(function["address"] >> 16 if len(members) > 400 else 0, []).append(function)
+        keys = sorted(regions, key=lambda k: (-sum(f["bytes"] for f in regions[k]), k))
+        region_rects = squarify([sum(f["bytes"] for f in regions[k]) for k in keys], gx, gy, gw, gh)
+        for region_key, (rx, ry, rw, rh) in zip(keys, region_rects):
+            inside = sorted(regions[region_key], key=lambda f: (-f["bytes"], f["address"]))
+            if len(regions) > 1:
+                outlines.append(f'<rect x="{rx:.1f}" y="{ry:.1f}" width="{rw:.1f}" height="{rh:.1f}" fill="none" '
+                                f'stroke="{edge}" stroke-width="1.2"/>')
+            for function, (x, y, w, h) in zip(inside, squarify([f["bytes"] for f in inside], rx, ry, rw, rh)):
+                key = "done" if function["status"] in ("translated", "verified") else (
+                    "wip" if function["status"] == "wip" else "todo")
+                if key == "todo" and w * h < 6:
+                    continue
+                paths[key].append(f"M{x:.1f} {y:.1f}h{w:.1f}v{h:.1f}h{-w:.1f}z")
+        if gw > 46 and gh > 16:
+            labels.append(f'<text x="{gx + 4:.1f}" y="{gy + 13:.1f}" fill="#e6edf3" font-size="11" '
+                          f'paint-order="stroke" stroke="{edge}" stroke-width="3">'
+                          f'{"unclassified" if name == "unknown" else name}</text>')
+    out += outlines
+    out.append(f'<path d="{"".join(paths["todo"])}" fill="{grey}" stroke="{edge}" stroke-width="0.4"/>')
+    out.append(f'<path d="{"".join(paths["wip"])}" fill="{amber}" stroke="{edge}" stroke-width="0.4"/>')
+    out.append(f'<path d="{"".join(paths["done"])}" fill="{green}" stroke="{edge}" stroke-width="0.4"/>')
+    out += labels
     legend_y = height - 10
-    for offset, (colour, text) in enumerate(
-        [(mix(grey, grey, 0), "to do"), (mix(grey, amber, 0.7), "in progress"),
-         (mix(green_low, green_high, 1.0), "translated")]
-    ):
+    for offset, (colour, text) in enumerate([(grey, "to do"), (amber, "in progress"), (green, "translated")]):
         x = 8 + offset * 130
         out.append(f'<rect x="{x}" y="{legend_y - 10}" width="12" height="12" fill="{colour}"/>')
         out.append(f'<text x="{x + 18}" y="{legend_y}" fill="#c9d1d9" font-size="12">{text}</text>')

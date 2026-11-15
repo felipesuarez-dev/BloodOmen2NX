@@ -80,7 +80,7 @@ The original is used as a reference, not shipped.
 
 Function map: 35,553 rows: 85 translated, 165 in progress, 16,701 to do, 18,602 external (not game code).
 
-![Map of the game code: one rectangle per 64 KiB of bo2.exe, sized by code bytes, the greener the more of it is translated, amber when it is only in progress](docs/progress.svg)
+![Map of the game code: one rectangle per function of bo2.exe, sized by its code and grouped by system; green is translated, amber is in progress](docs/progress.svg)
 
 The chapter list is in [`docs/LEVELS.md`](docs/LEVELS.md). Chapter flags and platform features are in [`tools/gen/progress_data.py`](tools/gen/progress_data.py).
 <!-- progress:end -->
