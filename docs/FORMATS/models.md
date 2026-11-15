@@ -74,23 +74,39 @@ u32   2
 
 ### `prims`
 
+Read by `FUN_0061de60` (one group; the loader `FUN_0061ed40` passes the
+`rmd` version, 2 in every model of the game) and written by `FUN_0067d270`,
+whose debug labels name the fields. Ints are aligned to 4 and u16 to 2:
+
 ```
 u32 group count
 per group:
-  u32  material index
-  u32  triangle count
-  u32  index count (3 × triangle count)
-  u16  vertex indices[index count]
-  u16  flag
-  u8   extra[flag == 0xffff ? 40 : 38]
+  u32  material index                       (MaterialIdx)
+  u16  triangle count                        (NTris)
+  u16  strip count                           (NStrips)
+  u16  strip length[strip count], then pad to 4
+  u32  index count                           (Tri_Coords)
+  u16  vertex indices[index count], then pad to 4
+  version >= 1:
+    u32  a; when its high half is not 0, two u16 follow the 16 bytes below
+    u32  n2, then n2 × 4 bytes
+    u32  n3, then n3 × 8 bytes
+    u32  n4, then n4 × 16 bytes
+    16 bytes
+    (two u16, see `a`)
+  version >= 2:
+    u16  adc count (NAdcs), then that many bytes, then pad to 4
 ```
 
-The vertex indices are triangle lists and index the model's `position`
-array. The extra record carries the strip/ADC data that the original
-dumper prints at `0x67d270` (`MaterialIdx`, `NTris`, `NStrips`,
-`strip_lens`, `Tri_Coords`, `NAdcs`). The on-disk layout of the extra is
-observed, not fully decompiled; the triangle list is the render
-geometry.
+Measured with a reference reader of this layout on every model: the 5,024
+model assets with a mesh (10,097 groups) and the 42,108 models inside the
+cell groups (74,825 groups) are read to the last byte; every group has no
+strips and its index count is three times its triangle count (a triangle
+list); `a` has a non-zero high half in every group; `n2`, `n3` and `n4` are
+0 everywhere except in eight groups, those of `hyldencity/t_lamp/t_lamp` and
+`hyldencity/t_lampb/t_lampb` in `hc_10.big`. The meaning of `a` and of the
+three arrays is not read. The earlier description of the tail as "a u16
+flag, then 38 or 40 bytes" matched only the groups whose arrays are empty.
 
 ### `texture`
 
