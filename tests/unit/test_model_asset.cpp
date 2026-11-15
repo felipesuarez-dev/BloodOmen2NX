@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+#include "bo2/common/reader.hpp"
 #include "bo2/engine/big_archive.hpp"
 #include "bo2/engine/cell_group.hpp"
 #include "bo2/engine/dds.hpp"
@@ -386,6 +387,36 @@ void test_texture_blend_counts(const std::filesystem::path& root) {
     }
 }
 
+// The `$default` texture of code.big is a DXT2 that the reader takes with
+// the DXT3 layout: 64x64, 7 mips, 5,616 bytes and the first pixel
+// (41, 36, 33, 255) (BO2NX-118).
+void test_default_texture(const std::filesystem::path& root) {
+    const std::filesystem::path code = root / "media/gogames/bo2/code.big";
+    if (!std::filesystem::exists(code)) {
+        return;
+    }
+    const bo2::engine::BigArchive archive = bo2::engine::BigArchive::load(code.string());
+    const bo2::engine::BigEntry* entry = archive.find("texture", "$default");
+    CHECK(entry != nullptr);
+    if (entry == nullptr) {
+        return;
+    }
+    const std::vector<std::uint8_t> data = archive.extract(*entry);
+    CHECK(data.size() == 5616);
+    CHECK(data.size() >= 88 && std::string(data.begin() + 84, data.begin() + 88) == "DXT2");
+    const bo2::common::Reader reader(data);
+    CHECK(reader.u32(28) == 7);
+    const bo2::engine::Image image = bo2::engine::decode_dds(data);
+    CHECK(image.width == 64 && image.height == 64);
+    CHECK(image.rgba.size() == 64 * 64 * 4);
+    if (image.rgba.size() >= 4) {
+        CHECK(image.rgba[0] == 41);
+        CHECK(image.rgba[1] == 36);
+        CHECK(image.rgba[2] == 33);
+        CHECK(image.rgba[3] == 255);
+    }
+}
+
 // The load numbers of every cell group the reader accepts, pinned in
 // tests/data/cell_group_baseline.tsv (docs/DATA_COVERAGE.md, "Cell group
 // baseline"). The container paths of the file are relative to the directory
@@ -529,6 +560,7 @@ int main() {
         test_cell_groups_with_attribute_arrays(root);
         test_model_attribute_counts(root);
         test_texture_blend_counts(root);
+        test_default_texture(root);
         test_cell_group_baseline(root);
     } catch (const std::exception& error) {
         std::cerr << "model asset test: " << error.what() << '\n';

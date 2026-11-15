@@ -3,7 +3,8 @@
 Status: **verified**. Every `texture` entry checked in the 179 `.big`
 files carries a standard DDS payload (`DDS ` magic): 22,483 entries,
 0 exceptions. Implementation: `src/engine/dds.cpp`; it decodes DXT1,
-DXT3, DXT5 and A8R8G8B8 and keeps the top mip.
+DXT2, DXT3, DXT4, DXT5 and A8R8G8B8 and keeps the top mip. DXT2 has the
+DXT3 bit layout and DXT4 the DXT5 one; only the FourCC differs.
 
 ## Container
 
@@ -75,7 +76,8 @@ exports each top mip to PNG with an `index.json` (entry, size, format).
 The level containers hold 44 groups of repeated texture names with
 different payloads; the exporter keeps every copy with a `~N` suffix.
 `slums/sl01.big` holds 239 textures: 189 DXT1, 32 DXT3, 17 DXT5 and one
-uncompressed 32-bit image; all 239 decode.
+uncompressed 32-bit image; all 239 decode. Pillow does not know DXT2 or
+DXT4, so the exporter changes their FourCC to DXT3 or DXT5 on a copy.
 
 ```sh
 python3 tools/bo2fmt/textures.py export \

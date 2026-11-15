@@ -1,4 +1,5 @@
 import json
+import os
 import struct
 import sys
 import tempfile
@@ -41,6 +42,22 @@ class TexturesTest(unittest.TestCase):
     def test_dds_info_rejects_other_payloads(self):
         with self.assertRaises(textures.TextureError):
             textures.dds_info(b"\0" * 128)
+
+    def test_decodable_dds_changes_dxt2_and_dxt4(self):
+        dxt2 = bytearray(rgba_dds(1, 1))
+        dxt2[84:88] = b"DXT2"
+        changed = textures.decodable_dds(bytes(dxt2))
+        self.assertEqual(changed[84:88], b"DXT3")
+        self.assertEqual(bytes(dxt2)[84:88], b"DXT2")
+        self.assertEqual(changed[88:], bytes(dxt2)[88:])
+
+        dxt4 = bytearray(rgba_dds(1, 1))
+        dxt4[84:88] = b"DXT4"
+        self.assertEqual(textures.decodable_dds(bytes(dxt4))[84:88], b"DXT5")
+
+        dxt1 = bytearray(rgba_dds(1, 1))
+        dxt1[84:88] = b"DXT1"
+        self.assertEqual(textures.decodable_dds(bytes(dxt1))[84:88], b"DXT1")
 
     def test_safe_target_rejects_traversal(self):
         out = Path("/tmp/out")
@@ -110,6 +127,28 @@ class TexturesTest(unittest.TestCase):
             from PIL import Image
             with Image.open(out / "Hud" / "curser~1.png") as image:
                 self.assertEqual(image.getpixel((0, 0)), (0x00, 0xFF, 0x00, 0xFF))
+
+
+    @unittest.skipIf(PIL is None, "Pillow is not installed")
+    def test_export_code_big_writes_dxt2(self):
+        root = Path(os.environ.get("BO2NX_ASSETS_DIR", ""))
+        container_path = root / "media/gogames/bo2/code.big"
+        if not container_path.exists():
+            self.skipTest("code.big is not available")
+        with tempfile.TemporaryDirectory() as directory:
+            out = Path(directory) / "out"
+            args = type("Args", (), {"container": str(container_path), "out": str(out),
+                                     "match": ""})
+            self.assertEqual(textures.cmd_export(args), 0)
+            index = json.loads((out / "index.json").read_text())
+            self.assertEqual(len(index), 66)
+            self.assertFalse(any("error" in record for record in index))
+            self.assertEqual(sum(1 for _ in out.rglob("*.png")), 66)
+            record = next(record for record in index if record["entry"] == "$default")
+            self.assertEqual(record["format"], "DXT2")
+            from PIL import Image
+            with Image.open(out / record["png"]) as image:
+                self.assertEqual(image.getpixel((0, 0)), (41, 36, 33, 255))
 
 
 if __name__ == "__main__":

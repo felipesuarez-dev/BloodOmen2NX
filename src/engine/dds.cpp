@@ -182,8 +182,10 @@ Image decode_dds(const std::vector<std::uint8_t>& data) {
 
     if ((pixel_flags & kPfFourCc) != 0) {
         const bool dxt1 = fourcc == kDxt1;
-        const bool dxt3 = fourcc == kDxt3;
-        const bool dxt5 = fourcc == kDxt5;
+        // DXT2 has the bit layout of DXT3 and DXT4 the one of DXT5; only the
+        // FourCC changes (docs/FORMATS/textures.md).
+        const bool dxt3 = fourcc == kDxt3 || fourcc == kDxt2;
+        const bool dxt5 = fourcc == kDxt5 || fourcc == kDxt4;
         if (!dxt1 && !dxt3 && !dxt5) {
             throw common::ParseError("unsupported DDS fourcc");
         }

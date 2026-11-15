@@ -5,7 +5,9 @@
     python3 tools/bo2fmt/textures.py export <container.big> --out <dir> [--match text]
 
 Every `texture` entry is a plain DDS file (docs/FORMATS/textures.md), so the
-top mip is decoded with Pillow (DXT1, DXT3, DXT5 and uncompressed RGBA).
+top mip is decoded with Pillow (DXT1, DXT2, DXT3, DXT4, DXT5 and uncompressed
+RGBA). Pillow does not know DXT2 or DXT4, so their FourCC is changed to DXT3
+or DXT5 on a copy before opening it.
 `export` keeps the entry path, writes one PNG per texture entry and an
 `index.json` with the size and pixel format of each one. A container can
 hold the same texture name more than once (with different payloads); the
@@ -43,12 +45,28 @@ def dds_info(data: bytes) -> dict:
     return {"width": width, "height": height, "mips": max(mips, 1), "format": pixel_format}
 
 
+def decodable_dds(data: bytes) -> bytes:
+    """Return a copy of the DDS with DXT2 changed to DXT3 and DXT4 to DXT5.
+
+    Both pairs share the bit layout; only the FourCC differs
+    (docs/FORMATS/textures.md).
+    """
+    if len(data) < 88:
+        return data
+    fourcc = data[84:88]
+    if fourcc == b"DXT2":
+        return data[:84] + b"DXT3" + data[88:]
+    if fourcc == b"DXT4":
+        return data[:84] + b"DXT5" + data[88:]
+    return data
+
+
 def to_png(data: bytes) -> bytes:
     try:
         from PIL import Image
     except ImportError as error:
         raise TextureError("Pillow is required to decode DDS (python3-pil)") from error
-    with Image.open(io.BytesIO(data)) as image:
+    with Image.open(io.BytesIO(decodable_dds(data))) as image:
         out = io.BytesIO()
         image.convert("RGBA").save(out, "PNG")
         return out.getvalue()
@@ -102,7 +120,7 @@ def cmd_export(args) -> int:
             png = to_png(entry.data)
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(png)
-        except (TextureError, OSError, ValueError) as error:
+        except (TextureError, OSError, ValueError, NotImplementedError) as error:
             record["error"] = str(error)
             failed += 1
         else:

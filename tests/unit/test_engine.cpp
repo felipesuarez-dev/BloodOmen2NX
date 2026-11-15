@@ -729,6 +729,40 @@ void test_dds() {
     CHECK(throws([&] { bo2::engine::decode_dds(truncated); }));
 }
 
+// DXT2 has the DXT3 bit layout and DXT4 the DXT5 one: the same payload
+// decoded with both FourCC gives the same image (docs/FORMATS/textures.md).
+void test_dds_dxt2_dxt4() {
+    std::vector<std::uint8_t> block3;
+    for (int index = 0; index < 8; ++index) {
+        block3.push_back(static_cast<std::uint8_t>(index * 17));
+    }
+    put16(block3, 0xF800);
+    put16(block3, 0x07E0);
+    put32(block3, 0x55555555U);
+    const auto dxt3 = bo2::engine::decode_dds(
+        make_dds(4, 4, 0x33545844U, 4, 0, 0, 0, 0, 0, block3));
+    const auto dxt2 = bo2::engine::decode_dds(
+        make_dds(4, 4, 0x32545844U, 4, 0, 0, 0, 0, 0, block3));
+    CHECK(dxt2.width == dxt3.width && dxt2.height == dxt3.height);
+    CHECK(dxt2.rgba == dxt3.rgba);
+
+    std::vector<std::uint8_t> block5;
+    block5.push_back(0);
+    block5.push_back(255);
+    for (int index = 0; index < 6; ++index) {
+        block5.push_back(0);
+    }
+    put16(block5, 0xF800);
+    put16(block5, 0x07E0);
+    put32(block5, 0x55555555U);
+    const auto dxt5 = bo2::engine::decode_dds(
+        make_dds(4, 4, 0x35545844U, 4, 0, 0, 0, 0, 0, block5));
+    const auto dxt4 = bo2::engine::decode_dds(
+        make_dds(4, 4, 0x34545844U, 4, 0, 0, 0, 0, 0, block5));
+    CHECK(dxt4.width == dxt5.width && dxt4.height == dxt5.height);
+    CHECK(dxt4.rgba == dxt5.rgba);
+}
+
 // FUN_0056f320: the blend class of a DDS header by its format.
 void test_texture_blend() {
     struct Case {
@@ -1838,6 +1872,7 @@ int main() {
     test_reader();
     test_big();
     test_dds();
+    test_dds_dxt2_dxt4();
     test_texture_blend();
     test_render_sort_order();
     test_math();
