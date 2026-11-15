@@ -2,6 +2,7 @@
 
 #include <exception>
 
+#include "bo2/engine/dds.hpp"
 #include "bo2/engine/pixmap_font.hpp"
 
 namespace bo2::engine {
@@ -12,11 +13,16 @@ void check_texfont(const BigArchive& archive, const BigEntry& entry) {
     static_cast<void>(parse_pixmap_font(archive.extract(entry), entry.symbols, archive.names()));
 }
 
+void check_texture(const BigArchive& archive, const BigEntry& entry) {
+    static_cast<void>(decode_dds(archive.extract(entry)));
+}
+
 }  // namespace
 
 const std::map<std::string, EntryCheck>& entry_checks() {
     static const std::map<std::string, EntryCheck> checks = {
         {"texfont", &check_texfont},
+        {"texture", &check_texture},
     };
     return checks;
 }

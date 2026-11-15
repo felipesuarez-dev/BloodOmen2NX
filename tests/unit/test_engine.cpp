@@ -1312,6 +1312,33 @@ void test_data_check() {
     CHECK(!report.failures[0].message.empty());
 }
 
+// A texture entry that the DDS reader rejects is one failure; the entries
+// after it are still checked (docs/DATA_COVERAGE.md, "texture").
+void test_data_check_texture() {
+    std::vector<std::uint8_t> block;
+    put16(block, 0xF800);
+    put16(block, 0x07E0);
+    put32(block, 0);
+    const std::vector<std::uint8_t> texture = make_dds(4, 4, 0x31545844U, 4, 0, 0, 0, 0, 0, block);
+    std::vector<std::uint8_t> cut = texture;
+    cut.resize(cut.size() / 2);
+    const std::vector<std::uint8_t> data = build_big({
+        {"texture", "tex/two", cut, {}},
+        {"texture", "tex/one", texture, {}},
+    });
+    const bo2::engine::BigArchive archive = bo2::engine::BigArchive::parse(data);
+    bo2::engine::DataReport report;
+    bo2::engine::check_archive(archive, "test.big", report);
+    CHECK(report.containers == 1);
+    const bo2::engine::TypeCount& count = report.types.at("texture");
+    CHECK(count.entries == 2);
+    CHECK(count.checked == 2);
+    CHECK(count.failed == 1);
+    CHECK(report.failures.size() == 1);
+    CHECK(report.failures[0].type == "texture");
+    CHECK(report.failures[0].entry == "tex/two");
+}
+
 // The modlskel record is 104 bytes (FUN_0067bdd0), not the old guessed
 // count + pairs + 96 bytes layout.
 void test_skeleton_bones() {
@@ -1375,6 +1402,7 @@ int main() {
     test_model_attribute_arrays();
     test_pixmap_font();
     test_data_check();
+    test_data_check_texture();
     test_skeleton_bones();
     test_collision_chunk();
     test_cell_animations();
