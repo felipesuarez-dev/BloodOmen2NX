@@ -11,8 +11,9 @@ was checked in the running game.
 Port: `src/engine/script_package.cpp` (the packages),
 `src/engine/script_program.cpp` (linking), `src/engine/script_memory.cpp`
 and `src/engine/script_machine.cpp` (the machine: objects, strings, frames
-and the instructions of "Values and variables"; calls, threads, jumps and
-arithmetic are not ported yet).
+and the instructions of "Values and variables", "Arithmetic and logic" and
+"Flow", with the loop guard; calls, child threads (`0x59` to `0x5b`) and the
+change of state (`0x5e`) are not ported yet).
 
 ## Objects, classes and states
 
@@ -65,7 +66,9 @@ arithmetic are not ported yet).
 - The interpreter returns 1 when the frame ended or when it pushed the
   frame of a call, and 0 when the thread must stop until its next run.
 - A loop guard counts the instructions `0x60` (`DAT_00a6a57c`, reset when
-  no interpreter is running): above 10,000 the frame ends with a warning.
+  no interpreter is running): above 10,000 the frame ends with the warning
+  `WARNING: Scripted loop ran too long: %s, %s` (`0x8ff5d0`), with the name
+  of the class of the object and the name of the method of the body.
 
 ## Instructions
 
@@ -114,7 +117,7 @@ with one operand replace top.
 | `0x35`, `0x36`, *`0x37`* | Floats: less, less or equal, equal |
 | `0x38` | Strings, by address: equal byte by byte (`FUN_0068ec30`); false when an address is 0 |
 | `0x39`, `0x3a`, `0x3b` | Booleans: not, and, or |
-| `0x3c`, *`0x3d`* | Float to integer (truncated) and to boolean |
+| `0x3c`, *`0x3d`* | Float to integer and to boolean. `0x3c` calls `__ftol` (`0x7a3af4`): rounding set to chop, `fistp` to a 64-bit integer, and the cell takes the low 32 bits |
 | `0x3e`, *`0x3f`* | Integer to float and to boolean |
 | *`0x40`*, *`0x41`* | Byte to integer (with sign) and to float |
 | *`0x42`*, *`0x43`*, *`0x44`* | String to integer (`FUN_007a3d4b`), to float (`FUN_007a3e44`) and to boolean |

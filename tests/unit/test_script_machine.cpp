@@ -2,8 +2,10 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <cstring>
 #include <functional>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <string>
 #include <vector>
@@ -328,7 +330,10 @@ struct MachineRun {
     std::unique_ptr<ScriptMachine> machine;
     ScriptThread thread;
 
-    explicit MachineRun(ScriptClass cls) : linked(make_program({std::move(cls)})) {
+    explicit MachineRun(ScriptClass cls) : MachineRun(std::vector<ScriptClass>{std::move(cls)}) {}
+
+    // The objects and the thread belong to the first class.
+    explicit MachineRun(std::vector<ScriptClass> classes) : linked(make_program(std::move(classes))) {
         machine = std::make_unique<ScriptMachine>(linked.program);
         const ScriptObjectId self = machine->create_object(0);
         machine->create_object(0);
@@ -469,8 +474,8 @@ void test_unported_code() {
         MachineRun run(machine_class({op(0x61), op(0x5C)}));
         run.machine->interpret(run.thread);
     }));
-    CHECK(throws([] {
-        MachineRun run(machine_class({op(0x03, 1), op(0x03, 2), op(0x28), op(0x5C)}));
+    CHECK(throws([] {  // a call: not ported yet
+        MachineRun run(machine_class({op(0x48), 0, op(0x5C)}));
         run.machine->interpret(run.thread);
     }));
     CHECK(throws([] {
@@ -485,6 +490,216 @@ void test_unported_code() {
         MachineRun run(machine_class({op(0x01), op(0x5C)}));
         run.machine->interpret(run.thread);
     }));
+}
+
+// Arithmetic, logic and flow (BO2NX-153).
+std::uint32_t bits(float value) {
+    std::uint32_t out = 0;
+    std::memcpy(&out, &value, sizeof out);
+    return out;
+}
+
+float as_float(std::uint32_t value) {
+    float out = 0.0f;
+    std::memcpy(&out, &value, sizeof out);
+    return out;
+}
+
+void test_int_ops() {
+    MachineRun run(machine_class({op(0x02), 0x7FFFFFFFU, op(0x03, 1), op(0x28),  // wraps
+                                  op(0x03, 5), op(0x27),
+                                  op(0x03, 3), op(0x03, 10), op(0x29),
+                                  op(0x5C)}));
+    CHECK(run.machine->interpret(run.thread));
+    CHECK(run.frame().top == 2);
+    CHECK(run.cell(0) == 0x80000000U);
+    CHECK(run.cell(1) == static_cast<std::uint32_t>(-5));
+    CHECK(run.cell(2) == static_cast<std::uint32_t>(-7));
+}
+
+// A comparison writes only the low byte of the first operand's cell.
+void test_int_compare() {
+    MachineRun run(machine_class({op(0x02), 0x11223300U, op(0x02), 0x11223301U, op(0x2D),
+                                  op(0x02), 0x11223300U, op(0x02), 0x11223300U, op(0x2E),
+                                  op(0x02), 0x11223305U, op(0x02), 0x11223300U, op(0x2F),
+                                  op(0x03, -1), op(0x03, 1), op(0x2D),
+                                  op(0x03, 1), op(0x03, -1), op(0x2E),
+                                  op(0x5C)}));
+    CHECK(run.machine->interpret(run.thread));
+    CHECK(run.frame().top == 4);
+    CHECK(run.cell(0) == 0x11223301U);
+    CHECK(run.cell(1) == 0x11223301U);
+    CHECK(run.cell(2) == 0x11223300U);
+    CHECK(run.cell(3) == 0xFFFFFF01U);  // signed: -1 < 1
+    CHECK(run.cell(4) == 0x00000000U);  // 1 <= -1 is false
+}
+
+void test_float_ops() {
+    MachineRun run(machine_class({
+        op(0x02), bits(1.5f), op(0x30),
+        op(0x02), bits(1.5f), op(0x02), bits(2.25f), op(0x31),
+        op(0x02), bits(1.5f), op(0x02), bits(2.25f), op(0x32),
+        op(0x02), bits(1.5f), op(0x02), bits(2.0f), op(0x33),
+        op(0x02), bits(3.0f), op(0x02), bits(2.0f), op(0x34),
+        op(0x02), bits(1.0f), op(0x02), bits(0.0f), op(0x34),
+        op(0x02), bits(-1.0f), op(0x02), bits(0.0f), op(0x34),
+        op(0x02), bits(0.0f), op(0x02), bits(-0.0f), op(0x34),
+        op(0x5C)}));
+    CHECK(run.machine->interpret(run.thread));
+    CHECK(run.frame().top == 7);
+    CHECK(as_float(run.cell(0)) == -1.5f);
+    CHECK(as_float(run.cell(1)) == 3.75f);
+    CHECK(as_float(run.cell(2)) == -0.75f);
+    CHECK(as_float(run.cell(3)) == 3.0f);
+    CHECK(as_float(run.cell(4)) == 1.5f);
+    CHECK(run.cell(5) == 0x7F7FFFFFU);  // the largest float, 0x0086dee8
+    CHECK(run.cell(6) == 0xFF7FFFFFU);
+    CHECK(run.cell(7) == 0);
+}
+
+void test_float_compare() {
+    const float nan = std::numeric_limits<float>::quiet_NaN();
+    MachineRun run(machine_class({
+        op(0x02), bits(1.0f), op(0x02), bits(2.0f), op(0x35),
+        op(0x02), bits(2.0f), op(0x02), bits(1.0f), op(0x35),
+        op(0x02), bits(nan), op(0x02), bits(1.0f), op(0x35),
+        op(0x02), bits(1.0f), op(0x02), bits(1.0f), op(0x36),
+        op(0x02), bits(nan), op(0x02), bits(1.0f), op(0x36),
+        op(0x5C)}));
+    CHECK(run.machine->interpret(run.thread));
+    CHECK(run.frame().top == 4);
+    CHECK((run.cell(0) & 0xFFU) == 1);
+    CHECK((run.cell(1) & 0xFFU) == 0);
+    CHECK((run.cell(2) & 0xFFU) == 1);  // with NaN, "less" is true
+    CHECK((run.cell(3) & 0xFFU) == 1);
+    CHECK((run.cell(4) & 0xFFU) == 0);  // with NaN, "less or equal" is false
+    CHECK((run.cell(0) & 0xFFFFFF00U) == (bits(1.0f) & 0xFFFFFF00U));
+}
+
+// FUN_0068ec30: two strings are equal when their bytes are.
+void test_string_compare() {
+    MachineRun run(machine_class({op(0x06, 0), op(0x06, 4), op(0x38),
+                                  op(0x06, 0), op(0x06, 8), op(0x38),
+                                  op(0x03, 0), op(0x06, 0), op(0x38),
+                                  op(0x06, 0), op(0x06, 12), op(0x38),
+                                  op(0x5C)}));
+    ScriptMachine& machine = *run.machine;
+    const bo2::engine::ScriptAddress locals = run.frame().locals;
+    machine.memory().set_u32(locals, machine.new_string_cell("abc"));
+    machine.memory().set_u32(locals + 4, machine.new_string_cell("abc"));
+    machine.memory().set_u32(locals + 8, machine.new_string_cell("abd"));
+    machine.memory().set_u32(locals + 12, machine.new_string_cell("ABC"));
+    CHECK(machine.interpret(run.thread));
+    CHECK(run.frame().top == 3);
+    CHECK((run.cell(0) & 0xFFU) == 1);
+    CHECK((run.cell(1) & 0xFFU) == 0);
+    CHECK((run.cell(2) & 0xFFU) == 0);  // a null string
+    CHECK((run.cell(3) & 0xFFU) == 0);  // case counts
+}
+
+void test_logic() {
+    MachineRun run(machine_class({op(0x03, 0), op(0x39), op(0x03, 5), op(0x39),
+                                  op(0x02), 0xAABBCC00U, op(0x39),
+                                  op(0x03, 1), op(0x03, 0), op(0x3A),
+                                  op(0x03, 2), op(0x03, 3), op(0x3A),
+                                  op(0x03, 0), op(0x03, 0), op(0x3B),
+                                  op(0x03, 0), op(0x03, 4), op(0x3B),
+                                  op(0x03, 0x100), op(0x39),  // only the low byte counts
+                                  op(0x5C)}));
+    CHECK(run.machine->interpret(run.thread));
+    CHECK(run.frame().top == 7);
+    CHECK(run.cell(0) == 1);
+    CHECK(run.cell(1) == 0);
+    CHECK(run.cell(2) == 0xAABBCC01U);
+    CHECK(run.cell(3) == 0);
+    CHECK(run.cell(4) == 1);
+    CHECK(run.cell(5) == 0);
+    CHECK(run.cell(6) == 1);
+    CHECK(run.cell(7) == 0x101);
+}
+
+// 0x3c is __ftol (0x7a3af4): truncated to 64 bits, the low 32 bits kept.
+void test_conversions() {
+    MachineRun run(machine_class({op(0x02), bits(-2.75f), op(0x3C),
+                                  op(0x02), bits(2.75f), op(0x3C),
+                                  op(0x02), bits(5.0e9f), op(0x3C),
+                                  op(0x02), bits(std::numeric_limits<float>::quiet_NaN()), op(0x3C),
+                                  op(0x03, -7), op(0x3E),
+                                  op(0x5C)}));
+    CHECK(run.machine->interpret(run.thread));
+    CHECK(run.frame().top == 4);
+    CHECK(run.cell(0) == static_cast<std::uint32_t>(-2));
+    CHECK(run.cell(1) == 2);
+    CHECK(run.cell(2) == static_cast<std::uint32_t>(5000000000ULL & 0xFFFFFFFFULL));
+    CHECK(run.cell(3) == 0);
+    CHECK(as_float(run.cell(4)) == -7.0f);
+}
+
+// The sum of 1 to 10 with 0x46 and 0x60: i in the local at 0, the sum at 4.
+void test_jumps() {
+    MachineRun run(machine_class({
+        op(0x07, 0), op(0x03, 1), op(0x1D),                                // 0: i = 1
+        op(0x07, 4), op(0x06, 4), op(0x06, 0), op(0x28), op(0x1D),         // 3: sum += i
+        op(0x07, 0), op(0x06, 0), op(0x03, 1), op(0x28), op(0x1D),         // 8: i += 1
+        op(0x06, 0), op(0x03, 11), op(0x2D), op(0x46, 1),                  // 13: i < 11, else to 18
+        op(0x60, -15),                                                     // 17: back to 3
+        op(0x5C)}));                                                       // 18
+    CHECK(run.machine->interpret(run.thread));
+    CHECK(run.machine->memory().u32(run.frame().locals + 4) == 55);
+    CHECK(run.frame().top == -1);
+    CHECK(run.machine->warnings().empty());
+
+    MachineRun skip(machine_class({op(0x45, 1), op(0x03, 9), op(0x03, 4), op(0x5C)}));
+    CHECK(skip.machine->interpret(skip.thread));
+    CHECK(skip.frame().top == 0);
+    CHECK(skip.cell(0) == 4);
+}
+
+// An endless loop ends its frame on the 10,001st 0x60, with the warning of
+// the original; a new interpret starts the count again.
+void test_loop_guard() {
+    const std::vector<std::uint32_t> code = {
+        op(0x07, 0), op(0x06, 0), op(0x03, 1), op(0x28), op(0x1D),  // count += 1
+        op(0x60, -6),                                               // back to 0
+        op(0x5C)};
+    MachineRun run(machine_class(code));
+    CHECK(run.machine->interpret(run.thread));
+    CHECK(run.machine->memory().u32(run.frame().locals) == 10001);
+    CHECK(run.machine->warnings() ==
+          (std::vector<std::string>{"WARNING: Scripted loop ran too long: alpha, start"}));
+    run.thread.frames.back() = run.machine->make_frame(1, 0);
+    CHECK(run.machine->interpret(run.thread));
+    CHECK(run.machine->memory().u32(run.frame().locals) == 10001);
+    CHECK(run.machine->warnings().size() == 2);
+}
+
+void test_yield() {
+    MachineRun run(machine_class({op(0x03, 1), op(0x5D), op(0x03, 2), op(0x5C)}));
+    CHECK(!run.machine->interpret(run.thread));
+    CHECK(run.frame().top == 0);
+    CHECK(run.frame().ip == 2);
+    CHECK(run.machine->interpret(run.thread));
+    CHECK(run.frame().top == 1);
+    CHECK(run.cell(1) == 2);
+}
+
+// 0x5f keeps an object whose class or an ancestor has the name; the word
+// comes from a reference of kind 1.
+void test_cast() {
+    ScriptClass child = machine_class(
+        {op(0x02), 1, 0, op(0x02), 1, 0, op(0x03, 0), 0, op(0x02), 1, 0, op(0x5C)},
+        {make_reference(1, 2, "base"), make_reference(1, 5, "other"), make_reference(1, 7, "base"),
+         make_reference(1, 10, "alpha")});
+    child.parent = "base";
+    ScriptClass base = make_class("base", "", {"default"}, 1);
+    ScriptClass other = make_class("other", "", {"default"}, 1);
+    MachineRun run(std::vector<ScriptClass>{child, base, other});
+    CHECK(run.machine->interpret(run.thread));
+    CHECK(run.frame().top == 3);
+    CHECK(run.cell(0) == 1);  // alpha derives from base
+    CHECK(run.cell(1) == 0);  // not an other
+    CHECK(run.cell(2) == 0);  // null stays null
+    CHECK(run.cell(3) == 1);  // its own class
 }
 
 // The game data. Containers are read with one sized read: the stream
@@ -654,6 +869,17 @@ int main() {
     test_store_null_object();
     test_strings();
     test_unported_code();
+    test_int_ops();
+    test_int_compare();
+    test_float_ops();
+    test_float_compare();
+    test_string_compare();
+    test_logic();
+    test_conversions();
+    test_jumps();
+    test_loop_guard();
+    test_yield();
+    test_cast();
 
     const char* root = std::getenv("BO2NX_ASSETS_DIR");
     if (root == nullptr) {

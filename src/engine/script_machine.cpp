@@ -2,7 +2,9 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstdio>
+#include <cstring>
 
 namespace bo2::engine {
 
@@ -58,6 +60,36 @@ bool unused_by_the_game(std::uint32_t code) {
     }
 }
 
+float as_float(std::uint32_t bits) {
+    float value = 0.0f;
+    std::memcpy(&value, &bits, sizeof value);
+    return value;
+}
+
+std::uint32_t float_bits(float value) {
+    std::uint32_t bits = 0;
+    std::memcpy(&bits, &value, sizeof bits);
+    return bits;
+}
+
+std::int32_t as_int(std::uint32_t bits) {
+    return static_cast<std::int32_t>(bits);
+}
+
+// __ftol (0x7a3af4): rounding set to chop, fistp to a 64-bit integer, the low
+// 32 bits. A value the 64-bit integer cannot hold (or NaN) stores the integer
+// indefinite 0x8000000000000000, whose low 32 bits are 0.
+std::uint32_t ftol(float value) {
+    const double wide = static_cast<double>(value);
+    if (std::isnan(wide) || wide >= 9223372036854775808.0 || wide < -9223372036854775808.0) {
+        return 0;
+    }
+    return static_cast<std::uint32_t>(static_cast<std::uint64_t>(static_cast<std::int64_t>(wide)));
+}
+
+constexpr std::uint32_t kLargestFloat = 0x7F7FFFFFU;  // 0x0086dee8
+constexpr std::uint32_t kLoopLimit = 10000;           // FUN_0057de80, instruction 0x60
+
 // One frame's view of the stack: 4-byte cells from `stack`, `top` the index
 // of the last one.
 class Stack {
@@ -77,6 +109,9 @@ public:
 
     std::uint32_t top() const { return memory_.u32(cell()); }
     void replace(std::uint32_t value) { memory_.set_u32(cell(), value); }
+    // A boolean is the low byte of a cell; the other three bytes stay.
+    std::uint8_t top_byte() const { return memory_.u8(cell()); }
+    void replace_byte(bool value) { memory_.set_u8(cell(), value ? 1 : 0); }
 
 private:
     ScriptAddress cell() const {
@@ -188,12 +223,33 @@ std::string ScriptMachine::string_at(ScriptAddress cell) const {
     }
 }
 
+bool ScriptMachine::is_a(std::uint32_t class_id, const std::string& name) const {
+    for (std::uint32_t id = class_id + 1; id != 0; id = program_.classes()[id - 1].parent) {
+        if (program_.classes()[id - 1].name == name) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // FUN_0057de80: read the word at ip, move ip past it and dispatch on the
 // high byte. The instructions are those of docs/SCRIPTS.md, "Values and
-// variables"; calls, threads, jumps and arithmetic are not ported yet.
+// variables", "Arithmetic and logic" and "Flow"; calls and threads are not
+// ported yet.
 bool ScriptMachine::interpret(ScriptThread& thread) {
     if (thread.frames.empty()) {
         throw ScriptError("script thread has no frame");
+    }
+    // The loop guard restarts when no other interpreter is running.
+    struct Depth {
+        explicit Depth(int& depth) : depth_(depth) { ++depth_; }
+        ~Depth() { --depth_; }
+        Depth(const Depth&) = delete;
+        Depth& operator=(const Depth&) = delete;
+        int& depth_;
+    } depth(depth_);
+    if (depth_ == 1) {
+        loop_count_ = 0;
     }
     ScriptFrame& frame = thread.frames.back();
     const std::vector<std::uint32_t>& code = program_.bodies().at(frame.body).code;
@@ -322,8 +378,135 @@ bool ScriptMachine::interpret(ScriptThread& thread) {
         case 0x21:
             next_word();
             throw ScriptError("script instruction 0x21: value types are not ported");
+        case 0x27:
+            stack.replace(0U - stack.top());
+            break;
+        case 0x28: {
+            const std::uint32_t right = stack.pop();
+            stack.replace(stack.top() + right);
+            break;
+        }
+        case 0x29: {
+            const std::uint32_t right = stack.pop();
+            stack.replace(stack.top() - right);
+            break;
+        }
+        case 0x2D: {
+            const std::int32_t right = as_int(stack.pop());
+            stack.replace_byte(as_int(stack.top()) < right);
+            break;
+        }
+        case 0x2E: {
+            const std::int32_t right = as_int(stack.pop());
+            stack.replace_byte(as_int(stack.top()) <= right);
+            break;
+        }
+        case 0x2F: {
+            const std::uint32_t right = stack.pop();
+            stack.replace_byte(stack.top() == right);
+            break;
+        }
+        case 0x30:
+            stack.replace(float_bits(-as_float(stack.top())));
+            break;
+        case 0x31: {
+            const float right = as_float(stack.pop());
+            stack.replace(float_bits(as_float(stack.top()) + right));
+            break;
+        }
+        case 0x32: {
+            const float right = as_float(stack.pop());
+            stack.replace(float_bits(as_float(stack.top()) - right));
+            break;
+        }
+        case 0x33: {
+            const float right = as_float(stack.pop());
+            stack.replace(float_bits(as_float(stack.top()) * right));
+            break;
+        }
+        case 0x34: {
+            const float right = as_float(stack.pop());
+            const float left = as_float(stack.top());
+            if (right != 0.0f) {
+                stack.replace(float_bits(left / right));
+            } else if (0.0f <= left) {
+                stack.replace(left <= 0.0f ? 0U : kLargestFloat);
+            } else {
+                stack.replace(float_bits(-as_float(kLargestFloat)));
+            }
+            break;
+        }
+        case 0x35: {
+            const float right = as_float(stack.pop());
+            stack.replace_byte(!(right <= as_float(stack.top())));
+            break;
+        }
+        case 0x36: {
+            const float right = as_float(stack.pop());
+            const float left = as_float(stack.top());
+            stack.replace_byte(left < right || left == right);
+            break;
+        }
+        case 0x38: {
+            // FUN_0068ec30: equal byte by byte.
+            const ScriptAddress right = stack.pop();
+            const ScriptAddress left = stack.top();
+            stack.replace_byte(left != 0 && right != 0 && string_at(left) == string_at(right));
+            break;
+        }
+        case 0x39:
+            stack.replace_byte(stack.top_byte() == 0);
+            break;
+        case 0x3A: {
+            const std::uint8_t right = static_cast<std::uint8_t>(stack.pop() & 0xFFU);
+            stack.replace_byte(stack.top_byte() != 0 && right != 0);
+            break;
+        }
+        case 0x3B: {
+            const std::uint8_t right = static_cast<std::uint8_t>(stack.pop() & 0xFFU);
+            stack.replace_byte(stack.top_byte() != 0 || right != 0);
+            break;
+        }
+        case 0x3C:
+            stack.replace(ftol(as_float(stack.top())));
+            break;
+        case 0x3E:
+            stack.replace(float_bits(static_cast<float>(as_int(stack.top()))));
+            break;
+        case 0x45:
+            frame.ip += static_cast<std::uint32_t>(simm);
+            break;
+        case 0x46:
+            if ((stack.pop() & 0xFFU) == 0) {
+                frame.ip += static_cast<std::uint32_t>(simm);
+            }
+            break;
+        case 0x60:
+            if (++loop_count_ > kLoopLimit) {
+                const std::string class_name =
+                    frame.object != 0 ? program_.classes()[class_of(frame.object)].name : std::string();
+                const ScriptProgramBody& body = program_.bodies()[frame.body];
+                const std::string& method =
+                    program_.classes()[body.owner].source->methods[body.source->method].name;
+                warnings_.push_back("WARNING: Scripted loop ran too long: " + class_name + ", " + method);
+                return true;
+            }
+            frame.ip += static_cast<std::uint32_t>(simm);
+            break;
         case 0x5C:
             return true;
+        case 0x5D:
+            return false;
+        case 0x5F: {
+            const ScriptObjectId object = stack.top();
+            if (imm >= program_.names().size()) {
+                throw ScriptError("script name index is out of range");
+            }
+            if (object != 0 && !is_a(class_of(object), program_.names()[imm])) {
+                stack.replace(0);
+            }
+            break;
+        }
         default:
             if (unused_by_the_game(op)) {
                 throw ScriptError("script instruction " + hex_code(op) + " is not used by the game data");

@@ -68,6 +68,9 @@ public:
     std::string string_at(ScriptAddress cell) const;
     ScriptAddress new_string_cell(std::string_view text);
 
+    // The warnings the original prints to its log, for the host to show.
+    const std::vector<std::string>& warnings() const { return warnings_; }
+
 private:
     struct Object {
         std::uint32_t class_id = 0;
@@ -79,10 +82,15 @@ private:
     ScriptAddress new_record(std::string_view text);
     void release_record(ScriptAddress record);
 
+    bool is_a(std::uint32_t class_id, const std::string& name) const;
+
     const ScriptProgram& program_;
     ScriptMemory memory_;
     std::vector<Object> objects_;
     ScriptAddress name_table_ = 0;
+    std::vector<std::string> warnings_;
+    std::uint32_t loop_count_ = 0;  // DAT_00a6a57c
+    int depth_ = 0;                 // DAT_00a6a578: interpreters running
 };
 
 }  // namespace bo2::engine
