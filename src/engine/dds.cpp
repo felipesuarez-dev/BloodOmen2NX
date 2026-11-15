@@ -17,8 +17,11 @@ constexpr std::uint32_t kPfFourCc = 0x4;
 constexpr std::uint32_t kPfRgb = 0x40;
 constexpr std::uint32_t kPfAlphaPixels = 0x1;
 constexpr std::uint32_t kDxt1 = 0x31545844;
+constexpr std::uint32_t kDxt2 = 0x32545844;
 constexpr std::uint32_t kDxt3 = 0x33545844;
+constexpr std::uint32_t kDxt4 = 0x34545844;
 constexpr std::uint32_t kDxt5 = 0x35545844;
+constexpr std::size_t kBlendHeaderBytes = 0x58;
 constexpr std::uint32_t kMaxDimension = 16384;
 constexpr std::size_t kMaxPixels = 64U * 1024U * 1024U;
 
@@ -256,6 +259,40 @@ Image decode_dds(const std::vector<std::uint8_t>& data) {
         }
     }
     return image;
+}
+
+// FUN_0056f320: the blend class by DDS format. A FourCC selects DXT1, DXT2
+// and DXT4 (no blend, depth), DXT3 (blend, depth) or DXT5 (blend, no depth);
+// any other FourCC is neither. Without a FourCC, RGB with alpha blends, RGB
+// without alpha writes depth and everything else is neither.
+TextureBlend texture_blend(const std::vector<std::uint8_t>& data) {
+    if (data.size() < kBlendHeaderBytes) {
+        throw common::ParseError("DDS file is shorter than its blend header");
+    }
+    const common::Reader reader(data);
+    if (reader.u32(0) != 0x20534444U) {
+        throw common::ParseError("not a DDS file");
+    }
+    const std::uint32_t flags = reader.u32(80);
+    const std::uint32_t fourcc = reader.u32(84);
+    TextureBlend blend;
+    if ((flags & kPfFourCc) != 0) {
+        if (fourcc == kDxt1 || fourcc == kDxt2 || fourcc == kDxt4) {
+            blend.writes_depth = true;
+        } else if (fourcc == kDxt3) {
+            blend.blends = true;
+            blend.writes_depth = true;
+        } else if (fourcc == kDxt5) {
+            blend.blends = true;
+        }
+        return blend;
+    }
+    if ((flags & (kPfRgb | kPfAlphaPixels)) == (kPfRgb | kPfAlphaPixels)) {
+        blend.blends = true;
+    } else if ((flags & kPfRgb) != 0) {
+        blend.writes_depth = true;
+    }
+    return blend;
 }
 
 }  // namespace bo2::engine

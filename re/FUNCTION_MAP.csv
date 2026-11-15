@@ -5977,7 +5977,7 @@ address,name,subsystem,status,notes
 0056f040,FUN_0056f040,unknown,todo,ghidra
 0056f0e0,FUN_0056f0e0,unknown,todo,ghidra
 0056f190,FUN_0056f190,unknown,todo,ghidra
-0056f320,FUN_0056f320,unknown,todo,ghidra
+0056f320,FUN_0056f320,render,wip,src/engine/dds.cpp: texture_blend reads the flags and FourCC of the DDS header; the upload to the device is not ported.
 0056f510,FUN_0056f510,unknown,todo,ghidra
 0056f810,FUN_0056f810,unknown,todo,ghidra
 0056f840,FUN_0056f840,unknown,todo,ghidra

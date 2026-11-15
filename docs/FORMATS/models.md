@@ -441,6 +441,11 @@ The host reads the `mtlctrl` records into `LevelGeometry::material_cull` and
 skips the clockwise triangles of a material that asks for culling, in both
 HUD drawings.
 
+`texture_blend` (`include/bo2/engine/dds.hpp`) applies the rule of
+`FUN_0056f320` to the DDS header and returns whether the texture blends and
+whether it writes depth; the test with assets pins the counts of `code.big`
+and `slums/sl01`.
+
 ## Cell grid and visibility
 
 The chunks after `cellmdls` are a second chunk stream inside the same

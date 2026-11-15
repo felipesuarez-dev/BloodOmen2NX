@@ -728,6 +728,39 @@ void test_dds() {
     CHECK(throws([&] { bo2::engine::decode_dds(truncated); }));
 }
 
+// FUN_0056f320: the blend class of a DDS header by its format.
+void test_texture_blend() {
+    struct Case {
+        std::uint32_t flags;
+        std::uint32_t fourcc;
+        bool blends;
+        bool depth;
+    };
+    const Case cases[] = {
+        {4, 0x31545844U, false, true},   // DXT1
+        {4, 0x32545844U, false, true},   // DXT2
+        {4, 0x33545844U, true, true},    // DXT3
+        {4, 0x34545844U, false, true},   // DXT4
+        {4, 0x35545844U, true, false},   // DXT5
+        {4, 0x30315844U, false, false},  // other FourCC
+        {0x41, 0, true, false},          // RGB with alpha
+        {0x40, 0, false, true},          // RGB without alpha
+        {0, 0, false, false},            // no RGB and no FourCC
+        {0x1, 0, false, false},          // alpha only
+    };
+    for (const Case& item : cases) {
+        const bo2::engine::TextureBlend blend = bo2::engine::texture_blend(
+            make_dds(4, 4, item.fourcc, item.flags, 0, 0, 0, 0, 0, {}));
+        CHECK(blend.blends == item.blends);
+        CHECK(blend.writes_depth == item.depth);
+    }
+    std::vector<std::uint8_t> short_data(0x57, 0);
+    patch32(short_data, 0, 0x20534444U);
+    CHECK(throws([&] { bo2::engine::texture_blend(short_data); }));
+    std::vector<std::uint8_t> no_mark(0x58, 0);
+    CHECK(throws([&] { bo2::engine::texture_blend(no_mark); }));
+}
+
 void test_math() {
     const bo2::engine::Mat4 view =
         bo2::engine::Mat4::look_at({0.0f, 0.0f, 3.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f});
@@ -1757,6 +1790,7 @@ int main() {
     test_reader();
     test_big();
     test_dds();
+    test_texture_blend();
     test_math();
     test_cell_group();
     test_material_texture_lists();

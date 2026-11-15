@@ -10,6 +10,7 @@
 
 #include "bo2/engine/big_archive.hpp"
 #include "bo2/engine/cell_group.hpp"
+#include "bo2/engine/dds.hpp"
 
 namespace {
 
@@ -336,6 +337,55 @@ void test_model_attribute_counts(const std::filesystem::path& root) {
     CHECK(sphere == 2);
 }
 
+// FUN_0056f320: the blend class of every texture of code.big (66 entries)
+// and of slums/sl01.big (239 entries).
+void test_texture_blend_counts(const std::filesystem::path& root) {
+    struct Counts {
+        std::size_t depth = 0;
+        std::size_t blend = 0;
+        std::size_t both = 0;
+        std::size_t none = 0;
+    };
+    const auto count = [](const bo2::engine::BigArchive& archive) {
+        Counts counts;
+        for (const bo2::engine::BigEntry& entry : archive.entries()) {
+            if (entry.type != "texture") {
+                continue;
+            }
+            const bo2::engine::TextureBlend blend =
+                bo2::engine::texture_blend(archive.extract(entry));
+            if (blend.blends && blend.writes_depth) {
+                ++counts.both;
+            } else if (blend.blends) {
+                ++counts.blend;
+            } else if (blend.writes_depth) {
+                ++counts.depth;
+            } else {
+                ++counts.none;
+            }
+        }
+        return counts;
+    };
+
+    const std::filesystem::path code = root / "media/gogames/bo2/code.big";
+    if (std::filesystem::exists(code)) {
+        const Counts counts = count(bo2::engine::BigArchive::load(code.string()));
+        CHECK(counts.depth == 7);
+        CHECK(counts.blend == 17);
+        CHECK(counts.both == 42);
+        CHECK(counts.none == 0);
+    }
+    const std::filesystem::path level =
+        root / "media/gogames/bo2/resources/levels/slums/sl01.big";
+    if (std::filesystem::exists(level)) {
+        const Counts counts = count(bo2::engine::BigArchive::load(level.string()));
+        CHECK(counts.depth == 189);
+        CHECK(counts.blend == 18);
+        CHECK(counts.both == 32);
+        CHECK(counts.none == 0);
+    }
+}
+
 // The load numbers of every cell group the reader accepts, pinned in
 // tests/data/cell_group_baseline.tsv (docs/DATA_COVERAGE.md, "Cell group
 // baseline"). The container paths of the file are relative to the directory
@@ -478,6 +528,7 @@ int main() {
         test_texture_lists_of_the_game_data(root);
         test_cell_groups_with_attribute_arrays(root);
         test_model_attribute_counts(root);
+        test_texture_blend_counts(root);
         test_cell_group_baseline(root);
     } catch (const std::exception& error) {
         std::cerr << "model asset test: " << error.what() << '\n';
