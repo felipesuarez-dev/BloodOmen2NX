@@ -24,6 +24,7 @@ add_library(bo2_engine STATIC
     src/engine/big_archive.cpp
     src/engine/cell_group.cpp
     src/engine/collision.cpp
+    src/engine/data_check.cpp
     src/engine/dds.cpp
     src/engine/entity_template.cpp
     src/engine/erg.cpp
@@ -94,6 +95,10 @@ if(BO2NX_HAVE_SDL)
     target_compile_definitions(bo2nx PRIVATE BO2NX_HAVE_SDL)
     target_link_libraries(bo2nx PRIVATE bo2_platform_sdl)
 endif()
+
+add_executable(bo2nx_check_data src/tools/check_data.cpp)
+target_link_libraries(bo2nx_check_data PRIVATE bo2_game)
+target_compile_options(bo2nx_check_data PRIVATE ${BO2NX_WARNINGS})
 
 include(CTest)
 if(BUILD_TESTING)

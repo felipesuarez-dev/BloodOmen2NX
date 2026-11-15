@@ -313,3 +313,19 @@ name of the package matches the asset pattern of
 Publishing is the user's call: only `--publish` runs
 `gh release create <tag> <package>`. The script never creates a tag and never
 pushes. Without a tag it prints the usage and exits with an error.
+
+## Checking the game data
+
+`bo2nx_check_data` runs the readers of the port over every entry of the 179
+containers and counts the entries of every type:
+
+```sh
+BO2NX_ASSETS_DIR=$PWD/external/installed
+./build/linux-debug/bo2nx_check_data "$BO2NX_ASSETS_DIR/media/gogames/bo2" \
+  --failures /tmp/check_failures.tsv
+```
+
+`--failures` writes every rejected entry, one per line. The result of the
+last run and the meaning of each number are in
+[DATA_COVERAGE.md](DATA_COVERAGE.md). The tool is not a CTest case: a full
+walk takes about a minute and a half.

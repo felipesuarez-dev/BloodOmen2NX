@@ -11,6 +11,7 @@
 #include "bo2/common/reader.hpp"
 #include "bo2/engine/big_archive.hpp"
 #include "bo2/engine/cell_group.hpp"
+#include "bo2/engine/data_check.hpp"
 #include "bo2/engine/dds.hpp"
 #include "bo2/engine/erg.hpp"
 #include "bo2/engine/math.hpp"
@@ -1284,6 +1285,33 @@ void test_pixmap_font() {
     CHECK(throws([&] { bo2::engine::parse_pixmap_font(data, no_symbols, names); }));
 }
 
+// The data checker counts every entry of a container by type and reports the
+// ones whose reader throws, without stopping the walk (docs/DATA_COVERAGE.md).
+void test_data_check() {
+    const std::vector<std::uint16_t> symbols = {0};
+    const std::vector<std::uint8_t> font = make_font(false, {{'a', 0, 0, 12, 20}});
+    std::vector<std::uint8_t> truncated = font;
+    truncated.resize(truncated.size() / 2);
+    const std::vector<std::uint8_t> data = build_big({
+        {"texfont", "fonts/one", font, symbols},
+        {"texfont", "fonts/two", truncated, symbols},
+    });
+    const bo2::engine::BigArchive archive = bo2::engine::BigArchive::parse(data);
+    bo2::engine::DataReport report;
+    bo2::engine::check_archive(archive, "test.big", report);
+    CHECK(report.containers == 1);
+    CHECK(report.types.size() == 1);
+    const bo2::engine::TypeCount& count = report.types.at("texfont");
+    CHECK(count.entries == 2);
+    CHECK(count.checked == 2);
+    CHECK(count.failed == 1);
+    CHECK(report.failures.size() == 1);
+    CHECK(report.failures[0].container == "test.big");
+    CHECK(report.failures[0].type == "texfont");
+    CHECK(report.failures[0].entry == "fonts/two");
+    CHECK(!report.failures[0].message.empty());
+}
+
 // The modlskel record is 104 bytes (FUN_0067bdd0), not the old guessed
 // count + pairs + 96 bytes layout.
 void test_skeleton_bones() {
@@ -1346,6 +1374,7 @@ int main() {
     test_model_render_priority();
     test_model_attribute_arrays();
     test_pixmap_font();
+    test_data_check();
     test_skeleton_bones();
     test_collision_chunk();
     test_cell_animations();
