@@ -128,7 +128,9 @@ private:
 }  // namespace
 
 ScriptMachine::ScriptMachine(const ScriptProgram& program)
-    : program_(program), natives_(program.bodies().size(), nullptr) {
+    : program_(program),
+      natives_(program.bodies().size(), nullptr),
+      task_natives_(program.bodies().size(), nullptr) {
     empty_record_ = new_record("");
     const std::vector<std::string>& names = program_.names();
     name_table_ = memory_.allocate(static_cast<std::uint32_t>(names.size() * 4));
@@ -163,8 +165,7 @@ ScriptAddress ScriptMachine::data_of(ScriptObjectId object) const { return objec
 ScriptAddress ScriptMachine::handle_of(ScriptObjectId object) const { return object_at(object).handle; }
 std::uint32_t ScriptMachine::class_of(ScriptObjectId object) const { return object_at(object).class_id; }
 
-void ScriptMachine::bind_native(const std::string& class_name, std::uint16_t body_index,
-                                ScriptNative native) {
+std::uint32_t ScriptMachine::native_body(const std::string& class_name, std::uint16_t body_index) const {
     const std::uint32_t id = program_.find_class(class_name);
     if (id == 0) {
         throw ScriptError("script class " + class_name + " does not exist");
@@ -177,7 +178,18 @@ void ScriptMachine::bind_native(const std::string& class_name, std::uint16_t bod
     if (!program_.bodies()[body].source->native()) {
         throw ScriptError("script body " + std::to_string(body_index) + " of " + class_name + " is not native");
     }
-    natives_[body] = native;
+    return body;
+}
+
+void ScriptMachine::bind_native(const std::string& class_name, std::uint16_t body_index,
+                                ScriptNative native) {
+    natives_[native_body(class_name, body_index)] = native;
+}
+
+// FUN_00587b00 writes the same function slot as FUN_00587ac0.
+void ScriptMachine::bind_task_native(const std::string& class_name, std::uint16_t body_index,
+                                     ScriptTaskNative native) {
+    task_natives_[native_body(class_name, body_index)] = native;
 }
 
 std::uint32_t ScriptMachine::method_of_body(std::uint32_t body) const {
@@ -389,19 +401,133 @@ void ScriptMachine::release_handle(ScriptAddress handle) {
     }
 }
 
-// FUN_0057d690: the parameters of the method and then the locals of the body
-// give back what they hold, and the stack and the locals are freed.
+// FUN_0057d690: unless the frame is a copy, the parameters of the method and
+// then the locals of the body give back what they hold, and the stack and the
+// locals are freed; then the children are destroyed.
 void ScriptMachine::end_frame(ScriptFrame& frame) {
-    const ScriptProgramBody& body = program_.bodies().at(frame.body);
-    const ScriptMethod& method = *program_.methods().at(method_of_body(frame.body)).source;
-    for (const ScriptVariable& param : method.params) {
-        destroy_variable(frame.locals + param.offset, param.type);
+    if (!frame.borrowed) {
+        const ScriptProgramBody& body = program_.bodies().at(frame.body);
+        const ScriptMethod& method = *program_.methods().at(method_of_body(frame.body)).source;
+        for (const ScriptVariable& param : method.params) {
+            destroy_variable(frame.locals + param.offset, param.type);
+        }
+        for (const ScriptVariable& local : body.source->locals) {
+            destroy_variable(frame.locals + local.offset, local.type);
+        }
+        memory_.release(frame.stack);
+        memory_.release(frame.locals);
     }
-    for (const ScriptVariable& local : body.source->locals) {
-        destroy_variable(frame.locals + local.offset, local.type);
+    for (std::unique_ptr<ScriptTask>& child : frame.children) {
+        destroy_task(child);
     }
-    memory_.release(frame.stack);
-    memory_.release(frame.locals);
+    frame.children.clear();
+}
+
+// The virtual +0 of a task: it gives back what it holds and is deleted. For a
+// thread that is FUN_0057dc70, which calls the deleting destructor
+// FUN_0057da50; its destructor FUN_0057dbe0 ends the frames (FUN_0057dc80).
+void ScriptMachine::destroy_task(std::unique_ptr<ScriptTask>& task) {
+    if (task != nullptr) {
+        task->finish(*this);
+        task.reset();
+    }
+}
+
+void ScriptMachine::end_thread(ScriptThread& thread) {
+    while (!thread.frames.empty()) {
+        end_frame(thread.frames.back());
+        thread.frames.pop_back();
+    }
+}
+
+// The virtual +8 (FUN_0057dcf0) and +4 (FUN_0057da20) of a thread.
+void ScriptThread::run(ScriptMachine& machine, std::uint32_t arg) { machine.run_thread(*this, arg); }
+
+void ScriptThread::finish(ScriptMachine& machine) { machine.end_thread(*this); }
+
+void ScriptMachine::drop_call(ScriptFrame& frame, std::uint32_t method) {
+    const ScriptMethod& source = *program_.methods().at(method).source;
+    frame.top -= static_cast<std::int32_t>(source.params.size()) + (source.result.kind != 0 ? 1 : 0);
+    if (frame.top < -1) {
+        throw ScriptError("script call pops more cells than its stack holds");
+    }
+}
+
+// The tables of `tables` at the state of `object` (its first data byte); a
+// state past the tables takes the table of state 0 except for slot 0.
+std::uint32_t ScriptMachine::body_in_tables(ScriptObjectId object, std::uint32_t tables,
+                                            std::uint32_t method) const {
+    const ScriptProgramClass& owner = program_.classes()[tables];
+    const std::uint16_t slot = program_.methods().at(method).source->slot;
+    if (object == 0 || owner.states.empty() || slot >= owner.states[0].size()) {
+        return 0;
+    }
+    const std::uint32_t state = memory_.u8(data_of(object));
+    if (state < owner.states.size()) {
+        return owner.states[state][slot];
+    }
+    return slot != 0 ? owner.states[0][slot] : 0;
+}
+
+// FUN_0057f6d0: the arguments are popped (the result cell is not); a script
+// body runs as a new thread of the same owner (FUN_0057d810), a native body
+// returns a task. The new child is added to the last frame and runs once.
+void ScriptMachine::spawn(ScriptThread& thread, ScriptObjectId object, std::uint32_t body) {
+    ScriptFrame& frame = thread.frames.back();
+    const ScriptMethod& method = *program_.methods().at(method_of_body(body)).source;
+    const auto argc = static_cast<std::uint32_t>(method.params.size());
+    frame.top -= static_cast<std::int32_t>(argc);
+    if (frame.top < -1) {
+        throw ScriptError("script thread start pops more cells than its stack holds");
+    }
+    const ScriptAddress args = frame.stack + static_cast<std::uint32_t>(frame.top + 1) * 4U;
+    std::unique_ptr<ScriptTask> child;
+    const ScriptProgramBody& target = program_.bodies().at(body);
+    if (target.source->native()) {
+        const ScriptTaskNative native = task_natives_[body];
+        if (native == nullptr) {
+            throw ScriptError("task body " + std::to_string(target.index) + " of " +
+                              program_.classes()[target.owner].name + " is not bound");
+        }
+        child = native(*this, object, thread.owner, argc, args);
+        if (child == nullptr) {
+            return;
+        }
+    } else {
+        auto started = std::make_unique<ScriptThread>();
+        started->owner = thread.owner;
+        ScriptFrame first = make_frame(object, body);
+        for (std::uint32_t index = 0; index < argc; ++index) {
+            const ScriptVariable& param = method.params[index];
+            copy_argument(first.locals + param.offset, param.type, args + index * 4U);
+        }
+        for (const ScriptVariable& local : target.source->locals) {
+            init_variable(first.locals + local.offset, local.type);
+        }
+        started->frames.push_back(std::move(first));
+        child = std::move(started);
+    }
+    frame.children.push_back(std::move(child));
+    frame.children.back()->run(*this, 0);
+}
+
+// FUN_0057daf0, FUN_0057d5c0: the copy has the object, the body and the next
+// instruction of the frame and the same stack and locals, with its stack top
+// at -1.
+void ScriptMachine::fork(ScriptThread& thread) {
+    ScriptFrame& frame = thread.frames.back();
+    ScriptFrame copy;
+    copy.object = frame.object;
+    copy.body = frame.body;
+    copy.ip = frame.ip;
+    copy.stack = frame.stack;
+    copy.locals = frame.locals;
+    copy.borrowed = true;
+    auto child = std::make_unique<ScriptThread>();
+    child->owner = thread.owner;
+    child->frames.push_back(std::move(copy));
+    frame.children.push_back(std::move(child));
+    frame.children.back()->run(*this, 0);
 }
 
 // FUN_0057f580 (and 0x47): pops the arguments, the result address and, for
@@ -456,11 +582,31 @@ bool ScriptMachine::call(ScriptThread& thread, std::uint32_t op, ScriptObjectId 
     for (const ScriptVariable& local : target.source->locals) {
         init_variable(callee.locals + local.offset, local.type);
     }
-    thread.frames.push_back(callee);
+    thread.frames.push_back(std::move(callee));
     return true;
 }
 
-bool ScriptMachine::run_thread(ScriptThread& thread) {
+bool ScriptMachine::run_thread(ScriptThread& thread, std::uint32_t arg) {
+    if (thread.frames.empty()) {
+        return false;
+    }
+    // Running a child never changes the frames of this thread.
+    std::vector<std::unique_ptr<ScriptTask>>& children = thread.frames.back().children;
+    for (std::size_t index = 0; index < children.size();) {
+        children[index]->run(*this, arg);
+        if (children[index]->running()) {
+            ++index;
+        } else {
+            destroy_task(children[index]);
+            children.erase(children.begin() + static_cast<std::ptrdiff_t>(index));
+        }
+    }
+    if (thread.frames.back().waiting) {
+        if (!children.empty()) {
+            return true;
+        }
+        thread.frames.back().waiting = false;
+    }
     while (!thread.frames.empty()) {
         const std::size_t frames = thread.frames.size();
         if (!interpret(thread)) {
@@ -547,9 +693,8 @@ bool ScriptMachine::is_a(std::uint32_t class_id, const std::string& name) const 
 }
 
 // FUN_0057de80: read the word at ip, move ip past it and dispatch on the
-// high byte. The instructions are those of docs/SCRIPTS.md, "Values and
-// variables", "Arithmetic and logic" and "Flow"; calls and threads are not
-// ported yet.
+// high byte. The instructions are those of docs/SCRIPTS.md, "Instructions";
+// the change of state (0x5e) is not ported yet.
 bool ScriptMachine::interpret(ScriptThread& thread) {
     if (thread.frames.empty()) {
         throw ScriptError("script thread has no frame");
@@ -850,17 +995,7 @@ bool ScriptMachine::interpret(ScriptThread& thread) {
             // The tables of a class (id + 1) and a method (id + 1).
             const std::uint32_t tables = next_id(program_.classes().size(), "class");
             const std::uint32_t method = next_id(program_.methods().size(), "method");
-            const ScriptProgramClass& owner = program_.classes()[tables];
-            const std::uint16_t slot = program_.methods().at(method).source->slot;
-            std::uint32_t body = 0;
-            if (frame.object != 0 && !owner.states.empty() && slot < owner.states[0].size()) {
-                const std::uint32_t state = memory_.u8(data_of(frame.object));
-                if (state < owner.states.size()) {
-                    body = owner.states[state][slot];
-                } else if (slot != 0) {
-                    body = owner.states[0][slot];
-                }
-            }
+            const std::uint32_t body = body_in_tables(frame.object, tables, method);
             if (body == 0) {
                 call(thread, op, 0, 0, method);
                 break;
@@ -870,6 +1005,97 @@ bool ScriptMachine::interpret(ScriptThread& thread) {
             }
             break;
         }
+        // Thread starts (FUN_0057f6d0): each finds its body as the call it
+        // mirrors (0x4e as 0x48, 0x4f and 0x55 as 0x49, 0x50 and 0x56 as
+        // 0x4a, 0x51 as 0x4b, 0x52 as 0x4c). 0x4e to 0x52 then wait for the
+        // children of the frame; 0x55 and 0x56 go on.
+        case 0x4D: {
+            // A native body that returns a task, on an object from the stack.
+            const std::uint32_t body = next_id(program_.bodies().size(), "body");
+            const ScriptObjectId object = stack.pop();
+            if (object == 0) {
+                drop_call(frame, method_of_body(body));
+            } else {
+                spawn(thread, object, body);
+            }
+            frame.waiting = true;
+            return false;
+        }
+        case 0x4E:
+        case 0x51: {
+            const std::uint32_t body = next_id(program_.bodies().size(), "body");
+            const ScriptObjectId object = op == 0x4E ? frame.object : stack.pop();
+            if (object == 0) {
+                drop_call(frame, method_of_body(body));
+            } else {
+                spawn(thread, object, body);
+            }
+            frame.waiting = true;
+            return false;
+        }
+        case 0x4F:
+        case 0x55: {
+            const std::uint32_t tables = next_id(program_.classes().size(), "class");
+            const std::uint32_t method = next_id(program_.methods().size(), "method");
+            const std::uint32_t body = body_in_tables(frame.object, tables, method);
+            if (body == 0) {
+                drop_call(frame, method);
+            } else {
+                spawn(thread, frame.object, body - 1);
+            }
+            if (op == 0x4F) {
+                frame.waiting = true;
+                return false;
+            }
+            break;
+        }
+        case 0x50:
+        case 0x56: {
+            const std::uint32_t method = next_id(program_.methods().size(), "method");
+            const std::uint32_t body = body_in_state(frame.object, method, (imm & 1U) != 0);
+            if (body == 0) {
+                drop_call(frame, method);
+            } else {
+                spawn(thread, frame.object, body - 1);
+            }
+            if (op == 0x50) {
+                frame.waiting = true;
+                return false;
+            }
+            break;
+        }
+        case 0x52: {
+            const std::uint32_t method = next_id(program_.methods().size(), "method");
+            const ScriptObjectId object = stack.pop();
+            const std::uint32_t body = object != 0 ? body_in_state(object, method, false) : 0;
+            if (body == 0) {
+                drop_call(frame, method);
+            } else {
+                spawn(thread, object, body - 1);
+            }
+            frame.waiting = true;
+            return false;
+        }
+        case 0x59:
+        case 0x5A:
+            // A copy of the frame runs the next instruction on; the frame
+            // skips imm words past it.
+            fork(thread);
+            frame.ip += imm;
+            if (op == 0x59) {
+                frame.waiting = true;
+                return false;
+            }
+            break;
+        case 0x5B:
+            // The frame ends once it has no children; until then it waits
+            // here.
+            if (frame.children.empty()) {
+                return true;
+            }
+            --frame.ip;
+            frame.waiting = true;
+            return false;
         case 0x5C:
             return true;
         case 0x5D:

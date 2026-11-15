@@ -13,9 +13,9 @@ Port: `src/engine/script_package.cpp` (the packages),
 and `src/engine/script_machine.cpp` (the machine: objects, strings, frames
 and the instructions of "Values and variables", "Arithmetic and logic" and
 "Flow", with the loop guard, the calls that return (`0x47` to `0x4c`) and
-the binding of native functions, and the end of a frame; child threads and tasks (`0x4d` to `0x52`,
-`0x55`, `0x56`, `0x59` to `0x5b`) and the change of state (`0x5e`) are not
-ported yet).
+the binding of native functions, the end of a frame, and the child threads
+and tasks (`0x4d` to `0x52`, `0x55`, `0x56`, `0x59` to `0x5b`); the change
+of state (`0x5e`) is not ported yet).
 
 ## Objects, classes and states
 
@@ -75,8 +75,13 @@ ported yet).
   (`FUN_0057f580`) and 2, 3 or 0 for the first frame of a thread, by the
   byte +5 of the method (0, 1 or 2; `FUN_0057d810`). The word that holds
   the address of the result is not a variable and is not destroyed.
-- `FUN_0057dcf0` (virtual +8) runs a thread once: first it runs the
-  children of the last frame and destroys the ones that ended; if the frame
+- `FUN_0057dcf0` (virtual +8 of vtable `0x86def0`; +4 `FUN_0057da20` says
+  whether the thread has frames, +0 `FUN_0057dc70` destroys it, and its
+  destructor ends the frames from the last one, `FUN_0057dc80`) runs a
+  thread once with an argument it passes on to each child (a child that
+  has just started runs once with 0): first it runs the children of the
+  last frame and destroys the ones that are no longer running (a child
+  that ended in an earlier run leaves the list here); if the frame
   is waiting and still has children, it returns; then it calls the
   interpreter until the interpreter says to stop or no frame is left. When
   the interpreter reports that a frame ended, the frame is removed and its

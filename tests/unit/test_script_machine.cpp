@@ -337,6 +337,7 @@ struct MachineRun {
         machine = std::make_unique<ScriptMachine>(linked.program);
         const ScriptObjectId self = machine->create_object(0);
         machine->create_object(0);
+        thread.owner = self;
         thread.frames.push_back(machine->make_frame(self, 0));
     }
 
@@ -475,8 +476,8 @@ void test_unported_code() {
         MachineRun run(machine_class({op(0x61), op(0x5C)}));
         run.machine->interpret(run.thread);
     }));
-    CHECK(throws([] {  // a call that starts a thread: not ported yet
-        MachineRun run(machine_class({op(0x4E), 1, op(0x5C)}));
+    CHECK(throws([] {  // a change of state: not ported yet
+        MachineRun run(machine_class({op(0x03, 1), op(0x5E), op(0x5C)}));
         run.machine->interpret(run.thread);
     }));
     CHECK(throws([] {  // a call word that names no body
@@ -959,6 +960,189 @@ void test_array_variables() {
     CHECK(memory.live_blocks() == blocks);
 }
 
+// Child threads and tasks (BO2NX-155). data + 4 = 7, the mark of the parent.
+std::vector<std::uint32_t> mark() { return {op(0x0B, 4), op(0x03, 7), op(0x1D)}; }
+
+// A body that adds its argument to data + 8, yields, adds it again and ends.
+ScriptBody worker(std::uint16_t method) {
+    const std::vector<std::uint32_t> add = {op(0x0B, 8), op(0x0A, 8), op(0x06, 4), op(0x28), op(0x1D)};
+    std::vector<std::uint32_t> code = add;
+    code.push_back(op(0x5D));
+    code.insert(code.end(), add.begin(), add.end());
+    code.push_back(op(0x5C));
+    return script_body(method, 0, code, 8);
+}
+
+std::vector<std::uint32_t> join(std::initializer_list<std::vector<std::uint32_t>> parts) {
+    std::vector<std::uint32_t> out;
+    for (const std::vector<std::uint32_t>& part : parts) {
+        out.insert(out.end(), part.begin(), part.end());
+    }
+    return out;
+}
+
+// 0x4e starts the body as a child thread with its argument and waits: the
+// parent goes on in the run in which the child ends.
+void test_spawn_waits() {
+    ScriptClass cls = machine_class(join({{op(0x03, 5), op(0x4E), 0}, mark(), {op(0x5D), op(0x5C)}}),
+                                    {make_reference(4, 2, "alpha", 1)});
+    cls.methods.push_back(method_with("work", bo2::engine::kScriptNoSlot, {variable(2, 4)}, 0));
+    cls.bodies.push_back(worker(1));
+    MachineRun run(cls);
+    ScriptMachine& machine = *run.machine;
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    const ScriptAddress data = machine.data_of(1);
+    const std::size_t blocks = memory.live_blocks();
+    CHECK(machine.run_thread(run.thread));
+    CHECK(memory.u32(data + 8) == 5);  // the child ran once
+    CHECK(memory.u32(data + 4) == 0);  // the parent waits
+    CHECK(run.frame().top == -1);      // the argument was popped
+    CHECK(run.frame().waiting);
+    CHECK(run.frame().children.size() == 1);
+    CHECK(machine.run_thread(run.thread));
+    CHECK(memory.u32(data + 8) == 10);  // the child ended
+    CHECK(memory.u32(data + 4) == 7);   // and the parent went on
+    CHECK(run.frame().children.empty());
+    CHECK(!run.frame().waiting);
+    CHECK(memory.live_blocks() == blocks);
+}
+
+// 0x56 finds the body in the slot of the method and does not wait; the frame
+// that ends destroys the child that still runs.
+void test_spawn_no_wait() {
+    ScriptClass cls = machine_class(join({{op(0x03, 2), op(0x56), 0}, mark(), {op(0x5C)}}),
+                                    {make_reference(3, 2, "alpha", 1)});
+    cls.slot_count = 2;
+    cls.methods.push_back(method_with("work", 1, {variable(2, 4)}, 0));
+    cls.bodies.push_back(worker(1));
+    cls.slots = {{0, 0, "alpha", 0}, {0, 1, "alpha", 1}};
+    MachineRun run(cls);
+    ScriptMachine& machine = *run.machine;
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    const ScriptAddress data = machine.data_of(1);
+    const std::size_t blocks = memory.live_blocks();
+    CHECK(!machine.run_thread(run.thread));
+    CHECK(memory.u32(data + 8) == 2);  // the child ran once
+    CHECK(memory.u32(data + 4) == 7);  // the parent did not wait
+    CHECK(run.thread.frames.empty());
+    // The child's frame went with the parent's stack and locals.
+    CHECK(memory.live_blocks() == blocks - 2);
+}
+
+struct TaskSeen {
+    ScriptObjectId self = 0;
+    ScriptObjectId owner = 0;
+    std::uint32_t argc = 0;
+    std::uint32_t runs = 0;
+    std::uint32_t last_arg = 0;
+    std::uint32_t finished = 0;
+} task_seen;
+
+class CountTask final : public bo2::engine::ScriptTask {
+public:
+    explicit CountTask(std::uint32_t target) : target_(target) {}
+    void run(ScriptMachine&, std::uint32_t arg) override {
+        ++runs_;
+        ++task_seen.runs;
+        task_seen.last_arg = arg;
+    }
+    bool running() const override { return runs_ < target_; }
+    void finish(ScriptMachine&) override { ++task_seen.finished; }
+
+private:
+    std::uint32_t target_;
+    std::uint32_t runs_ = 0;
+};
+
+std::unique_ptr<bo2::engine::ScriptTask> count_task(ScriptMachine& machine, ScriptObjectId self,
+                                                    ScriptObjectId owner, std::uint32_t argc,
+                                                    ScriptAddress args) {
+    task_seen.self = self;
+    task_seen.owner = owner;
+    task_seen.argc = argc;
+    return std::make_unique<CountTask>(machine.memory().u32(args));
+}
+
+// 0x4d calls a native body that returns a task on an object from the stack:
+// the task runs once at once, then once per run of the thread, and the frame
+// waits for it; on object 0 only the cells go.
+void test_task_native() {
+    ScriptClass cls = machine_class(
+        join({{op(0x03, 0x55), op(0x03, 9), op(0x03, 0), op(0x4D), 0,  // object 0: nothing
+               op(0x03, 3), op(0x02), 2, op(0x4D), 0},
+              mark(), {op(0x5D), op(0x5C)}}),
+        {make_reference(4, 4, "alpha", 1), make_reference(4, 9, "alpha", 1)});
+    cls.methods.push_back(method_with("wait", bo2::engine::kScriptNoSlot, {variable(2, 4)}, 0));
+    cls.bodies.push_back(native_body(1));
+    MachineRun run(cls);
+    ScriptMachine& machine = *run.machine;
+    CHECK(throws([&] {  // the second start finds the body not bound
+        machine.run_thread(run.thread);
+        machine.run_thread(run.thread);
+    }));
+    MachineRun bound(cls);
+    ScriptMachine& second = *bound.machine;
+    second.bind_task_native("alpha", 1, count_task);
+    CHECK(throws([&] { second.bind_task_native("alpha", 0, count_task); }));  // a script body
+    task_seen = {};
+    const ScriptAddress data = second.data_of(1);
+    CHECK(second.run_thread(bound.thread));  // object 0 waits once with no children
+    CHECK(task_seen.runs == 0);
+    CHECK(bound.frame().top == 0);
+    CHECK(bound.cell(0) == 0x55);
+    CHECK(second.run_thread(bound.thread));
+    CHECK(task_seen.self == 2);
+    CHECK(task_seen.owner == 1);
+    CHECK(task_seen.argc == 1);
+    CHECK(task_seen.runs == 1);
+    CHECK(bound.frame().top == 0);
+    CHECK(second.run_thread(bound.thread, 0x99));
+    CHECK(task_seen.runs == 2);
+    CHECK(task_seen.last_arg == 0x99);
+    CHECK(second.memory().u32(data + 4) == 0);
+    CHECK(second.run_thread(bound.thread));
+    CHECK(task_seen.runs == 3);
+    CHECK(task_seen.finished == 1);
+    CHECK(second.memory().u32(data + 4) == 7);
+}
+
+// 0x5a twice, then 0x5b: each copy of the frame runs its block with the same
+// locals; the frame ends when both copies have ended.
+void test_parallel_block() {
+    ScriptClass cls = machine_class({op(0x07, 0), op(0x03, 3), op(0x1D),  // locals + 0 = 3
+                                     op(0x5A, 3), op(0x5D), op(0x5D), op(0x5C),
+                                     op(0x5A, 4), op(0x07, 4), op(0x06, 0), op(0x1D), op(0x5C),
+                                     op(0x5B)});
+    MachineRun run(cls);
+    ScriptMachine& machine = *run.machine;
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    const std::size_t blocks = memory.live_blocks();
+    CHECK(machine.run_thread(run.thread));
+    // The second copy ended in its first run; it leaves the list in the next.
+    CHECK(run.frame().children.size() == 2);
+    CHECK(memory.u32(run.frame().locals + 4) == 3);  // it read the shared locals
+    CHECK(run.frame().ip == 12);
+    CHECK(run.frame().waiting);
+    CHECK(machine.run_thread(run.thread));
+    CHECK(run.frame().children.size() == 1);
+    CHECK(memory.live_blocks() == blocks);  // the copies own no stack and no locals
+    CHECK(!machine.run_thread(run.thread));
+    CHECK(run.thread.frames.empty());
+    CHECK(memory.live_blocks() == blocks - 2);
+}
+
+// 0x59: the copy runs, the frame skips the block and waits for it.
+void test_fork_waits() {
+    MachineRun run(machine_class(join({{op(0x59, 2), op(0x5D), op(0x5C)}, mark(), {op(0x5D), op(0x5C)}})));
+    ScriptMachine& machine = *run.machine;
+    const ScriptAddress data = machine.data_of(1);
+    CHECK(machine.run_thread(run.thread));
+    CHECK(machine.memory().u32(data + 4) == 0);
+    CHECK(run.frame().ip == 3);
+    CHECK(machine.run_thread(run.thread));
+    CHECK(machine.memory().u32(data + 4) == 7);
+}
+
 // The game data. Containers are read with one sized read: the stream
 // iterator of BigArchive::load takes over a minute for the whole game in a
 // debug build.
@@ -1145,6 +1329,11 @@ int main() {
     test_string_param();
     test_frame_end();
     test_array_variables();
+    test_spawn_waits();
+    test_spawn_no_wait();
+    test_task_native();
+    test_parallel_block();
+    test_fork_waits();
 
     const char* root = std::getenv("BO2NX_ASSETS_DIR");
     if (root == nullptr) {

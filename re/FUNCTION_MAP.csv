@@ -6268,21 +6268,23 @@ address,name,subsystem,status,notes
 0057d3c0,FUN_0057d3c0,unknown,todo,ghidra
 0057d3e0,FUN_0057d3e0,script,wip,src/engine/script_machine.cpp: ScriptMachine::call builds the frame of a script body with its result address and parameters and locals
 0057d550,FUN_0057d550,unknown,todo,ghidra
-0057d5c0,FUN_0057d5c0,unknown,todo,ghidra
-0057d690,FUN_0057d690,script,wip,src/engine/script_machine.cpp: ScriptMachine::end_frame destroys the parameters and the locals and frees the stack and the locals; the copy of a frame and the child threads are not ported
-0057d810,FUN_0057d810,unknown,todo,ghidra
+0057d5c0,FUN_0057d5c0,script,translated,src/engine/script_machine.cpp: ScriptMachine::fork copies the object and the body and the next instruction and the stack and the locals with the top at -1 and marks the copy borrowed
+0057d690,FUN_0057d690,script,translated,src/engine/script_machine.cpp: ScriptMachine::end_frame destroys the parameters and the locals and frees the stack and the locals unless the frame is a copy and then destroys the children
+0057d810,FUN_0057d810,script,translated,src/engine/script_machine.cpp: ScriptMachine::spawn builds the thread and its first frame; the kind word of the frame (0 2 or 3 by the method byte +5) only tells a copy apart and is the borrowed flag
+0057da20,FUN_0057da20,script,translated,src/engine/script_machine.cpp: ScriptThread::running is true while the thread has frames
 0057da30,FUN_0057da30,unknown,todo,ghidra
-0057da50,FUN_0057da50,unknown,todo,ghidra
+0057da50,FUN_0057da50,script,translated,src/engine/script_machine.cpp: ScriptMachine::destroy_task finishes the task and deletes it
 0057da80,FUN_0057da80,unknown,todo,ghidra
-0057daf0,FUN_0057daf0,unknown,todo,ghidra
-0057dbe0,FUN_0057dbe0,unknown,todo,ghidra
-0057dc80,FUN_0057dc80,unknown,todo,ghidra
-0057dcf0,FUN_0057dcf0,script,wip,src/engine/script_machine.cpp: ScriptMachine::run_thread interprets and removes the frames that end; child threads are not ported
+0057daf0,FUN_0057daf0,script,translated,src/engine/script_machine.cpp: ScriptMachine::fork makes a thread of the same owner on a copy of the frame
+0057dbe0,FUN_0057dbe0,script,translated,src/engine/script_machine.cpp: ScriptThread::finish ends the frames (FUN_0057dc80); the frame list is a vector
+0057dc70,FUN_0057dc70,script,translated,src/engine/script_machine.cpp: ScriptMachine::destroy_task is the virtual +0 of a thread
+0057dc80,FUN_0057dc80,script,translated,src/engine/script_machine.cpp: ScriptMachine::end_thread ends the frames from the last one
+0057dcf0,FUN_0057dcf0,script,wip,src/engine/script_machine.cpp: ScriptMachine::run_thread runs the children of the last frame with the argument and then interprets; the stop on a pending state of the owner is not ported
 0057de60,FUN_0057de60,unknown,todo,ghidra
 0057de80,FUN_0057de80,script,wip,src/engine/script_machine.cpp: ScriptMachine::interpret runs the value and arithmetic and logic and jump instructions and the loop guard and the calls that return; child threads and tasks and state changes are not ported
 0057f560,FUN_0057f560,unknown,todo,ghidra
 0057f580,FUN_0057f580,script,wip,src/engine/script_machine.cpp: ScriptMachine::call runs a native body at once or pushes the frame of a script body
-0057f6d0,FUN_0057f6d0,unknown,todo,ghidra
+0057f6d0,FUN_0057f6d0,script,translated,src/engine/script_machine.cpp: ScriptMachine::spawn pops the arguments and starts a script body as a thread of the same owner or calls a task native and runs the child once
 0057f830,FUN_0057f830,script,wip,src/engine/script_machine.cpp: ScriptMachine::create_object makes the data block and the handle the object counts once; the initial values and the manager lists are not ported
 0057f9f0,FUN_0057f9f0,unknown,todo,ghidra
 0057fa20,FUN_0057fa20,unknown,todo,ghidra
@@ -6514,8 +6516,8 @@ address,name,subsystem,status,notes
 00587a00,FUN_00587a00,unknown,todo,ghidra
 00587a10,FUN_00587a10,unknown,todo,ghidra
 00587a40,FUN_00587a40,unknown,todo,ghidra
-00587ac0,FUN_00587ac0,script,wip,src/engine/script_machine.cpp: ScriptMachine::bind_native binds a native body by class name and body index
-00587b00,FUN_00587b00,unknown,todo,ghidra
+00587ac0,FUN_00587ac0,script,translated,src/engine/script_machine.cpp: ScriptMachine::bind_native binds a native body by class name and body index; it throws where the original returns false and also rejects the index equal to the body count
+00587b00,FUN_00587b00,script,translated,src/engine/script_machine.cpp: ScriptMachine::bind_task_native as bind_native (the original writes the same function slot); it throws where the original returns false
 00587b60,FUN_00587b60,unknown,todo,ghidra
 00587b70,FUN_00587b70,unknown,todo,ghidra
 00587b80,FUN_00587b80,unknown,todo,ghidra
