@@ -2,8 +2,13 @@
 
 #include <array>
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
+
+#include "bo2/engine/big_archive.hpp"
+#include "bo2/engine/script_package.hpp"
+#include "bo2/engine/script_program.hpp"
 
 #include "bo2/engine/crt_random.hpp"
 #include "bo2/engine/region.hpp"
@@ -71,7 +76,9 @@ public:
 
     // The creatures of a region, one per entity in the order of its tables,
     // with the region's package (FUN_00783900) and the class of
-    // `reserved.script` (FUN_007828c0). Returns how many it added.
+    // `reserved.script` (FUN_007828c0). Every one is in the visual list (all
+    // 274 entity creatures of the three slums regions were, read live).
+    // Returns how many it added.
     std::size_t add_region(const std::string& region_name, const std::vector<RegionEntityTable>& tables);
     // A creature at the end of the creature list; returns its word (index
     // + 1). A creature with a script gets its object (FUN_0070e560): the
@@ -151,5 +158,22 @@ private:
     bool model_lod_ = false;                   // DAT_00a79e75
     std::vector<std::string> errors_;
 };
+
+// The KeeperTune fields of the `levelkeeper` tunedata entry of code.big
+// (docs/FORMATS/tunedata.md: a field at blob offset k is at byte 4 + k).
+// Throws common::ParseError when the blob is shorter than 0x40 bytes.
+ScriptLevel::KeeperTune read_keeper_tune(const std::vector<std::uint8_t>& tunedata);
+
+// The scripts of a level container: its `bpackage` entries in entry order,
+// then the package of its one region, linked into one program (docs/
+// SCRIPTS.md, "Loading and linking"), and the entity tables of the region.
+struct LevelScripts {
+    std::vector<std::unique_ptr<ScriptPackage>> packages;
+    std::string region_name;
+    std::vector<RegionEntityTable> tables;
+    std::unique_ptr<ScriptProgram> program;
+};
+// Throws ScriptError when the container does not hold exactly one region.
+LevelScripts load_level_scripts(const BigArchive& archive);
 
 }  // namespace bo2::engine

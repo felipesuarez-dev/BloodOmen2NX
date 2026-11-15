@@ -234,9 +234,13 @@ met its exit criterion but five of its tasks are still open (BO2NX-68, 96,
   (`src/engine/script_machine.cpp`: every instruction the game data uses,
   calls, native functions, child threads and tasks, objects with their
   initial values, main thread and states, and the value types `position`,
-  `rotation`, `color` and `gridposition`). It runs the game's compiled code
-  in synthetic tests but no object of a level yet: that needs the native
-  functions and the other value types. Combat has attack cooldown,
+  `rotation`, `color` and `gridposition`). Every value type the level
+  scripts use is in, with timers, and the creatures of a level live in
+  `src/engine/script_level.cpp` with the simulation scheduler of the
+  original. `bo2nx --replay ... --scripts` runs the 78 script objects of
+  `sl01` each tick; most stop on a native function the port has not bound
+  yet (the natives of `basescript`, the value classes, sound, effect and
+  creatures are queued). Combat has attack cooldown,
   combo state, entity health/damage and a forward hit-sphere query; the
   faithful original values and animation/weapon effects are still pending.
   The compressed `collmodc` runtime and game-specific entities remain
@@ -274,7 +278,8 @@ met its exit criterion but five of its tasks are still open (BO2NX-68, 96,
   compiled script packages) is read from the writer of the executable
   (`docs/FORMATS/bpackage.md`) and the machine that runs them from its
   interpreter (`docs/SCRIPTS.md`); the port reads the packages
-  (`src/engine/script_package.cpp`) but runs no script. The `texfont` font
+  (`src/engine/script_package.cpp`) and runs the scripts of a level with
+  `--replay --scripts`. The `texfont` font
   (`docs/FORMATS/textures.md`) is read by `src/engine/pixmap_font.cpp`.
 - Oracle state beyond position, velocity, health, lore, the animation id
   and the camera: the logic tick and the grounded flag are not located.

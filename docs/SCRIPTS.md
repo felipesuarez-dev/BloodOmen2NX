@@ -880,6 +880,7 @@ not drive the level yet.
 | The codes only the region packages use (`0x0d`, `0x17`, `0x18`, `0x37`, `0x53`, `0x54`, `0x57`, `0x58`) | `src/engine/script_machine.cpp` | `script` (`test_region_codes`, `test_start_without_waiting`) |
 | Timers: the value type, its task, the natives, the call from outside the scripts and the tasks of the script manager | `src/engine/script_timer.cpp`, `src/engine/script_machine.cpp` | `script` (`test_timers`) |
 | The creatures of a level and their objects: one creature per entity, the object of each scripted one, activation in build order, the update of each frame, hibernation and removal, and the simulation scheduler (the caller gives the model radii, the visual list, the drawn frames, the viewers and the keeper tune) | `src/engine/script_level.cpp`, `src/engine/crt_random.cpp` | `script` (`test_script_level`, `test_scheduler`; `test_sl01_level`: the 104 creatures and 78 objects of `sl01` activate and run 120 updates); `engine` (`test_crt_random`) |
+| The scripts of a level in the game loop: `bo2nx --replay ... --scripts` loads them (`load_level_scripts`), reads the level keeper's tune (`read_keeper_tune`), adds Kain as the `kain` creature and, each tick, runs the scheduler with the follow camera as the viewer and then the update | `src/main.cpp`, `src/engine/script_level.cpp` | `script` (`test_level_scripts_sl01`); the state of the gate replays does not change |
 
 ## Checked in the running game
 

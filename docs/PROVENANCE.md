@@ -165,7 +165,7 @@ design. `third_party/stb_vorbis.c` is third-party code (`NOTICE`).
 | `src/game/player.cpp` | Kain's movement | behaviour | analysis | 23 |
 | `src/game/replay.cpp` | Replay of an oracle input timeline | port's own tooling | own design | 0 |
 | `src/game/save.cpp` | Save slots of the port | port's own | own design | 0 |
-| `src/main.cpp` | Host program and its options | port's own | own design | 3 |
+| `src/main.cpp` | Host program and its options; the script tick of `--replay --scripts` | port's own; the tick order is behaviour | own design; the script tick, analysis | 4 |
 | `src/tools/check_data.cpp` | Command line of the data checker | port's own tooling | own design | 0 |
 | `src/common/version.cpp` | Version string | port's own | own design | 0 |
 | `tools/bo2fmt/big.py` | Python reader of the `.big` containers | data format | analysis | 1 |

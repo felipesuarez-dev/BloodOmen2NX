@@ -8,6 +8,7 @@
 #include <iomanip>
 #include <stdexcept>
 #include <iostream>
+#include <map>
 #include <memory>
 #include <string>
 #include <thread>
@@ -26,6 +27,10 @@
 #include "bo2/engine/region.hpp"
 #include "bo2/engine/skeleton_pose.hpp"
 #include "bo2/engine/tick.hpp"
+#include "bo2/engine/crt_random.hpp"
+#include "bo2/engine/script_creature_natives.hpp"
+#include "bo2/engine/script_level.hpp"
+#include "bo2/engine/script_timer.hpp"
 #include "bo2/engine/world.hpp"
 #include "bo2/game/camera.hpp"
 #include "bo2/game/hud_scene.hpp"
@@ -74,6 +79,10 @@ struct Options {
     std::string out;
     std::string replay;
     std::string state_out;
+    // --scripts: run the script objects of the level during --replay; the
+    // tune of the level keeper comes from `code` (code.big).
+    bool scripts = false;
+    std::string code;
     std::string collision_model;
     std::string collision_out;
     std::string event_ogg;
@@ -199,6 +208,9 @@ Options parse_options(int argc, char** argv) {
                 << "  --frames <n>           fixed-step iterations for --headless\n"
                 << "  --tick-rate <hz>       logic ticks per second (default 60)\n"
                 << "  --replay <file.csv>    replay an oracle input timeline headless\n"
+                << "  --scripts              with --replay, run the script objects of the level\n"
+                << "                         each tick and print what they did\n"
+                << "  --code <code.big>      the code.big of --scripts (default: next to resources/)\n"
                 << "  --state-out <file.csv> write the replayed player and camera state\n"
                 << "  --collision-dump       dump the collmodc payloads and their actors\n"
                 << "  --collision-model <s>  only models whose name contains <s>\n"
@@ -254,6 +266,10 @@ Options parse_options(int argc, char** argv) {
             }
         } else if (argument == "--entry") {
             options.entry = next_argument(index, argc, argv);
+        } else if (argument == "--scripts") {
+            options.scripts = true;
+        } else if (argument == "--code") {
+            options.code = next_argument(index, argc, argv);
         } else if (argument == "--hud") {
             options.hud = next_argument(index, argc, argv);
         } else if (argument == "--locale") {
@@ -323,6 +339,9 @@ Options parse_options(int argc, char** argv) {
     }
     if (!options.kain.empty() && !options.play && options.replay.empty()) {
         usage_error("--kain requires --play or --replay");
+    }
+    if ((options.scripts || !options.code.empty()) && options.replay.empty()) {
+        usage_error("--scripts and --code require --replay");
     }
     if (!options.hud.empty() && !options.level && !options.play) {
         usage_error("--hud requires --level or --play");
@@ -1210,6 +1229,100 @@ bo2::game::KainTuning load_kain_tuning(const Options& options) {
     return tuning;
 }
 
+// The script objects of the level of --replay (--scripts): its creatures
+// (ScriptLevel), Kain as the "kain" creature, the follow camera as the
+// viewer of the scheduler (read live: the viewer of sl01 stands behind and
+// above Kain). Not wired yet: the drawn frames (every creature counts as
+// not drawn, so a near creature gets its time in steps of
+// 1/periodicSimRate) and the bounding radius of the models (every creature
+// takes the radius of a creature with no model, 24).
+struct ScriptRun {
+    bo2::engine::LevelScripts scripts;
+    std::unique_ptr<bo2::engine::ScriptMachine> machine;
+    bo2::engine::CrtRandom random;
+    std::unique_ptr<bo2::engine::ScriptLevel> level;
+    std::uint32_t kain = 0;
+};
+
+std::string code_container_path(const Options& options) {
+    if (!options.code.empty()) {
+        return options.code;
+    }
+    // resources/levels/<area>/<level>.big -> code.big next to resources/.
+    const std::string area = bo2::platform::FileSystem::parent(options.big);
+    return bo2::platform::FileSystem::join(area, "../../../code.big");
+}
+
+std::unique_ptr<ScriptRun> start_scripts(const Options& options, const bo2::engine::Vec3& kain_position) {
+    auto run = std::make_unique<ScriptRun>();
+    const bo2::engine::BigArchive archive = bo2::engine::BigArchive::load(options.big);
+    run->scripts = bo2::engine::load_level_scripts(archive);
+    run->machine = std::make_unique<bo2::engine::ScriptMachine>(*run->scripts.program);
+    bo2::engine::bind_creature_natives(*run->machine);
+    bo2::engine::bind_timer_natives(*run->machine);
+    run->level = std::make_unique<bo2::engine::ScriptLevel>(*run->machine, run->random);
+    const std::string code_path = code_container_path(options);
+    const bo2::engine::BigArchive code = bo2::engine::BigArchive::load(code_path);
+    const bo2::engine::BigEntry* tune = code.find("tunedata", "levelkeeper");
+    if (tune == nullptr) {
+        throw std::runtime_error("no tunedata entry named levelkeeper in " + code_path);
+    }
+    run->level->set_keeper(bo2::engine::read_keeper_tune(code.extract(*tune)));
+    run->level->add_region(run->scripts.region_name, run->scripts.tables);
+    bo2::engine::ScriptLevel::Creature kain;
+    kain.name = "kain";
+    kain.kain = true;
+    kain.position = {kain_position.x, kain_position.y, kain_position.z};
+    run->kain = run->level->add_creature(kain);
+    run->level->activate();
+    return run;
+}
+
+// One frame of the game tick (FUN_0072edba): the scheduler, then the tasks
+// and the creatures (ScriptLevel::update).
+void tick_scripts(ScriptRun& run, const bo2::engine::Vec3& kain, const bo2::engine::Vec3& eye, double seconds) {
+    run.level->creature(run.kain).position = {kain.x, kain.y, kain.z};
+    const auto step = static_cast<float>(seconds);
+    run.level->schedule(step, {{eye.x, eye.y, eye.z}});
+    run.level->update(step);
+}
+
+void report_scripts(const ScriptRun& run) {
+    std::size_t creatures = 0;
+    std::size_t objects = 0;
+    std::map<std::uint32_t, std::size_t> states;
+    for (const auto& creature : run.level->creatures()) {
+        creatures += creature.deleted ? 0 : 1;
+        if (creature.object != 0) {
+            ++objects;
+            ++states[run.machine->state_of(creature.object)];
+        }
+    }
+    std::cout << "scripts: " << run.scripts.region_name << ", " << creatures << " creatures, " << objects
+              << " objects running, " << run.level->errors().size() << " stopped, frame "
+              << run.level->frame() << '\n';
+    std::cout << "  states:";
+    for (const auto& [state, count] : states) {
+        std::cout << ' ' << state << 'x' << count;
+    }
+    std::cout << '\n';
+    // What stopped the objects, most first: a native the port has not
+    // bound yet, as a rule.
+    std::map<std::string, std::size_t> causes;
+    for (const std::string& error : run.level->errors()) {
+        const std::size_t colon = error.find(": ");
+        ++causes[colon == std::string::npos ? error : error.substr(colon + 2)];
+    }
+    std::vector<std::pair<std::size_t, std::string>> sorted;
+    for (const auto& [cause, count] : causes) {
+        sorted.emplace_back(count, cause);
+    }
+    std::sort(sorted.rbegin(), sorted.rend());
+    for (std::size_t index = 0; index < sorted.size() && index < 12; ++index) {
+        std::cout << "  " << sorted[index].first << " x " << sorted[index].second << '\n';
+    }
+}
+
 int run_replay(const Options& options) {
     constexpr double kPi = 3.14159265358979323846;
     if (options.replay.empty() || options.state_out.empty() || options.big.empty()) {
@@ -1242,6 +1355,10 @@ int run_replay(const Options& options) {
     state << "frame,phase,player_x,player_y,player_z,vel_x,vel_y,vel_z,"
              "player_yaw_deg,grounded,cam_x,cam_y,cam_z,cam_yaw_deg,cam_pitch_deg,anim\n";
     bo2::engine::Vec3 previous = player.state().position;
+    std::unique_ptr<ScriptRun> scripts;
+    if (options.scripts) {
+        scripts = start_scripts(options, player.state().position);
+    }
     for (const bo2::game::ReplayTick& tick : route.ticks) {
         bo2::game::PlayerInput input;
         input.move_x = tick.move_x;
@@ -1258,6 +1375,9 @@ int run_replay(const Options& options) {
         animation.end(input, player.state(), tick.seconds);
         if (actor) {
             actor->step(input, player.state(), tick.seconds);
+        }
+        if (scripts) {
+            tick_scripts(*scripts, player.state().position, camera.eye(), tick.seconds);
         }
         const bo2::engine::Vec3 position = player.state().position;
         const bo2::engine::Vec3 velocity =
@@ -1293,6 +1413,9 @@ int run_replay(const Options& options) {
         const std::vector<std::uint8_t> pixels =
             bo2::platform::headless::render_level(level.geometry, level.textures, frame);
         bo2::platform::headless::write_ppm(options.out, frame.width, frame.height, pixels);
+    }
+    if (scripts) {
+        report_scripts(*scripts);
     }
     std::cout << "replay: " << route.ticks.size() << " ticks, final "
               << player.state().position.x << ',' << player.state().position.y << ','

@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 
+#include "bo2/common/reader.hpp"
 #include "bo2/engine/big_archive.hpp"
 #include "bo2/engine/region.hpp"
 #include "bo2/engine/script_creature_natives.hpp"
@@ -2399,6 +2400,41 @@ void test_sl01_level(const std::filesystem::path& root) {
     CHECK(states[3] == 8);
 }
 
+// The level keeper's tune in code.big and the scripts of the sl01 container
+// (read_keeper_tune, load_level_scripts): the program of 497 classes and the
+// 104 entities of the region (docs/SCRIPTS.md).
+void test_level_scripts_sl01(const std::filesystem::path& root) {
+    const bo2::engine::BigArchive code = load_container(root / "media/gogames/bo2/code.big");
+    const bo2::engine::BigEntry* tune_entry = code.find("tunedata", "levelkeeper");
+    CHECK(tune_entry != nullptr);
+    if (tune_entry != nullptr) {
+        const auto tune = bo2::engine::read_keeper_tune(code.extract(*tune_entry));
+        CHECK(tune.cull_dist == 0.0f);
+        CHECK(tune.periodic_dist == 1200.0f);
+        CHECK(tune.periodic_rate == 10.0f);
+        CHECK(tune.screen_cull == 1);
+        CHECK(tune.screen_near == 14.0f);
+        CHECK(tune.screen_far == 10.0f);
+    }
+    bool short_tune = false;
+    try {
+        static_cast<void>(bo2::engine::read_keeper_tune({0x40, 0, 0, 0, 1, 2, 3}));
+    } catch (const bo2::common::ParseError&) {
+        short_tune = true;
+    }
+    CHECK(short_tune);
+    const bo2::engine::BigArchive archive =
+        load_container(root / "media/gogames/bo2/resources/levels/slums/sl01.big");
+    const bo2::engine::LevelScripts scripts = bo2::engine::load_level_scripts(archive);
+    CHECK(scripts.region_name == "slums/sl01");
+    CHECK(scripts.program->classes().size() == 497);
+    std::size_t entities = 0;
+    for (const auto& table : scripts.tables) {
+        entities += table.entities.size();
+    }
+    CHECK(entities == 104);
+}
+
 // Every region of the game links (BO2NX-151): 165 programs, 81,752 classes.
 // The packages of a container start with native, and every state table, own
 // or copied from its owner, has the slot count of its class.
@@ -2507,6 +2543,7 @@ int main() {
             test_link_sl01(root);
             test_create_sl01_objects(root);
             test_sl01_level(root);
+            test_level_scripts_sl01(root);
             test_link_all_regions(root);
         } catch (const std::exception& error) {
             std::cerr << "script machine asset tests: " << error.what() << '\n';

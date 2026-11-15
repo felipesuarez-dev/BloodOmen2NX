@@ -1,5 +1,7 @@
 #include "bo2/engine/script_level.hpp"
 
+#include "bo2/common/reader.hpp"
+
 #include <algorithm>
 #include <cstring>
 #include <limits>
@@ -40,6 +42,7 @@ std::size_t ScriptLevel::add_region(const std::string& region_name, const std::v
             creature.package = package;
             creature.script = reserved_script(entity);
             creature.position = {entity.position.x, entity.position.y, entity.position.z};
+            creature.visual = true;
             add_creature(std::move(creature));
             ++added;
         }
@@ -383,6 +386,59 @@ void ScriptLevel::leave_group(std::uint32_t word, Group group) {
     } else {
         creature(word).in_second = false;
     }
+}
+
+ScriptLevel::KeeperTune read_keeper_tune(const std::vector<std::uint8_t>& tunedata) {
+    const common::Reader reader(tunedata);
+    if (tunedata.size() < 4 || reader.u32(0) < 0x40 || tunedata.size() < 4 + 0x40) {
+        throw common::ParseError("levelkeeper tunedata is shorter than its fields");
+    }
+    const auto field = [&](std::size_t offset) {
+        const std::uint32_t bits = reader.u32(4 + offset);
+        float value = 0.0f;
+        std::memcpy(&value, &bits, sizeof value);
+        return value;
+    };
+    ScriptLevel::KeeperTune tune;
+    tune.cull_dist = field(0x08);
+    tune.periodic_dist = field(0x10);
+    tune.periodic_rate = field(0x14);
+    tune.screen_cull = reader.u32(4 + 0x34);
+    tune.screen_near = field(0x38);
+    tune.screen_far = field(0x3c);
+    return tune;
+}
+
+LevelScripts load_level_scripts(const BigArchive& archive) {
+    LevelScripts scripts;
+    const BigEntry* region = nullptr;
+    for (const BigEntry& entry : archive.entries()) {
+        if (entry.type == "bpackage") {
+            scripts.packages.push_back(std::make_unique<ScriptPackage>(
+                parse_script_package(archive.extract(entry), entry.symbols, archive.names())));
+        } else if (entry.type == "region") {
+            if (region != nullptr) {
+                throw ScriptError("level container holds more than one region");
+            }
+            region = &entry;
+        }
+    }
+    if (region == nullptr) {
+        throw ScriptError("level container holds no region");
+    }
+    const std::vector<std::uint8_t> data = archive.extract(*region);
+    scripts.packages.push_back(std::make_unique<ScriptPackage>(
+        parse_region_script_package(data, region->symbols, archive.names())));
+    scripts.region_name = region->name;
+    scripts.tables = parse_region_entities(data);
+    std::vector<const ScriptPackage*> linked;
+    for (const auto& package : scripts.packages) {
+        linked.push_back(package.get());
+    }
+    // The value types with no class that the references of kind 2 name
+    // (docs/SCRIPTS.md, "Linking checked on the data").
+    scripts.program = std::make_unique<ScriptProgram>(ScriptProgram::link(linked, {"activation_info", "creature"}));
+    return scripts;
 }
 
 }  // namespace bo2::engine

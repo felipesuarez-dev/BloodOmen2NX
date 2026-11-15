@@ -65,6 +65,21 @@ and in the `--play` window: the frame, the health vial and the lore vial,
 with the health and lore Kain enters the level with ([`HUD.md`](HUD.md)). It
 reads the Kain tuning from `--kain` or `<level dir>/../kain/kain.big`.
 
+`--replay ... --scripts` runs the script objects of the level with the
+replay: each tick the simulation scheduler (with the follow camera as its
+viewer) and then the update of the creatures, after the player and the
+camera. The state the replay writes does not change. At the end it prints
+the objects that still run, their states and why the others stopped, most
+often a native function the port has not bound yet:
+
+```sh
+./build/linux-debug/bo2nx --replay inputs.csv --state-out state.csv --scripts \
+    --big external/installed/media/gogames/bo2/resources/levels/slums/sl01.big
+```
+
+Not wired yet: the frame each creature was last drawn in (they all count as
+not drawn) and the bounding radius of the models (they all take 24).
+
 `--replay` and `--play` take `--kain-model` too. The replay end frame
 (`--out`) draws Kain at the replayed position and yaw; the player skins him
 every frame and sends his slice of the vertex buffer again
@@ -232,6 +247,8 @@ provisional until the original controls are recovered from `bo2.exe`.
 | `--sdl [--big <file>]` | SDL2 + OpenGL window; no `--big` draws a triangle |
 | `--play --big <level.big>` | Kain third-person player in the SDL window |
 | `--kain <kain.big>` | `kain` tunedata for `--play` (default `<level dir>/../kain/kain.big`) |
+| `--scripts` | With `--replay`: run the script objects of the level each tick (`ScriptLevel`) and print how many run, their states and what stopped the others |
+| `--code <code.big>` | The `code.big` of `--scripts`, for the tune of the level keeper (default `<level dir>/../../../code.big`) |
 | `--hud <code.big>` | The HUD scene of `code.big` over the `--level` frame or in the `--play` window |
 | `--locale <name>` | Language of the localized resources: `english`, `french`, `italian`, `german` or `spanish` (default `spanish`, the one the original executable forces) |
 | `--kain-model <kain.big>` | Append Kain's model to the level: at `--kain-at` for `--level` and `--sdl`, at the player for `--replay` and `--play` |
