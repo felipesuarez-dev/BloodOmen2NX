@@ -6,6 +6,7 @@
 #include <functional>
 #include <iostream>
 #include <limits>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -1511,6 +1512,57 @@ void test_creature_value_types() {
     CHECK(memory.live_blocks() == blocks - 1);  // freed at count 0
 }
 
+// Activating the object of a creature (FUN_0070e0c0): each field of kind 10
+// takes the object of the creature named like the field's type class, then
+// the object starts.
+void test_activate_links_fields() {
+    ScriptClass base = make_class("basecreaturescript", "", {"default"}, 1);
+    base.data_size = 12;
+    ScriptField guard = field(10, 8, 0);
+    guard.type.name = "guard01";
+    guard.default_flag = 0;
+    base.fields = {guard};
+    ScriptClass lever = machine_class({op(0x0B, 12), op(0x03, 7), op(0x1D), op(0x5C)});
+    lever.name = "lever01";
+    lever.parent = "basecreaturescript";
+    lever.slots = {{0, 0, "lever01", 0}};
+    lever.data_size = 20;
+    ScriptField door = field(10, 4, 0);
+    door.type.name = "door01";
+    door.default_flag = 0;
+    ScriptField camera = field(10, 16, 0);
+    camera.type.name = "exportedcamera";
+    camera.default_flag = 0;
+    lever.fields = {door, camera};
+    ScriptClass door_class = make_class("door01", "basecreaturescript", {"default"}, 1);
+    door_class.data_size = 12;
+    ScriptClass guard_class = make_class("guard01", "basecreaturescript", {"default"}, 1);
+    guard_class.data_size = 12;
+    const Linked linked = make_program({lever, base, door_class, guard_class});
+    ScriptMachine machine(linked.program);
+    const ScriptObjectId lever_object = machine.create_object(0);
+    const ScriptObjectId door_object = machine.create_object(2);
+    const ScriptObjectId guard_object = machine.create_object(3);
+    const std::map<std::string, ScriptObjectId> creatures = {{"door01", door_object}, {"guard01", guard_object}};
+    std::vector<std::string> asked;
+    machine.activate(lever_object, [&](const std::string& name) {
+        asked.push_back(name);
+        const auto found = creatures.find(name);
+        return found == creatures.end() ? ScriptObjectId{0} : found->second;
+    });
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    const ScriptAddress data = machine.data_of(lever_object);
+    CHECK(asked == (std::vector<std::string>{"door01", "exportedcamera", "guard01"}));  // the class, then its parent
+    CHECK(memory.u32(data + 4) == machine.handle_of(door_object));
+    CHECK(memory.u32(data + 8) == machine.handle_of(guard_object));
+    CHECK(memory.u32(data + 16) == 0);  // no creature has that name
+    CHECK(memory.u32(machine.handle_of(door_object) + 4) == 2);
+    CHECK(memory.u32(data + 12) == 7);  // then the object started
+    machine.link_object_fields(lever_object, [&](const std::string&) { return guard_object; });
+    CHECK(memory.u32(data + 4) == machine.handle_of(guard_object));  // relinked
+    CHECK(memory.u32(machine.handle_of(door_object) + 4) == 1);      // the old one released
+}
+
 // 0x59: the copy runs, the frame skips the block and waits for it.
 void test_fork_waits() {
     MachineRun run(machine_class(join({{op(0x59, 2), op(0x5D), op(0x5C)}, mark(), {op(0x5D), op(0x5C)}})));
@@ -1771,6 +1823,7 @@ int main() {
     test_unregistered_value_type();
     test_waypoints_type();
     test_creature_value_types();
+    test_activate_links_fields();
 
     const char* root = std::getenv("BO2NX_ASSETS_DIR");
     if (root == nullptr) {

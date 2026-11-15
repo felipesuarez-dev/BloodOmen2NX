@@ -572,6 +572,8 @@ of the game and the value types other than the four block types.
 | Child threads, tasks, parallel blocks | `src/engine/script_machine.cpp` | `script` (`test_spawn_waits` to `test_fork_waits`) |
 | Objects: initial values, main thread, states | `src/engine/script_machine.cpp` | `script` (`test_field_defaults` to `test_stop`) |
 | Value types `position`, `rotation`, `color`, `gridposition` | `src/engine/script_machine.cpp` | `script` (`test_position_type` to `test_unregistered_value_type`) |
+| Value types `waypoints`, `creature`, `creaturecontroller`, `sound`, `effect`, `soundgroup`; every object of the region package of `sl01` | `src/engine/script_machine.cpp` | `script` (`test_waypoints_type`, `test_creature_value_types`, `test_create_sl01_objects`) |
+| Activating the object of a creature: its object fields linked by name, then the start | `src/engine/script_machine.cpp` | `script` (`test_activate_links_fields`) |
 
 ## Checked in the running game
 

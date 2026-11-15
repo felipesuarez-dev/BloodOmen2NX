@@ -13569,7 +13569,7 @@ address,name,subsystem,status,notes
 0070dff0,FUN_0070dff0,unknown,todo,ghidra
 0070e010,FUN_0070e010,unknown,todo,ghidra
 0070e080,FUN_0070e080,unknown,todo,ghidra
-0070e0c0,FUN_0070e0c0,unknown,todo,ghidra
+0070e0c0,FUN_0070e0c0,script,wip,src/engine/script_machine.cpp: ScriptMachine::activate links the object fields of kind 10 by the name of their type class through the host's finder and starts the object; the creature side (its flag +0x22 and FUN_00718160) is the host's
 0070e290,FUN_0070e290,unknown,todo,ghidra
 0070e3e0,FUN_0070e3e0,unknown,todo,ghidra
 0070e450,FUN_0070e450,unknown,todo,ghidra

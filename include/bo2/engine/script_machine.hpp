@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <memory>
 #include <string>
@@ -218,6 +219,19 @@ public:
     // states, else nothing. While the object runs its main thread the state
     // waits; otherwise it is taken at once (FUN_00580890).
     void request_state(ScriptObjectId object, std::int32_t state);
+
+    // The object of the creature with this name, 0 for none (the host's
+    // lookup, FUN_00718160).
+    using ScriptFinder = std::function<ScriptObjectId(const std::string& name)>;
+    // Links every field of kind 10 of the object, of its class and then of
+    // each ancestor, once per offset (FUN_00589030 with 10): the field takes
+    // the handle of the object `find` gives for the name of the field's type
+    // class, counted; a field whose name finds nothing keeps its value
+    // (FUN_0070e0c0).
+    void link_object_fields(ScriptObjectId object, const ScriptFinder& find);
+    // Activating the object of a creature (FUN_0070e0c0): link its fields,
+    // then start it.
+    void activate(ScriptObjectId object, const ScriptFinder& find);
 
     // A frame on the body `body` (program id) for `object`: a zeroed stack of
     // stack_size cells and zeroed locals of max(locals_size, 4) bytes, ip 0.

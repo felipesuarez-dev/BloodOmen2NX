@@ -343,6 +343,45 @@ void ScriptMachine::stop(ScriptObjectId object) {
     object_at(object).pending = 0;
 }
 
+// FUN_0070e0c0 with the walk of FUN_00589030 (class then ancestors, one field
+// per offset, FUN_0057c080): a found object's handle replaces the field's,
+// counted; the old handle is released.
+void ScriptMachine::link_object_fields(ScriptObjectId object, const ScriptFinder& find) {
+    const ScriptAddress data = data_of(object);
+    std::vector<std::uint32_t> seen;
+    for (std::uint32_t id = class_of(object) + 1; id != 0; id = program_.classes()[id - 1].parent) {
+        for (const ScriptField& field : program_.classes()[id - 1].source->fields) {
+            if (std::find(seen.begin(), seen.end(), field.offset) != seen.end()) {
+                continue;
+            }
+            seen.push_back(field.offset);
+            if (field.type.kind != 10) {
+                continue;
+            }
+            const ScriptObjectId target = find(field.type.name);
+            if (target == 0) {
+                continue;
+            }
+            const ScriptAddress handle = handle_of(target);
+            const ScriptAddress slot = data + field.offset;
+            const ScriptAddress old = memory_.u32(slot);
+            if (old == handle) {
+                continue;
+            }
+            if (old != 0) {
+                release_handle(old);
+            }
+            memory_.set_u32(slot, handle);
+            memory_.set_u32(handle + 4, memory_.u32(handle + 4) + 1);
+        }
+    }
+}
+
+void ScriptMachine::activate(ScriptObjectId object, const ScriptFinder& find) {
+    link_object_fields(object, find);
+    start(object);
+}
+
 void ScriptMachine::request_state(ScriptObjectId object, std::int32_t state) {
     const ScriptProgramClass& cls = program_.classes()[class_of(object)];
     if (state <= 0 || static_cast<std::uint32_t>(state) >= cls.states.size()) {
