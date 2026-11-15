@@ -473,7 +473,7 @@ void test_strings() {
 
 void test_unported_code() {
     CHECK(throws([] {
-        MachineRun run(machine_class({op(0x03, 1), op(0x0D, 0), op(0x5C)}));
+        MachineRun run(machine_class({op(0x03, 1), op(0x10, 0), op(0x5C)}));
         run.machine->interpret(run.thread);
     }));
     CHECK(throws([] {
@@ -580,6 +580,39 @@ void test_float_compare() {
     CHECK((run.cell(3) & 0xFFU) == 1);
     CHECK((run.cell(4) & 0xFFU) == 0);  // with NaN, "less or equal" is false
     CHECK((run.cell(0) & 0xFFFFFF00U) == (bits(1.0f) & 0xFFFFFF00U));
+}
+
+// Codes only the packages of the regions use: 0x0d reads a byte of an
+// object's data, 0x18 bounds an index and 0x17 moves an address by it, 0x37
+// compares floats for equality.
+void test_region_codes() {
+    MachineRun run(machine_class({
+        op(0x02), 2, op(0x0D, 12), op(0x03, 0), op(0x0D, 12),
+        op(0x03, 1000), op(0x03, 2), op(0x18, 3), op(0x17, 12),
+        op(0x03, 1000), op(0x03, 3), op(0x18, 3), op(0x17, 12),
+        op(0x03, 1000), op(0x02), 0xFFFFFFFFU, op(0x18, 3), op(0x17, 12),
+        op(0x5C)}));
+    run.machine->memory().set_u32(run.machine->data_of(2) + 12, 0x1234ABCDU);
+    CHECK(run.machine->interpret(run.thread));
+    CHECK(run.frame().top == 4);
+    CHECK(run.cell(0) == 0xCD);
+    CHECK(run.cell(1) == 0);     // object 0
+    CHECK(run.cell(2) == 1024);  // 1000 + 2 * 12
+    CHECK(run.cell(3) == 0);     // index 3 is not below 3
+    CHECK(run.cell(4) == 0);     // index -1 is below 0
+
+    const float nan = std::numeric_limits<float>::quiet_NaN();
+    MachineRun equal(machine_class({
+        op(0x02), bits(1.0f), op(0x02), bits(1.0f), op(0x37),
+        op(0x02), bits(1.0f), op(0x02), bits(2.0f), op(0x37),
+        op(0x02), bits(nan), op(0x02), bits(nan), op(0x37),
+        op(0x5C)}));
+    CHECK(equal.machine->interpret(equal.thread));
+    CHECK(equal.frame().top == 2);
+    CHECK((equal.cell(0) & 0xFFU) == 1);
+    CHECK((equal.cell(1) & 0xFFU) == 0);
+    CHECK((equal.cell(2) & 0xFFU) == 0);  // NaN is not equal to itself
+    CHECK((equal.cell(0) & 0xFFFFFF00U) == (bits(1.0f) & 0xFFFFFF00U));  // only the low byte
 }
 
 // FUN_0068ec30: two strings are equal when their bytes are.
@@ -1104,6 +1137,50 @@ void test_task_native() {
     CHECK(task_seen.runs == 3);
     CHECK(task_seen.finished == 1);
     CHECK(second.memory().u32(data + 4) == 7);
+}
+
+// 0x54, 0x57 and 0x58 start a child like 0x4e, 0x51 and 0x52, and 0x53 a
+// task like 0x4d, without waiting: the child runs once and the parent goes
+// on in the same run.
+void test_start_without_waiting() {
+    for (const std::uint32_t code : {0x54U, 0x57U, 0x58U}) {
+        const bool popped = code != 0x54U;
+        std::vector<std::uint32_t> start = {op(0x03, 2)};
+        if (popped) {
+            start.push_back(op(0x03, 1));  // the object, the frame's own
+        }
+        start.push_back(op(code));
+        start.push_back(0);
+        const std::uint16_t word = popped ? 3 : 2;
+        ScriptClass cls = machine_class(join({start, mark(), {op(0x5C)}}),
+                                        {make_reference(code == 0x58U ? 3 : 4, word, "alpha", 1)});
+        cls.slot_count = 2;
+        cls.methods.push_back(method_with("work", 1, {variable(2, 4)}, 0));
+        cls.bodies.push_back(worker(1));
+        cls.slots = {{0, 0, "alpha", 0}, {0, 1, "alpha", 1}};
+        MachineRun run(cls);
+        ScriptMachine& machine = *run.machine;
+        const ScriptAddress data = machine.data_of(1);
+        CHECK(!machine.run_thread(run.thread));
+        CHECK(machine.memory().u32(data + 8) == 2);  // the child ran once
+        CHECK(machine.memory().u32(data + 4) == 7);  // the parent did not wait
+    }
+
+    ScriptClass cls = machine_class(join({{op(0x03, 3), op(0x02), 2, op(0x53), 0}, mark(), {op(0x5D), op(0x5C)}}),
+                                    {make_reference(4, 4, "alpha", 1)});
+    cls.methods.push_back(method_with("wait", bo2::engine::kScriptNoSlot, {variable(2, 4)}, 0));
+    cls.bodies.push_back(native_body(1));
+    MachineRun run(cls);
+    ScriptMachine& machine = *run.machine;
+    machine.bind_task_native("alpha", 1, count_task);
+    task_seen = {};
+    const ScriptAddress data = machine.data_of(1);
+    CHECK(machine.run_thread(run.thread));
+    CHECK(task_seen.self == 2);
+    CHECK(task_seen.runs == 1);                  // at once
+    CHECK(machine.memory().u32(data + 4) == 7);  // and the frame went on
+    CHECK(!machine.run_thread(run.thread));
+    CHECK(task_seen.runs == 2);  // first the children, then the frame ended
 }
 
 // 0x5a twice, then 0x5b: each copy of the frame runs its block with the same
@@ -1958,6 +2035,7 @@ int main() {
     test_int_compare();
     test_float_ops();
     test_float_compare();
+    test_region_codes();
     test_string_compare();
     test_logic();
     test_conversions();
@@ -1976,6 +2054,7 @@ int main() {
     test_spawn_waits();
     test_spawn_no_wait();
     test_task_native();
+    test_start_without_waiting();
     test_parallel_block();
     test_fork_waits();
     test_field_defaults();

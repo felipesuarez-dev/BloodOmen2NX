@@ -132,7 +132,11 @@ package of `sl01` gets its object with the initial values of its fields
 with sign. "Push" and "pop" act on the stack of the frame; "top" is its
 last cell. An address is a pointer to memory of the game: a local, a field
 or an element. A boolean is the low byte of a cell: the comparisons write
-only that byte. The codes in italics are not used by the game data.
+only that byte. The codes in italics are not used by the game data: no
+body of the `bpackage` entries and none of the packages of the 165 regions
+has them. Eight codes are used only by the region packages: `0x0d` (342
+times), `0x17` and `0x18` (291 times each, in 61 classes: they index
+arrays), `0x37` (222), `0x53` (15), `0x54` (67), `0x57` (1) and `0x58` (24).
 
 ### Values and variables
 
@@ -147,11 +151,11 @@ only that byte. The codes in italics are not used by the game data.
 | `0x08` | Push the object of the handle stored at `imm` in the locals, or 0 |
 | `0x09`, `0x0a`, `0x0b` | Push the byte, the 32-bit value or the address at `imm` in the data of the object |
 | `0x0c` | Push the object of the handle stored at `imm` in the data of the object, or 0 |
-| *`0x0d`*, `0x0e`, `0x0f`, *`0x10`* | Top is an object: replace it with the byte, the 32-bit value, the address or the object of the handle at `imm` in its data; 0 when the object is 0 |
+| `0x0d`, `0x0e`, `0x0f`, *`0x10`* | Top is an object: replace it with the byte, the 32-bit value, the address or the object of the handle at `imm` in its data; 0 when the object is 0 |
 | *`0x11`*, *`0x12`*, *`0x13`* | Top is an address: replace it with the byte, the 32-bit value or the address at `imm` from it; nothing when it is 0 |
 | *`0x14`*, *`0x15`*, *`0x16`* | Pop an index; top is an address: replace it with the byte at the index, the 32-bit value at four times the index, or the object of the handle there |
-| *`0x17`* | Pop an index; top is an address: add `imm` times the index |
-| *`0x18`* | Top is an index: when it is below 0 or not below `imm`, the cell under it becomes 0 |
+| `0x17` | Pop an index; top is an address: add `imm` times the index, unless the address is 0 |
+| `0x18` | Top is an index (not popped): when it is below 0 or not below `imm`, the cell under it becomes 0 |
 | *`0x19`*, *`0x1a`*, *`0x1b`* | Pop a value; combine it with top through `FUN_005b4c10` or `FUN_005b4ca0` (not read) |
 | `0x1c`, `0x1d` | Pop a value, then pop an address: store the byte or the 32-bit value there when the address is not 0 |
 | `0x1e` | Pop an object, then pop an address: release the handle stored there and store the handle of the object, counting it |
@@ -170,7 +174,7 @@ with one operand replace top.
 | `0x27`, `0x28`, `0x29`, *`0x2a`*, *`0x2b`*, *`0x2c`* | Integers: negate, add, subtract, multiply, divide, remainder. A division by 0 gives 0x80000000 for a negative dividend, 0x7fffffff for a positive one and 0 for 0; a remainder by 0 gives 0 |
 | `0x2d`, `0x2e`, `0x2f` | Integers: less, less or equal, equal |
 | `0x30`, `0x31`, `0x32`, `0x33`, `0x34` | Floats: negate, add, subtract, multiply, divide. A division by 0.0 gives the largest float (`0x0086dee8`) with the sign of the dividend, or 0 for 0 |
-| `0x35`, `0x36`, *`0x37`* | Floats: less, less or equal, equal |
+| `0x35`, `0x36`, `0x37` | Floats: less, less or equal, equal |
 | `0x38` | Strings, by address: equal byte by byte (`FUN_0068ec30`); false when an address is 0 |
 | `0x39`, `0x3a`, `0x3b` | Booleans: not, and, or |
 | `0x3c`, *`0x3d`* | Float to integer and to boolean. `0x3c` calls `__ftol` (`0x7a3af4`): rounding set to chop, `fistp` to a 64-bit integer, and the cell takes the low 32 bits |
@@ -218,11 +222,12 @@ A body is reached in one of four ways, by the words after the instruction:
 | `0x4c` | popped | method | As `0x48` |
 | `0x4d` | popped | body | Calls a native function that can return a task; the task becomes a child of the frame, and the frame waits for its children |
 | `0x4e` to `0x52` | as `0x48` to `0x4c` | as `0x48` to `0x4c` | The body starts as a child thread of the frame (`FUN_0057f6d0`, `FUN_0057d810`) and the frame waits for its children |
-| *`0x53`* | popped | body | As `0x4d` without waiting |
-| *`0x54`*, `0x55`, `0x56`, *`0x57`*, *`0x58`* | as `0x48` to `0x4c` | as `0x48` to `0x4c` | As `0x4e` to `0x52` without waiting |
+| `0x53` | popped | body | As `0x4d` without waiting: the task joins the children of the frame and runs once |
+| `0x54`, `0x55`, `0x56`, `0x57`, `0x58` | as `0x48` to `0x4c` | as `0x48` to `0x4c` | As `0x4e` to `0x52` without waiting |
 
-In the game data the calls that start a thread (`0x4d` to `0x52`, `0x55`,
-`0x56`) always target a method whose byte +5 is 2, and the others never do.
+In the `bpackage` entries the calls that start a thread (`0x4d` to `0x52`,
+`0x55`, `0x56`) always target a method whose byte +5 is 2, and the others
+never do; the region packages were not measured for this.
 
 ## Values
 

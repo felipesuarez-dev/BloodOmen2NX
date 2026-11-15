@@ -16,11 +16,11 @@ std::string hex_code(std::uint32_t code) {
     return text.data();
 }
 
-// The codes that no body of the game data uses (in italics in
-// docs/SCRIPTS.md, "Instructions").
+// The codes that no body of the game data uses, in the bpackage entries or
+// in the packages of the regions (in italics in docs/SCRIPTS.md,
+// "Instructions").
 bool unused_by_the_game(std::uint32_t code) {
     switch (code) {
-    case 0x0D:
     case 0x10:
     case 0x11:
     case 0x12:
@@ -28,8 +28,6 @@ bool unused_by_the_game(std::uint32_t code) {
     case 0x14:
     case 0x15:
     case 0x16:
-    case 0x17:
-    case 0x18:
     case 0x19:
     case 0x1A:
     case 0x1B:
@@ -42,7 +40,6 @@ bool unused_by_the_game(std::uint32_t code) {
     case 0x2A:
     case 0x2B:
     case 0x2C:
-    case 0x37:
     case 0x3D:
     case 0x3F:
     case 0x40:
@@ -50,10 +47,6 @@ bool unused_by_the_game(std::uint32_t code) {
     case 0x42:
     case 0x43:
     case 0x44:
-    case 0x53:
-    case 0x54:
-    case 0x57:
-    case 0x58:
         return true;
     default:
         return code > 0x60;
@@ -112,6 +105,13 @@ public:
     // A boolean is the low byte of a cell; the other three bytes stay.
     std::uint8_t top_byte() const { return memory_.u8(cell()); }
     void replace_byte(bool value) { memory_.set_u8(cell(), value ? 1 : 0); }
+    // The cell under the top.
+    void replace_under(std::uint32_t value) {
+        if (frame_.top < 1) {
+            throw ScriptError("script stack has no cell under its top");
+        }
+        memory_.set_u32(frame_.stack + static_cast<std::uint32_t>(frame_.top - 1) * 4U, value);
+    }
 
 private:
     ScriptAddress cell() const {
@@ -1284,6 +1284,11 @@ bool ScriptMachine::interpret(ScriptThread& thread) {
             stack.push(handle != 0 ? memory_.u32(handle + 8) : 0);
             break;
         }
+        case 0x0D: {
+            const ScriptObjectId object = stack.top();
+            stack.replace(object != 0 ? memory_.u8(data_of(object) + imm) : 0);
+            break;
+        }
         case 0x0E: {
             const ScriptObjectId object = stack.top();
             stack.replace(object != 0 ? memory_.u32(data_of(object) + imm) : 0);
@@ -1294,6 +1299,24 @@ bool ScriptMachine::interpret(ScriptThread& thread) {
             stack.replace(object != 0 ? data_of(object) + imm : 0);
             break;
         }
+        case 0x17: {
+            // An element of an array: the address under the index moves
+            // `imm` bytes per index, unless it is 0.
+            const std::uint32_t index = stack.pop();
+            const ScriptAddress address = stack.top();
+            if (address != 0) {
+                stack.replace(imm * index + address);
+            }
+            break;
+        }
+        case 0x18:
+            // The bound of an index: below 0 or not below `imm`, the cell
+            // under it becomes 0; the index stays.
+            if (static_cast<std::int32_t>(stack.top()) < 0 ||
+                static_cast<std::int32_t>(imm) <= static_cast<std::int32_t>(stack.top())) {
+                stack.replace_under(0);
+            }
+            break;
         case 0x1C: {
             const std::uint32_t value = stack.pop();
             const ScriptAddress address = stack.pop();
@@ -1431,6 +1454,11 @@ bool ScriptMachine::interpret(ScriptThread& thread) {
             stack.replace_byte(left < right || left == right);
             break;
         }
+        case 0x37: {
+            const float right = as_float(stack.pop());
+            stack.replace_byte(as_float(stack.top()) == right);
+            break;
+        }
         case 0x38: {
             // FUN_0068ec30: equal byte by byte.
             const ScriptAddress right = stack.pop();
@@ -1526,8 +1554,10 @@ bool ScriptMachine::interpret(ScriptThread& thread) {
         // mirrors (0x4e as 0x48, 0x4f and 0x55 as 0x49, 0x50 and 0x56 as
         // 0x4a, 0x51 as 0x4b, 0x52 as 0x4c). 0x4e to 0x52 then wait for the
         // children of the frame; 0x55 and 0x56 go on.
-        case 0x4D: {
-            // A native body that returns a task, on an object from the stack.
+        case 0x4D:
+        case 0x53: {
+            // A native body that returns a task, on an object from the stack;
+            // 0x53 does not wait for it.
             const std::uint32_t body = next_id(program_.bodies().size(), "body");
             const ScriptObjectId object = stack.pop();
             if (object == 0) {
@@ -1535,17 +1565,25 @@ bool ScriptMachine::interpret(ScriptThread& thread) {
             } else {
                 spawn(thread, object, body);
             }
+            if (op == 0x53) {
+                break;
+            }
             frame.waiting = true;
             return false;
         }
         case 0x4E:
-        case 0x51: {
+        case 0x51:
+        case 0x54:
+        case 0x57: {
             const std::uint32_t body = next_id(program_.bodies().size(), "body");
-            const ScriptObjectId object = op == 0x4E ? frame.object : stack.pop();
+            const ScriptObjectId object = op == 0x4E || op == 0x54 ? frame.object : stack.pop();
             if (object == 0) {
                 drop_call(frame, method_of_body(body));
             } else {
                 spawn(thread, object, body);
+            }
+            if (op == 0x54 || op == 0x57) {
+                break;
             }
             frame.waiting = true;
             return false;
@@ -1581,7 +1619,8 @@ bool ScriptMachine::interpret(ScriptThread& thread) {
             }
             break;
         }
-        case 0x52: {
+        case 0x52:
+        case 0x58: {
             const std::uint32_t method = next_id(program_.methods().size(), "method");
             const ScriptObjectId object = stack.pop();
             const std::uint32_t body = object != 0 ? body_in_state(object, method, false) : 0;
@@ -1589,6 +1628,9 @@ bool ScriptMachine::interpret(ScriptThread& thread) {
                 drop_call(frame, method);
             } else {
                 spawn(thread, object, body - 1);
+            }
+            if (op == 0x58) {
+                break;
             }
             frame.waiting = true;
             return false;
