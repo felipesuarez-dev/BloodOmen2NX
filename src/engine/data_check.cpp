@@ -26,6 +26,10 @@ void check_cellgrup(const BigArchive& archive, const BigEntry& entry) {
     static_cast<void>(parse_cell_group(archive.extract(entry), entry.symbols, archive.names()));
 }
 
+void check_litedata(const BigArchive& archive, const BigEntry& entry) {
+    static_cast<void>(parse_lightmaps(archive.extract(entry)));
+}
+
 void check_model(const BigArchive& archive, const BigEntry& entry) {
     static_cast<void>(parse_model_asset(archive.extract(entry), entry.symbols, archive.names()));
 }
@@ -53,6 +57,7 @@ const std::map<std::string, EntryCheck>& entry_checks() {
         {"animatio", &check_animatio},
         {"animreel", &check_animreel},
         {"cellgrup", &check_cellgrup},
+        {"litedata", &check_litedata},
         {"model", &check_model},
         {"region", &check_region},
         {"strtable", &check_strtable},

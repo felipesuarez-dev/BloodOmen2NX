@@ -288,6 +288,17 @@ std::vector<std::uint8_t> build_model_asset() {
     return model;
 }
 
+// A light map payload with no group: the smallest payload that
+// parse_lightmaps accepts (docs/FORMATS/litedata.md). A truncated payload
+// returns an empty list, so the rejection case uses another version.
+std::vector<std::uint8_t> build_light_maps() {
+    std::vector<std::uint8_t> data;
+    put32(data, 1);
+    put32(data, 0);
+    put32(data, 0);
+    return data;
+}
+
 // A string table with no record: the smallest payload that
 // StringTable::parse accepts (docs/FORMATS/strtable.md).
 std::vector<std::uint8_t> build_string_table() {
@@ -1544,6 +1555,30 @@ void test_data_check_strtable() {
     CHECK(report.failures[0].entry == "text/cut");
 }
 
+// A light map entry that the reader rejects is one failure; the entries
+// after it are still checked (docs/DATA_COVERAGE.md, "litedata"). A
+// truncated payload returns an empty list, so the bad entry uses version 2.
+void test_data_check_litedata() {
+    const std::vector<std::uint8_t> light = build_light_maps();
+    std::vector<std::uint8_t> bad = light;
+    bad[0] = 2;
+    const std::vector<std::uint8_t> data = build_big({
+        {"litedata", "light/bad", bad, {}},
+        {"litedata", "light/ok", light, {}},
+    });
+    const bo2::engine::BigArchive archive = bo2::engine::BigArchive::parse(data);
+    bo2::engine::DataReport report;
+    bo2::engine::check_archive(archive, "test.big", report);
+    CHECK(report.containers == 1);
+    const bo2::engine::TypeCount& count = report.types.at("litedata");
+    CHECK(count.entries == 2);
+    CHECK(count.checked == 2);
+    CHECK(count.failed == 1);
+    CHECK(report.failures.size() == 1);
+    CHECK(report.failures[0].type == "litedata");
+    CHECK(report.failures[0].entry == "light/bad");
+}
+
 // A texture entry that the DDS reader rejects is one failure; the entries
 // after it are still checked (docs/DATA_COVERAGE.md, "texture").
 void test_data_check_texture() {
@@ -1640,6 +1675,7 @@ int main() {
     test_data_check_animatio();
     test_data_check_region();
     test_data_check_strtable();
+    test_data_check_litedata();
     test_data_check_texture();
     test_skeleton_bones();
     test_collision_chunk();

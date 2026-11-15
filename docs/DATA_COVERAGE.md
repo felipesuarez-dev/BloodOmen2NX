@@ -23,7 +23,7 @@ A container that does not open is printed as `load-fail` and makes the exit
 code 1. A reader failure does not change the exit code. Without arguments the
 exit code is 2.
 
-## Reads of 2026-11-14
+## Reads of 2026-11-15
 
 | Type | Entries | Checked | Failed |
 |---|---|---|---|
@@ -33,7 +33,7 @@ exit code is 2.
 | cellgrup | 236 | 236 | 30 |
 | effect | 7,865 | 0 | 0 |
 | lipsync | 71,182 | 0 | 0 |
-| litedata | 142 | 0 | 0 |
+| litedata | 142 | 142 | 0 |
 | liteinfo | 1 | 0 | 0 |
 | model | 5,168 | 5,168 | 146 |
 | musicbnk | 11 | 0 | 0 |
@@ -47,11 +47,12 @@ exit code is 2.
 | texture | 22,483 | 22,483 | 11 |
 | tunedata | 1,720 | 0 | 0 |
 
-`animatio`, `animreel`, `cellgrup`, `model`, `region`, `strtable`, `texfont`
-and `texture` have a registered reader. The other types are counted but not
+`animatio`, `animreel`, `cellgrup`, `litedata`, `model`, `region`, `strtable`,
+`texfont` and `texture` have a registered reader. The other types are counted but not
 read yet; each following issue adds the reader of one type and its row here.
-The 92 `strtable` entries, the 165 `region` entries, the 32,791 `animreel`
-entries and the four `texfont` entries are read without a failure.
+The 142 `litedata` entries, the 92 `strtable` entries, the 165 `region`
+entries, the 32,791 `animreel` entries and the four `texfont` entries are
+read without a failure.
 
 ## animatio
 
