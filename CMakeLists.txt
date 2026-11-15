@@ -24,6 +24,7 @@ add_library(bo2_engine STATIC
     src/engine/big_archive.cpp
     src/engine/cell_group.cpp
     src/engine/collision.cpp
+    src/engine/crt_random.cpp
     src/engine/data_check.cpp
     src/engine/dds.cpp
     src/engine/entity_template.cpp

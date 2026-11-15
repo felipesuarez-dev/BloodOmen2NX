@@ -11,6 +11,7 @@
 #include "bo2/common/reader.hpp"
 #include "bo2/engine/big_archive.hpp"
 #include "bo2/engine/cell_group.hpp"
+#include "bo2/engine/crt_random.hpp"
 #include "bo2/engine/data_check.hpp"
 #include "bo2/engine/dds.hpp"
 #include "bo2/engine/erg.hpp"
@@ -658,6 +659,23 @@ std::vector<std::uint8_t> make_font(bool upper_case_only, const std::vector<Glyp
         put_float(data, glyph.height);
     }
     return data;
+}
+
+// FUN_007a4289: the rand of the C library, state 1 (docs/GAMEPLAY.md).
+void test_crt_random() {
+    bo2::engine::CrtRandom random;
+    const std::uint32_t first[] = {41, 18467, 6334, 26500, 19169, 15724, 11478, 29358, 26962, 24464};
+    for (const std::uint32_t value : first) {
+        CHECK(random.next() == value);
+    }
+    for (int index = 10; index < 99; ++index) {
+        random.next();
+    }
+    CHECK(random.next() == 16541);  // the 100th
+    for (int index = 100; index < 199; ++index) {
+        random.next();
+    }
+    CHECK(random.next() == 9514);  // the 200th
 }
 
 void test_reader() {
@@ -2147,6 +2165,7 @@ void test_skeleton_bones() {
 
 int main() {
     test_reader();
+    test_crt_random();
     test_big();
     test_dds();
     test_dds_dxt2_dxt4();
