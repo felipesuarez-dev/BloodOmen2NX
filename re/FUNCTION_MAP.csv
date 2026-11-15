@@ -6075,6 +6075,7 @@ address,name,subsystem,status,notes
 005756e0,FUN_005756e0,unknown,todo,ghidra
 00575710,FUN_00575710,unknown,todo,ghidra
 00575900,FUN_00575900,unknown,todo,ghidra
+00575980,FUN_00575980,font,wip,src/engine/pixmap_font.cpp: layout_string places each glyph with its screen rectangle and texture coordinates; the view coordinates and the renderer queue are not ported.
 00575e30,FUN_00575e30,unknown,todo,ghidra
 00575e70,FUN_00575e70,unknown,todo,ghidra
 00575e90,FUN_00575e90,unknown,todo,ghidra

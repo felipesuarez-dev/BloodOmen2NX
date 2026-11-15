@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "bo2/engine/image.hpp"
@@ -54,5 +55,34 @@ struct GlyphBitmap {
 // font has no such code and common::ParseError when the rectangle is outside
 // the texture.
 GlyphBitmap glyph_bitmap(const PixmapFont& font, const Image& texture, std::uint8_t code);
+
+// One placed glyph: its screen rectangle (y0 above y1) and its texture
+// coordinates (v0 above v1; the texture is stored upside down).
+struct GlyphQuad {
+    std::uint8_t code = 0;
+    float x0 = 0.0f;
+    float y0 = 0.0f;
+    float x1 = 0.0f;
+    float y1 = 0.0f;
+    float u0 = 0.0f;
+    float v0 = 0.0f;
+    float u1 = 0.0f;
+    float v1 = 0.0f;
+};
+
+struct StringLayout {
+    std::vector<GlyphQuad> quads;
+    float pen_x = 0.0f;
+    float pen_y = 0.0f;
+};
+
+// FUN_00575980: lays out a string with the advance of the original. The pen
+// starts at (x, y) with y down; 0x0a starts a row, 0x20 advances a space and
+// every other byte places its glyph, or the glyph of ^ when the font has no
+// such code, or advances a space when it has neither. The screen rectangle of
+// a glyph is x0..x0 + width * scale and y - row_height..y.
+StringLayout layout_string(const PixmapFont& font, std::uint32_t texture_width,
+                           std::uint32_t texture_height, std::string_view text, float x,
+                           float y, float row_height, float scale);
 
 }  // namespace bo2::engine

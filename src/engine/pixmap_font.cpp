@@ -129,4 +129,58 @@ GlyphBitmap glyph_bitmap(const PixmapFont& font, const Image& texture, std::uint
     return bitmap;
 }
 
+// FUN_00575980: every byte advances the pen or places a glyph. A newline
+// returns the pen to the starting x and lowers it one row; a space advances
+// space_width; a glyph takes the rectangle x..x + width * scale and
+// y - row_height..y and advances (width + kerning) * scale. A code the font
+// does not have falls back to ^, and to a space when ^ is missing too. The
+// texture is stored upside down, so the top of the rectangle takes the
+// bottom row of the glyph.
+StringLayout layout_string(const PixmapFont& font, std::uint32_t texture_width,
+                           std::uint32_t texture_height, std::string_view text, float x,
+                           float y, float row_height, float scale) {
+    StringLayout layout;
+    layout.pen_x = x;
+    layout.pen_y = y;
+    const float start_x = x;
+    const float texture_width_value = static_cast<float>(texture_width);
+    const float texture_height_value = static_cast<float>(texture_height);
+    for (const char raw : text) {
+        const std::uint8_t code = static_cast<std::uint8_t>(raw);
+        if (code == 0x0a) {
+            layout.pen_y += row_height;
+            layout.pen_x = start_x;
+            continue;
+        }
+        if (code == 0x20) {
+            layout.pen_x += font.space_width * scale;
+            continue;
+        }
+        const FontGlyph* glyph = font.find(code);
+        std::uint8_t used = code;
+        if (glyph == nullptr) {
+            glyph = font.find('^');
+            used = '^';
+        }
+        if (glyph == nullptr) {
+            layout.pen_x += font.space_width * scale;
+            continue;
+        }
+        GlyphQuad quad;
+        quad.code = used;
+        quad.x0 = layout.pen_x;
+        quad.x1 = layout.pen_x + glyph->width * scale;
+        quad.y0 = layout.pen_y - row_height;
+        quad.y1 = layout.pen_y;
+        quad.u0 = glyph->x / texture_width_value;
+        quad.u1 = (glyph->x + glyph->width) / texture_width_value;
+        quad.v0 = (texture_height_value - glyph->y) / texture_height_value;
+        quad.v1 =
+            (texture_height_value - glyph->y - glyph->height) / texture_height_value;
+        layout.quads.push_back(quad);
+        layout.pen_x += (glyph->width + font.kerning) * scale;
+    }
+    return layout;
+}
+
 }  // namespace bo2::engine

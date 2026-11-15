@@ -166,4 +166,8 @@ item is red and the others white.
 `parse_text` (`include/bo2/engine/text.hpp`, `src/engine/text.cpp`) is
 `FUN_00772320`: it takes the bytes of a stored value and returns the rows of
 glyph and control items and the warnings of the original; it does not look at
-the locale. The `Text` object and its own lists are not ported.
+the locale. `layout_string` (`include/bo2/engine/pixmap_font.hpp`,
+`src/engine/pixmap_font.cpp`) is `FUN_00575980`: it places the glyphs of a
+string with the advance and the texture coordinates of the original; the view
+coordinates and the renderer queue are not ported. The `Text` object and its
+own lists are not ported.

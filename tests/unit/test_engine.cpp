@@ -1634,6 +1634,99 @@ void test_glyph_bitmap() {
     CHECK(throws([&] { bo2::engine::glyph_bitmap(outside, texture, 'a'); }));
 }
 
+// FUN_00575980: the placement of the glyphs of a string, with its advance,
+// texture coordinates, space, newline and the fallback to ^.
+void test_layout_string() {
+    using bo2::engine::FontGlyph;
+    using bo2::engine::StringLayout;
+    const auto near = [](float left, float right) {
+        return std::fabs(left - right) < 1.0e-5f;
+    };
+    bo2::engine::PixmapFont font;
+    font.glyphs.push_back(FontGlyph{'a', 0.0f, 0.0f, 10.0f, 10.0f});
+    font.glyphs.push_back(FontGlyph{'b', 20.0f, 0.0f, 6.0f, 10.0f});
+    font.glyphs.push_back(FontGlyph{'^', 40.0f, 0.0f, 4.0f, 10.0f});
+    font.kerning = 2.0f;
+    font.space_width = 4.0f;
+
+    {
+        const StringLayout layout =
+            bo2::engine::layout_string(font, 64, 64, "ab", 10.0f, 20.0f, 12.0f, 1.0f);
+        CHECK(layout.quads.size() == 2);
+        CHECK(near(layout.pen_x, 30.0f));
+        CHECK(near(layout.pen_y, 20.0f));
+        if (layout.quads.size() == 2) {
+            CHECK(layout.quads[0].code == 'a');
+            CHECK(near(layout.quads[0].x0, 10.0f));
+            CHECK(near(layout.quads[0].x1, 20.0f));
+            CHECK(near(layout.quads[0].y0, 8.0f));
+            CHECK(near(layout.quads[0].y1, 20.0f));
+            CHECK(near(layout.quads[0].u0, 0.0f));
+            CHECK(near(layout.quads[0].u1, 10.0f / 64.0f));
+            CHECK(near(layout.quads[0].v0, 1.0f));
+            CHECK(near(layout.quads[0].v1, 54.0f / 64.0f));
+            CHECK(layout.quads[1].code == 'b');
+            CHECK(near(layout.quads[1].x0, 22.0f));
+            CHECK(near(layout.quads[1].x1, 28.0f));
+            CHECK(near(layout.quads[1].u0, 20.0f / 64.0f));
+            CHECK(near(layout.quads[1].u1, 26.0f / 64.0f));
+        }
+    }
+    {
+        const StringLayout layout =
+            bo2::engine::layout_string(font, 64, 64, "a b", 0.0f, 10.0f, 10.0f, 2.0f);
+        CHECK(layout.quads.size() == 2);
+        CHECK(near(layout.pen_x, 48.0f));
+        if (layout.quads.size() == 2) {
+            CHECK(near(layout.quads[0].x0, 0.0f));
+            CHECK(near(layout.quads[0].x1, 20.0f));
+            CHECK(near(layout.quads[1].x0, 32.0f));
+            CHECK(near(layout.quads[1].x1, 44.0f));
+        }
+    }
+    {
+        const StringLayout layout =
+            bo2::engine::layout_string(font, 64, 64, "a\nb", 5.0f, 10.0f, 8.0f, 1.0f);
+        CHECK(layout.quads.size() == 2);
+        CHECK(near(layout.pen_x, 13.0f));
+        CHECK(near(layout.pen_y, 18.0f));
+        if (layout.quads.size() == 2) {
+            CHECK(near(layout.quads[0].y0, 2.0f));
+            CHECK(near(layout.quads[0].y1, 10.0f));
+            CHECK(near(layout.quads[1].x0, 5.0f));
+            CHECK(near(layout.quads[1].y0, 10.0f));
+            CHECK(near(layout.quads[1].y1, 18.0f));
+        }
+    }
+    {
+        const StringLayout layout =
+            bo2::engine::layout_string(font, 64, 64, "a~b", 0.0f, 0.0f, 10.0f, 1.0f);
+        CHECK(layout.quads.size() == 3);
+        CHECK(near(layout.pen_x, 26.0f));
+        if (layout.quads.size() == 3) {
+            CHECK(layout.quads[1].code == '^');
+            CHECK(near(layout.quads[1].x0, 12.0f));
+            CHECK(near(layout.quads[1].x1, 16.0f));
+            CHECK(near(layout.quads[2].x0, 18.0f));
+        }
+    }
+    {
+        bo2::engine::PixmapFont without_caret = font;
+        without_caret.glyphs.erase(without_caret.glyphs.begin() + 2);
+        const StringLayout layout =
+            bo2::engine::layout_string(without_caret, 64, 64, "a~b", 0.0f, 0.0f, 10.0f, 1.0f);
+        CHECK(layout.quads.size() == 2);
+        CHECK(near(layout.pen_x, 24.0f));
+        if (layout.quads.size() == 2) {
+            CHECK(near(layout.quads[1].x0, 16.0f));
+        }
+        const StringLayout missing =
+            bo2::engine::layout_string(without_caret, 64, 64, "~", 0.0f, 0.0f, 10.0f, 1.0f);
+        CHECK(missing.quads.empty());
+        CHECK(near(missing.pen_x, 4.0f));
+    }
+}
+
 // FUN_00772320: the parser of a stored text into rows of glyph and control
 // items, with the warnings of docs/TEXT.md, "Parsing a string".
 void test_text_parser() {
@@ -2034,6 +2127,7 @@ int main() {
     test_model_attributes();
     test_pixmap_font();
     test_glyph_bitmap();
+    test_layout_string();
     test_text_parser();
     test_data_check();
     test_data_check_cellgrup();

@@ -246,6 +246,82 @@ void test_game_font_glyphs(const bo2::engine::BigArchive& archive) {
     CHECK(first == 1);
 }
 
+// FUN_00575980: the three layout controls of the game font, with the texture
+// of 256 x 256 and the named header values of BO2NX-119.
+void test_layout_with_the_game_font(const bo2::engine::BigArchive& archive) {
+    const bo2::engine::BigEntry* font_entry = archive.find("texfont", "main/main");
+    const bo2::engine::BigEntry* texture_entry = archive.find("texture", "fonts/revised");
+    CHECK(font_entry != nullptr);
+    CHECK(texture_entry != nullptr);
+    if (font_entry == nullptr || texture_entry == nullptr) {
+        return;
+    }
+    const bo2::engine::PixmapFont font = bo2::engine::parse_pixmap_font(
+        archive.extract(*font_entry), font_entry->symbols, archive.names());
+    const bo2::engine::Image texture = bo2::engine::decode_dds(archive.extract(*texture_entry));
+    CHECK(texture.width == 256);
+    CHECK(texture.height == 256);
+    const auto near = [](float left, float right) {
+        return std::fabs(left - right) < 1.0e-4f;
+    };
+    {
+        const bo2::engine::StringLayout layout = bo2::engine::layout_string(
+            font, texture.width, texture.height, "ab 0", 100.0f, 200.0f, 20.0f, 1.0f);
+        CHECK(layout.quads.size() == 3);
+        CHECK(near(layout.pen_x, 152.0f));
+        CHECK(near(layout.pen_y, 200.0f));
+        if (layout.quads.size() == 3) {
+            CHECK(near(layout.quads[0].x0, 100.0f));
+            CHECK(near(layout.quads[0].x1, 112.0f));
+            CHECK(near(layout.quads[0].y0, 180.0f));
+            CHECK(near(layout.quads[0].y1, 200.0f));
+            CHECK(near(layout.quads[0].u0, 0.0f));
+            CHECK(near(layout.quads[0].u1, 0.046875f));
+            CHECK(near(layout.quads[0].v0, 1.0f));
+            CHECK(near(layout.quads[0].v1, 0.921875f));
+            CHECK(near(layout.quads[1].x0, 114.0f));
+            CHECK(near(layout.quads[1].x1, 127.0f));
+            CHECK(near(layout.quads[2].x0, 137.0f));
+            CHECK(near(layout.quads[2].x1, 150.0f));
+            CHECK(near(layout.quads[2].u0, 0.1640625f));
+            CHECK(near(layout.quads[2].u1, 0.21484375f));
+            CHECK(near(layout.quads[2].v0, 0.8359375f));
+            CHECK(near(layout.quads[2].v1, 0.7578125f));
+        }
+    }
+    {
+        const bo2::engine::StringLayout layout = bo2::engine::layout_string(
+            font, texture.width, texture.height, "a\nb", 10.0f, 50.0f, 24.0f, 2.0f);
+        CHECK(layout.quads.size() == 2);
+        CHECK(near(layout.pen_x, 40.0f));
+        CHECK(near(layout.pen_y, 74.0f));
+        if (layout.quads.size() == 2) {
+            CHECK(near(layout.quads[0].x0, 10.0f));
+            CHECK(near(layout.quads[0].x1, 34.0f));
+            CHECK(near(layout.quads[0].y0, 26.0f));
+            CHECK(near(layout.quads[0].y1, 50.0f));
+            CHECK(near(layout.quads[1].x0, 10.0f));
+            CHECK(near(layout.quads[1].x1, 36.0f));
+            CHECK(near(layout.quads[1].y0, 50.0f));
+            CHECK(near(layout.quads[1].y1, 74.0f));
+        }
+    }
+    {
+        const bo2::engine::StringLayout layout = bo2::engine::layout_string(
+            font, texture.width, texture.height, "a~b", 0.0f, 20.0f, 20.0f, 1.0f);
+        CHECK(layout.quads.size() == 2);
+        CHECK(near(layout.pen_x, 37.0f));
+        if (layout.quads.size() == 2) {
+            CHECK(near(layout.quads[0].x0, 0.0f));
+            CHECK(near(layout.quads[0].x1, 12.0f));
+            CHECK(near(layout.quads[1].x0, 22.0f));
+            CHECK(near(layout.quads[1].x1, 35.0f));
+            CHECK(near(layout.quads[0].y0, 0.0f));
+            CHECK(near(layout.quads[0].y1, 20.0f));
+        }
+    }
+}
+
 // FUN_00772320 over every value of the ui/UI table of the five languages:
 // the number of values, rows, glyphs, controls and warnings. The 21 control
 // items are value 4 and the single Spanish warning is an unsupported
@@ -387,6 +463,7 @@ int main() {
         const bo2::engine::BigArchive archive = bo2::engine::BigArchive::load(path.string());
         test_game_font(archive);
         test_game_font_glyphs(archive);
+        test_layout_with_the_game_font(archive);
         test_text_parser_on_the_menu_table(archive);
         test_marker_use_per_language(archive);
         // Every installed container starts its name table with the language names.
