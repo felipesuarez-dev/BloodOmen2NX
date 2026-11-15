@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Reader for the Blood Omen 2 `pc.rkv` audio archive.
 
-The PC archive is an Ogg Vorbis stream container. The layout is described
-by independent public parsers (see docs/PRIOR_ART.md and
-docs/FORMATS/rkv.md); the index is length-prefixed and the data start is
+The PC archive is an Ogg Vorbis stream container. The layout was first
+published by the blood-omen-2-pl project (Grupa Polonizacyjna Nosgothica,
+MIT License); this reader is an independent implementation of that layout
+and contains none of its code (see NOTICE, docs/PRIOR_ART.md and
+docs/FORMATS/rkv.md). The index is length-prefixed and the data start is
 derived from the index size, not from a fixed offset.
 
 Container:

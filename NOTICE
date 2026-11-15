@@ -1,0 +1,42 @@
+BloodOmen2NX
+Copyright (C) 2026 felipesuarez-dev and contributors.
+
+What the license covers
+-----------------------
+The original source code, tools, tests and documentation written for this
+repository are released under the GNU General Public License, version 3 or
+later (see LICENSE).
+
+The license grants no rights over Blood Omen 2 or anything of it: its
+executable, code, data, art, audio, video, text, names and trademarks
+belong to their owners (Crystal Dynamics, Eidos Interactive, Square Enix or
+their successors). The repository contains none of the game's files. To run
+the port you need your own legitimate copy of the game, installed with its
+official installer.
+
+How the port is written
+-----------------------
+The port reproduces the behaviour and reads the data of the original game.
+The behaviour is studied in a legally obtained copy (static analysis and
+observation of the running game) for interoperability with the game's own
+data on other platforms. What is learned is written down as specifications
+in docs/; the code is written from those specifications. Addresses such as
+FUN_00443a50 in comments and in re/FUNCTION_MAP.csv record where a rule was
+observed; they are not copies of the original code. docs/PROVENANCE.md
+describes the policy and the origin of each part of the repository.
+
+The images under docs/media/ are frames rendered by the port from a private
+copy of the game data. They show art that belongs to the owners of the game
+and are not covered by the license of the port.
+
+No binary build of the port is published before a legal review.
+
+Third-party components
+----------------------
+- third_party/stb_vorbis.c: stb_vorbis by Sean Barrett, public domain or
+  MIT (dual license, see the end of the file).
+- The pc.rkv layout was first published by the blood-omen-2-pl project of
+  Grupa Polonizacyjna Nosgothica (MIT License,
+  https://github.com/Grupa-Polonizacyjna-Nosgothica/blood-omen-2-pl).
+  tools/bo2fmt/rkv.py is an independent implementation of that layout; no
+  code of that project is included.
