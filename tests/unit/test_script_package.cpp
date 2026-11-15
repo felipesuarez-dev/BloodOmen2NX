@@ -9,6 +9,7 @@
 
 #include "bo2/common/reader.hpp"
 #include "bo2/engine/big_archive.hpp"
+#include "bo2/engine/region.hpp"
 #include "bo2/engine/script_package.hpp"
 
 namespace {
@@ -402,6 +403,30 @@ void test_sl01_packages(const std::filesystem::path& root) {
     CHECK(sounds.code_words == 1598 && sounds.fields == 96 && sounds.enums == 0);
 }
 
+// The package of the sl01 region (docs/FORMATS/bpackage.md, "Region
+// packages"): it imports creatures and its first class is resourcedb, with no
+// parent and no states.
+void test_sl01_region_package(const std::filesystem::path& root) {
+    const bo2::engine::BigArchive archive = bo2::engine::BigArchive::load(
+        (root / "media/gogames/bo2/resources/levels/slums/sl01.big").string());
+    int regions = 0;
+    for (const bo2::engine::BigEntry& entry : archive.entries()) {
+        if (entry.type != "region") {
+            continue;
+        }
+        ++regions;
+        const bo2::engine::ScriptPackage package = bo2::engine::parse_region_script_package(
+            archive.extract(entry), entry.symbols, archive.names());
+        CHECK(entry.name == "slums/sl01");
+        CHECK(package.imports == std::vector<std::string>{"creatures"});
+        CHECK(package.classes.size() == 79);
+        CHECK(!package.classes.empty() && package.classes.front().name == "resourcedb");
+        CHECK(!package.classes.empty() && package.classes.front().parent.empty());
+        CHECK(!package.classes.empty() && package.classes.front().states.empty());
+    }
+    CHECK(regions == 1);
+}
+
 }  // namespace
 
 int main() {
@@ -416,10 +441,11 @@ int main() {
         std::cout << "script package asset tests skipped (BO2NX_ASSETS_DIR is unset)\n";
     } else {
         try {
-            // The totals of the 480 packages of the game are checked by the data
-            // checker (bo2nx_check_data, docs/DATA_COVERAGE.md): loading the 179
-            // containers takes over a minute in a debug build.
+            // The 480 packages and the 165 region packages of the game are read
+            // by the data checker (bo2nx_check_data, docs/DATA_COVERAGE.md):
+            // loading the 179 containers takes over a minute in a debug build.
             test_sl01_packages(root);
+            test_sl01_region_package(root);
         } catch (const std::exception& error) {
             std::cerr << "script package asset tests: " << error.what() << '\n';
             return 1;

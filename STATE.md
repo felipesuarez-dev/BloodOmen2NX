@@ -226,7 +226,8 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   instructions, the binding of the 505 native functions, the classes of
   every region) and the port's script machine is decided
   (`docs/ARCHITECTURE.md`); the port reads the 480 compiled packages
-  (`src/engine/script_package.cpp`) and runs no script yet. Combat has attack cooldown,
+  (`src/engine/script_package.cpp`) and the package of each of the 165
+  regions (`src/engine/region.cpp`), and runs no script yet. Combat has attack cooldown,
   combo state, entity health/damage and a forward hit-sphere query; the
   faithful original values and animation/weapon effects are still pending.
   The compressed `collmodc` runtime and game-specific entities remain

@@ -74,7 +74,7 @@ checked by the tool. Regenerate the file when a reader change is deliberate.
 `strtable`, `texfont` and `texture` have a registered reader. The other types are counted but not
 read yet; each following issue adds the reader of one type and its row here.
 The 142 `litedata` entries, the 92 `strtable` entries, the 165 `region`
-entries, the 32,791 `animreel` entries, the 22,483 `texture` entries and
+entries (their entities and their script package), the 32,791 `animreel` entries, the 22,483 `texture` entries and
 the four `texfont` entries are read without a failure.
 
 ## animatio

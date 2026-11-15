@@ -77,6 +77,35 @@ RegionEntity parse_entity(const common::Reader& reader, std::size_t offset, std:
     return entity;
 }
 
+// The `packages` section between `begin` and `end` (docs/FORMATS/bpackage.md,
+// "Region packages"): u32 4, u32 package count, u16 1, u16 0xffff, the
+// package name (cstr padded to 4), u32 size (the bytes from the name to the
+// end of the section), u32 0, then the package up to the end of the section.
+ScriptPackage read_packages_section(const std::vector<std::uint8_t>& payload, std::size_t begin,
+                                    std::size_t end, const std::vector<std::uint16_t>& symbols,
+                                    const std::vector<std::string>& names) {
+    const common::Reader reader(payload);
+    if (begin + 12 > end) {
+        throw common::ParseError("packages section is truncated");
+    }
+    if (reader.u32(begin + 4) != 1) {
+        throw common::ParseError("packages section does not hold one package");
+    }
+    const std::size_t name_offset = begin + 12;
+    const std::string name = reader.cstr(name_offset, end);
+    const std::size_t offset = name_offset + align4(name.size() + 1);
+    if (offset + 8 > end) {
+        throw common::ParseError("packages section is truncated");
+    }
+    if (name_offset + reader.u32(offset) != end) {
+        throw common::ParseError("region package size does not reach the end of its section");
+    }
+    if (reader.u32(offset + 4) != 0) {
+        throw common::ParseError("region package header is not followed by 0");
+    }
+    return parse_script_package(reader.bytes(offset + 8, end - offset - 8), symbols, names);
+}
+
 }  // namespace
 
 std::vector<RegionEntityTable> parse_region_entities(
@@ -124,6 +153,29 @@ std::vector<RegionEntityTable> parse_region_entities(
         position += size;
     }
     return tables;
+}
+
+ScriptPackage parse_region_script_package(const std::vector<std::uint8_t>& data,
+                                          const std::vector<std::uint16_t>& symbols,
+                                          const std::vector<std::string>& names) {
+    const std::vector<std::uint8_t> payload = region_payload(data);
+    const common::Reader reader(payload);
+    std::size_t position = 8;
+    while (position + 12 <= payload.size()) {
+        const std::string name = type_name(reader, position);
+        if (name.empty()) {
+            break;
+        }
+        const std::uint32_t size = reader.u32(position + 8);
+        if (size < 12 || position + size > payload.size()) {
+            throw common::ParseError("bad region section size");
+        }
+        if (name == "packages") {
+            return read_packages_section(payload, position + 12, position + size, symbols, names);
+        }
+        position += size;
+    }
+    throw common::ParseError("region has no packages section");
 }
 
 }  // namespace bo2::engine

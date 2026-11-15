@@ -194,11 +194,10 @@ u32   4
 u32   package count (1)
 u16   1
 u16   0xffff
-then `size` bytes:
-  cstr  package name ("default"), padded to 4
-  u32   size: the bytes from the package name to the end of the section
-  u32   0
-  the package, in the layout above
+cstr  package name ("default"), padded to 4
+u32   size: the bytes from the package name to the end of the section
+u32   0
+      the package, in the layout above, up to the end of the section
 ```
 
 Measured on the 165 regions: one package each, named `default`, importing
@@ -207,7 +206,8 @@ first class is `resourcedb` (no parent, no states); the others are the
 classes of the scripted entities of the region, named like the entity
 (`reserved.script` property) and derived from a class of `creatures` or
 `native`. 13,158 classes, 16,104 bodies, 345,637 words of code, 17,255
-fields.
+fields. The port reads it with `parse_region_script_package`
+(`src/engine/region.cpp`), which gives the same four totals.
 
 ## Not read
 

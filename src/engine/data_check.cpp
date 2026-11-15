@@ -44,7 +44,9 @@ void check_texfont(const BigArchive& archive, const BigEntry& entry) {
 }
 
 void check_region(const BigArchive& archive, const BigEntry& entry) {
-    static_cast<void>(parse_region_entities(archive.extract(entry)));
+    const std::vector<std::uint8_t> data = archive.extract(entry);
+    static_cast<void>(parse_region_entities(data));
+    static_cast<void>(parse_region_script_package(data, entry.symbols, archive.names()));
 }
 
 void check_strtable(const BigArchive& archive, const BigEntry& entry) {

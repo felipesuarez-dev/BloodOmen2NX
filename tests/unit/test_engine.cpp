@@ -319,6 +319,18 @@ std::vector<std::uint8_t> build_region() {
     std::vector<std::uint8_t> data;
     put32(data, 1);
     put32(data, 3);
+    // The packages section (docs/FORMATS/bpackage.md, "Region packages") with
+    // a package that has no imports and no classes.
+    const std::vector<std::uint8_t> package = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    data.insert(data.end(), {'p', 'a', 'c', 'k', 'a', 'g', 'e', 's'});
+    put32(data, static_cast<std::uint32_t>(12 + 28 + package.size()));
+    put32(data, 4);
+    put32(data, 1);
+    put32(data, 0xFFFF0001U);
+    data.insert(data.end(), {'d', 'e', 'f', 'a', 'u', 'l', 't', 0});
+    put32(data, static_cast<std::uint32_t>(16 + package.size()));
+    put32(data, 0);
+    data.insert(data.end(), package.begin(), package.end());
     return data;
 }
 

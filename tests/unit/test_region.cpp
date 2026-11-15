@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "bo2/common/reader.hpp"
 #include "bo2/engine/region.hpp"
 
 namespace {
@@ -96,6 +97,67 @@ std::vector<std::uint8_t> nested_region(const std::vector<std::uint8_t>& payload
     return out;
 }
 
+// A package with one import, `creatures`, and no classes
+// (docs/FORMATS/bpackage.md, "Package").
+std::vector<std::uint8_t> minimal_package() {
+    return {1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+}
+
+// The `packages` section of docs/FORMATS/bpackage.md, "Region packages".
+std::vector<std::uint8_t> packages_section(std::uint32_t count, std::int32_t size_delta) {
+    const std::vector<std::uint8_t> package = minimal_package();
+    std::vector<std::uint8_t> section;
+    put32(section, 4);
+    put32(section, count);
+    put32(section, 0xFFFF0001U);
+    append(section, std::string("default\0", 8));
+    // The size counts from the name: name, size, 0 and the package.
+    put32(section, static_cast<std::uint32_t>(static_cast<std::int32_t>(16 + package.size()) + size_delta));
+    put32(section, 0);
+    section.insert(section.end(), package.begin(), package.end());
+    std::vector<std::uint8_t> out;
+    append(out, std::string("packages", 8));
+    put32(out, static_cast<std::uint32_t>(12 + section.size()));
+    out.insert(out.end(), section.begin(), section.end());
+    return out;
+}
+
+std::vector<std::uint8_t> region_with_packages(std::uint32_t count, std::int32_t size_delta) {
+    std::vector<std::uint8_t> payload;
+    put32(payload, 1);
+    put32(payload, 3);
+    const std::vector<std::uint8_t> packages = packages_section(count, size_delta);
+    payload.insert(payload.end(), packages.begin(), packages.end());
+    append(payload, "entities");
+    put32(payload, 20);
+    put32(payload, 0);
+    put32(payload, 9);
+    return payload;
+}
+
+bool package_throws(const std::vector<std::uint8_t>& data) {
+    try {
+        static_cast<void>(bo2::engine::parse_region_script_package(data, {0}, {"creatures"}));
+    } catch (const bo2::common::ParseError&) {
+        return true;
+    }
+    return false;
+}
+
+void test_region_script_package() {
+    const bo2::engine::ScriptPackage package = bo2::engine::parse_region_script_package(
+        nested_region(region_with_packages(1, 0)), {0}, {"creatures"});
+    CHECK(package.version == 1);
+    CHECK(package.imports.size() == 1);
+    CHECK(package.imports[0] == "creatures");
+    CHECK(package.classes.empty());
+    CHECK(!package_throws(region_with_packages(1, 0)));
+    CHECK(package_throws(region_payload()));             // no packages section
+    CHECK(package_throws(region_with_packages(2, 0)));   // two packages
+    CHECK(package_throws(region_with_packages(1, 4)));   // size past the section
+    CHECK(package_throws(region_with_packages(1, -4)));  // size short of the section
+}
+
 void test_direct_payload() {
     const auto tables = bo2::engine::parse_region_entities(region_payload());
     CHECK(tables.size() == 1);
@@ -118,6 +180,7 @@ void test_nested_container() {
 int main() {
     test_direct_payload();
     test_nested_container();
+    test_region_script_package();
     if (failures != 0) {
         std::cerr << failures << " check(s) failed\n";
         return 1;
