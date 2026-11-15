@@ -288,6 +288,18 @@ std::vector<std::uint8_t> build_model_asset() {
     return model;
 }
 
+// A string table with no record: the smallest payload that
+// StringTable::parse accepts (docs/FORMATS/strtable.md).
+std::vector<std::uint8_t> build_string_table() {
+    std::vector<std::uint8_t> data;
+    append(data, "default");
+    data.push_back(0);
+    put32(data, 20);
+    put32(data, 1);
+    put32(data, 2);
+    return data;
+}
+
 // A region payload with no section: the smallest payload that
 // parse_region_entities accepts (docs/FORMATS/region.md).
 std::vector<std::uint8_t> build_region() {
@@ -1509,6 +1521,29 @@ void test_data_check_region() {
     CHECK(report.failures[0].entry == "region/cut");
 }
 
+// A string table that the reader rejects is one failure; the entries after
+// it are still checked (docs/DATA_COVERAGE.md, "strtable").
+void test_data_check_strtable() {
+    const std::vector<std::uint8_t> table = build_string_table();
+    std::vector<std::uint8_t> cut = table;
+    cut.resize(cut.size() / 2);
+    const std::vector<std::uint8_t> data = build_big({
+        {"strtable", "text/cut", cut, {}},
+        {"strtable", "text/ok", table, {}},
+    });
+    const bo2::engine::BigArchive archive = bo2::engine::BigArchive::parse(data);
+    bo2::engine::DataReport report;
+    bo2::engine::check_archive(archive, "test.big", report);
+    CHECK(report.containers == 1);
+    const bo2::engine::TypeCount& count = report.types.at("strtable");
+    CHECK(count.entries == 2);
+    CHECK(count.checked == 2);
+    CHECK(count.failed == 1);
+    CHECK(report.failures.size() == 1);
+    CHECK(report.failures[0].type == "strtable");
+    CHECK(report.failures[0].entry == "text/cut");
+}
+
 // A texture entry that the DDS reader rejects is one failure; the entries
 // after it are still checked (docs/DATA_COVERAGE.md, "texture").
 void test_data_check_texture() {
@@ -1604,6 +1639,7 @@ int main() {
     test_data_check_animreel();
     test_data_check_animatio();
     test_data_check_region();
+    test_data_check_strtable();
     test_data_check_texture();
     test_skeleton_bones();
     test_collision_chunk();

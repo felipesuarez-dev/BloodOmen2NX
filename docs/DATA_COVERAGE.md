@@ -42,16 +42,16 @@ exit code is 2.
 | sample | 21,251 | 0 | 0 |
 | sound | 62,073 | 0 | 0 |
 | strmfile | 16,428 | 0 | 0 |
-| strtable | 92 | 0 | 0 |
+| strtable | 92 | 92 | 0 |
 | texfont | 4 | 4 | 0 |
 | texture | 22,483 | 22,483 | 11 |
 | tunedata | 1,720 | 0 | 0 |
 
-`animatio`, `animreel`, `cellgrup`, `model`, `region`, `texfont` and
-`texture` have a registered reader. The other types are counted but not read
-yet; each following issue adds the reader of one type and its row here. The
-165 `region` entries, the 32,791 `animreel` entries and the four `texfont`
-entries are read without a failure.
+`animatio`, `animreel`, `cellgrup`, `model`, `region`, `strtable`, `texfont`
+and `texture` have a registered reader. The other types are counted but not
+read yet; each following issue adds the reader of one type and its row here.
+The 92 `strtable` entries, the 165 `region` entries, the 32,791 `animreel`
+entries and the four `texfont` entries are read without a failure.
 
 ## animatio
 

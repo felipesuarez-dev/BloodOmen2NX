@@ -8,6 +8,7 @@
 #include "bo2/engine/dds.hpp"
 #include "bo2/engine/pixmap_font.hpp"
 #include "bo2/engine/region.hpp"
+#include "bo2/engine/string_table.hpp"
 
 namespace bo2::engine {
 
@@ -37,6 +38,10 @@ void check_region(const BigArchive& archive, const BigEntry& entry) {
     static_cast<void>(parse_region_entities(archive.extract(entry)));
 }
 
+void check_strtable(const BigArchive& archive, const BigEntry& entry) {
+    static_cast<void>(StringTable::parse(archive, entry));
+}
+
 void check_texture(const BigArchive& archive, const BigEntry& entry) {
     static_cast<void>(decode_dds(archive.extract(entry)));
 }
@@ -50,6 +55,7 @@ const std::map<std::string, EntryCheck>& entry_checks() {
         {"cellgrup", &check_cellgrup},
         {"model", &check_model},
         {"region", &check_region},
+        {"strtable", &check_strtable},
         {"texfont", &check_texfont},
         {"texture", &check_texture},
     };
