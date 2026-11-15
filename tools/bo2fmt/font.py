@@ -9,7 +9,7 @@ Layout (docs/FORMATS/textures.md, "Font"; loader FUN_005df900):
     u32     payload size
     u32     0
     u16     texture (a symbol of the entry), u16 0xffff
-    f32     four header values, in file order
+    f32     base_height, kerning, leading, space_width
     u8      upper-case-only flag, u8 0xff
     u16     glyph count
     glyphs, 20 bytes each: u8 code, three 0xff, f32 x, y, width, height
@@ -38,7 +38,7 @@ class FontError(ValueError):
 
 
 def parse_texfont(names: list[str], entry: big.Entry) -> dict:
-    """Return the font of a `texfont` entry as texture, header, flag and glyphs."""
+    """Return the font of a `texfont` entry as its four header values, flag and glyphs."""
     data = entry.data
     if len(data) < HEADER_SIZE or data[:8] != b"texfont\0":
         raise FontError("not a texfont payload")
@@ -48,7 +48,7 @@ def parse_texfont(names: list[str], entry: big.Entry) -> dict:
     if texture_symbol >= len(entry.symbols) or entry.symbols[texture_symbol] >= len(names):
         raise FontError("texfont texture is outside the name table")
     texture = names[entry.symbols[texture_symbol]]
-    header = struct.unpack_from("<4f", data, 20)
+    base_height, kerning, leading, space_width = struct.unpack_from("<4f", data, 20)
     upper_case_only = data[36] != 0
     count = struct.unpack_from("<H", data, 38)[0]
     if HEADER_SIZE + count * GLYPH_SIZE > len(data):
@@ -67,7 +67,10 @@ def parse_texfont(names: list[str], entry: big.Entry) -> dict:
                 glyphs.append((code + 0x20, *upper[1:]))
     return {
         "texture": texture,
-        "header": header,
+        "base_height": base_height,
+        "kerning": kerning,
+        "leading": leading,
+        "space_width": space_width,
         "upper_case_only": upper_case_only,
         "glyphs": glyphs,
     }
@@ -84,9 +87,10 @@ def cmd_dump(args) -> int:
         print(f"no texfont {args.entry!r}", file=sys.stderr)
         return 1
     font = parse_texfont(names, entry)
-    header = " ".join(f"{value:g}" for value in font["header"])
     print(
-        f"# {entry.name} texture={font['texture']} header={header} "
+        f"# {entry.name} texture={font['texture']} "
+        f"base_height={font['base_height']:g} kerning={font['kerning']:g} "
+        f"leading={font['leading']:g} space_width={font['space_width']:g} "
         f"upper_case_only={int(font['upper_case_only'])} glyphs={len(font['glyphs'])}"
     )
     for code, x, y, width, height in font["glyphs"]:

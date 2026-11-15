@@ -1561,10 +1561,10 @@ void test_pixmap_font() {
         false, {{'a', 0, 0, 12, 20}, {'A', 105, 105, 12, 20}, {'S', 63, 63, 10, 20}});
     const bo2::engine::PixmapFont font = bo2::engine::parse_pixmap_font(data, symbols, names);
     CHECK(font.texture == "fonts/revised");
-    CHECK(std::fabs(font.header[0] - 20.0f) < 1.0e-5f);
-    CHECK(std::fabs(font.header[1] - 2.0f) < 1.0e-5f);
-    CHECK(std::fabs(font.header[2] - 5.0f) < 1.0e-5f);
-    CHECK(std::fabs(font.header[3] - 8.0f) < 1.0e-5f);
+    CHECK(std::fabs(font.base_height - 20.0f) < 1.0e-5f);
+    CHECK(std::fabs(font.kerning - 2.0f) < 1.0e-5f);
+    CHECK(std::fabs(font.leading - 5.0f) < 1.0e-5f);
+    CHECK(std::fabs(font.space_width - 8.0f) < 1.0e-5f);
     CHECK(!font.upper_case_only);
     CHECK(font.glyphs.size() == 3);
     const bo2::engine::FontGlyph* a = font.find('a');

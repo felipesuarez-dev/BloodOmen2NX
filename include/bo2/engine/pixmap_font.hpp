@@ -1,6 +1,5 @@
 #pragma once
 
-#include <array>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -19,11 +18,14 @@ struct FontGlyph {
 };
 
 // The `texfont` entry of `code.big`: the name of the font texture, the four
-// header floats in file order (their meaning is not read), the upper-case-only
-// flag and the glyphs. Loader FUN_005df900.
+// header values, the upper-case-only flag and the glyphs. Loader FUN_005df900;
+// the header order is the one the converter FUN_005ded00 writes.
 struct PixmapFont {
     std::string texture;
-    std::array<float, 4> header{};
+    float base_height = 0.0f;
+    float kerning = 0.0f;
+    float leading = 0.0f;
+    float space_width = 0.0f;
     bool upper_case_only = false;
     std::vector<FontGlyph> glyphs;
 

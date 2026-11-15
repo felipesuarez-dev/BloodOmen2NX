@@ -51,9 +51,12 @@ PixmapFont parse_pixmap_font(const std::vector<std::uint8_t>& data,
     }
     PixmapFont font;
     font.texture = names[symbols[texture_symbol]];
-    for (std::size_t index = 0; index < 4; ++index) {
-        font.header[index] = read_float(reader, 20 + index * 4);
-    }
+    // FUN_005ded00 writes them in this order: base height, kerning, leading
+    // and space width.
+    font.base_height = read_float(reader, 20);
+    font.kerning = read_float(reader, 24);
+    font.leading = read_float(reader, 28);
+    font.space_width = read_float(reader, 32);
     font.upper_case_only = reader.u8(36) != 0;
     const std::uint16_t count = reader.u16(38);
     if (kHeaderSize + static_cast<std::size_t>(count) * kGlyphSize > data.size()) {

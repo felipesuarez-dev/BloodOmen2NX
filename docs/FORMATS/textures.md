@@ -17,7 +17,9 @@ header and payload can be handed to a DDS loader.
 The game has one font for every language: the `texfont` entry `main/main`
 of `code.big` (a second entry, `main/main.fnt`, has the same bytes) and the
 texture it names, `fonts/revised`, an uncompressed A8R8G8B8 image of
-256 x 256. The loader is `FUN_005df900`.
+256 x 256. The loader is `FUN_005df900`; it keeps the four header values as
+`base_height`, `kerning`, `leading` and `space_width` (20, 2, 5 and 8 in the
+game font).
 
 ```
 char[8] "texfont"

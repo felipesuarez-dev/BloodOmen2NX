@@ -156,10 +156,10 @@ void test_game_font(const bo2::engine::BigArchive& archive) {
     const bo2::engine::PixmapFont font =
         bo2::engine::parse_pixmap_font(data, entry->symbols, archive.names());
     CHECK(font.texture == "fonts/revised");
-    CHECK(std::fabs(font.header[0] - 20.0f) < 1.0e-5f);
-    CHECK(std::fabs(font.header[1] - 2.0f) < 1.0e-5f);
-    CHECK(std::fabs(font.header[2] - 5.0f) < 1.0e-5f);
-    CHECK(std::fabs(font.header[3] - 8.0f) < 1.0e-5f);
+    CHECK(std::fabs(font.base_height - 20.0f) < 1.0e-5f);
+    CHECK(std::fabs(font.kerning - 2.0f) < 1.0e-5f);
+    CHECK(std::fabs(font.leading - 5.0f) < 1.0e-5f);
+    CHECK(std::fabs(font.space_width - 8.0f) < 1.0e-5f);
     CHECK(!font.upper_case_only);
     CHECK(font.glyphs.size() == 87);
     const auto same = [&font](std::uint8_t code, float x, float y, float width, float height) {
