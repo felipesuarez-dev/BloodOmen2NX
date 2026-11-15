@@ -656,10 +656,13 @@ range (squared distance below 1200²) and whose kind is in the mask. A new
 one gets an entry when it answers the state query its message handler gets
 (slot +0x54, message kind `0x1b`), and a timer drawn the same way from
 0.25. Each step, an entry whose timer is out (`FUN_0049ad00`) asks the state
-again, measures the distance (`FUN_0047dab0`: `sqrt((z² + y²) + x²)`),
-draws its timer again, and counts the thresholds not above the distance;
-when that count or the state changed, the entry goes to the list +0x60 (an
-in-range event). An entry the scan no longer finds is dropped. Every scan,
+again, keeps the distance (`FUN_0047dab0`: `sqrt((x² + y²) + z²)` of the
+creature's position less the sensor creature's), draws its timer again,
+and counts the thresholds not above that distance before (from the distance
+it kept) and now (from `sqrt((z² + y²) + x²)` of the same difference,
+computed inline at `0x49b076`); when that count or the state changed, the
+entry goes to the list +0x60 (an in-range event). The scan's range test
+compares `(x² + y²) + z²` (`FUN_004082e0`) with the range squared. An entry the scan no longer finds is dropped. Every scan,
 every entry and every new entry draws `rand`, so the sensors take part in
 the sequence the scheduler draws from.
 
@@ -1084,7 +1087,7 @@ not drive the level yet.
 | The natives that find creatures (`creaturebyname`, `creatureself`, `getkain`, `creaturescriptbyname`, `gethud`) | `src/engine/script_creature_natives.cpp` | `script` (`test_creature_natives`; the bodies they bind to in `test_create_sl01_objects`) |
 | The codes only the region packages use (`0x0d`, `0x17`, `0x18`, `0x37`, `0x53`, `0x54`, `0x57`, `0x58`) | `src/engine/script_machine.cpp` | `script` (`test_region_codes`, `test_start_without_waiting`) |
 | Timers: the value type, its task, the natives, the call from outside the scripts and the tasks of the script manager | `src/engine/script_timer.cpp`, `src/engine/script_machine.cpp` | `script` (`test_timers`) |
-| The creatures of a level and their objects: one creature per entity, the object of each scripted one, activation in build order, the update of each frame, hibernation and removal, and the simulation scheduler (the caller gives the model radius of each entity, the visual list, the drawn frames, the viewers and the keeper tune) | `src/engine/script_level.cpp`, `src/engine/crt_random.cpp` | `script` (`test_script_level`, `test_scheduler`, `test_region_model_radius`; `test_sl01_level`: the 104 creatures and 78 objects of `sl01` activate and run 120 updates); `engine` (`test_crt_random`) |
+| The creatures of a level and their objects: one creature per entity, the object of each scripted one, activation in build order, the update of each frame, hibernation and removal, the simulation scheduler (the caller gives the model radius of each entity, the visual list, the drawn frames, the viewers and the keeper tune), and the hooks of the native part of an object (`ObjectHooks`: when it starts, before its start body, and after each run in an update) | `src/engine/script_level.cpp`, `src/engine/crt_random.cpp` | `script` (`test_script_level`, `test_scheduler`, `test_region_model_radius`, `test_object_hooks`; `test_sl01_level`: the 104 creatures and 78 objects of `sl01` activate and run 120 updates); `engine` (`test_crt_random`) |
 | The scripts of a level in the game loop: `bo2nx --replay ... --scripts` and `--play ... --scripts` load them (`load_level_scripts`), reads the level keeper's tune (`read_keeper_tune`), adds Kain as the `kain` creature and, each tick, runs the scheduler with the follow camera as the viewer and then the update | `src/main.cpp`, `src/engine/script_level.cpp`, `src/platform/sdl/sdl_backend.cpp` (`on_tick`) | `script` (`test_level_scripts_sl01`); the state of the gate replays does not change |
 
 ## Checked in the running game

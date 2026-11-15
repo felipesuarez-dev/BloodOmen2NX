@@ -251,11 +251,18 @@ void ScriptLevel::activate() {
         if (current.object == 0) {
             continue;
         }
+        const ScriptObjectId object = current.object;
         try {
-            machine_.activate(current.object, [&](const std::string& name) -> ScriptObjectId {
+            machine_.link_object_fields(object, [&](const std::string& name) -> ScriptObjectId {
                 const std::uint32_t found = find_creature(word, name);
                 return found == 0 ? 0 : creature(found).object;
             });
+            for (const ObjectHooks& hooks : hooks_) {
+                if (hooks.start) {
+                    hooks.start(word, object);  // slot +0x24, FUN_00762fe0
+                }
+            }
+            machine_.start(object);  // FUN_00580730
         } catch (const ScriptError& error) {
             stop_object(creature(word), error.what());
         }
@@ -275,8 +282,16 @@ void ScriptLevel::update(float step) {
         if (!(current.time > 0.0f) || current.object == 0) {
             continue;
         }
+        const ScriptObjectId object = current.object;
+        const float time = current.time;
         try {
-            machine_.run(current.object, float_bits(current.time));
+            machine_.run(object, float_bits(time));
+            // FUN_0070ee70: then the object's slot +0x1c gets the update.
+            for (const ObjectHooks& hooks : hooks_) {
+                if (hooks.update && creature(word).object == object) {
+                    hooks.update(word, object, time);
+                }
+            }
         } catch (const ScriptError& error) {
             stop_object(creature(word), error.what());
         }

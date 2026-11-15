@@ -1239,6 +1239,17 @@ ScriptAddress ScriptMachine::new_string_cell(std::string_view text) {
     return cell;
 }
 
+void ScriptMachine::release_string_cell(ScriptAddress cell) {
+    if (cell == 0) {
+        return;
+    }
+    const ScriptAddress record = memory_.u32(cell);
+    if (record != 0) {
+        release_record(record);
+    }
+    memory_.release(cell);
+}
+
 // A string variable holds the address of a 4-byte holder of a counted
 // string record (FUN_00588390, FUN_00587fc0), the same thing a string cell
 // on the stack is.

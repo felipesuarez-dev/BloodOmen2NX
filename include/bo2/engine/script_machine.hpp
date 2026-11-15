@@ -361,6 +361,9 @@ public:
     ScriptAddress name_cell(std::uint32_t index) const;
     std::string string_at(ScriptAddress cell) const;
     ScriptAddress new_string_cell(std::string_view text);
+    // Gives back a cell of new_string_cell: its record loses one count (and
+    // goes at 0), then the cell is freed. 0 does nothing.
+    void release_string_cell(ScriptAddress cell);
 
     // The warnings the original prints to its log, for the host to show.
     const std::vector<std::string>& warnings() const { return warnings_; }

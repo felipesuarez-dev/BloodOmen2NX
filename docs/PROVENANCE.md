@@ -137,10 +137,10 @@ design. `third_party/stb_vorbis.c` is third-party code (`NOTICE`).
 | `src/engine/region.cpp` | Reader of the region entities, their properties and the script package | data format | analysis | 2 |
 | `src/engine/script_package.cpp` | Reader of the compiled script packages | data format | analysis | 10 |
 | `src/engine/script_program.cpp` | Linker of the script packages of a region | behaviour | analysis | 4 |
-| `src/engine/script_machine.cpp` | Interpreter of the script machine | behaviour | analysis | 70 |
+| `src/engine/script_machine.cpp` | Interpreter of the script machine | behaviour | analysis | 76 |
 | `src/engine/script_creature_natives.cpp` | Natives that find creatures | behaviour | analysis | 9 |
 | `src/engine/script_timer.cpp` | Timers of the scripts: value type, task and natives | behaviour | analysis | 18 |
-| `src/engine/script_level.cpp` | The creatures of a level for the script machine (its host) | behaviour | analysis | 17 |
+| `src/engine/script_level.cpp` | The creatures of a level for the script machine (its host) | behaviour | analysis | 21 |
 | `src/engine/crt_random.cpp` | The rand of the C library the game links | behaviour | analysis | 1 |
 | `src/engine/script_memory.cpp` | 32-bit memory of the script machine | port's own; the 4-byte cells of the original | analysis | 0 |
 | `src/engine/string_table.cpp` | Reader of the string tables | data format | analysis, then specification | 0 |

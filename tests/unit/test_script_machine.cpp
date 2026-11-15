@@ -2180,6 +2180,65 @@ void test_region_model_radius() {
     CHECK(plain.creature(1).model_radius == 0.0f);
 }
 
+// The hooks of the native part of an object (FUN_00762fe0, FUN_0070ee70):
+// start after the fields are linked and before the start body, update after
+// the object ran, with its time. counter adds 1 to data + 4 on each run.
+void test_object_hooks() {
+    ScriptClass base = make_class("basecreaturescript", "", {"default"}, 1);
+    base.data_size = 4;
+    const Linked linked = make_program({base, counter_class("counter")});
+    ScriptMachine machine(linked.program);
+    bo2::engine::CrtRandom random;
+    bo2::engine::ScriptLevel level(machine, random);
+    using Creature = bo2::engine::ScriptLevel::Creature;
+    Creature one;
+    one.name = "one";
+    one.script = "counter";
+    const std::uint32_t a = level.add_creature(one);
+    one.name = "two";
+    const std::uint32_t b = level.add_creature(one);
+    const auto count = [&](std::uint32_t word) {
+        return machine.memory().u32(machine.data_of(level.creature(word).object) + 4);
+    };
+    std::vector<std::string> log;
+    bo2::engine::ScriptLevel::ObjectHooks hooks;
+    hooks.start = [&](std::uint32_t word, ScriptObjectId object) {
+        CHECK(level.creature(word).object == object);
+        log.push_back("start " + std::to_string(word) + " count " + std::to_string(count(word)));
+    };
+    hooks.update = [&](std::uint32_t word, ScriptObjectId object, float time) {
+        CHECK(level.creature(word).object == object);
+        log.push_back("update " + std::to_string(word) + " count " + std::to_string(count(word)) + " time " +
+                      std::to_string(time));
+        if (word == b) {
+            throw bo2::engine::ScriptError("hook failed");
+        }
+    };
+    level.add_object_hooks(hooks);
+    level.add_object_hooks({});  // empty functions are skipped
+    level.activate();
+    CHECK(log == std::vector<std::string>({"start 1 count 0", "start 2 count 0"}));
+    CHECK(count(a) == 1);  // the start body ran after the hook
+    log.clear();
+    level.creature(a).time = 0.5f;
+    level.creature(b).time = 0.0f;  // no update
+    level.update(0.0f);
+    CHECK(log == std::vector<std::string>({"update 1 count 2 time 0.500000"}));
+    log.clear();
+    level.creature(b).time = 0.25f;
+    level.update(0.0f);
+    CHECK(log == std::vector<std::string>({"update 1 count 3 time 0.500000", "update 2 count 2 time 0.250000"}));
+    CHECK(level.creature(b).object == 0);  // the error of its hook stopped it
+    CHECK(level.errors().size() == 1 && level.errors()[0] == "two: hook failed");
+
+    const std::size_t blocks = machine.memory().live_blocks();
+    const ScriptAddress cell = machine.new_string_cell("kain");
+    CHECK(machine.string_at(cell) == "kain");
+    machine.release_string_cell(cell);
+    machine.release_string_cell(0);
+    CHECK(machine.memory().live_blocks() == blocks);
+}
+
 // 0x59: the copy runs, the frame skips the block and waits for it.
 void test_fork_waits() {
     MachineRun run(machine_class(join({{op(0x59, 2), op(0x5D), op(0x5C)}, mark(), {op(0x5D), op(0x5C)}})));
@@ -2574,6 +2633,7 @@ int main() {
     test_script_level();
     test_scheduler();
     test_region_model_radius();
+    test_object_hooks();
 
     const char* root = std::getenv("BO2NX_ASSETS_DIR");
     if (root == nullptr) {
