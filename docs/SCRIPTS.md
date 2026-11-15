@@ -376,7 +376,8 @@ A method of a value class runs on a value: the object a native function of
 the slot that holds the block (the code pushes it with `0x0b` or `0x07`
 just before the `0x47`: 5,559 and 2,779 times in the game data, 8,338
 calls). Each native calls one helper, and every helper does nothing (a
-getter writes 0 to the result) when the slot holds no block. Getters write
+getter writes 0 to the result) when the slot holds no block; the natives of
+`waypoints` work the same way on its list. Getters write
 the result cell; setters take their floats from the argument cells, in
 order.
 
@@ -394,6 +395,8 @@ order.
 | `gridposition` | 0, 1 | `getx`, `gety` | `FUN_0076b760`, `FUN_0076b780` | `FUN_0079b130`, `FUN_0079b150` | The word at +0 or +4 |
 | `gridposition` | 2, 3 | `setx`, `sety` | `FUN_0076b7a0`, `FUN_0076b7c0` | `FUN_0079b170`, `FUN_0079b190` | Writes the argument at +0 or +4 |
 | `gridposition` | 4 | `setvalue` | `FUN_0076b7e0` | `FUN_0079b1b0` | Writes the two arguments |
+| `waypoints` | 0 | `count` | `FUN_0076d630` | `FUN_0079e710` | The count of the list, 0 when the slot holds none |
+| `waypoints` | 1 | `getwaypoint` | `FUN_0076d650` | `FUN_0079e730` | The result is a `position` slot: point i of the list for 0 ≤ i < count (signed), else three zeros, written into the result's block |
 
 The game data calls `position` 0 to 6, `rotation` 0 to 2, `color` 0 and
 `gridposition` 0, 1 and 4. The natives of `timer` (six, one a task) need
