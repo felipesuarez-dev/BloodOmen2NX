@@ -29,6 +29,13 @@ elif (($# > 2)); then
     exit 2
 fi
 
+# Binary releases are on hold until a legal review of the port (README,
+# "Licencia" / "License"). The package can still be built and inspected.
+if [[ "$PUBLISH" == true ]]; then
+    echo "publishing is on hold: no binary release before the legal review (README, License)" >&2
+    exit 1
+fi
+
 if [[ ! "$TAG" =~ ^[A-Za-z0-9._-]+$ ]]; then
     echo "invalid tag: $TAG" >&2
     usage
