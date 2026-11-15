@@ -1563,6 +1563,43 @@ void test_activate_links_fields() {
     CHECK(memory.u32(machine.handle_of(door_object) + 4) == 1);      // the old one released
 }
 
+// The creature of an object (+0x2c) and a handle stored in an object slot
+// (FUN_004cd760): counted first, the old one released when it differs.
+void test_creature_and_store_handle() {
+    ScriptClass base = make_class("basecreaturescript", "", {"default"}, 1);
+    ScriptClass creature = make_class("creaturescript", "basecreaturescript", {"default"}, 1);
+    ScriptClass guard = make_class("guard01", "creaturescript", {"default"}, 1);
+    base.data_size = creature.data_size = guard.data_size = 4;
+    const Linked linked = make_program({base, creature, guard});
+    ScriptMachine machine(linked.program);
+    const ScriptObjectId guard_object = machine.create_object(2);
+    const ScriptObjectId base_object = machine.create_object(0);
+    CHECK(machine.creature_of(guard_object) == 0);
+    machine.set_creature(guard_object, 0x100);
+    CHECK(machine.creature_of(guard_object) == 0x100);
+    CHECK(machine.creature_of(base_object) == 0);
+    CHECK(machine.creature_host() == nullptr);
+    CHECK(machine.is_a(2, "creaturescript"));
+    CHECK(!machine.is_a(0, "creaturescript"));
+
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    const auto count = [&](ScriptObjectId object) { return memory.u32(machine.handle_of(object) + 4); };
+    const ScriptAddress slot = memory.allocate(4);
+    machine.store_handle(slot, machine.handle_of(guard_object));
+    CHECK(memory.u32(slot) == machine.handle_of(guard_object));
+    CHECK(count(guard_object) == 2);
+    machine.store_handle(slot, machine.handle_of(guard_object));  // the same handle: nothing
+    CHECK(count(guard_object) == 2);
+    machine.store_handle(slot, machine.handle_of(base_object));
+    CHECK(count(guard_object) == 1);
+    CHECK(count(base_object) == 2);
+    machine.store_handle(slot, 0);
+    CHECK(memory.u32(slot) == 0);
+    CHECK(count(base_object) == 1);
+    machine.store_handle(slot, 0);
+    CHECK(memory.u32(slot) == 0);
+}
+
 // 0x59: the copy runs, the frame skips the block and waits for it.
 void test_fork_waits() {
     MachineRun run(machine_class(join({{op(0x59, 2), op(0x5D), op(0x5C)}, mark(), {op(0x5D), op(0x5C)}})));
@@ -1705,6 +1742,7 @@ void test_create_sl01_objects(const std::filesystem::path& root) {
     ScriptMachine machine(program);
     std::size_t created = 0;
     std::size_t creatures = 0;
+    std::size_t creature_scripts = 0;
     std::vector<std::string> refused;
     for (std::uint32_t id = 0; id < program.classes().size(); ++id) {
         const auto& cls = program.classes()[id];
@@ -1723,6 +1761,7 @@ void test_create_sl01_objects(const std::filesystem::path& root) {
                 break;
             }
         }
+        creature_scripts += machine.is_a(id, "creaturescript") ? 1 : 0;
     }
     for (const std::string& failure : refused) {
         std::cerr << "sl01 object: " << failure << '\n';
@@ -1730,6 +1769,7 @@ void test_create_sl01_objects(const std::filesystem::path& root) {
     CHECK(refused.empty());
     CHECK(created == 79);
     CHECK(creatures == 78);  // every class but resourcedb derives from basecreaturescript
+    CHECK(creature_scripts == 61);  // not the monsters (monsterscript) nor the conversations
 }
 
 // Every region of the game links (BO2NX-151): 165 programs, 81,752 classes.
@@ -1824,6 +1864,7 @@ int main() {
     test_waypoints_type();
     test_creature_value_types();
     test_activate_links_fields();
+    test_creature_and_store_handle();
 
     const char* root = std::getenv("BO2NX_ASSETS_DIR");
     if (root == nullptr) {

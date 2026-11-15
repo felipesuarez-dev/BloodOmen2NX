@@ -359,20 +359,9 @@ void ScriptMachine::link_object_fields(ScriptObjectId object, const ScriptFinder
                 continue;
             }
             const ScriptObjectId target = find(field.type.name);
-            if (target == 0) {
-                continue;
+            if (target != 0) {
+                store_handle(data + field.offset, handle_of(target));
             }
-            const ScriptAddress handle = handle_of(target);
-            const ScriptAddress slot = data + field.offset;
-            const ScriptAddress old = memory_.u32(slot);
-            if (old == handle) {
-                continue;
-            }
-            if (old != 0) {
-                release_handle(old);
-            }
-            memory_.set_u32(slot, handle);
-            memory_.set_u32(handle + 4, memory_.u32(handle + 4) + 1);
         }
     }
 }
@@ -380,6 +369,31 @@ void ScriptMachine::link_object_fields(ScriptObjectId object, const ScriptFinder
 void ScriptMachine::activate(ScriptObjectId object, const ScriptFinder& find) {
     link_object_fields(object, find);
     start(object);
+}
+
+void ScriptMachine::set_creature(ScriptObjectId object, std::uint32_t creature) {
+    object_at(object).creature = creature;
+}
+
+std::uint32_t ScriptMachine::creature_of(ScriptObjectId object) const {
+    return object_at(object).creature;
+}
+
+// FUN_004cd760 (and FUN_004cdf20, FUN_0070e0c0): the new handle is counted
+// before the old one is released, so the slot never holds a freed handle.
+void ScriptMachine::store_handle(ScriptAddress slot, ScriptAddress handle) {
+    const ScriptAddress old = memory_.u32(slot);
+    if (old == handle) {
+        return;
+    }
+    memory_.set_u32(slot, 0);
+    if (old != 0) {
+        release_handle(old);
+    }
+    memory_.set_u32(slot, handle);
+    if (handle != 0) {
+        memory_.set_u32(handle + 4, memory_.u32(handle + 4) + 1);
+    }
 }
 
 void ScriptMachine::request_state(ScriptObjectId object, std::int32_t state) {

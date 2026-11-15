@@ -2625,7 +2625,7 @@ address,name,subsystem,status,notes
 004a4e50,FUN_004a4e50,unknown,todo,ghidra
 004a5000,FUN_004a5000,unknown,todo,ghidra
 004a5150,FUN_004a5150,unknown,todo,ghidra
-004a5290,FUN_004a5290,unknown,todo,ghidra
+004a5290,FUN_004a5290,script,wip,include/bo2/engine/script_machine.hpp: ScriptCreatureHost::kain is its interface; the walk of the creature list and its cache are not ported
 004a5360,FUN_004a5360,unknown,todo,ghidra
 004a5380,FUN_004a5380,unknown,todo,ghidra
 004a53c0,FUN_004a53c0,unknown,todo,ghidra
@@ -3506,7 +3506,7 @@ address,name,subsystem,status,notes
 004d8ab0,FUN_004d8ab0,unknown,todo,ghidra
 004d8b10,FUN_004d8b10,unknown,todo,ghidra
 004d8ba0,FUN_004d8ba0,unknown,todo,ghidra
-004d8c60,FUN_004d8c60,unknown,todo,ghidra
+004d8c60,FUN_004d8c60,script,wip,include/bo2/engine/script_machine.hpp: ScriptCreatureHost::hud_object is its interface (FUN_0052bd60 and FUN_00531420 are not ported)
 004d8c80,FUN_004d8c80,unknown,todo,ghidra
 004d8de0,FUN_004d8de0,unknown,todo,ghidra
 004d8e90,FUN_004d8e90,unknown,todo,ghidra
@@ -15484,7 +15484,7 @@ address,name,subsystem,status,notes
 00762f40,FUN_00762f40,unknown,todo,ghidra
 00762fe0,FUN_00762fe0,unknown,todo,ghidra
 00763000,FUN_00763000,unknown,todo,ghidra
-00763050,FUN_00763050,unknown,todo,ghidra
+00763050,FUN_00763050,script,wip,include/bo2/engine/script_machine.hpp: ScriptCreatureHost::find_creature is its interface; FUN_00718160 is not ported
 00763070,FUN_00763070,unknown,todo,ghidra
 007632a0,FUN_007632a0,unknown,todo,ghidra
 00763310,FUN_00763310,unknown,todo,ghidra

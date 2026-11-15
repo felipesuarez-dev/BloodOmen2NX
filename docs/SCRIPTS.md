@@ -446,8 +446,49 @@ The most called:
 | 32 | `monsterscript` | `playanimation` (task) | `FUN_004d44a0` | the animation of a creature |
 
 The natives of `basescript` and of the value classes need no engine system
-(BO2NX-163, BO2NX-172). The rest needs the effects, the sound, the creatures
-of a level, the HUD and the camera: each is a system of its own.
+(BO2NX-163, BO2NX-172). The five that find creatures ask the creatures of
+the level (next section). The rest needs the effects, the sound, the HUD and
+the camera: each is a system of its own.
+
+## The natives that find creatures
+
+Five natives of the creature classes give a script another creature or its
+object. They use the creature that owns the calling object
+(`Sbasecreaturescript` +0x2c) and the creature list of the level. The
+binders of the two classes start at `0x7668f0` (`creaturescript`) and
+`0x4cd3f0` (`bo2creaturescript`), which Ghidra does not mark as functions.
+
+| Class | Body | Method | Result | Functions | Rule |
+|---|---:|---|---|---|---|
+| `creaturescript` | 6 | `creaturebyname(string)` | `creature` | `FUN_00767270`, `FUN_00760750` | An empty name, or a cell with no string, gives 0 without a search. Otherwise: the creature of that name for the caller (`FUN_00763050`, which is `FUN_00718160` in the package of the caller's creature, +0x144, the same search as the activation of an object). A name nobody has gives 0 and the log line `<caller's creature> : GetCreatureWithName('<name>') failed` (`0x912b00`) |
+| `creaturescript` | 7 | `creatureself()` | `creature` | `FUN_00767310`, `FUN_007607b0` | The creature of the object (+0x2c) |
+| `bo2creaturescript` | 0 | `getkain()` | `creature` | `FUN_004cd750`, `FUN_004d8840` | Kain (`FUN_004a5290`): the first creature of the creature list (`DAT_00a836a8`) whose virtual +0x5c returns `FUN_00428640`, the factory registered under the name `kain` (the code at `0x427de0` registers it with the string at `0x8e95cc`; `0x428040`, slot +0x5c of the vtable `0x841d84`, returns it); 0 when there is none |
+| `bo2creaturescript` | 1 | `creaturescriptbyname(string)` | object `creaturescript` | `FUN_004cd760`, `FUN_004d8860` | The object (+0x130) of the creature of that name (`FUN_00763050`; this one logs nothing) when it is a `creaturescript`, else 0 |
+| `bo2creaturescript` | 11 | `gethud()` | object `hud` | `FUN_004cdf20`, `FUN_004d8c60` | The object (+0x130) of the creature of the HUD: `FUN_0052bd60` returns the HUD (`DAT_0091f040`) and `FUN_00531420` its creature's object |
+
+`getkain` keeps the creatures it found in the list `DAT_00a836a0` and walks
+the creature list again only while that list is empty. A creature removed
+from the level leaves it (`FUN_00718970`) and the end of the level empties
+it (`FUN_00718eb0`).
+
+The two natives that return an object store it the way an assignment does,
+0 included: the new handle is counted, and when it differs from the slot's,
+the old one is released (`FUN_004cd760`, `FUN_004cdf20`).
+
+"When it is a `creaturescript`" is the `dynamic_cast` from
+`Sbasecreaturescript` to `Screaturescript` (`FUN_007a36c2`). The C++ class
+of a script object is the class of the factory of its nearest native class
+("Native functions" above). The RTTI of `bo2.exe` has 31 native classes
+that derive from `Sbasecreaturescript`. Each one derives from
+`Screaturescript` exactly when its script class derives from
+`creaturescript`, so the cast follows the script hierarchy. In `sl01`, 61
+of the 79 classes of the region package are `creaturescript`. Of the rest,
+`resourcedb` is not a creature, and for these 17 `creaturescriptbyname`
+gives 0:
+
+- the 15 monsters, which are `monsterscript` through `peasant`, `animal`
+  or `sarafan`;
+- the 2 conversations, which are `conversationscript`.
 
 ## The classes of a level
 
@@ -560,7 +601,7 @@ Checked in the oracle (`re/decomp/script_runtime/objects.gdb`,
 The machine runs the game's compiled code as it is; the tests feed it
 synthetic classes whose code and expected values come from the rules on
 this page. No object of a level runs yet: that needs the native functions
-of the game and the value types other than the four block types.
+of the game and a host that gives the machine the creatures of the level.
 
 | Part | File | Tests (`ctest -R`) |
 |---|---|---|
@@ -574,6 +615,7 @@ of the game and the value types other than the four block types.
 | Value types `position`, `rotation`, `color`, `gridposition` | `src/engine/script_machine.cpp` | `script` (`test_position_type` to `test_unregistered_value_type`) |
 | Value types `waypoints`, `creature`, `creaturecontroller`, `sound`, `effect`, `soundgroup`; every object of the region package of `sl01` | `src/engine/script_machine.cpp` | `script` (`test_waypoints_type`, `test_creature_value_types`, `test_create_sl01_objects`) |
 | Activating the object of a creature: its object fields linked by name, then the start | `src/engine/script_machine.cpp` | `script` (`test_activate_links_fields`) |
+| The creature of an object, a handle stored in an object slot, and `ScriptCreatureHost`, which the natives that find creatures ask (the natives: BO2NX-177) | `src/engine/script_machine.cpp` | `script` (`test_creature_and_store_handle`; the 61 `creaturescript` classes of `sl01` in `test_create_sl01_objects`) |
 
 ## Checked in the running game
 

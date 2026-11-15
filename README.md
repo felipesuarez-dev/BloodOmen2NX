@@ -81,7 +81,7 @@ El original se usa como referencia; no se distribuye.
 | Niveles completables (capítulos de la campaña) | 30% | 0 / 11 | 0.00% |
 | Características de plataforma | 10% | 9 / 12 + 1 parcial | 79.17% |
 
-Mapa de funciones: 35 570 filas: 103 traducidas, 169 en curso, 16 696 pendientes, 18 602 externas (no son código del juego).
+Mapa de funciones: 35 570 filas: 103 traducidas, 172 en curso, 16 693 pendientes, 18 602 externas (no son código del juego).
 
 ![Mapa del código del juego: un rectángulo por cada función de bo2.exe, del tamaño de su código y agrupado por sistema; verde lo traducido y ámbar lo que está en curso](docs/progress.svg)
 

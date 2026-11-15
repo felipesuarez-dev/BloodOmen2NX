@@ -180,6 +180,29 @@ using ScriptTaskNative = std::unique_ptr<ScriptTask> (*)(ScriptMachine& machine,
                                                          ScriptObjectId owner, std::uint32_t argc,
                                                          ScriptAddress args);
 
+// What the natives of the creature scripts ask the game about its creatures
+// (docs/SCRIPTS.md, "The natives that find creatures"). A creature is a word
+// the host gives, 0 for none: the value of a `creature` variable.
+class ScriptCreatureHost {
+public:
+    virtual ~ScriptCreatureHost() = default;
+    // The creature with this name for a script of the creature `owner`
+    // (FUN_00763050: FUN_00718160 with the package of `owner`, +0x144), 0
+    // for none.
+    virtual std::uint32_t find_creature(std::uint32_t owner, const std::string& name) = 0;
+    // The name of a creature (+0xb0), for the warnings.
+    virtual std::string creature_name(std::uint32_t creature) = 0;
+    // The script object of a creature (+0x130), 0 for none.
+    virtual ScriptObjectId creature_object(std::uint32_t creature) = 0;
+    // Kain (FUN_004a5290): the first creature of the level's list
+    // (DAT_00a836a8) made by the factory registered as "kain" (FUN_00428640,
+    // its virtual +0x5c), 0 for none.
+    virtual std::uint32_t kain() = 0;
+    // The script object of the creature of the HUD (FUN_0052bd60,
+    // FUN_00531420), 0 for none.
+    virtual ScriptObjectId hud_object() = 0;
+};
+
 class ScriptMachine {
 public:
     // The program must outlive the machine.
@@ -233,6 +256,24 @@ public:
     // then start it.
     void activate(ScriptObjectId object, const ScriptFinder& find);
 
+    // The creature an object belongs to (Sbasecreaturescript +0x2c), 0 for
+    // none.
+    void set_creature(ScriptObjectId object, std::uint32_t creature);
+    std::uint32_t creature_of(ScriptObjectId object) const;
+    // What the creature natives ask the game; null until the host sets it.
+    // The host must outlive its use by the machine.
+    void set_creature_host(ScriptCreatureHost* host) { creature_host_ = host; }
+    ScriptCreatureHost* creature_host() const { return creature_host_; }
+
+    // Stores a handle (0 for none) in a slot of kind 10: when it differs from
+    // the slot's, the old one is released and the new one counted
+    // (FUN_004cd760, FUN_004cdf20, FUN_0070e0c0).
+    void store_handle(ScriptAddress slot, ScriptAddress handle);
+    // The class `class_id` is `name` or derives from it.
+    bool is_a(std::uint32_t class_id, const std::string& name) const;
+    // A line of the original's log, for the host to show.
+    void warn(std::string text) { warnings_.push_back(std::move(text)); }
+
     // A frame on the body `body` (program id) for `object`: a zeroed stack of
     // stack_size cells and zeroed locals of max(locals_size, 4) bytes, ip 0.
     ScriptFrame make_frame(ScriptObjectId object, std::uint32_t body);
@@ -283,6 +324,7 @@ private:
         ScriptAddress handle = 0;
         std::uint32_t pending = 0;          // +0x14
         std::unique_ptr<ScriptTask> main;   // +0x18
+        std::uint32_t creature = 0;         // +0x2c
     };
 
     const Object& object_at(ScriptObjectId object) const;
@@ -300,7 +342,6 @@ private:
     ScriptAddress new_record(std::string_view text);
     void release_record(ScriptAddress record);
 
-    bool is_a(std::uint32_t class_id, const std::string& name) const;
     std::uint32_t method_of_body(std::uint32_t body) const;
     std::uint32_t body_in_state(ScriptObjectId object, std::uint32_t method, bool state_zero) const;
     void init_variable(ScriptAddress address, const ScriptType& type);
@@ -347,6 +388,7 @@ private:
     // original's global name table.
     std::map<std::string, ScriptAddress> default_names_;
     std::map<std::string, std::unique_ptr<ScriptValueType>> value_types_;
+    ScriptCreatureHost* creature_host_ = nullptr;
     std::uint32_t loop_count_ = 0;  // DAT_00a6a57c
     int depth_ = 0;                 // DAT_00a6a578: interpreters running
 };
