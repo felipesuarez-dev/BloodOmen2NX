@@ -136,8 +136,8 @@ pointers. The Switch runs 64-bit code only.
 Decision (2026-11-14): the port keeps the 32-bit model of the original
 inside the machine instead of rewriting the code for 8-byte pointers.
 
-- `ScriptMemory` is one byte arena per machine, addressed by 32-bit
-  offsets. Address 0 is null and no block starts below 8. Blocks are
+- `ScriptMemory` (`src/engine/script_memory.cpp`) is one byte arena per
+  machine, addressed by 32-bit offsets. Address 0 is null and no block starts below 8. Blocks are
   aligned to 4. Reads and writes are little-endian and checked: an address
   outside a live block stops the machine with an error, where the original
   would read garbage or crash.

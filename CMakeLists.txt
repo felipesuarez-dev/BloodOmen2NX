@@ -35,6 +35,7 @@ add_library(bo2_engine STATIC
     src/engine/render_order.cpp
     src/engine/skeleton_pose.cpp
     src/engine/script_package.cpp
+    src/engine/script_memory.cpp
     src/engine/string_table.cpp
     src/engine/text.cpp
     src/engine/tick.cpp
@@ -234,6 +235,11 @@ if(BUILD_TESTING)
     target_link_libraries(bo2nx_script_package_tests PRIVATE bo2_engine)
     target_compile_options(bo2nx_script_package_tests PRIVATE ${BO2NX_WARNINGS})
     add_test(NAME script_package COMMAND bo2nx_script_package_tests)
+
+    add_executable(bo2nx_script_tests tests/unit/test_script_machine.cpp)
+    target_link_libraries(bo2nx_script_tests PRIVATE bo2_engine)
+    target_compile_options(bo2nx_script_tests PRIVATE ${BO2NX_WARNINGS})
+    add_test(NAME script COMMAND bo2nx_script_tests)
 
     add_executable(bo2nx_platform_tests tests/unit/test_platform.cpp)
     target_link_libraries(bo2nx_platform_tests PRIVATE bo2_platform_core)
