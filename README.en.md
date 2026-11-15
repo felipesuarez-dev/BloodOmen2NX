@@ -46,15 +46,13 @@ Lee esto en español: [README.md](README.md)
 
 ## Legal notice
 
-> **This repository contains no game assets and no original game code or binaries.**
-> Your game files stay on your machine, in a gitignored folder (`external/`); see [`external/README.txt`](external/README.txt) and [`docs/GAME_DATA.md`](docs/GAME_DATA.md).
-> No textures, models, sounds, music, videos, executables or data containers from *Blood Omen 2* are distributed here.
-> **You need your own legitimate copy of the game** to run the port (see [Game data](#game-data)).
-> That will not change when the port is playable: only the program will be published, and each person will have to use the data of their own original copy of the game.
->
-> This is an independent, non-commercial preservation and interoperability project. It is **not affiliated with, endorsed by, or sponsored by** Crystal Dynamics, Eidos Interactive, Square Enix, or any other publisher or developer involved in the original game. All trademarks and game names belong to their respective owners.
+This port is an independent, non-profit fan project made for preservation and interoperability. It is not affiliated with, endorsed by or sponsored by Crystal Dynamics, Eidos Interactive or Square Enix. *Blood Omen 2*, *Legacy of Kain* and all related names and trademarks belong to their respective owners.
 
-CI enforces the first rule: [`scripts/check_no_assets.sh`](scripts/check_no_assets.sh) (run by [`scripts/ci.sh`](scripts/ci.sh)) fails if game files are tracked by git.
+This repository holds only the code written for the project and its documentation. **It does not include the game**: no executables, no game code, and no graphics, models, sounds, music, videos or data files. It will not include them once the port is playable either; only the program itself will be released.
+
+Using the port requires an original, legally obtained copy of the PC version of *Blood Omen 2*. The port reads the files of that copy on the player's own computer or console, without changing or sharing them. [Game data](#game-data) and [`docs/GAME_DATA.md`](docs/GAME_DATA.md) explain which files it needs and where they go.
+
+The original game is studied only so that the port can work with it: what is learned is first described in `docs/`, and the code is written from that description. The full method is in [`docs/PROVENANCE.md`](docs/PROVENANCE.md).
 
 ## Problem
 
@@ -319,7 +317,7 @@ Full loop: [`docs/PORTING_GUIDE.md`](docs/PORTING_GUIDE.md); provenance policy: 
 1. Conventional Commits in English (`feat(scope):`, `fix(scope):`, `docs:`, `test(scope):`, `build(scope):`); one logical change per commit, with its tests and docs.
 2. One author per commit. **No** `Co-Authored-By`, `Signed-off-by` or generated-by trailers, and no attribution inside code or docs.
 3. `clang-format` before every commit; no warnings with `-Wall -Wextra -Wshadow -Wconversion`.
-4. **Never commit** anything under `external/` or `re/decomp/`, or files like `.iso .exe .dll .dat .erg .rkv .big .bik .ogg .wav`. `scripts/ci.sh` checks it.
+4. **Never commit** anything under `external/` or `re/decomp/`, files like `.iso .exe .dll .dat .erg .rkv .big .bik .ogg .wav`, or images of the game. [`scripts/check_no_assets.sh`](scripts/check_no_assets.sh), run by `scripts/ci.sh`, checks it.
 5. Fidelity first in `src/game/`: reproduce the documented behaviour, do not redesign it, and update `re/FUNCTION_MAP.csv`.
 6. Every behaviour or format claim needs a `FUN_` address and a local decompile. If it is not proven, it does not go in.
 7. Keep `README.md` (Spanish) and `README.en.md` (English) in step; code, comments, commits and the other docs stay in English.

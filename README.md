@@ -46,15 +46,13 @@ English version: [README.en.md](README.en.md)
 
 ## Aviso legal
 
-> **Este repositorio no contiene recursos del juego ni código ni binarios originales.**
-> Tus archivos del juego permanecen en tu equipo, en una carpeta ignorada por git (`external/`); consulta [`external/README.txt`](external/README.txt) y [`docs/GAME_DATA.md`](docs/GAME_DATA.md).
-> Aquí no se distribuyen texturas, modelos, sonidos, música, videos, ejecutables ni contenedores de datos de *Blood Omen 2*.
-> **Necesitas tu propia copia legítima del juego** para ejecutar el port (consulta [Datos del juego](#datos-del-juego)).
-> Eso no cambiará cuando el port sea jugable: se publicará solo el programa, y cada persona tendrá que usar los datos de su propia copia original del juego.
->
-> Este es un proyecto independiente, sin fines comerciales, de preservación e interoperabilidad. **No está afiliado, respaldado ni patrocinado** por Crystal Dynamics, Eidos Interactive, Square Enix ni ningún otro editor o desarrollador involucrado en el juego original. Todas las marcas y nombres de juegos pertenecen a sus respectivos propietarios.
+Este port es un proyecto de aficionados, independiente y sin fines de lucro, hecho con fines de preservación e interoperabilidad. No está afiliado a Crystal Dynamics, Eidos Interactive ni Square Enix, ni cuenta con su respaldo o patrocinio. *Blood Omen 2*, *Legacy of Kain* y los demás nombres y marcas relacionados pertenecen a sus respectivos dueños.
 
-La CI hace cumplir la primera regla: [`scripts/check_no_assets.sh`](scripts/check_no_assets.sh) (lo ejecuta [`scripts/ci.sh`](scripts/ci.sh)) falla si git rastrea archivos del juego.
+Este repositorio contiene solo el código escrito para el proyecto y su documentación. **No incluye el juego**: ni sus ejecutables, ni su código, ni gráficos, modelos, sonidos, música, videos o archivos de datos. Tampoco los incluirá cuando el port sea jugable; lo que se publique será únicamente el programa.
+
+Para usar el port hace falta una copia original de la versión para PC de *Blood Omen 2*, obtenida de forma legal. El port lee los archivos de esa copia en el propio equipo o consola de quien lo usa, sin modificarlos ni compartirlos. En [Datos del juego](#datos-del-juego) y en [`docs/GAME_DATA.md`](docs/GAME_DATA.md) se explica qué archivos necesita y dónde van.
+
+El funcionamiento del juego original se estudia solo para que el port sea compatible con él: lo aprendido se describe primero en `docs/` y el código se escribe a partir de esa descripción. El método completo está en [`docs/PROVENANCE.md`](docs/PROVENANCE.md).
 
 ## Problema
 
@@ -321,7 +319,7 @@ La documentación técnica está en inglés.
 1. Conventional Commits en inglés (`feat(scope):`, `fix(scope):`, `docs:`, `test(scope):`, `build(scope):`); un cambio lógico por commit, con sus pruebas y documentación.
 2. Un solo autor por commit. **Nada** de `Co-Authored-By`, `Signed-off-by` ni trailers de generación, y ninguna atribución dentro del código o la documentación.
 3. Ejecuta `clang-format` antes de cada commit; sin advertencias con `-Wall -Wextra -Wshadow -Wconversion`.
-4. **Nunca subas** nada de `external/` o `re/decomp/`, ni archivos como `.iso .exe .dll .dat .erg .rkv .big .bik .ogg .wav`. `scripts/ci.sh` lo verifica.
+4. **Nunca subas** nada de `external/` o `re/decomp/`, ni archivos como `.iso .exe .dll .dat .erg .rkv .big .bik .ogg .wav`, ni imágenes del juego. [`scripts/check_no_assets.sh`](scripts/check_no_assets.sh), que corre dentro de `scripts/ci.sh`, lo verifica.
 5. Primero la fidelidad en `src/game/`: reproduce el comportamiento documentado, no lo rediseñes, y actualiza `re/FUNCTION_MAP.csv`.
 6. Toda afirmación de comportamiento o de formato necesita una dirección `FUN_` y una descompilación local. Si no está demostrada, no entra.
 7. Mantén `README.md` (español) y `README.en.md` (inglés) sincronizados; el código, los comentarios, los commits y el resto de la documentación siguen en inglés.
