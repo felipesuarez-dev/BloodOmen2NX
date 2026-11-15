@@ -1,0 +1,46 @@
+{
+ "milestones": {
+  "M0": {
+   "discovery": 0,
+   "done": 7,
+   "no_discovery": 0,
+   "open": 0
+  },
+  "M1": {
+   "discovery": 0,
+   "done": 15,
+   "no_discovery": 0,
+   "open": 0
+  },
+  "M2": {
+   "discovery": 0,
+   "done": 24,
+   "no_discovery": 4,
+   "open": 5
+  },
+  "M3": {
+   "discovery": 7,
+   "done": 22,
+   "no_discovery": 4,
+   "open": 15
+  },
+  "M4": {
+   "discovery": 2,
+   "done": 16,
+   "no_discovery": 13,
+   "open": 21
+  },
+  "M5": {
+   "discovery": 0,
+   "done": 0,
+   "no_discovery": 0,
+   "open": 5
+  },
+  "M6": {
+   "discovery": 0,
+   "done": 0,
+   "no_discovery": 1,
+   "open": 6
+  }
+ }
+}

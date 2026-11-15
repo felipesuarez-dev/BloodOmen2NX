@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import csv
 import html
+import json
 from pathlib import Path
 
 REPO = "https://github.com/felipesuarez-dev/BloodOmen2NX"
@@ -48,6 +49,7 @@ TEXT = {
         "code_map_alt": "Mapa del código de bo2.exe: un rectángulo por función, del tamaño de su código y agrupado por sistema; verde lo traducido, ámbar lo que está en curso",
         "milestones": "Hitos",
         "milestone_state": {"done": "completo", "now": "en curso", "next": "sin iniciar"},
+        "tasks": "{done} de {total} tareas",
         "milestone_names": [
             "Laboratorio y triaje del binario",
             "Contenedores y recursos",
@@ -113,6 +115,7 @@ TEXT = {
         "code_map_alt": "Map of the bo2.exe code: one rectangle per function, sized by its code and grouped by system; green is translated, amber is in progress",
         "milestones": "Milestones",
         "milestone_state": {"done": "done", "now": "in progress", "next": "not started"},
+        "tasks": "{done} of {total} tasks",
         "milestone_names": [
             "Lab and binary triage",
             "Containers and assets",
@@ -177,12 +180,14 @@ margin:0 0 14px}
 .cell.done{border-color:var(--ok)}.cell.partial{border-color:var(--wip)}
 .map img{width:100%;height:auto;border-radius:8px;display:block}
 ol.steps{list-style:none;margin:0;padding:0}
-ol.steps li{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;padding:8px 0;
+ol.steps li{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:4px 10px;padding:9px 0;
 border-top:1px solid var(--line);font-size:14px}
 ol.steps li:first-child{border-top:0}
 ol.steps b{font-variant-numeric:tabular-nums}
 ol.steps .s{color:var(--muted);font-size:13px}
 ol.steps .now .s{color:var(--accent)}ol.steps .done .s{color:var(--ok)}
+ol.steps .tasks{grid-column:2/-1;display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted)}
+ol.steps .tasks .bar{flex:1;margin:0;height:4px}
 footer{margin-top:28px;font-size:13px;color:var(--muted)}
 footer p{margin:6px 0}
 @media (max-width:520px){section{padding:18px 16px 14px}.sys{grid-template-columns:84px minmax(0,1fr) auto}}
@@ -211,7 +216,7 @@ def _pct(value: float, digits: int = 1) -> str:
 
 
 def build_page(lang: str, m: dict, systems: list[tuple[str, int, int]], levels: list, features: list,
-               number) -> str:
+               number, plan: dict | None = None) -> str:
     t = TEXT[lang]
     counts = m["counts"]
     phase_index = MILESTONES.index(m["phase"]) if m["phase"] in MILESTONES else 0
@@ -298,8 +303,14 @@ def build_page(lang: str, m: dict, systems: list[tuple[str, int, int]], levels: 
     out += ["<section>", f"<h2>{_e(t['milestones'])}</h2>", '<ol class="steps">']
     for index, (code, name) in enumerate(zip(MILESTONES, t["milestone_names"])):
         key = "done" if index < phase_index else "now" if index == phase_index else "next"
+        tasks = ""
+        counts = (plan or {}).get("milestones", {}).get(code)
+        if counts and counts["done"] + counts["open"]:
+            total = counts["done"] + counts["open"]
+            tasks = (f'<span class="tasks"><span class="bar"><span style="width:{counts["done"] / total * 100:.1f}%">'
+                     f'</span></span>{_e(t["tasks"].format(done=counts["done"], total=total))}</span>')
         out.append(f'<li class="{key}"><b>{code}</b><span>{_e(name)}</span>'
-                   f'<span class="s">{_e(t["milestone_state"][key])}</span></li>')
+                   f'<span class="s">{_e(t["milestone_state"][key])}</span>{tasks}</li>')
     out += ["</ol>", "</section>"]
 
     readme = f"{REPO}#readme" if lang == "es" else f"{REPO}/blob/develop/README.en.md"
@@ -317,6 +328,10 @@ def build_page(lang: str, m: dict, systems: list[tuple[str, int, int]], levels: 
 
 
 def build_pages(m: dict, function_map: Path, levels: list, features: list, number) -> dict[str, str]:
-    """{path relative to docs/: page} for both languages."""
+    """{path relative to docs/: page} for both languages. The task counts of
+    each milestone come from docs/plan.json when it exists (written from the
+    tracker by a maintainer's script)."""
     systems = subsystem_counts(function_map)
-    return {TEXT[lang]["file"]: build_page(lang, m, systems, levels, features, number) for lang in TEXT}
+    plan_path = function_map.parents[1] / "docs" / "plan.json"
+    plan = json.loads(plan_path.read_text(encoding="utf-8")) if plan_path.exists() else None
+    return {TEXT[lang]["file"]: build_page(lang, m, systems, levels, features, number, plan) for lang in TEXT}
