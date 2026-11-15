@@ -706,6 +706,9 @@ int run_level(const engine::LevelGeometry& geometry,
             if (actor) {
                 options.kain_actor->end(player_input, player->state(), static_cast<double>(dt));
             }
+            if (options.on_tick) {
+                options.on_tick(player->state().position, follow->eye(), static_cast<double>(dt));
+            }
             update_actor();
             ++play_tick;
         } else {

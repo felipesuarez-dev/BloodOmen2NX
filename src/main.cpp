@@ -208,8 +208,8 @@ Options parse_options(int argc, char** argv) {
                 << "  --frames <n>           fixed-step iterations for --headless\n"
                 << "  --tick-rate <hz>       logic ticks per second (default 60)\n"
                 << "  --replay <file.csv>    replay an oracle input timeline headless\n"
-                << "  --scripts              with --replay, run the script objects of the level\n"
-                << "                         each tick and print what they did\n"
+                << "  --scripts              with --replay or --play, run the script objects of\n"
+                << "                         the level each tick and print what they did\n"
                 << "  --code <code.big>      the code.big of --scripts (default: next to resources/)\n"
                 << "  --state-out <file.csv> write the replayed player and camera state\n"
                 << "  --collision-dump       dump the collmodc payloads and their actors\n"
@@ -340,8 +340,8 @@ Options parse_options(int argc, char** argv) {
     if (!options.kain.empty() && !options.play && options.replay.empty()) {
         usage_error("--kain requires --play or --replay");
     }
-    if ((options.scripts || !options.code.empty()) && options.replay.empty()) {
-        usage_error("--scripts and --code require --replay");
+    if ((options.scripts || !options.code.empty()) && options.replay.empty() && !options.play) {
+        usage_error("--scripts and --code require --replay or --play");
     }
     if (!options.hud.empty() && !options.level && !options.play) {
         usage_error("--hud requires --level or --play");
@@ -1471,7 +1471,26 @@ int run_sdl(const Options& options) {
         print_hud(hud.items(window.vitals, window.kain, bo2::game::HudMode::Kain, false).size(),
                   window.vitals);
     }
-    return bo2::platform::sdl::run_level(level.geometry, level.textures, window);
+    // --play --scripts: the script objects of the level run each tick, and
+    // a line every 600 ticks (10 s at 60 Hz) says how they do.
+    std::unique_ptr<ScriptRun> scripts;
+    std::uint64_t script_ticks = 0;
+    if (options.play && options.scripts) {
+        window.on_tick = [&](const bo2::engine::Vec3& player, const bo2::engine::Vec3& eye, double seconds) {
+            if (!scripts) {
+                scripts = start_scripts(options, player);
+            }
+            tick_scripts(*scripts, player, eye, seconds);
+            if (++script_ticks % 600 == 0) {
+                report_scripts(*scripts);
+            }
+        };
+    }
+    const int result = bo2::platform::sdl::run_level(level.geometry, level.textures, window);
+    if (scripts) {
+        report_scripts(*scripts);
+    }
+    return result;
 #else
     (void)options;
     throw std::runtime_error("this build has no SDL2/OpenGL backend");

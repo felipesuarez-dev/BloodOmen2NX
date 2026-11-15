@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -41,6 +42,10 @@ struct WindowOptions {
     const std::vector<engine::Image>* hud_textures = nullptr;
     game::KainVitals vitals;
     Camera camera;
+    // Called once per play tick, after the player and the camera, with the
+    // player's position, the eye of the follow camera and the tick in
+    // seconds (the script objects of the level, --play --scripts).
+    std::function<void(const engine::Vec3& player, const engine::Vec3& eye, double seconds)> on_tick;
 };
 
 int run_triangle(const WindowOptions& options);
