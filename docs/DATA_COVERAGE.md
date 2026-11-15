@@ -46,13 +46,13 @@ numbers; to stay under its 60-second budget it checks the four cell groups of
 `code.big` and the nine of the slums levels, and the rest of the file is
 checked by the tool. Regenerate the file when a reader change is deliberate.
 
-## Reads of 2026-11-15 (texture row updated after BO2NX-118)
+## Reads of 2026-11-15 (texture row updated after BO2NX-118, bpackage after BO2NX-146)
 
 | Type | Entries | Checked | Failed |
 |---|---|---|---|
 | animatio | 4,081 | 4,081 | 1,925 |
 | animreel | 32,791 | 32,791 | 0 |
-| bpackage | 480 | 0 | 0 |
+| bpackage | 480 | 480 | 0 |
 | cellgrup | 236 | 236 | 30 |
 | effect | 7,865 | 0 | 0 |
 | lipsync | 71,182 | 0 | 0 |
@@ -70,8 +70,8 @@ checked by the tool. Regenerate the file when a reader change is deliberate.
 | texture | 22,483 | 22,483 | 0 |
 | tunedata | 1,720 | 0 | 0 |
 
-`animatio`, `animreel`, `cellgrup`, `litedata`, `model`, `region`, `strtable`,
-`texfont` and `texture` have a registered reader. The other types are counted but not
+`animatio`, `animreel`, `bpackage`, `cellgrup`, `litedata`, `model`, `region`,
+`strtable`, `texfont` and `texture` have a registered reader. The other types are counted but not
 read yet; each following issue adds the reader of one type and its row here.
 The 142 `litedata` entries, the 92 `strtable` entries, the 165 `region`
 entries, the 32,791 `animreel` entries, the 22,483 `texture` entries and

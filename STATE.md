@@ -225,7 +225,8 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   read (`docs/SCRIPTS.md`: the compiled packages, the machine and its 97
   instructions, the binding of the 505 native functions, the classes of
   every region) and the port's script machine is decided
-  (`docs/ARCHITECTURE.md`); none of it is ported yet. Combat has attack cooldown,
+  (`docs/ARCHITECTURE.md`); the port reads the 480 compiled packages
+  (`src/engine/script_package.cpp`) and runs no script yet. Combat has attack cooldown,
   combo state, entity health/damage and a forward hit-sphere query; the
   faithful original values and animation/weapon effects are still pending.
   The compressed `collmodc` runtime and game-specific entities remain
@@ -262,9 +263,9 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
 - `planinfo`, `musicbnk` and `liteinfo`. The layout of `bpackage` (the
   compiled script packages) is read from the writer of the executable
   (`docs/FORMATS/bpackage.md`) and the machine that runs them from its
-  interpreter (`docs/SCRIPTS.md`), but the port has no reader for the
-  packages and runs no script. The layout of `texfont` is read
-  (`docs/FORMATS/textures.md`) and the port has no reader for it yet.
+  interpreter (`docs/SCRIPTS.md`); the port reads the packages
+  (`src/engine/script_package.cpp`) but runs no script. The `texfont` font
+  (`docs/FORMATS/textures.md`) is read by `src/engine/pixmap_font.cpp`.
 - Oracle state beyond position, velocity, health, lore, the animation id
   and the camera: the logic tick and the grounded flag are not located.
 - The `sl01` port frame: helper objects are hidden and the `.slm` palette is

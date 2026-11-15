@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="960" height="300" viewBox="0 0 960 300" font-family="Segoe UI, Helvetica, Arial, sans-serif">
 <rect width="960" height="300" fill="#0d1117"/>
-<text x="8" y="22" fill="#e6edf3" font-size="14">bo2.exe game code by 64 KiB block: 0.33% of the bytes translated, 3.11% in progress</text>
+<text x="8" y="22" fill="#e6edf3" font-size="14">bo2.exe game code by 64 KiB block: 0.33% of the bytes translated, 3.20% in progress</text>
 <rect x="0.0" y="34.0" width="64.5" height="56.2" fill="#69501d" stroke="#0d1117" stroke-width="1"><title>0x400000: 324 functions, 61472 bytes, 0.00% translated, 7.60% in progress</title></rect>
 <text x="3.0" y="45.0" fill="#8b949e" font-size="9">0x400000</text>
 <rect x="0.0" y="90.2" width="64.5" height="59.9" fill="#614d21" stroke="#0d1117" stroke-width="1"><title>0x410000: 296 functions, 65536 bytes, 0.00% translated, 3.10% in progress</title></rect>
@@ -49,13 +49,13 @@
 <text x="329.6" y="164.7" fill="#8b949e" font-size="9">0x560000</text>
 <rect x="326.6" y="212.8" width="65.5" height="57.2" fill="#614c21" stroke="#0d1117" stroke-width="1"><title>0x570000: 303 functions, 63520 bytes, 0.00% translated, 2.70% in progress</title></rect>
 <text x="329.6" y="223.8" fill="#8b949e" font-size="9">0x570000</text>
-<rect x="392.2" y="34.0" width="65.8" height="58.9" fill="#2d333b" stroke="#0d1117" stroke-width="1"><title>0x580000: 389 functions, 65648 bytes, 0.00% translated, 0.00% in progress</title></rect>
+<rect x="392.2" y="34.0" width="65.8" height="58.9" fill="#654e1f" stroke="#0d1117" stroke-width="1"><title>0x580000: 389 functions, 65648 bytes, 0.00% translated, 5.09% in progress</title></rect>
 <text x="395.2" y="45.0" fill="#8b949e" font-size="9">0x580000</text>
 <rect x="392.2" y="92.9" width="65.8" height="58.7" fill="#2d333b" stroke="#0d1117" stroke-width="1"><title>0x590000: 234 functions, 65440 bytes, 0.00% translated, 0.00% in progress</title></rect>
 <text x="395.2" y="103.9" fill="#8b949e" font-size="9">0x590000</text>
 <rect x="392.2" y="151.5" width="65.8" height="63.1" fill="#2d333b" stroke="#0d1117" stroke-width="1"><title>0x5a0000: 226 functions, 70384 bytes, 0.00% translated, 0.00% in progress</title></rect>
 <text x="395.2" y="162.5" fill="#8b949e" font-size="9">0x5a0000</text>
-<rect x="392.2" y="214.6" width="65.8" height="55.4" fill="#5a4924" stroke="#0d1117" stroke-width="1"><title>0x5b0000: 325 functions, 61744 bytes, 0.00% translated, 0.65% in progress</title></rect>
+<rect x="392.2" y="214.6" width="65.8" height="55.4" fill="#256034" stroke="#0d1117" stroke-width="1"><title>0x5b0000: 325 functions, 61744 bytes, 0.34% translated, 0.65% in progress</title></rect>
 <text x="395.2" y="225.6" fill="#8b949e" font-size="9">0x5b0000</text>
 <rect x="458.0" y="34.0" width="65.3" height="58.3" fill="#654e1f" stroke="#0d1117" stroke-width="1"><title>0x5c0000: 380 functions, 64464 bytes, 0.00% translated, 5.26% in progress</title></rect>
 <text x="461.0" y="45.0" fill="#8b949e" font-size="9">0x5c0000</text>

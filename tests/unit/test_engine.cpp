@@ -1963,6 +1963,28 @@ void test_data_check_animatio() {
     CHECK(report.failures[0].entry == "graph/cut");
 }
 
+// A script package cut in half is one failure; the whole one reads
+// (docs/DATA_COVERAGE.md, "bpackage").
+void test_data_check_bpackage() {
+    // Version 1, no imports, no classes, padding to 4 and the final 0.
+    const std::vector<std::uint8_t> package = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    std::vector<std::uint8_t> cut = package;
+    cut.resize(6);
+    const std::vector<std::uint8_t> data = build_big({
+        {"bpackage", "scripts/cut", cut, {}},
+        {"bpackage", "scripts/ok", package, {}},
+    });
+    const bo2::engine::BigArchive archive = bo2::engine::BigArchive::parse(data);
+    bo2::engine::DataReport report;
+    bo2::engine::check_archive(archive, "test.big", report);
+    const bo2::engine::TypeCount& count = report.types.at("bpackage");
+    CHECK(count.entries == 2);
+    CHECK(count.checked == 2);
+    CHECK(count.failed == 1);
+    CHECK(report.failures.size() == 1);
+    CHECK(report.failures[0].entry == "scripts/cut");
+}
+
 // A region that the reader rejects is one failure; the entries after it are
 // still checked (docs/DATA_COVERAGE.md, "region").
 void test_data_check_region() {
@@ -2134,6 +2156,7 @@ int main() {
     test_data_check_model();
     test_data_check_animreel();
     test_data_check_animatio();
+    test_data_check_bpackage();
     test_data_check_region();
     test_data_check_strtable();
     test_data_check_litedata();

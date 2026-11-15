@@ -6620,13 +6620,13 @@ address,name,subsystem,status,notes
 0058c9d0,FUN_0058c9d0,unknown,todo,ghidra
 0058c9f0,FUN_0058c9f0,unknown,todo,ghidra
 0058cb90,FUN_0058cb90,unknown,todo,ghidra
-0058cbb0,FUN_0058cbb0,unknown,todo,ghidra
+0058cbb0,FUN_0058cbb0,script,wip,src/engine/script_package.cpp: parse_script_package reads the version and imports and declarations and link records this function writes
 0058ce50,FUN_0058ce50,unknown,todo,ghidra
-0058ce80,FUN_0058ce80,unknown,todo,ghidra
-0058cf00,FUN_0058cf00,unknown,todo,ghidra
-0058cf20,FUN_0058cf20,unknown,todo,ghidra
-0058d000,FUN_0058d000,unknown,todo,ghidra
-0058d420,FUN_0058d420,unknown,todo,ghidra
+0058ce80,FUN_0058ce80,script,wip,src/engine/script_package.cpp: read_type reads the type this function writes
+0058cf00,FUN_0058cf00,script,wip,src/engine/script_package.cpp: Cursor::name reads the name index this function writes
+0058cf20,FUN_0058cf20,script,wip,src/engine/script_package.cpp: read_default reads the default value this function writes
+0058d000,FUN_0058d000,script,wip,src/engine/script_package.cpp: read_declaration reads the class declaration this function writes
+0058d420,FUN_0058d420,script,wip,src/engine/script_package.cpp: read_link reads the link record this function writes
 0058d8f0,FUN_0058d8f0,unknown,todo,ghidra
 0058d910,FUN_0058d910,unknown,todo,ghidra
 0058d920,FUN_0058d920,unknown,todo,ghidra
@@ -7296,7 +7296,7 @@ address,name,subsystem,status,notes
 005b8a90,FUN_005b8a90,unknown,todo,ghidra
 005b8ad0,FUN_005b8ad0,unknown,todo,ghidra
 005b8b10,FUN_005b8b10,unknown,todo,ghidra
-005b8b80,FUN_005b8b80,unknown,todo,ghidra
+005b8b80,FUN_005b8b80,script,translated,src/engine/script_package.cpp: script_instruction_words returns the words of an instruction
 005b8c50,FUN_005b8c50,unknown,todo,ghidra
 005b8c90,FUN_005b8c90,unknown,todo,ghidra
 005b8cc0,FUN_005b8cc0,unknown,todo,ghidra

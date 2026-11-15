@@ -131,6 +131,7 @@ design. `third_party/stb_vorbis.c` is third-party code (`NOTICE`).
 | `src/engine/anim_machine.cpp` | Animation state machine | behaviour | analysis | 15 |
 | `src/engine/skeleton_pose.cpp` | Skeleton pose, blending and skinning | behaviour | analysis | 11 |
 | `src/engine/region.cpp` | Reader of the region entities | data format | analysis | 0 |
+| `src/engine/script_package.cpp` | Reader of the compiled script packages | data format | analysis | 10 |
 | `src/engine/string_table.cpp` | Reader of the string tables | data format | analysis, then specification | 0 |
 | `src/engine/erg.cpp` | Reader of `game.erg` | data format | analysis | 0 |
 | `src/engine/entity_template.cpp` | Reader of the entity templates | data format | analysis | 1 |

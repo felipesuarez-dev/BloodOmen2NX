@@ -8,11 +8,16 @@
 #include "bo2/engine/dds.hpp"
 #include "bo2/engine/pixmap_font.hpp"
 #include "bo2/engine/region.hpp"
+#include "bo2/engine/script_package.hpp"
 #include "bo2/engine/string_table.hpp"
 
 namespace bo2::engine {
 
 namespace {
+
+void check_bpackage(const BigArchive& archive, const BigEntry& entry) {
+    static_cast<void>(parse_script_package(archive.extract(entry), entry.symbols, archive.names()));
+}
 
 void check_animatio(const BigArchive& archive, const BigEntry& entry) {
     static_cast<void>(parse_anim_graph(archive.extract(entry)));
@@ -56,6 +61,7 @@ const std::map<std::string, EntryCheck>& entry_checks() {
     static const std::map<std::string, EntryCheck> checks = {
         {"animatio", &check_animatio},
         {"animreel", &check_animreel},
+        {"bpackage", &check_bpackage},
         {"cellgrup", &check_cellgrup},
         {"litedata", &check_litedata},
         {"model", &check_model},

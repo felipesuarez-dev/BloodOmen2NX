@@ -1,6 +1,7 @@
 # `bpackage`: compiled script packages
 
-Status: **format read, not ported**. A `bpackage` entry is a package of
+Status: **format read and ported** (`src/engine/script_package.cpp`, which
+reads the 480 entries of the game). A `bpackage` entry is a package of
 script classes compiled by the game's own script compiler. The layout below
 is read from the function that writes a package (`FUN_0058cbb0`, a method of
 `goe::PackageBinaryLoader`, and the two functions it calls per class,
