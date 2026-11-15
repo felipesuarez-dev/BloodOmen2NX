@@ -41,7 +41,7 @@ English version: [README.en.md](README.en.md)
 | **Destino** | Un homebrew nativo para Nintendo Switch (`.nro`, libnx + deko3d) que lee tu propia copia del juego desde la tarjeta SD. |
 | **Host de desarrollo** | Linux (SDL2 + OpenGL). El juego se compila, se prueba y se compara con el original ahí antes de llegar a la consola. El backend de Switch todavía no se ha iniciado. |
 | **Original** | El lanzamiento de PC para Windows de *Blood Omen 2*, GoldMaster 1.02 en español: un PE de 32 bits compilado con MSVC 6, con Direct3D 8, DirectInput y Bink Video. |
-| **Idioma** | El port está pensado para los cinco idiomas que traen los datos del juego: inglés, francés, italiano, alemán y español. Hoy arranca en español, como el `bo2.exe` original, y el idioma se elige con `--locale`; el texto en pantalla, las voces por idioma y la pantalla de elección de idioma están en el plan. Consulta [Idioma del juego](#idioma-del-juego). |
+| **Idioma** | El port está pensado para los cinco idiomas que traen los datos del juego: inglés, francés, italiano, alemán y español. Hoy arranca en español, como el `bo2.exe` original, y el idioma se elige con `--locale`. Ya lee las tablas de texto, la fuente y los códigos de acentos de los cinco idiomas, y separa y coloca los glifos de un texto como el original; falta dibujar el texto en pantalla, elegir las voces por idioma y la pantalla de elección de idioma. Consulta [Idioma del juego](#idioma-del-juego). |
 | **Método** | Ingeniería inversa para la compatibilidad: `bo2.exe` se analiza en Ghidra y el comportamiento se contrasta con el original ejecutándose como oráculo; lo aprendido se escribe como especificación en `docs/` y el código C++17 portable se escribe desde esa especificación. No es una reconstrucción byte a byte. Consulta [`docs/PROVENANCE.md`](docs/PROVENANCE.md). |
 
 ## Aviso legal
@@ -56,7 +56,7 @@ El funcionamiento del juego original se estudia solo para que el port sea compat
 
 ## Problema
 
-El lanzamiento de PC de 2002 es un juego de Windows de 32 bits construido sobre la misma familia de motor que *Mad Dash Racing*. No tiene código fuente, ni símbolos públicos, ni una forma oficial de ejecutarse en sistemas modernos. Las versiones de consola están atadas al hardware de PS2, GameCube y Xbox; la versión de PC es el único objetivo práctico de descompilación.
+El lanzamiento de PC de 2002 es un juego de Windows de 32 bits construido sobre la misma familia de motor que *Mad Dash Racing*. No tiene código fuente, ni símbolos públicos, ni una forma oficial de ejecutarse en sistemas modernos. Las versiones de consola están atadas al hardware de PS2, GameCube y Xbox; la versión de PC es el único objetivo práctico de decompilación.
 
 ## Solución
 
@@ -67,7 +67,7 @@ El original se usa como referencia; no se distribuye.
 
 ## Estado
 
-**Dónde está el proyecto: M0, M1 y M2 están completos y M3 está en curso.** La canalización de datos, el renderizador de niveles y el oráculo funcionan. Kain camina, corre y salta (con control en el aire) con los ajustes de movimiento originales y el port elige el español como el original, pero el combate, los enemigos y los scripts no están traducidos, así que **no se puede completar ningún capítulo**. Los números de abajo se generan y miden lo que el port traduce, no qué tan jugable se siente (consulta [qué miden los porcentajes](#qué-miden-los-porcentajes)).
+**Dónde está el proyecto: M0, M1 y M2 están completos y M3 está en curso.** La canalización de datos, el renderizador de niveles y el oráculo funcionan. Kain camina, corre y salta (con control en el aire) con los ajustes de movimiento originales y el port elige el español como el original. La máquina que ejecuta los scripts del juego está portada en buena parte, pero todavía no corre los scripts de un nivel, y el combate y los enemigos no están traducidos, así que **no se puede completar ningún capítulo**. Los números de abajo se generan y miden lo que el port traduce, no qué tan jugable se siente (consulta [qué miden los porcentajes](#qué-miden-los-porcentajes)).
 
 <!-- progress:start -->
 **Progreso global: 8.1%**
@@ -103,11 +103,13 @@ Fuente de verdad: [`STATE.md`](STATE.md) y [`ROADMAP.md`](ROADMAP.md) (en inglé
 
 | Área | Estado |
 |---|---|
-| Canalización de recursos | El port lee el árbol que deja el instalador oficial (227 archivos); el parser de `.big` lee los 179 contenedores (246 332 entradas) y `pc.rkv` entrega 2666 flujos Ogg Vorbis; se leen las texturas DDS y `game.erg` |
+| Canalización de recursos | El port lee el árbol que deja el instalador oficial (227 archivos); el parser de `.big` lee los 179 contenedores (246 332 entradas) y `pc.rkv` entrega 2666 flujos Ogg Vorbis; se leen las texturas DDS y `game.erg`. `bo2nx_check_data` pasa cada lector del port por los 179 contenedores y lo que rechaza queda en [`docs/DATA_COVERAGE.md`](docs/DATA_COVERAGE.md) |
 | Renderizado de niveles | Un nivel se renderiza sin ventana (rasterizador por software, salida PPM) y en una ventana SDL2 + OpenGL, con texturas, cuadrícula de celdas, BSP de visibilidad, instancias colocadas, luces y marcadores analizados. Los objetos auxiliares (`flag helperobj` en su plantilla `.etp`) se ocultan como en el original. La iluminación está incompleta |
 | Original como oráculo | El `bo2.exe` intacto se ejecuta bajo Wine en un Xvfb privado con entrada guiada por script. Los fotogramas y el video se capturan del Xvfb (x11grab a 30 fps); el estado de Kain, su animación y la cámara de seguimiento se leen de la memoria del proceso cada 20 ms. Un arnés nativo de Windows sirve de verificación cruzada |
 | Reproducción del oráculo y comparación de estado | El port reproduce el timeline de entrada de una captura Wine y compara el estado del jugador, la cámara y la velocidad frame a frame. El spawn coincide dentro de 0,05 u y se miden las primeras divergencias de W y salto |
 | Kain en `sl01` | `bo2nx --play` hace caminar, correr y saltar a Kain en el nivel `sl01` con los ajustes de movimiento originales leídos de los datos de `kain` (giro tipo tanque, gravedad de salto en dos fases, impulso al mantener el salto, control en el aire y stick parcial) y con las velocidades de carrera y de retroceso tomadas del movimiento de raíz de las animaciones y del grafo de animación. La cámara sigue el giro con aceleración limitada, recupera el rango tras una colisión y se retrasa en altura al saltar, como en el original. Con `--kain-model` se dibuja el modelo de Kain con su esqueleto: los clips `animreel` posan los 104 huesos y el skinning mueve los 1988 vértices. En `--replay` y `--play` el clip lo elige la máquina de estados del grafo de animación según el movimiento (reposo, carrera, retroceso, salto y aterrizaje); el estado coincide con el del original en el 96,4 % y el 99,9 % de las muestras de dos capturas del oráculo |
+| Scripts del juego | El port lee los 480 paquetes de scripts compilados y el paquete de cada una de las 165 regiones, y los enlaza en un programa por región (81 752 clases en total). Su máquina ejecuta objetos, cadenas, valores, aritmética, lógica, saltos, llamadas y funciones nativas, como la del original ([`docs/SCRIPTS.md`](docs/SCRIPTS.md)) |
+| Texto e idiomas | Se leen las tablas de texto (`strtable`) de los cinco idiomas, la fuente del juego (87 glifos) y los códigos de acentos de cada idioma. Los comandos de un texto y la colocación de sus glifos están portados como en el original ([`docs/TEXT.md`](docs/TEXT.md)) |
 | Base del motor | Bucle de paso fijo, mundo de entidades con descarte por frustum, carga por celdas, colisión, cámara en tercera persona, guardado en puntos de control y una barra de salud y maná |
 | Audio y entrada | Decodificación Ogg, mezclador y salida por SDL; mapas de teclado, de control y de botones de Switch |
 
@@ -116,9 +118,10 @@ Fuente de verdad: [`STATE.md`](STATE.md) y [`ROADMAP.md`](ROADMAP.md) (en inglé
 | Área | Estado |
 |---|---|
 | Capítulos | Ninguno se puede completar; no hay flujo de niveles, ni menús, ni pantalla de inicio. Ya se sabe, comprobado contra el juego original, dónde y cómo dibuja el menú principal sus textos ([`docs/TEXT.md`](docs/TEXT.md)) |
-| Sistemas de juego | El combate, los enemigos y la IA, los dotes oscuras, las armas y el inventario, y los scripts y disparadores no están traducidos. Los scripts ya están leídos (formato de los paquetes, la máquina que los ejecuta y sus 505 funciones nativas; consulta [`docs/SCRIPTS.md`](docs/SCRIPTS.md)) y su porte está planificado. Faltan el planeo y la caída desde bordes |
+| Sistemas de juego | El combate, los enemigos y la IA, los dotes oscuras, las armas y el inventario, y los disparadores no están traducidos. Ningún script del juego corre todavía: a la máquina le faltan los hilos hijos, los estados de los objetos y los tipos de valor, y faltan las 505 funciones nativas que conectan los scripts con el juego. Faltan el planeo y la caída desde bordes |
+| Texto en pantalla | El texto todavía no se dibuja: ni el menú, ni el HUD, ni los diálogos. Faltan también las voces por idioma y la pantalla de elección de idioma (`LanguageSetupUI`) |
 | Animación y colisión | La evaluación del esqueleto, el skinning y la máquina de estados del grafo de animación (`animatio`) están portados para una capa. También están portadas la mezcla de poses entre clips, sin los filtros de transición, y las capas de la carrera con la mezcla caminar/correr según el stick. El modo combate (Shift) reproduce el movimiento de combate del grafo. Faltan la inclinación al girar, las máscaras de capa, los eventos de los clips y los ataques. La colisión está portada: el `collmodc` se decodifica (puntos, triángulos empaquetados, esferas y caras), `CollisionWorld` usa el hull exacto y el gestor de colisión barre la esfera del cuerpo de Kain. La carrera de W en `sl01` desliza a 162 u/s por el chaflán del modelo 57 y frena en x = 326,38, y = 44,18 (oráculo: 326,35 / 44,14) |
-| Iluminación y materiales | El palette de `.slm` es un mapa de sombra; en el punto de inicio de `sl01` el error del mundo es 8,69/255. El HUD del original ya se dibuja sobre el frame del nivel y en la ventana de `--play` (marco, vial de salud, vial de lore y barra de furia). Quedan Kain, el icono de dark gift del HUD, el marcador verde `bo2cinematic001` y el formato exacto de textura del palette; la niebla está desactivada en `sl01` |
+| Iluminación y materiales | El palette de `.slm` es un mapa de sombra; en el punto de inicio de `sl01` el error del mundo es 8,69/255. El HUD del original ya se dibuja sobre el frame del nivel y en la ventana de `--play` (marco, vial de salud, vial de lore, barra de furia y el icono del dark gift con el que empieza Kain), pero sus contadores todavía no cambian. Quedan la iluminación de Kain, el marcador verde `bo2cinematic001` y el formato exacto de textura del palette; la niebla está desactivada en `sl01` |
 | Eventos de audio y video | La tabla de eventos `sound` y `strmfile` no está conectada al juego; no hay reproducción de Bink |
 | Switch | El backend libnx y deko3d no se ha iniciado |
 
@@ -130,7 +133,9 @@ Fuente de verdad: [`STATE.md`](STATE.md) y [`ROADMAP.md`](ROADMAP.md) (en inglé
 | Niveles completables | 30% | Un nivel es uno de los 11 capítulos de la campaña, recuperados del original en [`docs/LEVELS.md`](docs/LEVELS.md). Cuenta cuando el port lo juega desde su región de entrada hasta el siguiente traspaso |
 | Características de plataforma | 10% | Cada característica cuenta completa cuando está lista y a la mitad cuando es parcial |
 
-La parte de funciones es pequeña a propósito: gran parte del port reimplementa formatos y cálculos de los ajustes, y una función se marca como traducida solo con cobertura completa y una prueba. Muchas funciones de movimiento y de animación están registradas como en curso.
+La parte de funciones es pequeña a propósito: gran parte del port reimplementa formatos y cálculos de los ajustes, y una función se marca como traducida solo con cobertura completa y una prueba. Las funciones en curso, que el port cubre solo en parte, no suman.
+
+Por eso el porcentaje global sube despacio. Cada función traducida suma unos 0,0035 puntos (el 60 % repartido entre casi 17 000 funciones), cada capítulo completable suma 2,7 puntos y cada característica de plataforma 0,8. El trabajo en curso se ve en ámbar en el mapa del código, no en el porcentaje.
 
 ## Arquitectura
 
@@ -205,7 +210,7 @@ La compilación para Switch leerá la misma estructura desde la tarjeta SD; la r
 
 - **El ejecutable original fuerza el español.** `bo2.exe` es una compilación GoldMaster en español que fuerza la configuración regional `spanish` al arrancar (`FUN_004aae40`, llamada desde `Game::Init`, `FUN_00515920`, antes de que se cargue `code.big`). La pantalla de elección de idioma (`LanguageSetupUI`) existe en el código, pero esta compilación nunca la muestra.
 - **Los datos incluyen hasta seis variantes** de cada entrada localizada. El campo `language` de un `.big` es un índice en la tabla de nombres del contenedor: 0 predeterminado (una copia en inglés), 1 inglés, 2 francés, 3 italiano, 4 alemán, 5 español. Los tipos localizados son `strtable` (15 por idioma), `lipsync` (unas 11 900 por idioma) y 44 texturas de pantallas de carga (solo en francés, italiano, alemán y español, más la copia predeterminada). Las voces son distintas: `pc.rkv` contiene un solo idioma, el español, con 2433 voces.
-- **El port elige el idioma con `--locale`** (`english`, `french`, `italian`, `german` o `spanish`; sin la opción, `spanish`): al buscar un recurso localizado toma la entrada de ese idioma y, si no existe, la copia predeterminada (`FUN_006c8fb0`). Las tablas de texto ya se leen; el menú y el HUD todavía no las usan.
+- **El port elige el idioma con `--locale`** (`english`, `french`, `italian`, `german` o `spanish`; sin la opción, `spanish`): al buscar un recurso localizado toma la entrada de ese idioma y, si no existe, la copia predeterminada (`FUN_006c8fb0`). Las tablas de texto, la fuente y los códigos de acentos ya se leen, y los comandos de un texto y la colocación de sus glifos están portados; el menú y el HUD todavía no dibujan texto.
 - **Plan multiidioma.** El port no quedará atado al español. Falta dibujar el texto con la fuente y los acentos de cada idioma, elegir las voces y el lipsync por idioma y portar la pantalla de elección de idioma del original (`LanguageSetupUI`); en Switch el idioma inicial será el de la consola. Con los datos de este lanzamiento las voces solo están en español: las de otro idioma tendrán que venir del `pc.rkv` de tu propia copia de otra edición de PC.
 
 ## Ejecutar
@@ -254,9 +259,9 @@ flowchart LR
     F -->|diferencia| A
 ```
 
-1. **Analizar**: Ghidra sobre `bo2.exe` y el juego en ejecución como oráculo; toda afirmación de comportamiento necesita la dirección `FUN_` donde se observó. Las descompilaciones quedan locales en `re/decomp/` (ignorado por git).
+1. **Analizar**: Ghidra sobre `bo2.exe` y el juego en ejecución como oráculo; toda afirmación de comportamiento necesita la dirección `FUN_` donde se observó. Las decompilaciones quedan locales en `re/decomp/` (ignorado por git).
 2. **Especificar**: la regla, el formato y los números que un test puede comprobar se escriben en `docs/` y en un issue. Los formatos se validan además con una referencia en Python con solo biblioteca estándar (`tools/bo2fmt/`).
-3. **Implementar**: el código se escribe desde la especificación, sin abrir el binario ni las descompilaciones; reproduce el comportamiento y los datos que documenta, con estructura y nombres propios. Cada función queda registrada en [`re/FUNCTION_MAP.csv`](re/FUNCTION_MAP.csv).
+3. **Implementar**: el código se escribe desde la especificación, sin abrir el binario ni las decompilaciones; reproduce el comportamiento y los datos que documenta, con estructura y nombres propios. Cada función queda registrada en [`re/FUNCTION_MAP.csv`](re/FUNCTION_MAP.csv).
 4. **Verificar**: pruebas unitarias con datos sintéticos y luego el oráculo: el original se ejecuta de forma nativa en Windows o bajo Wine, con entrada guiada por script, y sus capturas, estado y partidas guardadas se comparan con el port.
 
 Ciclo completo: [`docs/PORTING_GUIDE.md`](docs/PORTING_GUIDE.md); política de procedencia: [`docs/PROVENANCE.md`](docs/PROVENANCE.md). La regla es simple: **analiza antes de suponer y no afirmes nada sin la función donde se observa**.
@@ -321,7 +326,7 @@ La documentación técnica está en inglés.
 3. Ejecuta `clang-format` antes de cada commit; sin advertencias con `-Wall -Wextra -Wshadow -Wconversion`.
 4. **Nunca subas** nada de `external/` o `re/decomp/`, ni archivos como `.iso .exe .dll .dat .erg .rkv .big .bik .ogg .wav`, ni imágenes del juego. [`scripts/check_no_assets.sh`](scripts/check_no_assets.sh), que corre dentro de `scripts/ci.sh`, lo verifica.
 5. Primero la fidelidad en `src/game/`: reproduce el comportamiento documentado, no lo rediseñes, y actualiza `re/FUNCTION_MAP.csv`.
-6. Toda afirmación de comportamiento o de formato necesita una dirección `FUN_` y una descompilación local. Si no está demostrada, no entra.
+6. Toda afirmación de comportamiento o de formato necesita una dirección `FUN_` y una decompilación local. Si no está demostrada, no entra.
 7. Mantén `README.md` (español) y `README.en.md` (inglés) sincronizados; el código, los comentarios, los commits y el resto de la documentación siguen en inglés.
 
 ## Créditos

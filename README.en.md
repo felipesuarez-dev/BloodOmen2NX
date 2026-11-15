@@ -41,7 +41,7 @@ Lee esto en español: [README.md](README.md)
 | **Target** | A native Nintendo Switch homebrew (`.nro`, libnx + deko3d) that reads your own copy of the game from the SD card. |
 | **Development host** | Linux (SDL2 + OpenGL). The game is built, tested and compared against the original there before it reaches the console. The Switch backend has not started. |
 | **Original** | The Windows PC release of *Blood Omen 2*, 1.02 Spanish GoldMaster: a 32-bit PE built with MSVC 6, Direct3D 8, DirectInput and Bink Video. |
-| **Language** | The port is meant for the five languages the game data carries: English, French, Italian, German and Spanish. Today it starts in Spanish, like the original `bo2.exe`, and the language is chosen with `--locale`; on-screen text, voices per language and the language-choice screen are planned. See [Game language](#game-language). |
+| **Language** | The port is meant for the five languages the game data carries: English, French, Italian, German and Spanish. Today it starts in Spanish, like the original `bo2.exe`, and the language is chosen with `--locale`. It already reads the string tables, the font and the accent codes of the five languages, and splits a text and places its glyphs like the original; drawing the text on screen, choosing voices per language and the language-choice screen are still to do. See [Game language](#game-language). |
 | **Method** | Reverse engineering for interoperability: `bo2.exe` is analysed in Ghidra and behaviour is checked against the original running as an oracle; what is learned is written as a specification in `docs/`, and the portable C++17 code is written from that specification. It is not a byte-matching rebuild. See [`docs/PROVENANCE.md`](docs/PROVENANCE.md). |
 
 ## Legal notice
@@ -67,7 +67,7 @@ The original is used as a reference, not shipped.
 
 ## Status
 
-**Where the project stands: M0, M1 and M2 are done and M3 is in progress.** The data pipeline, the level renderer and the oracle work. Kain walks, runs and jumps (with air control) with the original movement tuning and the port picks Spanish like the original, but combat, enemies and scripting are not translated, so **no chapter can be completed**. The numbers below are generated and measure what the port translates, not how playable it feels (see [what the percentages measure](#what-the-percentages-measure)).
+**Where the project stands: M0, M1 and M2 are done and M3 is in progress.** The data pipeline, the level renderer and the oracle work. Kain walks, runs and jumps (with air control) with the original movement tuning and the port picks Spanish like the original. Most of the machine that runs the game's scripts is ported, but it does not run the scripts of a level yet, and combat and enemies are not translated, so **no chapter can be completed**. The numbers below are generated and measure what the port translates, not how playable it feels (see [what the percentages measure](#what-the-percentages-measure)).
 
 <!-- progress:start -->
 **Overall progress: 8.1%**
@@ -103,11 +103,13 @@ Source of truth: [`STATE.md`](STATE.md) and [`ROADMAP.md`](ROADMAP.md).
 
 | Area | State |
 |---|---|
-| Asset pipeline | The port reads a tree made by the official installer (227 files); the `.big` parser reads all 179 containers (246,332 entries) and `pc.rkv` yields 2,666 Ogg Vorbis streams; DDS textures and `game.erg` are read |
+| Asset pipeline | The port reads a tree made by the official installer (227 files); the `.big` parser reads all 179 containers (246,332 entries) and `pc.rkv` yields 2,666 Ogg Vorbis streams; DDS textures and `game.erg` are read. `bo2nx_check_data` runs every reader of the port over the 179 containers and what they reject is listed in [`docs/DATA_COVERAGE.md`](docs/DATA_COVERAGE.md) |
 | Level rendering | A level renders headless (software rasterizer, PPM output) and in an SDL2 + OpenGL window with textures, cell grid, visibility BSP, placed instances, lights and markers parsed. Helper objects (`flag helperobj` in their `.etp` template) are hidden like the original. Lighting is incomplete |
 | Original as oracle | The pristine `bo2.exe` runs under Wine on a private Xvfb with scripted input. Frames and video are grabbed from the Xvfb (x11grab at 30 fps); Kain's state, his animation and the follow camera are read from process memory every 20 ms. A native Windows harness is the cross-check |
 | Oracle replay and state comparison | The port replays a Wine capture's input timeline and compares the player, camera and velocity state frame by frame. The spawn matches within 0.05 u and the first W and jump divergences are measured |
 | Kain in `sl01` | `bo2nx --play` walks, runs and jumps Kain in the `sl01` level with the original movement tuning read from the `kain` data (tank turning, two-phase jump gravity, hold boost, air control, partial stick) and the run and walk-back speeds taken from the animation root motion and the animation graph. The camera follows the turn with a limited acceleration, smooths the range back after a collision and lags in height on a jump, like the original. With `--kain-model` Kain's model is drawn with its skeleton: the `animreel` clips pose the 104 bones and the skinning moves the 1,988 vertices. In `--replay` and `--play` the state machine of the animation graph picks the clip from the movement (idle, run, walk back, jump and landing); the state equals the original's in 96.4% and 99.9% of the samples of two oracle captures |
+| Game scripts | The port reads the 480 compiled script packages and the package of each of the 165 regions, and links them into one program per region (81,752 classes in all). Its machine runs objects, strings, values, arithmetic, logic, jumps, calls and native functions like the original's ([`docs/SCRIPTS.md`](docs/SCRIPTS.md)) |
+| Text and languages | The string tables (`strtable`) of the five languages, the game font (87 glyphs) and the accent codes of each language are read. The commands of a text and the placing of its glyphs are ported like the original ([`docs/TEXT.md`](docs/TEXT.md)) |
 | Engine foundations | Fixed-step loop, entity world with frustum culling, cell streaming, collision, third-person camera, checkpoint saves and a health and mana bar |
 | Audio and input | Ogg decoding, mixer and SDL output; keyboard, controller and Switch button maps |
 
@@ -116,9 +118,10 @@ Source of truth: [`STATE.md`](STATE.md) and [`ROADMAP.md`](ROADMAP.md).
 | Area | State |
 |---|---|
 | Chapters | None is completable; there is no level flow, no menus and no front end. Where and how the main menu draws its text is known and checked against the original game ([`docs/TEXT.md`](docs/TEXT.md)) |
-| Gameplay systems | Combat, enemies and AI, dark gifts, weapons and inventory, scripting and triggers are not translated. The scripts are read (the package format, the machine that runs them and its 505 native functions; see [`docs/SCRIPTS.md`](docs/SCRIPTS.md)) and their port is planned. Glide and ledge falls are pending |
+| Gameplay systems | Combat, enemies and AI, dark gifts, weapons and inventory, and triggers are not translated. No game script runs yet: the machine still lacks child threads, object states and value types, and the 505 native functions that connect the scripts to the game are missing. Glide and ledge falls are pending |
+| On-screen text | No text is drawn yet: not the menu, the HUD or the dialogue. Voices per language and the language-choice screen (`LanguageSetupUI`) are missing too |
 | Animation and collision | Skeleton evaluation, skinning and the state machine of the animation graph (`animatio`) are ported for one layer. The pose blend between clips, without the transition filters, and the layers of the run with the walk/run blend by the stick are ported too. Combat mode (Shift) plays the combat movement of the graph. The lean on a turn, the layer masks, the clip events and the attacks are missing. Collision is ported: the `collmodc` decodes (points, packed triangles, spheres and faces), `CollisionWorld` uses the exact hull and the collision manager sweeps Kain's body sphere. The W run in `sl01` slides at 162 u/s on model 57's chamfer and stops at x = 326.38, y = 44.18 (oracle: 326.35 / 44.14) |
-| Lighting and materials | The `.slm` palette is a shadow map; at the `sl01` spawn the world error is 8.69/255. The original HUD is drawn over the level frame and in the `--play` window (frame, health vial, lore vial and rage bar). Kain, the dark gift icon of the HUD, the green `bo2cinematic001` marker and the exact palette texture format remain; fog is disabled in `sl01` |
+| Lighting and materials | The `.slm` palette is a shadow map; at the `sl01` spawn the world error is 8.69/255. The original HUD is drawn over the level frame and in the `--play` window (frame, health vial, lore vial, rage bar and the icon of the dark gift Kain starts with), but its counters do not change yet. Kain's lighting, the green `bo2cinematic001` marker and the exact palette texture format remain; fog is disabled in `sl01` |
 | Audio events and video | The `sound` and `strmfile` event table is not wired to gameplay; there is no Bink playback |
 | Switch | The libnx and deko3d backend has not started |
 
@@ -130,7 +133,9 @@ Source of truth: [`STATE.md`](STATE.md) and [`ROADMAP.md`](ROADMAP.md).
 | Levels completable | 30% | One level is one of the 11 campaign chapters, recovered from the original in [`docs/LEVELS.md`](docs/LEVELS.md). It counts when the port plays it from its entry region to the next hand-off |
 | Platform features | 10% | Each feature counts fully when done and half when partial |
 
-The function share stays small on purpose: much of the port reimplements formats and tuning math, and a function is marked translated only with full coverage and a test. Many movement and animation functions are tracked as in progress.
+The function share stays small on purpose: much of the port reimplements formats and tuning math, and a function is marked translated only with full coverage and a test. Functions in progress, which the port covers only in part, do not add to it.
+
+That is why the overall percentage grows slowly. Each translated function adds about 0.0035 points (60% shared among almost 17,000 functions), each completable chapter adds 2.7 points and each platform feature 0.8. Work in progress shows in amber on the code map, not in the percentage.
 
 ## Architecture
 
@@ -205,7 +210,7 @@ The Switch build will read the same layout from the SD card; the exact path is d
 
 - **The original executable forces Spanish.** `bo2.exe` is a Spanish Gold Master build that forces the locale `spanish` at boot (`FUN_004aae40`, called from `Game::Init`, `FUN_00515920`, before `code.big` loads). The language-choice screen (`LanguageSetupUI`) exists in the code, but this build never shows it.
 - **The data ships up to six variants** of each localized entry. The `.big` `language` field indexes the container's name table: 0 default (an English copy), 1 English, 2 French, 3 Italian, 4 German, 5 Spanish. The localized types are `strtable` (15 per language), `lipsync` (about 11,900 per language) and 44 load-screen textures (French, Italian, German and Spanish only, plus the default copy). Voices are different: `pc.rkv` holds a single language, Spanish, with 2,433 voice clips.
-- **The port chooses the language with `--locale`** (`english`, `french`, `italian`, `german` or `spanish`; without the option, `spanish`): a localized lookup takes the entry of that language and falls back to the default copy (`FUN_006c8fb0`). The string tables are read; the menu and HUD do not use them yet.
+- **The port chooses the language with `--locale`** (`english`, `french`, `italian`, `german` or `spanish`; without the option, `spanish`): a localized lookup takes the entry of that language and falls back to the default copy (`FUN_006c8fb0`). The string tables, the font and the accent codes are read, and the commands of a text and the placing of its glyphs are ported; the menu and HUD draw no text yet.
 - **Multi-language plan.** The port will not stay tied to Spanish. What is left: drawing the text with the font and the accents of each language, choosing voices and lipsync per language, and porting the original's language-choice screen (`LanguageSetupUI`); on the Switch the first language will be the console's. With the data of this release the voices exist only in Spanish: another voice language has to come from the `pc.rkv` of your own copy of another PC edition.
 
 ## Running
