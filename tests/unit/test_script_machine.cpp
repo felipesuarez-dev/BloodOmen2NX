@@ -13,6 +13,7 @@
 
 #include "bo2/engine/big_archive.hpp"
 #include "bo2/engine/region.hpp"
+#include "bo2/engine/script_creature_natives.hpp"
 #include "bo2/engine/script_machine.hpp"
 #include "bo2/engine/script_memory.hpp"
 #include "bo2/engine/script_program.hpp"
@@ -1600,6 +1601,117 @@ void test_creature_and_store_handle() {
     CHECK(memory.u32(slot) == 0);
 }
 
+// The creatures of a level as the creature natives see them: a word per
+// creature, its name and its object.
+struct FakeCreatures final : bo2::engine::ScriptCreatureHost {
+    std::map<std::string, std::uint32_t> by_name;
+    std::map<std::uint32_t, ScriptObjectId> objects;
+    std::vector<std::pair<std::uint32_t, std::string>> asked;
+    std::uint32_t kain_creature = 0;
+    ScriptObjectId hud = 0;
+
+    std::uint32_t find_creature(std::uint32_t owner, const std::string& name) override {
+        asked.emplace_back(owner, name);
+        const auto found = by_name.find(name);
+        return found == by_name.end() ? 0 : found->second;
+    }
+    std::string creature_name(std::uint32_t creature) override {
+        for (const auto& [name, word] : by_name) {
+            if (word == creature) {
+                return name;
+            }
+        }
+        return {};
+    }
+    ScriptObjectId creature_object(std::uint32_t creature) override {
+        const auto found = objects.find(creature);
+        return found == objects.end() ? 0 : found->second;
+    }
+    std::uint32_t kain() override { return kain_creature; }
+    ScriptObjectId hud_object() override { return hud; }
+};
+
+// A class with `count` native bodies, one method each.
+ScriptClass native_class(const std::string& name, const std::string& parent, std::uint16_t count) {
+    ScriptClass cls = make_class(name, parent, {"default"}, 1);
+    cls.data_size = 4;
+    for (std::uint16_t index = 0; index < count; ++index) {
+        cls.methods.push_back(make_method("m" + std::to_string(index), bo2::engine::kScriptNoSlot));
+        cls.bodies.push_back(native_body(index));
+    }
+    return cls;
+}
+
+// The natives that find creatures (BO2NX-177; docs/SCRIPTS.md).
+void test_creature_natives() {
+    const Linked linked = make_program({native_class("basecreaturescript", "", 0),
+                                        native_class("creaturescript", "basecreaturescript", 8),
+                                        native_class("bo2creaturescript", "creaturescript", 12),
+                                        native_class("guard01", "bo2creaturescript", 0),
+                                        native_class("lever01", "basecreaturescript", 0)});
+    ScriptMachine machine(linked.program);
+    bo2::engine::bind_creature_natives(machine);
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    const ScriptObjectId guard = machine.create_object(linked.program.find_class("guard01") - 1);
+    const ScriptObjectId lever = machine.create_object(linked.program.find_class("lever01") - 1);
+    machine.set_creature(guard, 0x100);
+    machine.set_creature(lever, 0x200);
+    const ScriptAddress arg = memory.allocate(4);
+    const ScriptAddress result = memory.allocate(4);
+    const auto call = [&](bo2::engine::ScriptNative native, const char* name) {
+        memory.set_u32(arg, name == nullptr ? 0 : machine.new_string_cell(name));
+        native(machine, guard, name == nullptr ? 0 : 1, arg, result);
+        return memory.u32(result);
+    };
+
+    CHECK(call(bo2::engine::native_creature_self, nullptr) == 0x100);
+    CHECK(throws([&] { call(bo2::engine::native_get_kain, nullptr); }));  // no host yet
+    FakeCreatures creatures;
+    creatures.by_name = {{"guard01", 0x100}, {"lever01", 0x200}, {"ghost", 0x300}};
+    creatures.objects = {{0x100, guard}, {0x200, lever}};
+    creatures.kain_creature = 0x400;
+    machine.set_creature_host(&creatures);
+    CHECK(call(bo2::engine::native_get_kain, nullptr) == 0x400);
+    CHECK(!throws([&] { bo2::engine::native_get_kain(machine, guard, 0, 0, 0); }));  // no result
+
+    // creaturebyname: the creature word; an empty or missing name asks no one.
+    CHECK(call(bo2::engine::native_creature_by_name, "lever01") == 0x200);
+    CHECK(creatures.asked.back() == std::make_pair(std::uint32_t{0x100}, std::string("lever01")));
+    const std::size_t warned = machine.warnings().size();
+    CHECK(call(bo2::engine::native_creature_by_name, "nobody") == 0);
+    CHECK(machine.warnings().size() == warned + 1);
+    CHECK(machine.warnings().back() == "guard01 : GetCreatureWithName('nobody') failed");
+    const std::size_t asked = creatures.asked.size();
+    memory.set_u32(result, 7);
+    CHECK(call(bo2::engine::native_creature_by_name, nullptr) == 0);
+    memory.set_u32(result, 7);
+    CHECK(call(bo2::engine::native_creature_by_name, "") == 0);
+    CHECK(creatures.asked.size() == asked);
+    CHECK(machine.warnings().size() == warned + 1);
+
+    // creaturescriptbyname: the handle of a creaturescript object, counted.
+    const auto count = [&](ScriptObjectId object) { return memory.u32(machine.handle_of(object) + 4); };
+    memory.set_u32(result, 0);
+    CHECK(call(bo2::engine::native_creature_script_by_name, "guard01") == machine.handle_of(guard));
+    CHECK(count(guard) == 2);
+    CHECK(call(bo2::engine::native_creature_script_by_name, "guard01") == machine.handle_of(guard));
+    CHECK(count(guard) == 2);  // the same handle: nothing
+    CHECK(call(bo2::engine::native_creature_script_by_name, "lever01") == 0);  // not a creaturescript
+    CHECK(count(guard) == 1);
+    CHECK(count(lever) == 1);
+    CHECK(call(bo2::engine::native_creature_script_by_name, "ghost") == 0);  // no object
+    CHECK(call(bo2::engine::native_creature_script_by_name, "nobody") == 0);
+    CHECK(machine.warnings().size() == warned + 1);  // this one does not log
+
+    // gethud: the HUD's object, whatever its class.
+    creatures.hud = lever;
+    CHECK(call(bo2::engine::native_get_hud, nullptr) == machine.handle_of(lever));
+    CHECK(count(lever) == 2);
+    creatures.hud = 0;
+    CHECK(call(bo2::engine::native_get_hud, nullptr) == 0);
+    CHECK(count(lever) == 1);
+}
+
 // 0x59: the copy runs, the frame skips the block and waits for it.
 void test_fork_waits() {
     MachineRun run(machine_class(join({{op(0x59, 2), op(0x5D), op(0x5C)}, mark(), {op(0x5D), op(0x5C)}})));
@@ -1770,6 +1882,23 @@ void test_create_sl01_objects(const std::filesystem::path& root) {
     CHECK(created == 79);
     CHECK(creatures == 78);  // every class but resourcedb derives from basecreaturescript
     CHECK(creature_scripts == 61);  // not the monsters (monsterscript) nor the conversations
+
+    // The bodies the creature natives bind to (BO2NX-177).
+    bo2::engine::bind_creature_natives(machine);
+    const auto method_of = [&](const std::string& name, std::uint16_t index) -> const ScriptMethod& {
+        const auto& cls = program.classes()[program.find_class(name) - 1];
+        const auto& body = program.bodies()[cls.bodies[index]];
+        return program.classes()[body.owner].source->methods[body.source->method];
+    };
+    CHECK(method_of("creaturescript", 6).name == "creaturebyname");
+    CHECK(method_of("creaturescript", 6).result.kind == 9);
+    CHECK(method_of("creaturescript", 7).name == "creatureself");
+    CHECK(method_of("bo2creaturescript", 0).name == "getkain");
+    CHECK(method_of("bo2creaturescript", 0).result.kind == 9);
+    CHECK(method_of("bo2creaturescript", 1).name == "creaturescriptbyname");
+    CHECK(method_of("bo2creaturescript", 1).result.name == "creaturescript");
+    CHECK(method_of("bo2creaturescript", 11).name == "gethud");
+    CHECK(method_of("bo2creaturescript", 11).result.name == "hud");
 }
 
 // Every region of the game links (BO2NX-151): 165 programs, 81,752 classes.
@@ -1865,6 +1994,7 @@ int main() {
     test_creature_value_types();
     test_activate_links_fields();
     test_creature_and_store_handle();
+    test_creature_natives();
 
     const char* root = std::getenv("BO2NX_ASSETS_DIR");
     if (root == nullptr) {

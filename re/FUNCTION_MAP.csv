@@ -3274,7 +3274,8 @@ address,name,subsystem,status,notes
 004cd320,FUN_004cd320,unknown,todo,ghidra
 004cd3b0,FUN_004cd3b0,unknown,todo,ghidra
 004cd3e0,FUN_004cd3e0,unknown,todo,ghidra
-004cd760,FUN_004cd760,unknown,todo,ghidra
+004cd750,FUN_004cd750,script,translated,src/engine/script_creature_natives.cpp: native_get_kain
+004cd760,FUN_004cd760,script,translated,src/engine/script_creature_natives.cpp: native_creature_script_by_name stores the found object's handle counted
 004cd870,FUN_004cd870,unknown,todo,ghidra
 004cd940,FUN_004cd940,unknown,todo,ghidra
 004cd9e0,FUN_004cd9e0,unknown,todo,ghidra
@@ -3283,7 +3284,7 @@ address,name,subsystem,status,notes
 004cdc40,FUN_004cdc40,unknown,todo,ghidra
 004cdcf0,FUN_004cdcf0,unknown,todo,ghidra
 004cde00,FUN_004cde00,unknown,todo,ghidra
-004cdf20,FUN_004cdf20,unknown,todo,ghidra
+004cdf20,FUN_004cdf20,script,translated,src/engine/script_creature_natives.cpp: native_get_hud stores the handle of the HUD's object counted
 004cdfd0,FUN_004cdfd0,unknown,todo,ghidra
 004ce170,FUN_004ce170,unknown,todo,ghidra
 004ce2b0,FUN_004ce2b0,unknown,todo,ghidra
@@ -3495,8 +3496,8 @@ address,name,subsystem,status,notes
 004d85e0,FUN_004d85e0,unknown,todo,ghidra
 004d8610,FUN_004d8610,unknown,todo,ghidra
 004d8680,FUN_004d8680,unknown,todo,ghidra
-004d8840,FUN_004d8840,unknown,todo,ghidra
-004d8860,FUN_004d8860,unknown,todo,ghidra
+004d8840,FUN_004d8840,script,translated,src/engine/script_creature_natives.cpp: native_get_kain writes ScriptCreatureHost::kain
+004d8860,FUN_004d8860,script,translated,src/engine/script_creature_natives.cpp: native_creature_script_by_name keeps the object only when its class is a creaturescript (the dynamic_cast to Screaturescript)
 004d88b0,FUN_004d88b0,unknown,todo,ghidra
 004d88f0,FUN_004d88f0,unknown,todo,ghidra
 004d8910,FUN_004d8910,unknown,todo,ghidra
@@ -15407,8 +15408,8 @@ address,name,subsystem,status,notes
 00760450,FUN_00760450,unknown,todo,ghidra
 00760480,FUN_00760480,unknown,todo,ghidra
 00760700,FUN_00760700,unknown,todo,ghidra
-00760750,FUN_00760750,unknown,todo,ghidra
-007607b0,FUN_007607b0,unknown,todo,ghidra
+00760750,FUN_00760750,script,translated,src/engine/script_creature_natives.cpp: native_creature_by_name; an empty name gives 0 and a missing creature gives 0 and the GetCreatureWithName warning
+007607b0,FUN_007607b0,script,translated,src/engine/script_creature_natives.cpp: native_creature_self writes the creature of the object (+0x2c)
 007607c0,FUN_007607c0,unknown,todo,ghidra
 00760810,FUN_00760810,unknown,todo,ghidra
 00760830,FUN_00760830,unknown,todo,ghidra
@@ -15538,7 +15539,8 @@ address,name,subsystem,status,notes
 00766870,FUN_00766870,unknown,todo,ghidra
 007670e0,FUN_007670e0,unknown,todo,ghidra
 007671b0,FUN_007671b0,unknown,todo,ghidra
-00767270,FUN_00767270,unknown,todo,ghidra
+00767270,FUN_00767270,script,translated,src/engine/script_creature_natives.cpp: native_creature_by_name takes the name argument (empty for a null cell)
+00767310,FUN_00767310,script,translated,src/engine/script_creature_natives.cpp: native_creature_self
 00767360,FUN_00767360,unknown,todo,ghidra
 00767460,FUN_00767460,unknown,todo,ghidra
 00767510,FUN_00767510,unknown,todo,ghidra

@@ -447,8 +447,8 @@ The most called:
 
 The natives of `basescript` and of the value classes need no engine system
 (BO2NX-163, BO2NX-172). The five that find creatures ask the creatures of
-the level (next section). The rest needs the effects, the sound, the HUD and
-the camera: each is a system of its own.
+the level (next section) and are ported. The rest needs the effects, the
+sound, the HUD and the camera: each is a system of its own.
 
 ## The natives that find creatures
 
@@ -615,7 +615,8 @@ of the game and a host that gives the machine the creatures of the level.
 | Value types `position`, `rotation`, `color`, `gridposition` | `src/engine/script_machine.cpp` | `script` (`test_position_type` to `test_unregistered_value_type`) |
 | Value types `waypoints`, `creature`, `creaturecontroller`, `sound`, `effect`, `soundgroup`; every object of the region package of `sl01` | `src/engine/script_machine.cpp` | `script` (`test_waypoints_type`, `test_creature_value_types`, `test_create_sl01_objects`) |
 | Activating the object of a creature: its object fields linked by name, then the start | `src/engine/script_machine.cpp` | `script` (`test_activate_links_fields`) |
-| The creature of an object, a handle stored in an object slot, and `ScriptCreatureHost`, which the natives that find creatures ask (the natives: BO2NX-177) | `src/engine/script_machine.cpp` | `script` (`test_creature_and_store_handle`; the 61 `creaturescript` classes of `sl01` in `test_create_sl01_objects`) |
+| The creature of an object, a handle stored in an object slot, and `ScriptCreatureHost`, which the natives that find creatures ask | `src/engine/script_machine.cpp` | `script` (`test_creature_and_store_handle`; the 61 `creaturescript` classes of `sl01` in `test_create_sl01_objects`) |
+| The natives that find creatures (`creaturebyname`, `creatureself`, `getkain`, `creaturescriptbyname`, `gethud`) | `src/engine/script_creature_natives.cpp` | `script` (`test_creature_natives`; the bodies they bind to in `test_create_sl01_objects`) |
 
 ## Checked in the running game
 
