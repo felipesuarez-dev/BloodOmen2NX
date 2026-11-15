@@ -72,10 +72,101 @@ cd external/installed
 find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum
 ```
 
+## Code provenance
+
+The policy for everything written into this repository:
+
+- **What the port reproduces.** The behaviour of the game and the layout
+  of its data files, which the port must read to work with the player's
+  own copy. Both are studied in a legally obtained copy, by static analysis
+  and by observing the running game, for interoperability on other
+  platforms.
+- **Two roles.** The analysis reads the binary and the oracle and writes
+  specifications into `docs/` and the tracker. The implementation writes
+  code from those specifications only, without opening the binary or the
+  decompiled output ([`PORTING_GUIDE.md`](PORTING_GUIDE.md)). This split is
+  the rule since 2026-11-14; code written before then came from the
+  analysis directly, and the table below says so per file.
+- **References, not copies.** An address such as `FUN_00443a50` in a
+  comment, in `docs/` or in `re/FUNCTION_MAP.csv` records where a rule was
+  observed. Decompiled output, disassembly listings and the game's text,
+  art and audio are never committed (`scripts/check_no_assets.sh` checks
+  names and contents).
+- **Third parties.** Code from another project enters only with its license
+  and notice (`NOTICE`); GPL-only projects are read for facts, never copied
+  ([`PRIOR_ART.md`](PRIOR_ART.md)).
+- **Removed.** The decoder of the installer chunks reproduced the
+  installer's encryption and was removed on 2026-11-15
+  ([`FORMATS/dat.md`](FORMATS/dat.md)).
+- **Releases.** No binary of the port is published before a legal review
+  (`scripts/release.sh` refuses `--publish`).
+
+## Origin of each file
+
+"Based on": *data format* is the layout of the game's files, *behaviour*
+is a rule of the original observed in the analysis, *port's own* has no
+counterpart in the original. "Written from": *analysis* means the code was
+written while studying the original, *specification* means it was written
+from `docs/` and an issue only (the `[sin descubrimiento]` issues of the
+tracker), *own design* means there was nothing to reproduce. "Functions
+cited" counts the distinct `FUN_` addresses named in the file. The platform
+backends (`src/platform/`), the oracle tools (`tools/oracle/`, which read
+the running game's memory), the generators (`tools/gen/`), the Ghidra
+helpers (`tools/ghidra/`) and the scripts (`scripts/`) are the port's own
+design. `third_party/stb_vorbis.c` is third-party code (`NOTICE`).
+
+| File | What it is | Based on | Written from | Functions cited |
+|---|---|---|---|---:|
+| `src/engine/big_archive.cpp` | Reader of the `.big` containers | data format | analysis | 0 |
+| `src/engine/cell_group.cpp` | Reader of the level geometry, models, markers and light maps | data format; load rules | analysis, then specification | 16 |
+| `src/engine/dds.cpp` | DDS texture decoder and blend class | public format; blend rule | own design | 1 |
+| `src/engine/anim_reel.cpp` | Reader of the animation clips | data format | analysis | 10 |
+| `src/engine/anim_graph.cpp` | Reader of the animation graphs | data format | analysis | 24 |
+| `src/engine/anim_machine.cpp` | Animation state machine | behaviour | analysis | 15 |
+| `src/engine/skeleton_pose.cpp` | Skeleton pose, blending and skinning | behaviour | analysis | 11 |
+| `src/engine/region.cpp` | Reader of the region entities | data format | analysis | 0 |
+| `src/engine/string_table.cpp` | Reader of the string tables | data format | analysis, then specification | 0 |
+| `src/engine/erg.cpp` | Reader of `game.erg` | data format | analysis | 0 |
+| `src/engine/entity_template.cpp` | Reader of the entity templates | data format | analysis | 1 |
+| `src/engine/pixmap_font.cpp` | Reader of the game font and glyph placing | data format; behaviour | specification | 3 |
+| `src/engine/text.cpp` | Parser of the text commands of a string | behaviour | specification | 1 |
+| `src/engine/render_order.cpp` | Sort value and key of the sorted pass | behaviour | specification | 3 |
+| `src/engine/collision.cpp` | Collision queries | port's own; one rule from the original | own design | 1 |
+| `src/engine/audio.cpp` | Audio mixer | port's own | own design | 0 |
+| `src/engine/ogg.cpp` | Ogg Vorbis decoding through stb_vorbis | port's own | own design | 0 |
+| `src/engine/navigation.cpp` | Navigation helpers | port's own | own design | 0 |
+| `src/engine/tick.cpp` | Fixed-step clock | port's own | own design | 0 |
+| `src/engine/world.cpp` | Entity world | port's own | own design | 0 |
+| `src/engine/data_check.cpp` | Data checker over every container | port's own tooling | own design | 0 |
+| `src/game/camera.cpp` | Follow camera | behaviour | analysis | 11 |
+| `src/game/hud_scene.cpp` | HUD scene | behaviour | analysis, then specification | 11 |
+| `src/game/kain_actor.cpp` | Kain's actor state | behaviour | analysis | 2 |
+| `src/game/kain_animation.cpp` | Kain's animation state | behaviour | analysis | 8 |
+| `src/game/kain_tuning.cpp` | Reader of Kain's tuning data | data format | analysis | 11 |
+| `src/game/kain_vitals.cpp` | Kain's health, lore and rage | behaviour | analysis, then specification | 5 |
+| `src/game/player.cpp` | Kain's movement | behaviour | analysis | 23 |
+| `src/game/replay.cpp` | Replay of an oracle input timeline | port's own tooling | own design | 0 |
+| `src/game/save.cpp` | Save slots of the port | port's own | own design | 0 |
+| `src/main.cpp` | Host program and its options | port's own | own design | 3 |
+| `src/tools/check_data.cpp` | Command line of the data checker | port's own tooling | own design | 0 |
+| `src/common/version.cpp` | Version string | port's own | own design | 0 |
+| `tools/bo2fmt/big.py` | Python reader of the `.big` containers | data format | analysis | 1 |
+| `tools/bo2fmt/animatio.py` | Python reader of the animation graphs | data format | analysis | 40 |
+| `tools/bo2fmt/animreel.py` | Python reader of the animation clips | data format | analysis | 14 |
+| `tools/bo2fmt/audio.py` | Python reader of the sound tables | data format | analysis | 0 |
+| `tools/bo2fmt/bo2fmt.py` | Command line of the Python readers | port's own tooling | own design | 0 |
+| `tools/bo2fmt/font.py` | Python reader of the game font | data format | specification | 1 |
+| `tools/bo2fmt/model.py` | Python reader of the models | data format | analysis | 1 |
+| `tools/bo2fmt/region.py` | Python reader of the region entities | data format | analysis | 0 |
+| `tools/bo2fmt/rkv.py` | Python reader of `pc.rkv` | data format (layout first published by an MIT project, see NOTICE) | analysis | 0 |
+| `tools/bo2fmt/sfxi.py` | Python reader of the installer resource container | data format | analysis | 0 |
+| `tools/bo2fmt/strtable.py` | Python reader of the string tables | data format | analysis, then specification | 1 |
+| `tools/bo2fmt/textures.py` | Python texture export | public format | own design | 0 |
+
 ## Chain of custody
 
 1. Keep the reference ISO and the extracted files under `external/`.
 2. Record hashes in this file before first use.
 3. Run `scripts/check_no_assets.sh` before every commit.
 4. Never commit game data, original code, decompiled dumps or verbatim
-   game text.
+   game text, and follow "Code provenance" above.

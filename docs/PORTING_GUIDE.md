@@ -1,18 +1,33 @@
-# Porting guide: the per-function translation loop
+# Porting guide: from a specification to code
 
-Mandatory workflow for translating original code into `src/`.
+Mandatory workflow for porting a part of the game into `src/`. It has two
+roles, kept apart on purpose ([`PROVENANCE.md`](PROVENANCE.md), "Code
+provenance"):
 
-1. Pick a function from `re/FUNCTION_MAP.csv` with status `todo`, highest
-   subsystem priority first.
-2. Read it in Ghidra and cross-check every string, RTTI entry and caller
-   that reveals its purpose.
-3. Translate to C++ in the subsystem's file, preserving structure, control
-   flow and data layout. Use real names when evidence provides them;
-   otherwise `fn_<address>`. No design improvements, no cleanup refactors.
+**Analysis.** Study the original and write down what it does.
+
+1. Pick the next discovery from the queue. Read the functions in Ghidra and
+   cross-check every string, RTTI entry and caller that reveals their
+   purpose; check the behaviour in the running game (the oracle) when it
+   can be observed.
+2. Write the result as a specification: the rule, the data layout the
+   game's files use, the numbers a test can check, and the address of each
+   function where the rule was observed. It goes into the matching page of
+   `docs/` and into an issue for the implementation. Decompiled output and
+   disassembly stay local (`re/decomp/`, gitignored).
+
+**Implementation.** Write the code from the specification only.
+
+3. Write the C++ from the issue and the `docs/` pages it names, without
+   opening the binary or the dumps. Reproduce the behaviour and the data
+   layout of the game's files that the specification documents; the
+   structure of the code, its names and its helpers are the port's own.
+   No redesign of the behaviour, no cleanup refactors outside the issue.
 4. Pure logic gets a unit test with a synthetic fixture. Code that touches
    render, audio or I/O is wired up and verified against the oracle at the
    same game moment.
 5. Update `re/FUNCTION_MAP.csv`: `todo -> wip -> translated -> verified`.
+   The address in a comment says where the rule was observed.
 6. Commit as one work unit: code, tests and docs of that change.
 7. The port must stay buildable and runnable at every commit.
 

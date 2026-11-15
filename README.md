@@ -2,7 +2,7 @@
 
 # Blood Omen 2 — Port nativo para Switch
 
-**Port nativo homebrew de *Blood Omen 2* para Nintendo Switch (libnx), construido mediante descompilación funcional del lanzamiento original de PC para Windows (2002, GoldMaster 1.02 en español).**
+**Port nativo homebrew de *Blood Omen 2* para Nintendo Switch (libnx), construido mediante ingeniería inversa del lanzamiento original de PC para Windows (2002, GoldMaster 1.02 en español).**
 
 English version: [README.en.md](README.en.md)
 
@@ -47,8 +47,8 @@ English version: [README.en.md](README.en.md)
 | **Destino** | Un homebrew nativo para Nintendo Switch (`.nro`, libnx + deko3d) que lee tu propia copia del juego desde la tarjeta SD. |
 | **Host de desarrollo** | Linux (SDL2 + OpenGL). El juego se compila, se prueba y se compara con el original ahí antes de llegar a la consola. El backend de Switch todavía no se ha iniciado. |
 | **Original** | El lanzamiento de PC para Windows de *Blood Omen 2*, GoldMaster 1.02 en español: un PE de 32 bits compilado con MSVC 6, con Direct3D 8, DirectInput y Bink Video. |
-| **Idioma** | El port está pensado para los cinco idiomas que traen los datos del juego: inglés, francés, italiano, alemán y español. Hoy arranca en español, como el `bo2.exe` del que se traduce, y el idioma se elige con `--locale`; el texto en pantalla, las voces por idioma y la pantalla de elección de idioma están en el plan. Consulta [Idioma del juego](#idioma-del-juego). |
-| **Método** | Descompilación funcional: `bo2.exe` se analiza en Ghidra, el comportamiento se contrasta con el original ejecutándose como oráculo y cada función se traduce a C++17 portable. No es una reconstrucción byte a byte. |
+| **Idioma** | El port está pensado para los cinco idiomas que traen los datos del juego: inglés, francés, italiano, alemán y español. Hoy arranca en español, como el `bo2.exe` original, y el idioma se elige con `--locale`; el texto en pantalla, las voces por idioma y la pantalla de elección de idioma están en el plan. Consulta [Idioma del juego](#idioma-del-juego). |
+| **Método** | Ingeniería inversa para la compatibilidad: `bo2.exe` se analiza en Ghidra y el comportamiento se contrasta con el original ejecutándose como oráculo; lo aprendido se escribe como especificación en `docs/` y el código C++17 portable se escribe desde esa especificación. No es una reconstrucción byte a byte. Consulta [`docs/PROVENANCE.md`](docs/PROVENANCE.md). |
 
 ## Aviso legal
 
@@ -253,20 +253,20 @@ Las teclas son valores de desarrollo hasta que se recuperen los controles origin
 
 ```mermaid
 flowchart LR
-    A[Análisis en Ghidra<br/>bo2.exe] --> B[Descompilación local<br/>re/decomp]
+    A[Análisis<br/>Ghidra y oráculo] --> B[Especificación<br/>docs/ e issue]
     B --> C[Referencia en Python<br/>tools/bo2fmt]
-    C --> D[Port en C++17<br/>src/game, src/engine]
+    B --> D[Port en C++17<br/>src/game, src/engine]
     D --> E[Pruebas unitarias y golden]
     D --> F[Comparación con el oráculo<br/>Windows nativo o Wine]
-    F -->|diferencia| B
+    F -->|diferencia| A
 ```
 
-1. **Aplicar ingeniería inversa**: Ghidra sobre `bo2.exe`; toda afirmación de comportamiento necesita una dirección `FUN_` y una descompilación local en `re/decomp/` (ignorado por git).
-2. **Referencia**: los formatos y comportamientos se validan primero con una implementación en Python con solo biblioteca estándar (`tools/bo2fmt/`).
-3. **Portar**: traduce con fidelidad; registra cada función en [`re/FUNCTION_MAP.csv`](re/FUNCTION_MAP.csv).
+1. **Analizar**: Ghidra sobre `bo2.exe` y el juego en ejecución como oráculo; toda afirmación de comportamiento necesita la dirección `FUN_` donde se observó. Las descompilaciones quedan locales en `re/decomp/` (ignorado por git).
+2. **Especificar**: la regla, el formato y los números que un test puede comprobar se escriben en `docs/` y en un issue. Los formatos se validan además con una referencia en Python con solo biblioteca estándar (`tools/bo2fmt/`).
+3. **Implementar**: el código se escribe desde la especificación, sin abrir el binario ni las descompilaciones; reproduce el comportamiento y los datos que documenta, con estructura y nombres propios. Cada función queda registrada en [`re/FUNCTION_MAP.csv`](re/FUNCTION_MAP.csv).
 4. **Verificar**: pruebas unitarias con datos sintéticos y luego el oráculo: el original se ejecuta de forma nativa en Windows o bajo Wine, con entrada guiada por script, y sus capturas, estado y partidas guardadas se comparan con el port.
 
-Ciclo por función: [`docs/PORTING_GUIDE.md`](docs/PORTING_GUIDE.md). La regla es simple: **descompila antes de suponer y nunca afirmes algo sin un volcado**.
+Ciclo completo: [`docs/PORTING_GUIDE.md`](docs/PORTING_GUIDE.md); política de procedencia: [`docs/PROVENANCE.md`](docs/PROVENANCE.md). La regla es simple: **analiza antes de suponer y no afirmes nada sin la función donde se observa**.
 
 ## Estructura del repositorio
 
@@ -298,7 +298,7 @@ La documentación técnica está en inglés.
 | [`ROADMAP.md`](ROADMAP.md) | Hitos y criterios de paso |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Capas, estrategia de host primero y reglas de determinismo |
 | [`docs/REVERSING.md`](docs/REVERSING.md) | Flujo de trabajo con Ghidra, triaje del compilador y política de volcados |
-| [`docs/PORTING_GUIDE.md`](docs/PORTING_GUIDE.md) | El ciclo de traducción por función |
+| [`docs/PORTING_GUIDE.md`](docs/PORTING_GUIDE.md) | Del análisis a la especificación y de la especificación al código |
 | [`docs/FORMATS/`](docs/FORMATS/) | Especificaciones de formatos de contenedores y recursos |
 | [`docs/PRIOR_ART.md`](docs/PRIOR_ART.md) | Herramientas públicas, licencias y qué reutilizamos o solo usamos como oráculo |
 | [`docs/LEVELS.md`](docs/LEVELS.md) | Los 11 capítulos de la campaña, su fuente en `bo2.exe` y la correspondencia con las regiones |
@@ -327,7 +327,7 @@ La documentación técnica está en inglés.
 2. Un solo autor por commit. **Nada** de `Co-Authored-By`, `Signed-off-by` ni trailers de generación, y ninguna atribución dentro del código o la documentación.
 3. Ejecuta `clang-format` antes de cada commit; sin advertencias con `-Wall -Wextra -Wshadow -Wconversion`.
 4. **Nunca subas** nada de `external/` o `re/decomp/`, ni archivos como `.iso .exe .dll .dat .erg .rkv .big .bik .ogg .wav`. `scripts/ci.sh` lo verifica.
-5. Primero la fidelidad en `src/game/`: traduce, no rediseñes, y actualiza `re/FUNCTION_MAP.csv`.
+5. Primero la fidelidad en `src/game/`: reproduce el comportamiento documentado, no lo rediseñes, y actualiza `re/FUNCTION_MAP.csv`.
 6. Toda afirmación de comportamiento o de formato necesita una dirección `FUN_` y una descompilación local. Si no está demostrada, no entra.
 7. Mantén `README.md` (español) y `README.en.md` (inglés) sincronizados; el código, los comentarios, los commits y el resto de la documentación siguen en inglés.
 
@@ -356,6 +356,7 @@ Copyright (C) 2026 felipesuarez-dev y colaboradores.
 
 - Puedes usar, estudiar, modificar y redistribuir el programa. Si distribuyes una versión modificada o un binario, tienes que ofrecer su código fuente bajo la misma licencia.
 - El programa se entrega sin ninguna garantía.
-- `third_party/stb_vorbis.c` conserva su propia licencia (dominio público / MIT).
+- `third_party/stb_vorbis.c` conserva su propia licencia (dominio público / MIT). El alcance de la licencia y los créditos de terceros están en [`NOTICE`](NOTICE).
+- **No se publican binarios del port** (ni `.nro` ni ejecutables) antes de una revisión legal. La política de procedencia del código está en [`docs/PROVENANCE.md`](docs/PROVENANCE.md).
 
 La licencia cubre solo el trabajo original de los autores de este repositorio. **No concede ningún derecho** sobre *Blood Omen 2*: su código, sus datos, sus recursos, sus nombres y sus marcas pertenecen a sus propietarios (Crystal Dynamics, Eidos Interactive, Square Enix o sus sucesores). Las imágenes de `docs/media/` muestran arte del juego y no quedan bajo esta licencia.

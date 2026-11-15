@@ -2,7 +2,7 @@
 
 # Blood Omen 2 — Native Switch Port
 
-**A native Nintendo Switch homebrew port (libnx) of *Blood Omen 2*, built through functional decompilation of the original Windows PC release (2002, Spanish GoldMaster 1.02).**
+**A native Nintendo Switch homebrew port (libnx) of *Blood Omen 2*, built through reverse engineering of the original Windows PC release (2002, Spanish GoldMaster 1.02).**
 
 Lee esto en español: [README.md](README.md)
 
@@ -47,8 +47,8 @@ Lee esto en español: [README.md](README.md)
 | **Target** | A native Nintendo Switch homebrew (`.nro`, libnx + deko3d) that reads your own copy of the game from the SD card. |
 | **Development host** | Linux (SDL2 + OpenGL). The game is built, tested and compared against the original there before it reaches the console. The Switch backend has not started. |
 | **Original** | The Windows PC release of *Blood Omen 2*, 1.02 Spanish GoldMaster: a 32-bit PE built with MSVC 6, Direct3D 8, DirectInput and Bink Video. |
-| **Language** | The port is meant for the five languages the game data carries: English, French, Italian, German and Spanish. Today it starts in Spanish, like the `bo2.exe` it is translated from, and the language is chosen with `--locale`; on-screen text, voices per language and the language-choice screen are planned. See [Game language](#game-language). |
-| **Method** | A functional decompilation: `bo2.exe` is analysed in Ghidra, behaviour is checked against the original running as an oracle, and each function is translated to portable C++17. It is not a byte-matching rebuild. |
+| **Language** | The port is meant for the five languages the game data carries: English, French, Italian, German and Spanish. Today it starts in Spanish, like the original `bo2.exe`, and the language is chosen with `--locale`; on-screen text, voices per language and the language-choice screen are planned. See [Game language](#game-language). |
+| **Method** | Reverse engineering for interoperability: `bo2.exe` is analysed in Ghidra and behaviour is checked against the original running as an oracle; what is learned is written as a specification in `docs/`, and the portable C++17 code is written from that specification. It is not a byte-matching rebuild. See [`docs/PROVENANCE.md`](docs/PROVENANCE.md). |
 
 ## Legal notice
 
@@ -253,20 +253,20 @@ Keyboard bindings are development defaults until the original controls are recov
 
 ```mermaid
 flowchart LR
-    A[Ghidra analysis<br/>bo2.exe] --> B[Local decompile<br/>re/decomp]
+    A[Analysis<br/>Ghidra and oracle] --> B[Specification<br/>docs/ and issue]
     B --> C[Python reference<br/>tools/bo2fmt]
-    C --> D[C++17 port<br/>src/game, src/engine]
+    B --> D[C++17 port<br/>src/game, src/engine]
     D --> E[Unit and golden tests]
     D --> F[Oracle comparison<br/>native Windows or Wine]
-    F -->|mismatch| B
+    F -->|mismatch| A
 ```
 
-1. **Reverse engineer**: Ghidra over `bo2.exe`; every behaviour claim needs a `FUN_` address and a local decompile under `re/decomp/` (gitignored).
-2. **Reference**: formats and behaviours are first validated with a stdlib Python implementation (`tools/bo2fmt/`).
-3. **Port**: translate faithfully; record each function in [`re/FUNCTION_MAP.csv`](re/FUNCTION_MAP.csv).
+1. **Analyse**: Ghidra over `bo2.exe` and the running game as an oracle; every behaviour claim needs the `FUN_` address where it was observed. Decompiles stay local under `re/decomp/` (gitignored).
+2. **Specify**: the rule, the format and the numbers a test can check go into `docs/` and an issue. Formats are also validated with a stdlib Python reference (`tools/bo2fmt/`).
+3. **Implement**: the code is written from the specification, without opening the binary or the decompiles; it reproduces the documented behaviour and data with its own structure and names. Each function is recorded in [`re/FUNCTION_MAP.csv`](re/FUNCTION_MAP.csv).
 4. **Verify**: unit tests on synthetic fixtures, then the oracle: the original runs natively on Windows or under Wine, driven by scripted input, and its screenshots, state and saves are compared with the port.
 
-Per-function loop: [`docs/PORTING_GUIDE.md`](docs/PORTING_GUIDE.md). The rule is simple: **decompile before guessing, and never ship a claim without a dump**.
+Full loop: [`docs/PORTING_GUIDE.md`](docs/PORTING_GUIDE.md); provenance policy: [`docs/PROVENANCE.md`](docs/PROVENANCE.md). The rule is simple: **analyse before guessing, and never state a claim without the function where it is observed**.
 
 ## Repository layout
 
@@ -296,7 +296,7 @@ Per-function loop: [`docs/PORTING_GUIDE.md`](docs/PORTING_GUIDE.md). The rule is
 | [`ROADMAP.md`](ROADMAP.md) | Milestones and gates |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Layers, host-first strategy and determinism rules |
 | [`docs/REVERSING.md`](docs/REVERSING.md) | Ghidra workflow, compiler triage and dump policy |
-| [`docs/PORTING_GUIDE.md`](docs/PORTING_GUIDE.md) | The per-function translation loop |
+| [`docs/PORTING_GUIDE.md`](docs/PORTING_GUIDE.md) | From analysis to specification and from specification to code |
 | [`docs/FORMATS/`](docs/FORMATS/) | Container and asset format specs |
 | [`docs/PRIOR_ART.md`](docs/PRIOR_ART.md) | Public tools, licenses and what we reuse or only use as an oracle |
 | [`docs/LEVELS.md`](docs/LEVELS.md) | The 11 campaign chapters, their source in `bo2.exe` and the region mapping |
@@ -325,7 +325,7 @@ Per-function loop: [`docs/PORTING_GUIDE.md`](docs/PORTING_GUIDE.md). The rule is
 2. One author per commit. **No** `Co-Authored-By`, `Signed-off-by` or generated-by trailers, and no attribution inside code or docs.
 3. `clang-format` before every commit; no warnings with `-Wall -Wextra -Wshadow -Wconversion`.
 4. **Never commit** anything under `external/` or `re/decomp/`, or files like `.iso .exe .dll .dat .erg .rkv .big .bik .ogg .wav`. `scripts/ci.sh` checks it.
-5. Fidelity first in `src/game/`: translate, do not redesign, and update `re/FUNCTION_MAP.csv`.
+5. Fidelity first in `src/game/`: reproduce the documented behaviour, do not redesign it, and update `re/FUNCTION_MAP.csv`.
 6. Every behaviour or format claim needs a `FUN_` address and a local decompile. If it is not proven, it does not go in.
 7. Keep `README.md` (Spanish) and `README.en.md` (English) in step; code, comments, commits and the other docs stay in English.
 
@@ -354,6 +354,7 @@ Copyright (C) 2026 felipesuarez-dev and contributors.
 
 - You may use, study, modify and redistribute the program. If you distribute a modified version or a binary, you must offer its source code under the same license.
 - The program comes with no warranty.
-- `third_party/stb_vorbis.c` keeps its own license (public domain / MIT).
+- `third_party/stb_vorbis.c` keeps its own license (public domain / MIT). The scope of the license and the third-party credits are in [`NOTICE`](NOTICE).
+- **No binary of the port is published** (no `.nro`, no executable) before a legal review. The provenance policy of the code is in [`docs/PROVENANCE.md`](docs/PROVENANCE.md).
 
 The license covers only the original work of the authors of this repository. It **grants no rights** over *Blood Omen 2*: its code, data, assets, names and trademarks belong to their owners (Crystal Dynamics, Eidos Interactive, Square Enix or their successors). The images under `docs/media/` show art of the game and are not covered by this license.
