@@ -2625,7 +2625,7 @@ address,name,subsystem,status,notes
 004a4e50,FUN_004a4e50,unknown,todo,ghidra
 004a5000,FUN_004a5000,unknown,todo,ghidra
 004a5150,FUN_004a5150,unknown,todo,ghidra
-004a5290,FUN_004a5290,script,wip,include/bo2/engine/script_machine.hpp: ScriptCreatureHost::kain is its interface; the walk of the creature list and its cache are not ported
+004a5290,FUN_004a5290,script,wip,src/engine/script_level.cpp: ScriptLevel::kain gives the first active creature made by the kain factory; the cache is not ported
 004a5360,FUN_004a5360,unknown,todo,ghidra
 004a5380,FUN_004a5380,unknown,todo,ghidra
 004a53c0,FUN_004a53c0,unknown,todo,ghidra
@@ -13574,11 +13574,11 @@ address,name,subsystem,status,notes
 0070e290,FUN_0070e290,unknown,todo,ghidra
 0070e3e0,FUN_0070e3e0,unknown,todo,ghidra
 0070e450,FUN_0070e450,unknown,todo,ghidra
-0070e560,FUN_0070e560,unknown,todo,ghidra
+0070e560,FUN_0070e560,script,wip,src/engine/script_level.cpp: ScriptLevel::add_creature gives the object of a basecreaturescript class and its creature
 0070e6e0,FUN_0070e6e0,unknown,todo,ghidra
 0070e770,FUN_0070e770,unknown,todo,ghidra
 0070e7e0,FUN_0070e7e0,unknown,todo,ghidra
-0070e8b0,FUN_0070e8b0,unknown,todo,ghidra
+0070e8b0,FUN_0070e8b0,script,wip,src/engine/script_level.cpp: ScriptLevel::update runs the object with the update message time; the other messages are not ported
 0070eac0,FUN_0070eac0,unknown,todo,ghidra
 0070ef60,FUN_0070ef60,unknown,todo,ghidra
 0070f000,FUN_0070f000,unknown,todo,ghidra
@@ -13817,23 +13817,23 @@ address,name,subsystem,status,notes
 00717db0,FUN_00717db0,unknown,todo,ghidra
 00717f60,FUN_00717f60,unknown,todo,ghidra
 00717ff0,FUN_00717ff0,unknown,todo,ghidra
-00718160,FUN_00718160,unknown,todo,ghidra
+00718160,FUN_00718160,script,translated,src/engine/script_level.cpp: ScriptLevel::find_creature searches the active then the hibernating creatures by name and package
 00718210,FUN_00718210,unknown,todo,ghidra
 00718220,FUN_00718220,unknown,todo,ghidra
 00718240,FUN_00718240,unknown,todo,ghidra
 00718250,FUN_00718250,unknown,todo,ghidra
-00718290,FUN_00718290,unknown,todo,ghidra
+00718290,FUN_00718290,script,translated,src/engine/script_level.cpp: ScriptLevel::activate activates each creature not activated yet in list order
 007182c0,FUN_007182c0,unknown,todo,ghidra
-00718340,FUN_00718340,unknown,todo,ghidra
-00718490,FUN_00718490,unknown,todo,ghidra
-00718970,FUN_00718970,unknown,todo,ghidra
-00718a60,FUN_00718a60,unknown,todo,ghidra
-00718b80,FUN_00718b80,unknown,todo,ghidra
+00718340,FUN_00718340,script,translated,src/engine/script_level.cpp: ScriptLevel::update every 60 frames takes out of process_msg the creatures with 0x10000 whose object has no main thread
+00718490,FUN_00718490,script,wip,src/engine/script_level.cpp: ScriptLevel::update runs the tasks then the creatures of process_msg then the queued changes; the post-update pass and the debug output are not ported
+00718970,FUN_00718970,script,wip,src/engine/script_level.cpp: ScriptLevel::update moves a creature to the hibernating list; its groups and the Kain cache are not ported
+00718a60,FUN_00718a60,script,wip,src/engine/script_level.cpp: ScriptLevel::update moves a creature back to the active list
+00718b80,FUN_00718b80,script,translated,src/engine/script_level.cpp: ScriptLevel::remove_creature sets 0x2000 and queues the creature once
 00718bf0,FUN_00718bf0,unknown,todo,ghidra
 00718cb0,FUN_00718cb0,unknown,todo,ghidra
 00718ce0,FUN_00718ce0,unknown,todo,ghidra
-00718cf0,FUN_00718cf0,unknown,todo,ghidra
-00718d30,FUN_00718d30,unknown,todo,ghidra
+00718cf0,FUN_00718cf0,script,translated,src/engine/script_level.cpp: ScriptLevel::hibernate_creature queues the creature for the end of the frame
+00718d30,FUN_00718d30,script,translated,src/engine/script_level.cpp: ScriptLevel::unhibernate_creature queues the creature for the end of the frame
 00718d70,FUN_00718d70,unknown,todo,ghidra
 00718da0,FUN_00718da0,unknown,todo,ghidra
 00718eb0,FUN_00718eb0,unknown,todo,ghidra
@@ -15485,7 +15485,7 @@ address,name,subsystem,status,notes
 00762f40,FUN_00762f40,unknown,todo,ghidra
 00762fe0,FUN_00762fe0,unknown,todo,ghidra
 00763000,FUN_00763000,unknown,todo,ghidra
-00763050,FUN_00763050,script,wip,include/bo2/engine/script_machine.hpp: ScriptCreatureHost::find_creature is its interface; FUN_00718160 is not ported
+00763050,FUN_00763050,script,translated,src/engine/script_level.cpp: ScriptLevel::find_creature with the package of the owner
 00763070,FUN_00763070,unknown,todo,ghidra
 007632a0,FUN_007632a0,unknown,todo,ghidra
 00763310,FUN_00763310,unknown,todo,ghidra

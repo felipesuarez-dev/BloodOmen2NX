@@ -14,6 +14,7 @@
 #include "bo2/engine/big_archive.hpp"
 #include "bo2/engine/region.hpp"
 #include "bo2/engine/script_creature_natives.hpp"
+#include "bo2/engine/script_level.hpp"
 #include "bo2/engine/script_timer.hpp"
 #include "bo2/engine/script_machine.hpp"
 #include "bo2/engine/script_memory.hpp"
@@ -1942,6 +1943,122 @@ void test_timers() {
     CHECK(memory.live_blocks() == blocks);
 }
 
+// The creatures of a level and their objects (ScriptLevel; docs/SCRIPTS.md,
+// "The script objects of a level", "The update of the objects of a level").
+// counter adds 1 to data + 4 on each run of its main thread.
+ScriptClass counter_class(const std::string& name) {
+    ScriptClass cls = make_class(name, "basecreaturescript", {"default"}, 1);
+    cls.data_size = 8;
+    cls.methods = {make_method("start", 0)};
+    cls.bodies = {script_body(0, 0, {op(0x0B, 4), op(0x0A, 4), op(0x03, 1), op(0x28), op(0x1D), op(0x5D),
+                                     op(0x45, -7)}, 8)};
+    cls.slots = {{0, 0, name, 0}};
+    return cls;
+}
+
+void test_script_level() {
+    ScriptClass base = make_class("basecreaturescript", "", {"default"}, 1);
+    base.data_size = 4;
+    ScriptClass plain = make_class("plain", "", {"default"}, 1);
+    plain.data_size = 4;
+    ScriptClass broken = counter_class("broken");
+    broken.bodies[0].code = {op(0x10, 0), op(0x5C)};  // a code the machine does not run
+    const Linked linked = make_program({base, counter_class("counter"), plain, broken});
+    ScriptMachine machine(linked.program);
+    bo2::engine::ScriptLevel level(machine);
+    CHECK(machine.creature_host() == &level);
+    using Creature = bo2::engine::ScriptLevel::Creature;
+    const auto make = [](const std::string& name, const std::string& package, const std::string& script) {
+        Creature creature;
+        creature.name = name;
+        creature.package = package;
+        creature.script = script;
+        return creature;
+    };
+    const std::uint32_t a = level.add_creature(make("a", "pkg", "counter"));
+    const std::uint32_t b = level.add_creature(make("b", "pkg", "plain"));    // not a creature script
+    const std::uint32_t c = level.add_creature(make("c", "pkg", ""));
+    const std::uint32_t d = level.add_creature(make("a", "other", "counter"));
+    const std::uint32_t e = level.add_creature(make("e", "", "Counter"));     // names compare with case
+    const std::uint32_t f = level.add_creature(make("f", "pkg", "broken"));
+    Creature hero = make("kain", "", "");
+    hero.kain = true;
+    const std::uint32_t k = level.add_creature(hero);
+    CHECK(level.creature(a).object != 0);
+    CHECK(machine.creature_of(level.creature(a).object) == a);
+    CHECK(level.creature(b).object == 0);
+    CHECK(level.creature(c).object == 0);
+    CHECK(level.creature(e).object == 0);
+    CHECK(level.kain() == k);
+    CHECK(level.find_creature(a, "a") == a);   // its own package
+    CHECK(level.find_creature(d, "a") == d);
+    CHECK(level.find_creature(a, "kain") == k);  // no package: found from any
+    CHECK(level.find_creature(a, "e") == e);
+    CHECK(level.find_creature(a, "A") == 0);
+
+    level.activate();
+    const auto count = [&](std::uint32_t word) {
+        return machine.memory().u32(machine.data_of(level.creature(word).object) + 4);
+    };
+    CHECK(count(a) == 1);  // the start ran once
+    CHECK(level.creature(a).activated && level.creature(c).activated);
+    CHECK(level.creature(f).object == 0);  // its error stopped it
+    CHECK(level.errors().size() == 1);
+
+    level.update(1.0f / 60.0f);  // no creature has a time yet
+    CHECK(count(a) == 1);
+    for (std::uint32_t word = 1; word <= level.creatures().size(); ++word) {
+        level.creature(word).time = 1.0f / 60.0f;
+    }
+    level.update(1.0f / 60.0f);
+    CHECK(count(a) == 2);
+    CHECK(count(d) == 2);
+    level.set_creature_flags(d, 2);  // asleep
+    level.update(1.0f / 60.0f);
+    CHECK(count(a) == 3);
+    CHECK(count(d) == 2);
+    level.set_creature_flags(d, 0);
+    level.leave_group(d, bo2::engine::ScriptCreatureHost::Group::process);
+    level.update(1.0f / 60.0f);
+    CHECK(count(a) == 4);
+    CHECK(count(d) == 2);
+
+    // Hibernation waits for the end of the frame, then the creature gets no
+    // update and is found in the second list.
+    level.hibernate_creature(a);
+    level.update(1.0f / 60.0f);
+    CHECK(count(a) == 5);
+    CHECK(level.creature(a).hibernating);
+    CHECK(level.find_creature(c, "a") == a);
+    level.update(1.0f / 60.0f);
+    CHECK(count(a) == 5);
+    level.unhibernate_creature(a);
+    level.update(1.0f / 60.0f);
+    CHECK(!level.creature(a).hibernating);
+    level.update(1.0f / 60.0f);
+    CHECK(count(a) == 6);
+
+    // Removal: the creature gets this frame's update, then it goes.
+    const ScriptObjectId object = level.creature(a).object;
+    level.remove_creature(a);
+    CHECK((level.creature_flags(a) & 0x2000U) != 0);
+    level.update(1.0f / 60.0f);
+    CHECK(machine.memory().u32(machine.data_of(object) + 4) == 7);
+    CHECK(level.creature(a).object == 0);
+    CHECK(machine.main_thread(object) == nullptr);  // stopped
+    CHECK(level.find_creature(c, "a") == 0);
+
+    // The tasks of the script manager run first, with the step.
+    task_seen = {};
+    machine.add_update_task(0x10, std::make_unique<CountTask>(5));
+    level.update(0.0f);
+    CHECK(task_seen.runs == 0);
+    level.update(0.5f);
+    CHECK(task_seen.runs == 1);
+    CHECK(task_seen.last_arg == bits(0.5f));
+    CHECK(level.frame() == 11);  // eleven updates
+}
+
 // 0x59: the copy runs, the frame skips the block and waits for it.
 void test_fork_waits() {
     MachineRun run(machine_class(join({{op(0x59, 2), op(0x5D), op(0x5C)}, mark(), {op(0x5D), op(0x5C)}})));
@@ -2131,6 +2248,75 @@ void test_create_sl01_objects(const std::filesystem::path& root) {
     CHECK(method_of("bo2creaturescript", 11).result.name == "hud");
 }
 
+void native_nothing(ScriptMachine&, ScriptObjectId, std::uint32_t, ScriptAddress, ScriptAddress) {}
+std::unique_ptr<bo2::engine::ScriptTask> task_nothing(ScriptMachine&, ScriptObjectId, ScriptObjectId, std::uint32_t,
+                                                      ScriptAddress) {
+    return nullptr;
+}
+
+// The level of sl01 (ScriptLevel): 104 creatures, one per entity, and the
+// objects of the 78 with a script; every native the port has not ported
+// does nothing here. All of them activate and run 120 updates of 1/60 s
+// with no error, and end in the states the spike of
+// re/decomp/script_runtime measured: 36 in state 0, 33 in 1, 1 in 2, 8 in 3.
+void test_sl01_level(const std::filesystem::path& root) {
+    const bo2::engine::BigArchive archive =
+        load_container(root / "media/gogames/bo2/resources/levels/slums/sl01.big");
+    const RegionPrograms container = read_container(archive);
+    if (container.regions.size() != 1) {
+        CHECK(container.regions.size() == 1);
+        return;
+    }
+    const ScriptProgram program = link_region(container, *container.regions[0].second, kNativeTypes);
+    ScriptMachine machine(program);
+    for (const auto& cls : program.classes()) {
+        for (std::size_t index = 0; index < cls.bodies.size(); ++index) {
+            const auto& body = program.bodies()[cls.bodies[index]];
+            if (body.source->native() && &program.classes()[body.owner] == &cls) {
+                machine.bind_native(cls.name, static_cast<std::uint16_t>(index), native_nothing);
+                machine.bind_task_native(cls.name, static_cast<std::uint16_t>(index), task_nothing);
+            }
+        }
+    }
+    bo2::engine::bind_creature_natives(machine);
+    bo2::engine::bind_timer_natives(machine);
+    bo2::engine::ScriptLevel level(machine);
+    std::vector<bo2::engine::RegionEntityTable> tables;
+    for (const bo2::engine::BigEntry& entry : archive.entries()) {
+        if (entry.type == "region") {
+            tables = bo2::engine::parse_region_entities(archive.extract(entry));
+            CHECK(level.add_region(entry.name, tables) == 104);
+        }
+    }
+    std::size_t objects = 0;
+    for (const auto& creature : level.creatures()) {
+        objects += creature.object != 0 ? 1 : 0;
+        CHECK(creature.package == "slums_sl01");
+    }
+    CHECK(objects == 78);
+    level.activate();
+    for (std::uint32_t word = 1; word <= level.creatures().size(); ++word) {
+        level.creature(word).time = 1.0f / 60.0f;
+    }
+    for (int frame = 0; frame < 120; ++frame) {
+        level.update(1.0f / 60.0f);
+    }
+    for (const std::string& error : level.errors()) {
+        std::cerr << "sl01 level: " << error << '\n';
+    }
+    CHECK(level.errors().empty());
+    std::map<std::uint32_t, std::size_t> states;
+    for (const auto& creature : level.creatures()) {
+        if (creature.object != 0) {
+            ++states[machine.state_of(creature.object)];
+        }
+    }
+    CHECK(states[0] == 36);
+    CHECK(states[1] == 33);
+    CHECK(states[2] == 1);
+    CHECK(states[3] == 8);
+}
+
 // Every region of the game links (BO2NX-151): 165 programs, 81,752 classes.
 // The packages of a container start with native, and every state table, own
 // or copied from its owner, has the slot count of its class.
@@ -2228,6 +2414,7 @@ int main() {
     test_creature_and_store_handle();
     test_creature_natives();
     test_timers();
+    test_script_level();
 
     const char* root = std::getenv("BO2NX_ASSETS_DIR");
     if (root == nullptr) {
@@ -2236,6 +2423,7 @@ int main() {
         try {
             test_link_sl01(root);
             test_create_sl01_objects(root);
+            test_sl01_level(root);
             test_link_all_regions(root);
         } catch (const std::exception& error) {
             std::cerr << "script machine asset tests: " << error.what() << '\n';

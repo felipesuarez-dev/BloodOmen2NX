@@ -633,6 +633,26 @@ Every frame the game tick (`FUN_0072edba`) does, in this order:
    above 0, and `FUN_0070e8b0` runs its object once with the time as the
    argument of the run.
 
+A creature gets its script object when it is built (`FUN_0070e560`): with
+a script name, the class of that name (the class map is keyed by the id of
+the name, and names compare with case, `FUN_00694fc0`), when the class
+derives from `basecreaturescript` (`FUN_00580a30`). The object goes to
++0x130, the creature to the object's +0x2c, and +0x138 is set; otherwise
++0x138 stays clear and the creature has no object. In `sl01` the 104
+entities of the region are 104 creatures, and 78 of them get an object.
+Every entity of the three regions of `slums` but six is a creature in the
+creature list read live; the six are cinematic actors and a monster the
+scripts had removed by then.
+
+Hibernating, waking and removing a creature (`FUN_00718cf0`,
+`FUN_00718d30`, `FUN_00718b80`) only queue it. At the end of
+`FUN_00718490` the removed creatures go (their object stops,
+`FUN_0070e6e0`), then the hibernating ones move from the creature list to
+the list `DAT_00a83680` with +0x160 set (`FUN_00718970`), then the woken ones
+move back to the end of the creature list (`FUN_00718a60`). So a creature
+removed or sent to sleep during a frame still gets that frame's update, and
+the search by name finds a hibernating creature after the active ones.
+
 Read live in `sl01`, without breakpoints (`update_probe.py`, ten samples two
 seconds apart): 393 creatures, all ten scales 1.0. In each sample about 110
 creatures have a time near 0.01 s, about 260 have 0, and 5 to 29 have 0.1.
@@ -793,8 +813,9 @@ Checked in the oracle (`re/decomp/script_runtime/objects.gdb`,
 
 The machine runs the game's compiled code as it is; the tests feed it
 synthetic classes whose code and expected values come from the rules on
-this page. No object of a level runs yet: that needs the native functions
-of the game and a host that gives the machine the creatures of the level.
+this page. The objects of `sl01` activate and run in `ScriptLevel` with the
+natives the port has; the others still do nothing there, and the game does
+not drive the level yet.
 
 | Part | File | Tests (`ctest -R`) |
 |---|---|---|
@@ -812,6 +833,7 @@ of the game and a host that gives the machine the creatures of the level.
 | The natives that find creatures (`creaturebyname`, `creatureself`, `getkain`, `creaturescriptbyname`, `gethud`) | `src/engine/script_creature_natives.cpp` | `script` (`test_creature_natives`; the bodies they bind to in `test_create_sl01_objects`) |
 | The codes only the region packages use (`0x0d`, `0x17`, `0x18`, `0x37`, `0x53`, `0x54`, `0x57`, `0x58`) | `src/engine/script_machine.cpp` | `script` (`test_region_codes`, `test_start_without_waiting`) |
 | Timers: the value type, its task, the natives, the call from outside the scripts and the tasks of the script manager | `src/engine/script_timer.cpp`, `src/engine/script_machine.cpp` | `script` (`test_timers`) |
+| The creatures of a level and their objects: one creature per entity, the object of each scripted one, activation in build order, the update of each frame, hibernation and removal (the scheduler is not ported: the caller gives each creature its time) | `src/engine/script_level.cpp` | `script` (`test_script_level`; `test_sl01_level`: the 104 creatures and 78 objects of `sl01` activate and run 120 updates) |
 
 ## Checked in the running game
 
