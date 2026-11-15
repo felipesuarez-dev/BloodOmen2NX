@@ -87,6 +87,12 @@ The policy for everything written into this repository:
   decompiled output ([`PORTING_GUIDE.md`](PORTING_GUIDE.md)). This split is
   the rule since 2026-11-14; code written before then came from the
   analysis directly, and the table below says so per file.
+- **Exception, decided by the maintainer on 2026-11-15.** The script machine
+  (the readers of the script packages, its memory, its linker and its
+  interpreter) is written by the analysis role too, from the specification
+  in [`SCRIPTS.md`](SCRIPTS.md) and the tracker, without opening the
+  decompiled output while writing. Those files are marked *analysis* in the
+  table. Everything else keeps the split.
 - **References, not copies.** An address such as `FUN_00443a50` in a
   comment, in `docs/` or in `re/FUNCTION_MAP.csv` records where a rule was
   observed. Decompiled output, disassembly listings and the game's text,
