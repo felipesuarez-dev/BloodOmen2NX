@@ -2,6 +2,7 @@
 
 #include <exception>
 
+#include "bo2/engine/anim_reel.hpp"
 #include "bo2/engine/cell_group.hpp"
 #include "bo2/engine/dds.hpp"
 #include "bo2/engine/pixmap_font.hpp"
@@ -9,6 +10,10 @@
 namespace bo2::engine {
 
 namespace {
+
+void check_animreel(const BigArchive& archive, const BigEntry& entry) {
+    static_cast<void>(parse_anim_reel(archive.extract(entry)));
+}
 
 void check_cellgrup(const BigArchive& archive, const BigEntry& entry) {
     static_cast<void>(parse_cell_group(archive.extract(entry), entry.symbols, archive.names()));
@@ -30,6 +35,7 @@ void check_texture(const BigArchive& archive, const BigEntry& entry) {
 
 const std::map<std::string, EntryCheck>& entry_checks() {
     static const std::map<std::string, EntryCheck> checks = {
+        {"animreel", &check_animreel},
         {"cellgrup", &check_cellgrup},
         {"model", &check_model},
         {"texfont", &check_texfont},

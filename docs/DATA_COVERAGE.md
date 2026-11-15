@@ -28,7 +28,7 @@ exit code is 2.
 | Type | Entries | Checked | Failed |
 |---|---|---|---|
 | animatio | 4,081 | 0 | 0 |
-| animreel | 32,791 | 0 | 0 |
+| animreel | 32,791 | 32,791 | 0 |
 | bpackage | 480 | 0 | 0 |
 | cellgrup | 236 | 236 | 30 |
 | effect | 7,865 | 0 | 0 |
@@ -47,10 +47,10 @@ exit code is 2.
 | texture | 22,483 | 22,483 | 11 |
 | tunedata | 1,720 | 0 | 0 |
 
-`cellgrup`, `model`, `texfont` and `texture` have a registered reader. The
-other types are counted but not read yet; each following issue adds the
-reader of one type and its row here. The four `texfont` entries are read
-without a failure.
+`animreel`, `cellgrup`, `model`, `texfont` and `texture` have a registered
+reader. The other types are counted but not read yet; each following issue
+adds the reader of one type and its row here. The 32,791 `animreel` entries
+and the four `texfont` entries are read without a failure.
 
 ## cellgrup
 

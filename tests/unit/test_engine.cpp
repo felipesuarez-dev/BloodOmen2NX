@@ -288,6 +288,26 @@ std::vector<std::uint8_t> build_model_asset() {
     return model;
 }
 
+// An animreel with no channels: the smallest payload that parse_anim_reel
+// accepts (docs/FORMATS/animreel.md).
+std::vector<std::uint8_t> build_anim_reel() {
+    std::vector<std::uint8_t> body;
+    put32(body, 6);  // inner version
+    put32(body, 0);
+    put32(body, 1);
+    put32(body, 7);
+    put_float(body, 5.0f);
+    put_float(body, 30.0f);
+    put32(body, 2);  // frames
+    put32(body, 0);  // channels
+    put32(body, 0);  // descriptor blob size
+    std::vector<std::uint8_t> out = {'a', 'n', 'i', 'm', 'r', 'e', 'e', 'l'};
+    put32(out, static_cast<std::uint32_t>(16 + body.size()));
+    put32(out, 4);  // chunk version
+    out.insert(out.end(), body.begin(), body.end());
+    return out;
+}
+
 std::vector<std::uint8_t> build_cell_group(
     bool with_instances = false, bool with_collision = false,
     const std::vector<std::uint8_t>& texture_payload = {},
@@ -1394,6 +1414,29 @@ void test_data_check_model() {
     CHECK(report.failures[0].entry == "model/cut");
 }
 
+// An animreel that the reader rejects is one failure; the entries after it
+// are still checked (docs/DATA_COVERAGE.md, "animreel").
+void test_data_check_animreel() {
+    const std::vector<std::uint8_t> reel = build_anim_reel();
+    std::vector<std::uint8_t> cut = reel;
+    cut.resize(cut.size() / 2);
+    const std::vector<std::uint8_t> data = build_big({
+        {"animreel", "reel/cut", cut, {}},
+        {"animreel", "reel/ok", reel, {}},
+    });
+    const bo2::engine::BigArchive archive = bo2::engine::BigArchive::parse(data);
+    bo2::engine::DataReport report;
+    bo2::engine::check_archive(archive, "test.big", report);
+    CHECK(report.containers == 1);
+    const bo2::engine::TypeCount& count = report.types.at("animreel");
+    CHECK(count.entries == 2);
+    CHECK(count.checked == 2);
+    CHECK(count.failed == 1);
+    CHECK(report.failures.size() == 1);
+    CHECK(report.failures[0].type == "animreel");
+    CHECK(report.failures[0].entry == "reel/cut");
+}
+
 // A texture entry that the DDS reader rejects is one failure; the entries
 // after it are still checked (docs/DATA_COVERAGE.md, "texture").
 void test_data_check_texture() {
@@ -1486,6 +1529,7 @@ int main() {
     test_data_check();
     test_data_check_cellgrup();
     test_data_check_model();
+    test_data_check_animreel();
     test_data_check_texture();
     test_skeleton_bones();
     test_collision_chunk();
