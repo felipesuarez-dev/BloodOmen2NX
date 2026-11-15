@@ -56,9 +56,17 @@ FUN_005e9ae0 reads two ints. The first must be 0. The second is the version:
   (FUN_005e9840). The entry only names other resources (for example Kain's
   `nexus_stone`, 16 bytes). 1,925 entries.
 
-A reference is two u16: an index into the entry's BIG symbol list for the name
-and one for the type. The symbol list maps to the container `names` table;
-FUN_006b48e0 does the index lookup.
+A reference is two u16 indexes into the entry's BIG symbol list: the name of
+the resource and the name of the package that holds it (FUN_005e9840). An
+empty package name means the current package: the name is looked up there
+(FUN_0060ed10); otherwise in the named package (FUN_00533260, FUN_006085a0).
+The symbol list maps to the container `names` table; FUN_006b48e0 does the
+index lookup. Every one of the 1,925 aliases holds exactly one reference;
+its package is a region path (`wharves/regionfiles/wh11` in 158 of them,
+`eternal prison/ep10` in 111) or empty (Kain's `nexus_stone` names
+`accessories/nexusstone` in the current package). The reel references of the
+graphs use the same pair; in `kain.big` and `sl01.big` their package is
+empty except one that names `slums/sl01`.
 
 ### Version 0 stream
 

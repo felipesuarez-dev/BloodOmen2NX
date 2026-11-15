@@ -113,7 +113,9 @@ alias lists, still unread. The first 20 failures:
 
 ## cellgrup
 
-30 of the 236 entries fail, all with the same message:
+30 of the 236 entries fail: 29 with the message below and
+`lowercity/cinematics/kainmeetsvorador` (`kainmeetsvorador.big`) with
+`cell group has no renderable geometry` (BO2NX-166 reads both kinds):
 
 | Message | Entries |
 |---|---|

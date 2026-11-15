@@ -66,7 +66,9 @@ class AnimatioError(ValueError):
 
 @dataclass(frozen=True)
 class Ref:
-    """FUN_005e9840: two u16 indexes into the entry symbol list (name, type)."""
+    """FUN_005e9840: two u16 indexes into the entry symbol list: the resource
+    name and the package that holds it (empty: the current package). The
+    second field keeps its old name, `kind`."""
 
     name: int
     kind: int
@@ -243,7 +245,7 @@ class _Stream:
         return n
 
     def ref(self) -> Ref:
-        return Ref(self.u16("reference name"), self.u16("reference type"))
+        return Ref(self.u16("reference name"), self.u16("reference package"))
 
 
 def _action(s: _Stream) -> Action:
