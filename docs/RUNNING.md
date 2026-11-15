@@ -45,23 +45,19 @@ LEVELS=external/installed/media/gogames/bo2/resources/levels
   --out /tmp/kain_run.ppm
 ```
 
-### README images
+### Frames for local use
 
-The two images of the README (`docs/media/`) are frames of this command,
-converted to JPEG. Only frames rendered by the port go there: no frame of
-the original game and no extracted texture.
+Frames of the port show the game's art: they stay local (under `external/`
+or `/tmp`) and never enter the repository (`scripts/check_no_assets.sh`).
+For example, Kain running in `sl01` with the HUD:
 
 ```sh
 LEVELS=external/installed/media/gogames/bo2/resources/levels
-shot() {
-  ./build/linux-debug/bo2nx --level --big "$LEVELS/slums/sl01.big" \
-    --kain-model "$LEVELS/kain/kain.big" --kain-clip kain/run --kain-frame "$2" \
-    --kain-at -8.8,57.1,208 --eye "$3" --target "$4" \
-    --hud external/installed/media/gogames/bo2/code.big \
-    --width 960 --height 720 --out "$1"
-}
-shot /tmp/port-sl01-kain-run.ppm 6 -8.8,-62.9,248 -8.8,57.1,244
-shot /tmp/port-sl01-kain-front.ppm 2 70,-30,258 -8.8,57.1,246
+./build/linux-debug/bo2nx --level --big "$LEVELS/slums/sl01.big" \
+  --kain-model "$LEVELS/kain/kain.big" --kain-clip kain/run --kain-frame 6 \
+  --kain-at -8.8,57.1,208 --eye -8.8,-62.9,248 --target -8.8,57.1,244 \
+  --hud external/installed/media/gogames/bo2/code.big \
+  --width 960 --height 720 --out /tmp/port-sl01-kain-run.ppm
 ```
 
 `--hud <code.big>` draws the HUD scene (`ui/hud`) over the `--level` frame

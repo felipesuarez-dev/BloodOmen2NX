@@ -25,10 +25,6 @@ FUN_00443a50 in comments and in re/FUNCTION_MAP.csv record where a rule was
 observed; they are not copies of the original code. docs/PROVENANCE.md
 describes the policy and the origin of each part of the repository.
 
-The images under docs/media/ are frames rendered by the port from a private
-copy of the game data. They show art that belongs to the owners of the game
-and are not covered by the license of the port.
-
 No binary build of the port is published before a legal review.
 
 Third-party components

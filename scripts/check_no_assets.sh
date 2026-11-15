@@ -8,9 +8,9 @@
 #   2. content: a known game, image, audio, video, archive or executable
 #      signature in the first bytes;
 #   3. binaries: any file with a NUL byte in its first 8 KiB.
-# A file passes checks 1 to 3 only when it is in ALLOWED below. The list
-# holds the README frames rendered by the port (docs/RUNNING.md, "README
-# images"); add an entry only with the maintainer's approval.
+# A file passes checks 1 to 3 only when it is in ALLOWED below. No image of
+# the game goes into the repository, not even a frame rendered by the port;
+# add an entry only with the maintainer's approval.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
@@ -19,8 +19,6 @@ PATTERN='\.(iso|cue|bin|chd|img|nrg|mdf|exe|dll|sys|pdb|so|dylib|o|obj|lib|a|dat
 
 ALLOWED=(
   "external/README.txt"
-  "docs/media/port-sl01-kain-front.jpg"
-  "docs/media/port-sl01-kain-run.jpg"
 )
 
 is_allowed() {
