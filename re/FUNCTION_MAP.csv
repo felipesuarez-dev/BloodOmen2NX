@@ -6184,11 +6184,11 @@ address,name,subsystem,status,notes
 0057a4f0,FUN_0057a4f0,unknown,todo,ghidra
 0057a6d0,FUN_0057a6d0,unknown,todo,ghidra
 0057a710,FUN_0057a710,unknown,todo,ghidra
-0057a7a0,FUN_0057a7a0,unknown,todo,ghidra
-0057a800,FUN_0057a800,unknown,todo,ghidra
+0057a7a0,FUN_0057a7a0,script,wip,src/engine/script_program.cpp: link_class gives a state with no owner a table of slot_count empty slots
+0057a800,FUN_0057a800,script,wip,src/engine/script_program.cpp: link_class copies the table of the same state of the owner class
 0057a840,FUN_0057a840,unknown,todo,ghidra
 0057a870,FUN_0057a870,unknown,todo,ghidra
-0057a890,FUN_0057a890,unknown,todo,ghidra
+0057a890,FUN_0057a890,script,wip,src/engine/script_program.cpp: link_class writes the body of a slot entry into the state table
 0057a910,FUN_0057a910,unknown,todo,ghidra
 0057a940,FUN_0057a940,unknown,todo,ghidra
 0057a980,FUN_0057a980,unknown,todo,ghidra
@@ -6612,7 +6612,7 @@ address,name,subsystem,status,notes
 0058b500,FUN_0058b500,unknown,todo,ghidra
 0058c020,FUN_0058c020,unknown,todo,ghidra
 0058c040,FUN_0058c040,unknown,todo,ghidra
-0058c060,FUN_0058c060,unknown,todo,ghidra
+0058c060,FUN_0058c060,script,wip,src/engine/script_program.cpp: ScriptProgram::link builds the slot tables and rewrites the code words of the link records
 0058c920,FUN_0058c920,unknown,todo,ghidra
 0058c930,FUN_0058c930,unknown,todo,ghidra
 0058c950,FUN_0058c950,unknown,todo,ghidra

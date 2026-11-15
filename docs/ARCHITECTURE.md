@@ -154,7 +154,8 @@ inside the machine instead of rewriting the code for 8-byte pointers.
   original rewrites into pointers at link time hold indices into the
   machine's tables instead (value type, method record, body record, class
   of the state tables), and the words of references 0 and 1 hold the index
-  of the name, as in the original.
+  of the name, as in the original. `ScriptProgram`
+  (`src/engine/script_program.cpp`) does this linking.
 - A native function is bound by class name and body index, as the
   factories of the original do ([`SCRIPTS.md`](SCRIPTS.md), "Native
   functions"), and takes the machine, the object, the argument count, the

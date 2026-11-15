@@ -322,6 +322,11 @@ are native types with no class (`ActivationNativeType`,
 `CreatureNativeType`). For `sl01` the program has 497 classes, 1,320 bodies
 (505 native), 24,640 code words, 13,361 slot entries and 3,991 references.
 
+The port links the same programs with `ScriptProgram::link`
+(`src/engine/script_program.cpp`) and its tests check these numbers and
+the 165 programs. In every program each state table, own or copied from its
+owner, has the slot count of its class.
+
 ## Not read
 
 - What each native function does: one function per row of the table of

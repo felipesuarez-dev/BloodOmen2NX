@@ -80,7 +80,7 @@ The original is used as a reference, not shipped.
 | Levels completable (campaign chapters) | 30% | 0 / 11 | 0.00% |
 | Platform features | 10% | 9 / 12 + 1 partial | 79.17% |
 
-Function map: 35,543 rows: 38 translated, 162 in progress, 16,741 to do, 18,602 external (not game code).
+Function map: 35,543 rows: 38 translated, 166 in progress, 16,737 to do, 18,602 external (not game code).
 
 ![Map of the game code: one rectangle per 64 KiB of bo2.exe, sized by code bytes, the greener the more of it is translated, amber when it is only in progress](docs/progress.svg)
 
