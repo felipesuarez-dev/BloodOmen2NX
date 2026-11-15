@@ -2141,6 +2141,45 @@ void test_scheduler() {
     CHECK(random.state() == 2179684817U);  // every draw, in order
 }
 
+// add_region takes the model radius of each entity from the caller; the
+// radius the scheduler keeps is at least 24 (FUN_0073e1a0). The values are
+// the model radii traced live for boat_01, detector01 (a marker model with
+// no geometry) and psntanm001 (re/decomp/script_runtime/radius_trace.log).
+void test_region_model_radius() {
+    const Linked linked = make_program({});
+    ScriptMachine machine(linked.program);
+    bo2::engine::CrtRandom random;
+    bo2::engine::ScriptLevel level(machine, random);
+    bo2::engine::ScriptLevel::KeeperTune tune;
+    tune.screen_cull = 1;
+    tune.screen_near = 14.0f;
+    tune.screen_far = 10.0f;
+    level.set_keeper(tune);
+    std::vector<bo2::engine::RegionEntityTable> tables(1);
+    for (const char* name : {"boat_01", "detector01", "psntanm001"}) {
+        bo2::engine::RegionEntity entity;
+        entity.name = name;
+        tables[0].entities.push_back(entity);
+    }
+    std::vector<std::string> asked;
+    const auto radius = [&](const bo2::engine::RegionEntity& entity) {
+        asked.push_back(entity.name);
+        if (entity.name == "boat_01") {
+            return 109.499756f;
+        }
+        return entity.name == "psntanm001" ? 38.10461f : 0.0f;
+    };
+    CHECK(level.add_region("slums/sl01", tables, radius) == 3);
+    CHECK(asked == std::vector<std::string>({"boat_01", "detector01", "psntanm001"}));
+    CHECK(level.creature(1).model_radius == 109.499756f);
+    CHECK(level.creature(1).radius == 109.499756f);
+    CHECK(level.creature(2).radius == 24.0f);
+    CHECK(level.creature(3).radius == 38.10461f);
+    bo2::engine::ScriptLevel plain(machine, random);
+    CHECK(plain.add_region("slums/sl01", tables) == 3);
+    CHECK(plain.creature(1).model_radius == 0.0f);
+}
+
 // 0x59: the copy runs, the frame skips the block and waits for it.
 void test_fork_waits() {
     MachineRun run(machine_class(join({{op(0x59, 2), op(0x5D), op(0x5C)}, mark(), {op(0x5D), op(0x5C)}})));
@@ -2534,6 +2573,7 @@ int main() {
     test_timers();
     test_script_level();
     test_scheduler();
+    test_region_model_radius();
 
     const char* root = std::getenv("BO2NX_ASSETS_DIR");
     if (root == nullptr) {

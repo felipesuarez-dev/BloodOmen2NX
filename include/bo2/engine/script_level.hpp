@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -74,12 +75,18 @@ public:
     ScriptLevel(const ScriptLevel&) = delete;
     ScriptLevel& operator=(const ScriptLevel&) = delete;
 
+    // The bounding radius of the model of an entity's creature, 0 for none
+    // (docs/SCRIPTS.md, "The model radius").
+    using ModelRadius = std::function<float(const RegionEntity&)>;
+
     // The creatures of a region, one per entity in the order of its tables,
-    // with the region's package (FUN_00783900) and the class of
-    // `reserved.script` (FUN_007828c0). Every one is in the visual list (all
-    // 274 entity creatures of the three slums regions were, read live).
-    // Returns how many it added.
-    std::size_t add_region(const std::string& region_name, const std::vector<RegionEntityTable>& tables);
+    // with the region's package (FUN_00783900), the class of
+    // `reserved.script` (FUN_007828c0) and the radius `model_radius` gives
+    // (0 for all when it is empty). Every one is in the visual list (all 274
+    // entity creatures of the three slums regions were, read live). Returns
+    // how many it added.
+    std::size_t add_region(const std::string& region_name, const std::vector<RegionEntityTable>& tables,
+                           const ModelRadius& model_radius = {});
     // A creature at the end of the creature list; returns its word (index
     // + 1). A creature with a script gets its object (FUN_0070e560): the
     // class of that name in the program, when it derives from
@@ -91,8 +98,9 @@ public:
     void set_keeper(const KeeperTune& tune);
     // The squared near and far distances of a creature (FUN_0073e0c0):
     // FUN_0073e1a0 in the second mode, else FUN_0073e0f0. `size` is the
-    // size the caller passes, 0 when a creature is built.
-    void set_distances(std::uint32_t word, float size = 0.0f);
+    // size the caller passes: 1 from the constructor (0x70d7ba) and from
+    // FUN_0072c910 (0x72d285).
+    void set_distances(std::uint32_t word, float size = 1.0f);
     // FUN_0073e840: the time of each creature of the creature list for a
     // frame of `frame_time` seconds, and the sleeping bit (1) of its flags.
     void schedule(float frame_time, const std::vector<std::array<float, 3>>& viewers);

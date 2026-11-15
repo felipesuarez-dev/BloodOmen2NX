@@ -598,6 +598,28 @@ address is not 0.
 | 76 | `enablesimcull()` | `FUN_00768710` | `FUN_007624b0` | Flags +0xf0 lose 4, unless they have 8 |
 | 77 | `disablesimwhenscriptdone()` | `FUN_00768720` | `FUN_007624d0` | Flags +0xf0 gain 0x10000 (bit 0 of +0xf2: `FUN_00718340` takes the creature out of `process_msg` once its object has no main thread) |
 
+## The natives of monsterscript and detectorscript
+
+The binder of `monsterscript` is the slot +0xc of the vtable `0x866b38` of
+`SmonsterscriptFactory` (`FUN_004d3c50`); the one of `detectorscript` the
+slot +0xc of `0x866a78` (`FUN_004d1b60`). The calls of `sl01` (above):
+
+| Class | Body | Method | Native | Calls in `sl01` | What it does |
+|---|---:|---|---|---:|---|
+| `monsterscript` | 1 | `gotowaypoint` (task) | `FUN_004d4170` | 107 | `FUN_004e5d50`: a command to the monster's AI (`Smonsterscript` slot +0x28 with `FUN_0046e3d0`) |
+| `monsterscript` | 5 | `playanimation` (task) | `FUN_004d44a0` | 545 | `FUN_004e59b0`: a command to the AI (slot +0x28 with `FUN_00463060`); with an empty animation name it returns 0 and sends nothing |
+| `monsterscript` | 18 | `enableai(bool)` | `FUN_004d4ba0` | 3 | `FUN_004e4ad0`: when the value changes (+0xc0), starts or ends the `toplevelai` behavior of the creature (`FUN_004e8650`) |
+| `monsterscript` | 50 | `wait` (task) | `FUN_004d5350` | 59 | `FUN_004e5cf0`: a command to the AI (slot +0x28 with `FUN_0073dd20`) |
+| `monsterscript` | 58 | `start` (task) | `FUN_004d5600` | 9 | `FUN_004e5d10`: `FUN_004e4900(FUN_00481720)` |
+| `detectorscript` | 0 to 4 | | `FUN_004d1c10` to `FUN_004d1e10` | 0 | Nothing: each calls an empty function (`FUN_004e1820` to `FUN_004e1860`) |
+| `detectorscript` | 5 | `removeallrangethresholds()` | `0x4d1eb0` | 6 | `FUN_004e1890`: when the object has a detector behavior (+0xa0), empties its set of thresholds (`FUN_0049a9f0`: the tree at +0x70, its count at +0x74) |
+| `detectorscript` | 6 | `addrangethreshold(float)` | `FUN_004d1ec0` | 12 | `FUN_004e1870`: when the object has a detector behavior (+0xa0), adds the value to the set unless it is there (`FUN_0049aa50`, an ordered set of floats) |
+
+The monster natives need the AI of the monsters (the `toplevelai` behavior,
+its commands and when a command ends), and the two detector natives the
+behavior a `detectorscript` gets from the template line `behavior detector`
+and what it does with the thresholds. Neither system is read yet.
+
 ## The update of the objects of a level
 
 Every frame the game tick (`FUN_0072edba`) does, in this order:
@@ -661,9 +683,10 @@ Each creature has two squared distances (+0x104, +0x108), set when it is
 built and when the level keeper starts (`FUN_0073e0c0`):
 
 - `screenCullData` is 1 (`FUN_0073e1a0`). The creature keeps a radius R
-  at +0x10c, from the bounding radius of its model (the model's virtual
-  +0x3c; 24 when it has none), a size the caller passes and what +0x10c
-  held: the largest of them, and at least 24. A creature with no visual
+  at +0x10c, from the bounding radius of its model ("The model radius"
+  below; 24 when it gives none), a size the caller passes (1 from the
+  constructor, `0x70d7ba`, and from `FUN_0072c910`, `0x72d285`) and what
+  +0x10c held: the largest of them, and at least 24. A creature with no visual
   part (+0x58 is not the visual list, `DAT_00a83da8` +4) gets
   `3.4e38` (`FLT_MAX`) for both distances. Otherwise the near distance is
   `20 / 14 × R × 40`, at least 100, and the far one `20 / 10 × R × 40`, at
@@ -702,6 +725,69 @@ Each operation rounds to a float: the x87 unit runs in single precision
 `sl01` the second mode runs: +0x110 holds timers between 0.7 and 3.0 s,
 and 0.1 s, the step of a rate of 10, is the time most of the far creatures
 get.
+
+### The model radius
+
+The slot +0x68 of `Creature` (`0x70d8e0`) returns +0x10, the creature's
+model object, and that object's virtual +0x3c gives a centre and a radius:
+
+- A `goe::RigidModel` (vtable `0x86fadc`, `0x63ecd0`) asks its model data
+  (+0x14; slot +0x40, `0x570f20`). A `goe::AnimModel` (vtable `0x86fb3c`,
+  `0x63f3e0`) asks the data of its first part (`**(+0x2c)`, slot +0x20,
+  `0x570ce0`) when +0x24 is set. Both copy a sphere the data keeps
+  (`FUN_0056bfb0`). With no data the call fails and `FUN_0073e1a0` takes 24.
+- The data computes the sphere once, when it is built (`FUN_0056d130`),
+  from the positions of the model (stream 0, the `position` chunk of its
+  `rmd`, stored by `FUN_0061ed40`), with `FUN_00693fc0`: the centre is the
+  middle of the box of the points (per axis `(max + min) × 0.5`), the
+  radius the square root of the largest squared distance from the centre,
+  added as `(dz² + dy²) + dx²` (`0x694114`; each operation rounded to a
+  float, and a later point replaces the largest only when it is strictly
+  larger). The box starts
+  at `FLT_MAX` (`0x876244`) and `−FLT_MAX` (`DAT_00a74bf8`, set by
+  `FUN_006944c0`). A model with stream 0x1e gets that stream's sphere merged
+  in; only `FUN_005f4b50` stores stream 0x1e, on data the `collmodc`
+  loader and two other paths build, not on the model of an `rmd`.
+
+Which model a creature of a region gets. `FUN_00736a40` builds each entity
+through the factory of its type (slot +0x1c, `FUN_00728fd0`, then
+`FUN_007289d0`):
+
+- When the entity's property `reserved.marker` is 1 (`FUN_0078b670`:
+  `FUN_00734680`, `FUN_00782620`), it looks up the marker of the entity's
+  name (`FUN_00739bc0` on the map at +0x38, which `FUN_0078c320` fills
+  with the name at marker +0x64). The names compare byte by byte
+  (`FUN_0068ec30`), and the marker named `Ocean` in the `cellmark` of
+  `sl01` was found for the entity `ocean` (traced), so a marker's name
+  reaches the map in lower case: the name table lower-cases a name it
+  registers (`FUN_005a0f20` calls `FUN_0068f430`, which maps each byte with
+  the C library `tolower`, `FUN_007a4456`). Every entity name of the game
+  (15,584) is lower case. The marker's model
+  object (marker data +0x58, the `cellmdls` block of its model index) goes
+  to the factory, which uses it instead of its own (`FUN_007289d0`,
+  `param_9`); its clip (+0x54, when +0x6c is set) goes with it. A block
+  with no `rmd` gives no radius. A marker whose model index is −1, and an
+  entity with no marker, pass nothing.
+- Otherwise the factory's own model (+0x34, `FUN_00727b70`): the first
+  `model` line of the type's template (`FUN_0077a0b0`, `FUN_0077b5e0(0)`;
+  the next lines are levels of detail), found by name among the loaded
+  resources (`FUN_005eed10`, `FUN_006aaa30`). The name is made canonical
+  first (`FUN_0069a380`): `FUN_00699d90` turns `\` into `/`, lower-cases,
+  drops a drive `X:`, a known root and the extension after the last `.`,
+  and `FUN_0069a170` keeps only the part before the first `/` when the
+  rest equals it (`sfxobj\sfxobj` is the entry `sfxobj`). The model
+  `levelkeeper` is in `code.big`.
+
+Traced in the oracle (`radius.gdb` and `factory_model.gdb` on the load of
+`sl01` with its neighbours; `radius_check.py` applies this rule to the data):
+the model radius of all 104 creatures of the `sl01` region (to the six
+decimals the trace prints) and all 82 of `sl02` is the one the rule gives. 16 of `sl01` take the marker's model
+(`ocean` 3886.923096, `spotlight` 371.669556, `gate01` 149.244507,
+`boat_01` 109.499756, `birds02` 67.882240; the four detectors,
+`levelloader01` and the two steam markers have blocks with no `rmd`) and 88
+their template's (`psntcnf` 40.428162, `0x4221b670`; `umahvf` 40.246319, `psntanm`
+38.104610, `checkpoint` 37.416573, `sfxobj` 27.712812, `levelkeeper` and
+`regionkeeper` 24.494898, `camera/exportedcamera` 10.375216).
 
 ## Timers
 
@@ -879,7 +965,7 @@ not drive the level yet.
 | The natives that find creatures (`creaturebyname`, `creatureself`, `getkain`, `creaturescriptbyname`, `gethud`) | `src/engine/script_creature_natives.cpp` | `script` (`test_creature_natives`; the bodies they bind to in `test_create_sl01_objects`) |
 | The codes only the region packages use (`0x0d`, `0x17`, `0x18`, `0x37`, `0x53`, `0x54`, `0x57`, `0x58`) | `src/engine/script_machine.cpp` | `script` (`test_region_codes`, `test_start_without_waiting`) |
 | Timers: the value type, its task, the natives, the call from outside the scripts and the tasks of the script manager | `src/engine/script_timer.cpp`, `src/engine/script_machine.cpp` | `script` (`test_timers`) |
-| The creatures of a level and their objects: one creature per entity, the object of each scripted one, activation in build order, the update of each frame, hibernation and removal, and the simulation scheduler (the caller gives the model radii, the visual list, the drawn frames, the viewers and the keeper tune) | `src/engine/script_level.cpp`, `src/engine/crt_random.cpp` | `script` (`test_script_level`, `test_scheduler`; `test_sl01_level`: the 104 creatures and 78 objects of `sl01` activate and run 120 updates); `engine` (`test_crt_random`) |
+| The creatures of a level and their objects: one creature per entity, the object of each scripted one, activation in build order, the update of each frame, hibernation and removal, and the simulation scheduler (the caller gives the model radius of each entity, the visual list, the drawn frames, the viewers and the keeper tune) | `src/engine/script_level.cpp`, `src/engine/crt_random.cpp` | `script` (`test_script_level`, `test_scheduler`, `test_region_model_radius`; `test_sl01_level`: the 104 creatures and 78 objects of `sl01` activate and run 120 updates); `engine` (`test_crt_random`) |
 | The scripts of a level in the game loop: `bo2nx --replay ... --scripts` and `--play ... --scripts` load them (`load_level_scripts`), reads the level keeper's tune (`read_keeper_tune`), adds Kain as the `kain` creature and, each tick, runs the scheduler with the follow camera as the viewer and then the update | `src/main.cpp`, `src/engine/script_level.cpp`, `src/platform/sdl/sdl_backend.cpp` (`on_tick`) | `script` (`test_level_scripts_sl01`); the state of the gate replays does not change |
 
 ## Checked in the running game
@@ -928,8 +1014,12 @@ owner, has the slot count of its class.
 - The order of the creature list `DAT_00a836a8`, which is the order in
   which the creatures of a region are activated.
 - Which holders the viewers of the simulation are (`FUN_007544d0`; one in
-  `sl01`), what the model's virtual +0x3c measures, and which creatures are
-  in the visual list (`DAT_00a83da8`).
+  `sl01`), and which creatures are in the visual list (`DAT_00a83da8`).
+- Where `FUN_00699d90` gets its known root and its two lists of directory
+  prefixes (+4, +0x250, +0x25c); no template model name of the slums
+  regions needs them.
+- The AI of the monsters behind the `monsterscript` natives, and the
+  detector behavior behind the `detectorscript` natives 5 and 6.
 - What `FUN_006e20d0(0)` does to a scripted sound instance.
 - The properties `<class>.<field>` of an entity (for example
   `levelkeeperintro.commondata.farClip`), which look like overrides of the

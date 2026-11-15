@@ -32,7 +32,8 @@ ScriptLevel::~ScriptLevel() {
     }
 }
 
-std::size_t ScriptLevel::add_region(const std::string& region_name, const std::vector<RegionEntityTable>& tables) {
+std::size_t ScriptLevel::add_region(const std::string& region_name, const std::vector<RegionEntityTable>& tables,
+                                    const ModelRadius& model_radius) {
     const std::string package = region_package_name(region_name);
     std::size_t added = 0;
     for (const RegionEntityTable& table : tables) {
@@ -42,6 +43,7 @@ std::size_t ScriptLevel::add_region(const std::string& region_name, const std::v
             creature.package = package;
             creature.script = reserved_script(entity);
             creature.position = {entity.position.x, entity.position.y, entity.position.z};
+            creature.model_radius = model_radius ? model_radius(entity) : 0.0f;
             creature.visual = true;
             add_creature(std::move(creature));
             ++added;
@@ -70,7 +72,7 @@ std::uint32_t ScriptLevel::add_creature(Creature creature) {
         }
     }
     active_.push_back(word);
-    set_distances(word);  // the constructor, 0x70d7f8
+    set_distances(word, 1.0f);  // the constructor passes 1 (0x70d7ba, 0x70d7f8)
     return word;
 }
 
@@ -78,7 +80,7 @@ void ScriptLevel::set_keeper(const KeeperTune& tune) {
     keeper_ = tune;
     has_keeper_ = true;
     for (std::uint32_t word = 1; word <= creatures_.size(); ++word) {
-        set_distances(word);
+        set_distances(word, 1.0f);  // FUN_0072c910 passes 1 (0x72d285)
     }
 }
 
