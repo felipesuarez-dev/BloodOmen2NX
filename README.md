@@ -6,7 +6,7 @@
 
 English version: [README.en.md](README.en.md)
 
-**Trabajo en curso. Los hitos M0-M2 están completos; M3 (porción jugable) está en curso. Todavía no se puede completar ningún capítulo.**
+**Trabajo en curso. Los hitos M0 y M1 están completos; M3 (porción jugable) es la fase actual, y M2 y M4 también tienen tareas abiertas. Todavía no se puede completar ningún capítulo.**
 
 [![Estado][status-badge]](#estado)
 [![Progreso global][overall-badge]](#qué-miden-los-porcentajes)
@@ -70,7 +70,7 @@ El original se usa como referencia; no se distribuye.
 
 ## Estado
 
-**Dónde está el proyecto: M0, M1 y M2 están completos y M3 está en curso.** La canalización de datos, el renderizador de niveles y el oráculo funcionan. Kain camina, corre y salta (con control en el aire) con los ajustes de movimiento originales y el port elige el español como el original. La máquina que ejecuta los scripts del juego está portada, pero todavía no corre los scripts de un nivel, y el combate y los enemigos no están traducidos, así que **no se puede completar ningún capítulo**. Los números de abajo se generan y miden lo que el port traduce, no qué tan jugable se siente (consulta [qué miden los porcentajes](#qué-miden-los-porcentajes)).
+**Dónde está el proyecto: M0 y M1 están completos; M3 es la fase actual. M2 cumplió su criterio de cierre pero le quedan cinco tareas, y M4 ya avanza.** La canalización de datos, el renderizador de niveles y el oráculo funcionan. Kain camina, corre y salta (con control en el aire) con los ajustes de movimiento originales y el port elige el español como el original. La máquina que ejecuta los scripts del juego está portada, pero todavía no corre los scripts de un nivel, y el combate y los enemigos no están traducidos, así que **no se puede completar ningún capítulo**. Los números de abajo se generan y miden lo que el port traduce, no qué tan jugable se siente (consulta [qué miden los porcentajes](#qué-miden-los-porcentajes)).
 
 <!-- progress:start -->
 **Progreso global: 8.3%**
@@ -94,9 +94,9 @@ La lista de capítulos está en [`docs/LEVELS.md`](docs/LEVELS.md). Los capítul
 |---|---|---|
 | M0 | Laboratorio y triaje del binario: hashes, análisis del PE, contenedor del instalador, inventario de Ghidra | Completo |
 | M1 | Contenedores y recursos: `.big`, `pc.rkv`, texturas y modelos validados contra el árbol instalado | Completo |
-| M2 | Esqueleto del host y primer fotograma: un nivel se renderiza con texturas y cámara libre; fotograma comparable con el oráculo | Completo |
-| M3 | Porción jugable: el primer nivel jugable de principio a fin, repetición de ruta y comparación de estado | **En curso** |
-| M4 | Sistemas completos: enemigos, combate, dotes oscuras, scripts, menús, guardado, audio, video | Sin iniciar |
+| M2 | Esqueleto del host y primer fotograma: un nivel se renderiza con texturas y cámara libre; fotograma comparable con el oráculo | En curso: el criterio de cierre se cumplió el 29-10-2026; quedan cinco tareas (materiales de `sl01`, colores por vértice y lo que rechaza el verificador de datos) |
+| M3 | Porción jugable: el primer nivel jugable de principio a fin, repetición de ruta y comparación de estado | **En curso (fase actual)** |
+| M4 | Sistemas completos: enemigos, combate, dotes oscuras, scripts, menús, guardado, audio, video | En curso: la máquina de scripts y el texto del menú avanzan |
 | M5 | Contenido completo: todos los capítulos, jefes y desbloqueables | Sin iniciar |
 | M6 | Lanzamiento: rendimiento, modo portátil y dock, empaquetado | Sin iniciar |
 

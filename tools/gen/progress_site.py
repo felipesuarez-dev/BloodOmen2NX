@@ -51,6 +51,7 @@ TEXT = {
         "code_map_alt": "Mapa del código de bo2.exe: un rectángulo por función, del tamaño de su código y agrupado por sistema; verde lo traducido, ámbar lo que está en curso",
         "milestones": "Hitos",
         "milestone_state": {"done": "completo", "now": "en curso", "next": "sin iniciar"},
+        "current_phase": "fase actual",
         "tasks": "{done} de {total} tareas",
         "milestone_names": [
             "Laboratorio y triaje del binario",
@@ -119,6 +120,7 @@ TEXT = {
         "code_map_alt": "Map of the bo2.exe code: one rectangle per function, sized by its code and grouped by system; green is translated, amber is in progress",
         "milestones": "Milestones",
         "milestone_state": {"done": "done", "now": "in progress", "next": "not started"},
+        "current_phase": "current phase",
         "tasks": "{done} of {total} tasks",
         "milestone_names": [
             "Lab and binary triage",
@@ -313,15 +315,22 @@ def build_page(lang: str, m: dict, systems: list[tuple[str, int, int]], levels: 
 
     out += ["<section>", f"<h2>{_e(t['milestones'])}</h2>", '<ol class="steps">']
     for index, (code, name) in enumerate(zip(MILESTONES, t["milestone_names"])):
-        key = "done" if index < phase_index else "now" if index == phase_index else "next"
-        tasks = ""
         counts = (plan or {}).get("milestones", {}).get(code)
+        if counts and counts["done"] + counts["open"]:
+            # A milestone is done only when none of its tasks is open.
+            key = "done" if counts["open"] == 0 else "now" if counts["done"] else "next"
+        else:
+            key = "done" if index < phase_index else "now" if index == phase_index else "next"
+        state = t["milestone_state"][key]
+        if index == phase_index:
+            state += " · " + t["current_phase"]
+        tasks = ""
         if counts and counts["done"] + counts["open"]:
             total = counts["done"] + counts["open"]
             tasks = (f'<span class="tasks"><span class="bar"><span style="width:{counts["done"] / total * 100:.1f}%">'
                      f'</span></span>{_e(t["tasks"].format(done=counts["done"], total=total))}</span>')
         out.append(f'<li class="{key}"><b>{code}</b><span>{_e(name)}</span>'
-                   f'<span class="s">{_e(t["milestone_state"][key])}</span>{tasks}</li>')
+                   f'<span class="s">{_e(state)}</span>{tasks}</li>')
     out += ["</ol>", "</section>"]
 
     readme = f"{REPO}#readme" if lang == "es" else f"{REPO}/blob/develop/README.en.md"

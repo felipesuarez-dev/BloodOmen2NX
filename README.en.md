@@ -6,7 +6,7 @@
 
 Lee esto en español: [README.md](README.md)
 
-**Work in progress. Milestones M0-M2 are done; M3 (playable slice) is in progress. No chapter can be completed yet.**
+**Work in progress. Milestones M0 and M1 are done; M3 (playable slice) is the current phase, and M2 and M4 also have open tasks. No chapter can be completed yet.**
 
 [![Status][status-badge]](#status)
 [![Overall progress][overall-badge]](#what-the-percentages-measure)
@@ -70,7 +70,7 @@ The original is used as a reference, not shipped.
 
 ## Status
 
-**Where the project stands: M0, M1 and M2 are done and M3 is in progress.** The data pipeline, the level renderer and the oracle work. Kain walks, runs and jumps (with air control) with the original movement tuning and the port picks Spanish like the original. The machine that runs the game's scripts is ported, but it does not run the scripts of a level yet, and combat and enemies are not translated, so **no chapter can be completed**. The numbers below are generated and measure what the port translates, not how playable it feels (see [what the percentages measure](#what-the-percentages-measure)).
+**Where the project stands: M0 and M1 are done; M3 is the current phase. M2 met its exit criterion but has five tasks left, and M4 is under way.** The data pipeline, the level renderer and the oracle work. Kain walks, runs and jumps (with air control) with the original movement tuning and the port picks Spanish like the original. The machine that runs the game's scripts is ported, but it does not run the scripts of a level yet, and combat and enemies are not translated, so **no chapter can be completed**. The numbers below are generated and measure what the port translates, not how playable it feels (see [what the percentages measure](#what-the-percentages-measure)).
 
 <!-- progress:start -->
 **Overall progress: 8.3%**
@@ -94,9 +94,9 @@ The chapter list is in [`docs/LEVELS.md`](docs/LEVELS.md). Chapter flags and pla
 |---|---|---|
 | M0 | Laboratory and binary triage: hashes, PE analysis, installer container, Ghidra inventory | Done |
 | M1 | Containers and assets: `.big`, `pc.rkv`, textures and models validated against the installed tree | Done |
-| M2 | Host skeleton and first frame: a level renders with textures and a free camera; frame comparable to the oracle | Done |
-| M3 | Playable slice: the first level playable from start to finish, route replay and state comparison | **In progress** |
-| M4 | Complete systems: enemies, combat, dark gifts, scripting, menus, saves, audio, video | Not started |
+| M2 | Host skeleton and first frame: a level renders with textures and a free camera; frame comparable to the oracle | In progress: the exit criterion was met on 2026-10-29; five tasks are left (`sl01` materials, vertex colours and what the data checker rejects) |
+| M3 | Playable slice: the first level playable from start to finish, route replay and state comparison | **In progress (current phase)** |
+| M4 | Complete systems: enemies, combat, dark gifts, scripting, menus, saves, audio, video | In progress: the script machine and the menu text are under way |
 | M5 | Complete content: all chapters, bosses and unlockables | Not started |
 | M6 | Release: performance, handheld and docked, packaging | Not started |
 

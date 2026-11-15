@@ -1,7 +1,9 @@
 # State
 
-Current milestone: **M3 — playable slice**. M0 (binary truth), M1
-(containers and assets) and M2 (host skeleton and first frame) are complete.
+Current milestone: **M3 — playable slice**. M0 (binary truth) and M1
+(containers and assets) are complete. M2 (host skeleton and first frame)
+met its exit criterion but five of its tasks are still open (BO2NX-68, 96,
+166, 167, 169).
 
 ## What is done
 
