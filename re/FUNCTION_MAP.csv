@@ -11725,15 +11725,15 @@ address,name,subsystem,status,notes
 006a7fa0,FUN_006a7fa0,unknown,todo,ghidra
 006a7fc0,FUN_006a7fc0,unknown,todo,ghidra
 006a8000,FUN_006a8000,unknown,todo,ghidra
-006a80a0,FUN_006a80a0,unknown,todo,ghidra
+006a80a0,FUN_006a80a0,render,wip,src/engine/cell_group.cpp: attribute_byte reads the byte at an index of a type 3 record (docs/FORMATS/models.md); the rest of the original is not ported.
 006a8150,FUN_006a8150,unknown,todo,ghidra
-006a81a0,FUN_006a81a0,unknown,todo,ghidra
+006a81a0,FUN_006a81a0,render,wip,src/engine/cell_group.cpp: attribute_float reads the float at an index of a type 0 record (docs/FORMATS/models.md); the rest of the original is not ported.
 006a81f0,FUN_006a81f0,unknown,todo,ghidra
 006a8200,FUN_006a8200,unknown,todo,ghidra
 006a8320,FUN_006a8320,unknown,todo,ghidra
 006a8460,FUN_006a8460,unknown,todo,ghidra
 006a8590,FUN_006a8590,unknown,todo,ghidra
-006a8620,FUN_006a8620,unknown,todo,ghidra
+006a8620,FUN_006a8620,render,wip,src/engine/cell_group.cpp: attribute_set reads the first byte of a type 3 record (docs/FORMATS/models.md); the rest of the original is not ported.
 006a8650,FUN_006a8650,unknown,todo,ghidra
 006a8660,FUN_006a8660,unknown,todo,ghidra
 006a8690,FUN_006a8690,unknown,todo,ghidra

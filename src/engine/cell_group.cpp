@@ -903,23 +903,26 @@ ModelSkeleton& skeleton_for(LevelGeometry& geometry, std::uint32_t model) {
     return geometry.skeletons.back();
 }
 
-// FUN_0056d130: the RenderPriority of a model is the type 0 record of its
-// `mdlattr` table whose key resolves to RenderPriority. Every record is four
-// header bytes (type, array flag, key) and then one value, or an array count
-// and that many values padded to four bytes (docs/FORMATS/models.md,
-// "mdlattr"). The other attributes are not read.
-float read_render_priority(const common::Reader& reader, const std::vector<Chunk>& chunks,
-                           const std::vector<std::uint16_t>& symbols,
-                           const std::vector<std::string>& names) {
-    const Chunk* attributes = find_chunk(chunks, "mdlattr");
-    if (attributes == nullptr) {
+// FUN_0056d130, FUN_006a81a0, FUN_006a80a0, FUN_006a8620: walks the
+// `mdlattr` table of a model and keeps every record. The RenderPriority is
+// the first type 0 record whose key resolves to RenderPriority. Every record
+// is four header bytes (type, array flag, key) and then one value, or an
+// array count and that many values padded to four bytes
+// (docs/FORMATS/models.md, "mdlattr").
+float read_model_attributes(const common::Reader& reader, const std::vector<Chunk>& chunks,
+                            const std::vector<std::uint16_t>& symbols,
+                            const std::vector<std::string>& names,
+                            std::vector<ModelAttribute>& attributes) {
+    attributes.clear();
+    const Chunk* table = find_chunk(chunks, "mdlattr");
+    if (table == nullptr) {
         return 0.0f;
     }
-    if (attributes->data_size < 20) {
+    if (table->data_size < 20) {
         throw common::ParseError("bad mdlattr table size");
     }
-    const std::size_t end = attributes->data_offset + attributes->data_size;
-    std::size_t position = attributes->data_offset + 20;
+    const std::size_t end = table->data_offset + table->data_size;
+    std::size_t position = table->data_offset + 20;
     float priority = 0.0f;
     bool found = false;
     while (position < end) {
@@ -934,34 +937,63 @@ float read_render_priority(const common::Reader& reader, const std::vector<Chunk
         if (array > 1) {
             throw common::ParseError("bad mdlattr array flag");
         }
+        ModelAttribute attribute;
+        attribute.type = type;
+        attribute.name = resolve_symbol_name(reader.u16(position + 2), symbols, names);
         if (array == 0) {
             if (end - position < 8) {
                 throw common::ParseError("truncated mdlattr value");
             }
-            if (!found && type == 0 &&
-                resolve_symbol_name(reader.u16(position + 2), symbols, names) ==
-                    "RenderPriority") {
-                priority = read_float(reader, position + 4);
-                found = true;
+            if (type == 0) {
+                const float value = read_float(reader, position + 4);
+                attribute.floats.push_back(value);
+                if (!found && attribute.name == "RenderPriority") {
+                    priority = value;
+                    found = true;
+                }
+            } else if (type == 3) {
+                attribute.bytes.push_back(reader.u8(position + 4));
+            } else {
+                attribute.symbols.push_back(
+                    resolve_symbol_name(reader.u16(position + 4), symbols, names));
             }
             position += 8;
-            continue;
+        } else {
+            if (end - position < 8) {
+                throw common::ParseError("truncated mdlattr array");
+            }
+            const std::uint32_t count = reader.u32(position + 4);
+            const std::size_t width = (type == 0) ? 4 : ((type == 3) ? 1 : 2);
+            const std::size_t available = end - position - 8;
+            if (count > available / width) {
+                throw common::ParseError("mdlattr array is truncated");
+            }
+            const std::size_t payload = static_cast<std::size_t>(count) * width;
+            const std::size_t padded = (payload + 3) & ~std::size_t{3};
+            if (padded > available) {
+                throw common::ParseError("mdlattr array has no padding");
+            }
+            if (type == 0) {
+                attribute.floats.reserve(count);
+                for (std::uint32_t index = 0; index < count; ++index) {
+                    attribute.floats.push_back(read_float(reader, position + 8 + index * 4));
+                }
+            } else if (type == 3) {
+                attribute.bytes.reserve(count);
+                for (std::uint32_t index = 0; index < count; ++index) {
+                    attribute.bytes.push_back(reader.u8(position + 8 + index));
+                }
+            } else {
+                attribute.symbols.reserve(count);
+                for (std::uint32_t index = 0; index < count; ++index) {
+                    attribute.symbols.push_back(
+                        resolve_symbol_name(reader.u16(position + 8 + index * 2), symbols,
+                                            names));
+                }
+            }
+            position += 8 + padded;
         }
-        if (end - position < 8) {
-            throw common::ParseError("truncated mdlattr array");
-        }
-        const std::uint32_t count = reader.u32(position + 4);
-        const std::size_t width = (type == 0) ? 4 : ((type == 3) ? 1 : 2);
-        const std::size_t available = end - position - 8;
-        if (count > available / width) {
-            throw common::ParseError("mdlattr array is truncated");
-        }
-        const std::size_t payload = static_cast<std::size_t>(count) * width;
-        const std::size_t padded = (payload + 3) & ~std::size_t{3};
-        if (padded > available) {
-            throw common::ParseError("mdlattr array has no padding");
-        }
-        position += 8 + padded;
+        attributes.push_back(std::move(attribute));
     }
     if (position != end) {
         throw common::ParseError("mdlattr table has a trailer");
@@ -988,8 +1020,11 @@ void parse_model(const common::Reader& reader, const Chunk& rmd, std::uint32_t m
     if (geometry.model_render_priority.size() <= model) {
         geometry.model_render_priority.resize(static_cast<std::size_t>(model) + 1);
     }
-    geometry.model_render_priority[model] =
-        read_render_priority(reader, chunks, symbols, names);
+    if (geometry.model_attributes.size() <= model) {
+        geometry.model_attributes.resize(static_cast<std::size_t>(model) + 1);
+    }
+    geometry.model_render_priority[model] = read_model_attributes(
+        reader, chunks, symbols, names, geometry.model_attributes[model]);
     const Chunk* positions = find_chunk(chunks, "position");
     const Chunk* normals = find_chunk(chunks, "normals");
     const Chunk* prims = find_chunk(chunks, "prims");
@@ -1474,6 +1509,7 @@ LevelGeometry parse_cell_group(const std::vector<std::uint8_t>& data,
     std::size_t position = 28;
     LevelGeometry geometry;
     geometry.model_ranges.assign(model_count, ModelRange{});
+    geometry.model_attributes.resize(model_count);
     for (std::uint32_t model = 0; model < model_count; ++model) {
         if (position + 20 > data.size()) {
             throw common::ParseError("truncated model block");
@@ -2037,6 +2073,49 @@ Vec3 material_color(const LevelGeometry& geometry, const LevelTriangle& triangle
         return color;
     }
     return palette[index % 8];
+}
+
+// FUN_006c05c0: finds a record of the `mdlattr` table of a model by key.
+const ModelAttribute* find_attribute(const LevelGeometry& geometry, std::uint32_t model,
+                                     std::string_view name) {
+    if (model >= geometry.model_attributes.size()) {
+        return nullptr;
+    }
+    for (const ModelAttribute& attribute : geometry.model_attributes[model]) {
+        if (std::string_view(attribute.name) == name) {
+            return &attribute;
+        }
+    }
+    return nullptr;
+}
+
+// FUN_006a81a0: the float at `index` of a type 0 record.
+bool attribute_float(const LevelGeometry& geometry, std::uint32_t model,
+                     std::string_view name, std::size_t index, float& out) {
+    const ModelAttribute* attribute = find_attribute(geometry, model, name);
+    if (attribute == nullptr || attribute->type != 0 || index >= attribute->floats.size()) {
+        return false;
+    }
+    out = attribute->floats[index];
+    return true;
+}
+
+// FUN_006a80a0: the byte at `index` of a type 3 record.
+bool attribute_byte(const LevelGeometry& geometry, std::uint32_t model,
+                    std::string_view name, std::size_t index, std::uint8_t& out) {
+    const ModelAttribute* attribute = find_attribute(geometry, model, name);
+    if (attribute == nullptr || attribute->type != 3 || index >= attribute->bytes.size()) {
+        return false;
+    }
+    out = attribute->bytes[index];
+    return true;
+}
+
+// FUN_006a8620: true when the type 3 record exists and its first byte is not 0.
+bool attribute_set(const LevelGeometry& geometry, std::uint32_t model, std::string_view name) {
+    const ModelAttribute* attribute = find_attribute(geometry, model, name);
+    return attribute != nullptr && attribute->type == 3 && !attribute->bytes.empty() &&
+           attribute->bytes.front() != 0;
 }
 
 Vec3 material_tint(const LevelGeometry& geometry, const LevelTriangle& triangle,

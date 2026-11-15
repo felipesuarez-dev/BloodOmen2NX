@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <optional>
 #include <string>
 #include <vector>
@@ -248,6 +249,93 @@ void test_cell_groups_with_attribute_arrays(const std::filesystem::path& root) {
     }
 }
 
+// The attribute tables of the HUD and of sl01: the records of every model
+// and the names of the control of BO2NX-115 (docs/FORMATS/models.md,
+// "mdlattr").
+void test_model_attribute_counts(const std::filesystem::path& root) {
+    const std::filesystem::path code = root / "media/gogames/bo2/code.big";
+    if (!std::filesystem::exists(code)) {
+        return;
+    }
+    const bo2::engine::BigArchive ui = bo2::engine::BigArchive::load(code.string());
+    const bo2::engine::BigEntry* hud = ui.find("cellgrup", "ui/hud");
+    CHECK(hud != nullptr);
+    if (hud != nullptr) {
+        const bo2::engine::LevelGeometry scene =
+            bo2::engine::parse_cell_group(ui.extract(*hud), hud->symbols, ui.names());
+        CHECK(scene.model_count == 42);
+        CHECK(scene.model_attributes.size() == scene.model_ranges.size());
+        std::map<std::string, std::size_t> counts;
+        std::size_t records = 0;
+        for (const std::vector<bo2::engine::ModelAttribute>& table : scene.model_attributes) {
+            records += table.size();
+            for (const bo2::engine::ModelAttribute& attribute : table) {
+                ++counts[attribute.name];
+            }
+        }
+        CHECK(records == 206);
+        CHECK(counts.size() == 5);
+        CHECK(counts["ObjectType"] == 42);
+        CHECK(counts["UseMaxMesh"] == 42);
+        CHECK(counts["RenderPriority"] == 42);
+        CHECK(counts["NoCollisionModel"] == 42);
+        CHECK(counts["EntityClass"] == 38);
+    }
+
+    const std::filesystem::path level =
+        root / "media/gogames/bo2/resources/levels/slums/sl01.big";
+    if (!std::filesystem::exists(level)) {
+        return;
+    }
+    const bo2::engine::BigArchive archive =
+        bo2::engine::BigArchive::load(level.string());
+    const bo2::engine::BigEntry* level_entry = archive.find("cellgrup", "slums/sl01");
+    CHECK(level_entry != nullptr);
+    if (level_entry == nullptr) {
+        return;
+    }
+    const bo2::engine::LevelGeometry scene =
+        bo2::engine::parse_cell_group(archive.extract(*level_entry), level_entry->symbols,
+                                      archive.names());
+    CHECK(scene.model_count == 608);
+    CHECK(scene.model_attributes.size() == scene.model_ranges.size());
+    std::map<std::string, std::size_t> counts;
+    std::size_t records = 0;
+    for (const std::vector<bo2::engine::ModelAttribute>& table : scene.model_attributes) {
+        records += table.size();
+        for (const bo2::engine::ModelAttribute& attribute : table) {
+            ++counts[attribute.name];
+        }
+    }
+    CHECK(records == 479);
+    CHECK(counts.size() == 18);
+    CHECK(counts["ObjectType"] == 212);
+    CHECK(counts["NoCollisionModel"] == 168);
+    CHECK(counts["VertexLighting"] == 50);
+    CHECK(counts["EntityClass"] == 9);
+    CHECK(counts["UseMaxMesh"] == 9);
+    CHECK(counts["NoEdgeGrab"] == 5);
+    CHECK(counts["Animated"] == 4);
+    CHECK(counts["NoCameraCollide"] == 4);
+    CHECK(counts["TransparentToLight"] == 4);
+    CHECK(counts["VertexAlpha"] == 2);
+    CHECK(counts["DFacade"] == 2);
+    CHECK(counts["Lightmaps"] == 2);
+    CHECK(counts["SkySphere"] == 2);
+    CHECK(counts["SortBias"] == 2);
+    CHECK(counts["TransparentToLineOfSight"] == 1);
+    CHECK(counts["NoLighting"] == 1);
+    CHECK(counts["SmoothLighting"] == 1);
+    CHECK(counts["Slide"] == 1);
+    std::size_t sphere = 0;
+    for (std::uint32_t model = 0; model < scene.model_attributes.size(); ++model) {
+        if (bo2::engine::attribute_set(scene, model, "SkySphere")) {
+            ++sphere;
+        }
+    }
+    CHECK(sphere == 2);
+}
+
 // The load numbers of every cell group the reader accepts, pinned in
 // tests/data/cell_group_baseline.tsv (docs/DATA_COVERAGE.md, "Cell group
 // baseline"). The container paths of the file are relative to the directory
@@ -389,6 +477,7 @@ int main() {
         }
         test_texture_lists_of_the_game_data(root);
         test_cell_groups_with_attribute_arrays(root);
+        test_model_attribute_counts(root);
         test_cell_group_baseline(root);
     } catch (const std::exception& error) {
         std::cerr << "model asset test: " << error.what() << '\n';

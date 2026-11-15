@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "bo2/engine/anim_reel.hpp"
@@ -90,6 +91,17 @@ struct ModelRange {
     std::uint32_t first_triangle = 0;
     std::uint32_t triangle_count = 0;
     bool present = false;
+};
+
+// One record of the `mdlattr` table of a model (docs/FORMATS/models.md,
+// "mdlattr"). Only the vector of its type is filled: floats for type 0,
+// bytes for type 3 and symbols for type 7.
+struct ModelAttribute {
+    std::string name;
+    std::uint8_t type = 0;
+    std::vector<float> floats;
+    std::vector<std::uint8_t> bytes;
+    std::vector<std::string> symbols;
 };
 
 struct LevelCollision {
@@ -283,6 +295,9 @@ struct LevelGeometry {
     // RenderPriority of each model, in the order of model_ranges; 0 for a
     // model without the attribute (FUN_0056d130).
     std::vector<float> model_render_priority;
+    // The whole `mdlattr` table of each model, in the order of model_ranges
+    // (empty for a model without a table).
+    std::vector<std::vector<ModelAttribute>> model_attributes;
     std::vector<CellAttributeTable> level_attributes;
     std::vector<ModelRange> model_ranges;
     std::vector<LevelCollision> collisions;
@@ -324,6 +339,19 @@ LevelGeometry parse_cell_group(const std::vector<std::uint8_t>& data,
 LevelGeometry parse_model_asset(const std::vector<std::uint8_t>& data,
                                 const std::vector<std::uint16_t>& symbols,
                                 const std::vector<std::string>& names);
+
+// The attribute of a model whose key resolves to `name`, or nullptr.
+const ModelAttribute* find_attribute(const LevelGeometry& geometry, std::uint32_t model,
+                                     std::string_view name);
+// FUN_006a81a0: the float at `index` of a type 0 record. False when the record
+// does not exist, is another type or the index is out of range.
+bool attribute_float(const LevelGeometry& geometry, std::uint32_t model,
+                     std::string_view name, std::size_t index, float& out);
+// FUN_006a80a0: the byte at `index` of a type 3 record, with the same rules.
+bool attribute_byte(const LevelGeometry& geometry, std::uint32_t model,
+                    std::string_view name, std::size_t index, std::uint8_t& out);
+// FUN_006a8620: true when the type 3 record exists and its first byte is not 0.
+bool attribute_set(const LevelGeometry& geometry, std::uint32_t model, std::string_view name);
 
 Vec3 material_tint(const LevelGeometry& geometry, const LevelTriangle& triangle,
                    MaterialMode mode);

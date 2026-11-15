@@ -1341,6 +1341,102 @@ void test_model_attribute_arrays() {
     }));
 }
 
+// The whole `mdlattr` table of a model and its three reads: the float of a
+// type 0 record (FUN_006a81a0), the byte of a type 3 record (FUN_006a80a0)
+// and whether a type 3 record is set (FUN_006a8620).
+void test_model_attributes() {
+    std::vector<std::uint8_t> attributes;
+    append(attributes, std::string("default\0\0\0\0\0", 8));
+    put32(attributes, 56);
+    put32(attributes, 1);
+    put32(attributes, 2);
+    attributes.push_back(0);  // float SortBias
+    attributes.push_back(0);
+    put16(attributes, 0);
+    put_float(attributes, 2.5f);
+    attributes.push_back(3);  // byte NoDraw
+    attributes.push_back(0);
+    put16(attributes, 1);
+    attributes.push_back(1);
+    attributes.push_back(0xFF);
+    attributes.push_back(0xFF);
+    attributes.push_back(0xFF);
+    attributes.push_back(3);  // byte array FogColor
+    attributes.push_back(1);
+    put16(attributes, 2);
+    put32(attributes, 4);
+    for (const std::uint8_t value : {std::uint8_t{0x10}, std::uint8_t{0x20}, std::uint8_t{0x30},
+                                     std::uint8_t{0x40}}) {
+        attributes.push_back(value);
+    }
+    attributes.push_back(7);  // symbol EntityClass
+    attributes.push_back(0);
+    put16(attributes, 3);
+    put16(attributes, 4);
+    put16(attributes, 0xFFFF);
+
+    const std::vector<std::uint16_t> symbols = {100, 101, 102, 103, 104};
+    std::vector<std::string> names(105);
+    names[100] = "SortBias";
+    names[101] = "NoDraw";
+    names[102] = "FogColor";
+    names[103] = "EntityClass";
+    names[104] = "objectClass";
+    const bo2::engine::LevelGeometry geometry = bo2::engine::parse_cell_group(
+        build_cell_group(false, false, {}, {}, attributes), symbols, names);
+    CHECK(geometry.model_attributes.size() == 1);
+    if (geometry.model_attributes.size() != 1) {
+        return;
+    }
+    const std::vector<bo2::engine::ModelAttribute>& table = geometry.model_attributes[0];
+    CHECK(table.size() == 4);
+    if (table.size() == 4) {
+        CHECK(table[0].name == "SortBias" && table[0].type == 0);
+        CHECK(table[0].floats.size() == 1 && table[0].floats[0] == 2.5f);
+        CHECK(table[1].name == "NoDraw" && table[1].type == 3);
+        CHECK(table[1].bytes.size() == 1 && table[1].bytes[0] == 1);
+        CHECK(table[2].name == "FogColor" && table[2].type == 3);
+        CHECK(table[2].bytes.size() == 4 && table[2].bytes[3] == 0x40);
+        CHECK(table[3].name == "EntityClass" && table[3].type == 7);
+        CHECK(table[3].symbols.size() == 1 && table[3].symbols[0] == "objectClass");
+    }
+
+    float number = 0.0f;
+    CHECK(bo2::engine::attribute_float(geometry, 0, "SortBias", 0, number));
+    CHECK(number == 2.5f);
+    CHECK(!bo2::engine::attribute_float(geometry, 0, "SortBias", 1, number));
+    CHECK(!bo2::engine::attribute_float(geometry, 0, "NoDraw", 0, number));
+    std::uint8_t byte = 0;
+    CHECK(bo2::engine::attribute_byte(geometry, 0, "NoDraw", 0, byte));
+    CHECK(byte == 1);
+    CHECK(!bo2::engine::attribute_byte(geometry, 0, "NoDraw", 1, byte));
+    CHECK(!bo2::engine::attribute_byte(geometry, 0, "SortBias", 0, byte));
+    CHECK(bo2::engine::attribute_byte(geometry, 0, "FogColor", 3, byte));
+    CHECK(byte == 0x40);
+    CHECK(!bo2::engine::attribute_byte(geometry, 0, "FogColor", 4, byte));
+    CHECK(bo2::engine::attribute_set(geometry, 0, "NoDraw"));
+    CHECK(bo2::engine::attribute_set(geometry, 0, "FogColor"));
+    CHECK(bo2::engine::find_attribute(geometry, 0, "RenderPriority") == nullptr);
+    CHECK(bo2::engine::find_attribute(geometry, 1, "NoDraw") == nullptr);
+
+    std::vector<std::uint8_t> zeroed = attributes;
+    zeroed[32] = 0;  // the value of NoDraw, after its 8-byte record header
+    const bo2::engine::LevelGeometry cleared = bo2::engine::parse_cell_group(
+        build_cell_group(false, false, {}, {}, zeroed), symbols, names);
+    CHECK(!bo2::engine::attribute_set(cleared, 0, "NoDraw"));
+
+    const bo2::engine::LevelGeometry plain =
+        bo2::engine::parse_cell_group(build_cell_group(false, false, {}, {}, {}));
+    CHECK(plain.model_attributes.size() == 1);
+    if (plain.model_attributes.size() == 1) {
+        CHECK(plain.model_attributes[0].empty());
+    }
+    CHECK(bo2::engine::find_attribute(plain, 0, "NoDraw") == nullptr);
+    CHECK(!bo2::engine::attribute_set(plain, 0, "NoDraw"));
+    CHECK(!bo2::engine::attribute_float(plain, 0, "NoDraw", 0, number));
+    CHECK(!bo2::engine::attribute_byte(plain, 0, "NoDraw", 0, byte));
+}
+
 // FUN_005df900: the texfont entry and its upper-case-only rule.
 void test_pixmap_font() {
     const std::vector<std::uint16_t> symbols = {100};
@@ -1667,6 +1763,7 @@ int main() {
     test_material_cull();
     test_model_render_priority();
     test_model_attribute_arrays();
+    test_model_attributes();
     test_pixmap_font();
     test_data_check();
     test_data_check_cellgrup();

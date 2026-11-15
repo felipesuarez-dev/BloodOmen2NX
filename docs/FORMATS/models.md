@@ -362,11 +362,17 @@ The attribute names are symbols the executable builds at start (the
 `TransparentToLineOfSight` 3, and `VertexAlpha`, `DFacade`, `Lightmaps`,
 `SkySphere` and `SortBias` 2 each.
 
-The host walks the whole table and keeps the `RenderPriority` of each model
-in `LevelGeometry::model_render_priority`. A record with the array flag set
-is skipped with its count and its values padded to four bytes, so every
-table of the game is consumed exactly, including the 16 cell groups whose
-tables carry a colour array.
+The host walks the whole table, keeps every record in
+`LevelGeometry::model_attributes` (indexed like `model_ranges`, with only the
+vector of its type filled) and the first `RenderPriority` in
+`LevelGeometry::model_render_priority`. The three reads of the original are
+`attribute_float` (FUN_006a81a0), `attribute_byte` (FUN_006a80a0) and
+`attribute_set` (FUN_006a8620): the first two return false when the record is
+missing, is another type or the index is out of range, and `attribute_set`
+is true only when the first byte of the type 3 record is not 0. A record with
+the array flag set is read with its count and its values padded to four
+bytes, so every table of the game is consumed exactly, including the 16 cell
+groups whose tables carry a colour array.
 
 ### Render state and draw order
 
