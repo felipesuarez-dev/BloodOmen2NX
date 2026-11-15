@@ -17,6 +17,7 @@
 #include "bo2/engine/math.hpp"
 #include "bo2/engine/pixmap_font.hpp"
 #include "bo2/engine/render_order.hpp"
+#include "bo2/engine/text.hpp"
 
 namespace {
 
@@ -1633,6 +1634,123 @@ void test_glyph_bitmap() {
     CHECK(throws([&] { bo2::engine::glyph_bitmap(outside, texture, 'a'); }));
 }
 
+// FUN_00772320: the parser of a stored text into rows of glyph and control
+// items, with the warnings of docs/TEXT.md, "Parsing a string".
+void test_text_parser() {
+    using bo2::engine::ParsedText;
+    using bo2::engine::TextItem;
+    using bo2::engine::TextWarning;
+    const auto item = [](bool control, std::uint8_t value) { return TextItem{control, value}; };
+    const auto same_row = [](const std::vector<TextItem>& row,
+                             const std::vector<TextItem>& expected) {
+        if (row.size() != expected.size()) {
+            return false;
+        }
+        for (std::size_t index = 0; index < row.size(); ++index) {
+            if (row[index].control != expected[index].control ||
+                row[index].value != expected[index].value) {
+                return false;
+            }
+        }
+        return true;
+    };
+    const auto same_rows = [&same_row](const ParsedText& parsed,
+                                       const std::vector<std::vector<TextItem>>& expected) {
+        if (parsed.rows.size() != expected.size()) {
+            return false;
+        }
+        for (std::size_t index = 0; index < parsed.rows.size(); ++index) {
+            if (!same_row(parsed.rows[index], expected[index])) {
+                return false;
+            }
+        }
+        return true;
+    };
+
+    {
+        const ParsedText parsed = bo2::engine::parse_text("@cab c@n\\x d");
+        CHECK(same_rows(parsed, {{item(true, 4), item(false, 'a'), item(false, 'b'),
+                                  item(false, ' '), item(false, 'c')},
+                                 {item(false, 0xcb), item(false, ' '), item(false, 'd')}}));
+        CHECK(parsed.warnings.empty());
+    }
+    {
+        const ParsedText parsed = bo2::engine::parse_text("a  b");
+        CHECK(same_rows(parsed, {{item(false, 'a'), item(false, ' '), item(false, ' '),
+                                  item(false, 'b')}}));
+        CHECK(parsed.warnings == std::vector<TextWarning>{TextWarning::MultipleSpaces});
+    }
+    {
+        const ParsedText parsed = bo2::engine::parse_text("a@cb");
+        CHECK(same_rows(parsed, {{item(false, 'a'), item(false, 'b')}}));
+        CHECK(parsed.warnings == std::vector<TextWarning>{TextWarning::Alignment});
+    }
+    {
+        const ParsedText parsed = bo2::engine::parse_text("@p@rx");
+        CHECK(same_rows(parsed, {{}, {item(true, 1), item(true, 3), item(false, 'x')}}));
+        CHECK(parsed.warnings == std::vector<TextWarning>{TextWarning::MultipleNewlines});
+    }
+    {
+        const ParsedText parsed = bo2::engine::parse_text("\\z");
+        CHECK(same_rows(parsed, {{}}));
+        CHECK(parsed.warnings == std::vector<TextWarning>{TextWarning::UnsupportedCommand});
+    }
+    {
+        const ParsedText parsed = bo2::engine::parse_text("a@");
+        CHECK(same_rows(parsed, {{item(false, 'a')}}));
+        CHECK(parsed.warnings == std::vector<TextWarning>{TextWarning::EndsWithinCommand});
+    }
+    {
+        const ParsedText parsed = bo2::engine::parse_text("@n");
+        CHECK(same_rows(parsed, {{}, {}}));
+        CHECK((parsed.warnings ==
+               std::vector<TextWarning>{TextWarning::MultipleNewlines,
+                                        TextWarning::TrailingNewline}));
+    }
+    {
+        const std::string text{'a', static_cast<char>(0xE9), 'b'};
+        const ParsedText parsed = bo2::engine::parse_text(text);
+        CHECK(same_rows(parsed, {{item(false, 'a'), item(false, 'b')}}));
+        CHECK(parsed.warnings == std::vector<TextWarning>{TextWarning::UnsupportedCharacter});
+    }
+    {
+        const ParsedText parsed = bo2::engine::parse_text("@l@r@@x");
+        CHECK(same_rows(parsed, {{item(true, 2), item(true, 3), item(false, 0x40),
+                                  item(false, 'x')}}));
+        CHECK(parsed.warnings.empty());
+    }
+    {
+        const ParsedText parsed = bo2::engine::parse_text("a@wb");
+        CHECK(same_rows(parsed, {{item(false, 'a'), item(false, 'b')}}));
+        CHECK(parsed.warnings == std::vector<TextWarning>{TextWarning::ReservedCommand});
+    }
+    {
+        struct Command {
+            char character;
+            std::uint8_t glyph;
+        };
+        const Command commands[] = {
+            {'q', 0xc8}, {'y', 0xc8}, {'b', 0xc9}, {'g', 0xc9}, {'a', 0xca}, {'c', 0xca},
+            {'x', 0xcb}, {'1', 0xcc}, {'2', 0xcd}, {'3', 0xce}, {'4', 0xcf}, {'u', 0xd0},
+            {'d', 0xd1}, {'h', 0xd2}, {'l', 0xd3}, {'[', 0xd4}, {']', 0xd5}, {'*', 0xd6},
+            {'#', 0xd7}, {' ', 0x20}, {'\\', 0x5c},
+        };
+        std::string text;
+        std::vector<TextItem> expected;
+        for (const Command& command : commands) {
+            text.push_back('\\');
+            text.push_back(command.character);
+            expected.push_back(item(false, command.glyph));
+        }
+        const ParsedText parsed = bo2::engine::parse_text(text);
+        CHECK(parsed.rows.size() == 1);
+        if (parsed.rows.size() == 1) {
+            CHECK(same_row(parsed.rows[0], expected));
+        }
+        CHECK(parsed.warnings.empty());
+    }
+}
+
 // The data checker counts every entry of a container by type and reports the
 // ones whose reader throws, without stopping the walk (docs/DATA_COVERAGE.md).
 void test_data_check() {
@@ -1916,6 +2034,7 @@ int main() {
     test_model_attributes();
     test_pixmap_font();
     test_glyph_bitmap();
+    test_text_parser();
     test_data_check();
     test_data_check_cellgrup();
     test_data_check_model();

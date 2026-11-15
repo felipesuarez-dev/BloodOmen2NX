@@ -11,6 +11,7 @@
 #include "bo2/engine/dds.hpp"
 #include "bo2/engine/pixmap_font.hpp"
 #include "bo2/engine/string_table.hpp"
+#include "bo2/engine/text.hpp"
 
 namespace {
 
@@ -245,6 +246,71 @@ void test_game_font_glyphs(const bo2::engine::BigArchive& archive) {
     CHECK(first == 1);
 }
 
+// FUN_00772320 over every value of the ui/UI table of the five languages:
+// the number of values, rows, glyphs, controls and warnings. The 21 control
+// items are value 4 and the single Spanish warning is an unsupported
+// character.
+void test_text_parser_on_the_menu_table(const bo2::engine::BigArchive& archive) {
+    struct Case {
+        const char* locale;
+        std::size_t values;
+        std::size_t rows;
+        std::size_t glyphs;
+        std::size_t controls;
+        std::size_t warnings;
+    };
+    const Case cases[] = {
+        {"english", 137, 165, 1905, 21, 0}, {"french", 137, 165, 2239, 21, 0},
+        {"italian", 135, 163, 2142, 21, 0}, {"german", 137, 165, 2144, 21, 0},
+        {"spanish", 137, 165, 2295, 21, 1},
+    };
+    for (const Case& item : cases) {
+        const bo2::engine::BigEntry* entry =
+            archive.find("strtable", "ui/UI", item.locale);
+        CHECK(entry != nullptr);
+        if (entry == nullptr) {
+            continue;
+        }
+        const bo2::engine::StringTable table =
+            bo2::engine::StringTable::parse(archive, *entry);
+        std::size_t rows = 0;
+        std::size_t glyphs = 0;
+        std::size_t controls = 0;
+        std::size_t warnings = 0;
+        std::size_t wrong_control = 0;
+        std::size_t unsupported = 0;
+        for (const bo2::engine::StringTableRecord& record : table.records()) {
+            const bo2::engine::ParsedText parsed = bo2::engine::parse_text(record.value);
+            rows += parsed.rows.size();
+            warnings += parsed.warnings.size();
+            for (const std::vector<bo2::engine::TextItem>& row : parsed.rows) {
+                for (const bo2::engine::TextItem& text_item : row) {
+                    if (text_item.control) {
+                        ++controls;
+                        if (text_item.value != 4) {
+                            ++wrong_control;
+                        }
+                    } else {
+                        ++glyphs;
+                    }
+                }
+            }
+            for (const bo2::engine::TextWarning warning : parsed.warnings) {
+                if (warning == bo2::engine::TextWarning::UnsupportedCharacter) {
+                    ++unsupported;
+                }
+            }
+        }
+        CHECK(table.records().size() == item.values);
+        CHECK(rows == item.rows);
+        CHECK(glyphs == item.glyphs);
+        CHECK(controls == item.controls);
+        CHECK(warnings == item.warnings);
+        CHECK(wrong_control == 0);
+        CHECK(unsupported == item.warnings);
+    }
+}
+
 void test_marker_use_per_language(const bo2::engine::BigArchive& archive) {
     struct Expected {
         const char* locale;
@@ -321,6 +387,7 @@ int main() {
         const bo2::engine::BigArchive archive = bo2::engine::BigArchive::load(path.string());
         test_game_font(archive);
         test_game_font_glyphs(archive);
+        test_text_parser_on_the_menu_table(archive);
         test_marker_use_per_language(archive);
         // Every installed container starts its name table with the language names.
         const std::vector<std::string> expected = {"default", "english", "french",

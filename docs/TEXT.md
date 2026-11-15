@@ -1,6 +1,6 @@
 # Text
 
-Status: **read, not ported**. How the original turns a string of a string
+Status: **read; the parser is ported**. How the original turns a string of a string
 table into glyphs on screen. The font is in
 [`FORMATS/textures.md`](FORMATS/textures.md#font) and the accent codes in
 [`FORMATS/strtable.md`](FORMATS/strtable.md#text-encoding). Every rule names
@@ -160,3 +160,10 @@ item is red and the others white.
 - `%d` and the other format codes of the strings.
 - The input of the menu (which item is selected and how the selection
   moves) and the fade that gives the alpha.
+
+## Port
+
+`parse_text` (`include/bo2/engine/text.hpp`, `src/engine/text.cpp`) is
+`FUN_00772320`: it takes the bytes of a stored value and returns the rows of
+glyph and control items and the warnings of the original; it does not look at
+the locale. The `Text` object and its own lists are not ported.

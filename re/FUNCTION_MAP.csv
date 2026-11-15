@@ -15792,7 +15792,7 @@ address,name,subsystem,status,notes
 007720c0,FUN_007720c0,unknown,todo,ghidra
 007720e0,FUN_007720e0,unknown,todo,ghidra
 00772140,FUN_00772140,unknown,todo,ghidra
-00772320,FUN_00772320,unknown,todo,ghidra
+00772320,FUN_00772320,font,wip,src/engine/text.cpp: parse_text reads rows of glyph and control items and the warnings; the Text object and its lists are not ported.
 00772e40,FUN_00772e40,unknown,todo,ghidra
 00772f40,FUN_00772f40,unknown,todo,ghidra
 00773100,FUN_00773100,unknown,todo,ghidra

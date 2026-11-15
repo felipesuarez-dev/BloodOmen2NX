@@ -35,6 +35,7 @@ add_library(bo2_engine STATIC
     src/engine/render_order.cpp
     src/engine/skeleton_pose.cpp
     src/engine/string_table.cpp
+    src/engine/text.cpp
     src/engine/tick.cpp
     src/engine/world.cpp
     third_party/stb_vorbis.c
