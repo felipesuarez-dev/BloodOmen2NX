@@ -279,7 +279,7 @@ packages: `sound` 5,078, `waypoints` 1,532, `soundgroup` 231, `effect` 166,
 | `rotation` | `0x878d3c` | 12 bytes, three floats (radians) | zeroed (`FUN_0079e0a0`) | three floats (`FUN_0079e020`) |
 | `color` | `0x878d10` | 16 bytes, four floats | zeroed (`FUN_0079ddd0`) | four floats (`FUN_0079dd50`) |
 | `gridposition` | `0x878bb0` | 8 bytes | left as the allocator gives it (`FUN_0079b080`) | none: +0x10 returns 0 (`FUN_0079b060`) |
-| `timer` | `0x878c34` | a counted timer object of 0x14 bytes (`FUN_0079cac0`); assign shares it (`FUN_0079cca0`) | a new timer (`0x79cc30`) | not read |
+| `timer` | `0x878c34` | a counted timer of 0x14 bytes (`FUN_0079cac0`; "Timers" below) | a new timer whatever the source (`FUN_0079cc30`); destroy releases it and keeps the slot (`FUN_0079cc80`); assign shares it, counted (`FUN_0079cca0`) | none: +0x10 returns 0 (`FUN_0079cc10`), so a field starts as a new timer |
 | `waypoints` | `0x878d94` | a list {u32 count, address of the points, count points of three floats} | the source list, shared (`FUN_0079e6e0`; assign `FUN_0079e700` shares too; destroy `FUN_0079e6f0` does nothing) | a u32 count, then the points (`FUN_0079e650`): checked on the 1,529 defaults of the regions, 0 to 18 points; read once, so every object of the class shares the list |
 | `sound` | `0x878c08` | a counted sound instance of 0x18 bytes (`FUN_0079ba00`) | 0 with no source; with a source, the sound found by name in the sound bank (`FUN_006cde30`) wrapped in a new instance (`FUN_0079c0b0`); destroy releases it (`FUN_0079c1b0`); assign shares it, counted (`FUN_0079c1d0`) | a name, 2 bytes holding a name index (`0x79bff0`, `FUN_0079c010`; 4-byte chunk) |
 | `soundgroup` | `0x878bdc` | the sound group found by name (`FUN_006cdbb0`), not counted | the group of the source name, or 0 (`0x79b410`); destroy does nothing (`0x79b440`); assign copies the word (`0x79b450`) | a name (`FUN_0079b320`; 4-byte chunk) |
@@ -410,8 +410,7 @@ order.
 | `waypoints` | 1 | `getwaypoint` | `FUN_0076d650` | `FUN_0079e730` | The result is a `position` slot: point i of the list for 0 ≤ i < count (signed), else three zeros, written into the result's block |
 
 The game data calls `position` 0 to 6, `rotation` 0 to 2, `color` 0 and
-`gridposition` 0, 1 and 4. The natives of `timer` (six, one a task) need
-the timer object and are not read.
+`gridposition` 0, 1 and 4. The natives of `timer` are in "Timers".
 
 ## The natives the scripts of sl01 call
 
@@ -494,6 +493,52 @@ gives 0:
 - the 15 monsters, which are `monsterscript` through `peasant`, `animal`
   or `sarafan`;
 - the 2 conversations, which are `conversationscript`.
+
+## Timers
+
+A timer counts down a time and calls an object back when it runs out. It
+is a counted block of 0x14 bytes (`FUN_0079cac0`, vtable `0x87a020`): +4
+its count, +8 the time left (a float; 0 when it is stopped), +0xc its task
+and +0x10 the handle of the object it calls back, counted. Its last release
+(`FUN_0079cae0`, `FUN_0079cb10`) parts the timer from its task and releases
+the object.
+
+The task of a timer (`FUN_0079c970`, vtable `0x87a00c`, 0xc bytes) holds
+the timer (+4) and a restart time (+8, 0 when it does not repeat; set with
+the time by `FUN_0079ca40`). Its run (`FUN_0079ca70`) takes the time of
+the frame from the timer (`FUN_0079cbb0`): when the time left goes below 0
+it becomes 0 and the object of the timer gets the call of the body in slot
+15 of its current state (`FUN_00766300`, `FUN_00580810`) with the timer as
+its argument. Slot 15 is `ontimer(timer)` in `creaturescript` and
+`onglyphdeactivate()` in `monsterscript`. Then, when the timer has no time
+left, it starts again with the restart time or stops (`FUN_0079cb90`: no
+time left, and the timer and the task part). The task runs while its timer
+has time left (`FUN_0079c9e0`); when it ends it parts from its timer
+(`FUN_0079ca20`).
+
+The call from outside the scripts (`FUN_00580a40`) runs a native body at
+once; a script body gets a thread of its own, owned by the object that runs
+at that moment (the top of `DAT_00a6a588`, 0 for none), which runs once with
+0 and then ends (`FUN_0057d810`, `FUN_0057dcf0`, `FUN_0057dbe0`).
+
+The script manager keeps a set of tasks at +0xa4, in the order of their
+addresses: `FUN_00583200` adds one, and `FUN_00583400`, called by the game
+tick (`FUN_0072edba`) with the time of the frame before the creatures are
+processed, runs each task once (virtual +8), asks it whether it runs on
+(+4) and destroys those that do not (virtual 0, `FUN_0079c9d0` for the task
+of a timer).
+
+The natives of `timer` (bound by `FUN_0076c220`; for each, the object is the
+slot that holds the timer, and nothing happens without a timer):
+
+| Body | Method | Native | What it does |
+|---:|---|---|---|
+| 0 | `setcallback(basescript)` | `FUN_0076c2b0`, `FUN_0079ccd0` | With an object, the timer keeps its handle, counted (`FUN_0079ccf0`) |
+| 1 | `starttimer(float, bool)` | `FUN_0076c2d0`, `FUN_0079cd80` | A timer with no task gets one with the time and, when the boolean is set, the time as restart; the script manager runs it (`FUN_00583200`). A timer with a task sets it again |
+| 2 | `stop()` | `FUN_0076c2f0`, `FUN_0079ce30` | `FUN_0079cb90` |
+| 3 | `isrunning()` | `FUN_0076c300`, `FUN_0079ce40` | Whether the timer has time left, in the low byte of the result |
+| 4 | `getid()` | `FUN_0076c320`, `FUN_0079cf30` | The address of the timer |
+| 5 | `play(float, bool)`, a task | `FUN_0076c340`, `FUN_0079ce70` | As `starttimer`, but the task is not added to the script manager: the frame runs it as a child and waits for it, each run with the time of the run. A timer that has a task already gives that same task, which then has two owners; the port refuses that case |
 
 ## The classes of a level
 
@@ -622,6 +667,8 @@ of the game and a host that gives the machine the creatures of the level.
 | Activating the object of a creature: its object fields linked by name, then the start | `src/engine/script_machine.cpp` | `script` (`test_activate_links_fields`) |
 | The creature of an object, a handle stored in an object slot, and `ScriptCreatureHost`, which the natives that find creatures ask | `src/engine/script_machine.cpp` | `script` (`test_creature_and_store_handle`; the 61 `creaturescript` classes of `sl01` in `test_create_sl01_objects`) |
 | The natives that find creatures (`creaturebyname`, `creatureself`, `getkain`, `creaturescriptbyname`, `gethud`) | `src/engine/script_creature_natives.cpp` | `script` (`test_creature_natives`; the bodies they bind to in `test_create_sl01_objects`) |
+| The codes only the region packages use (`0x0d`, `0x17`, `0x18`, `0x37`, `0x53`, `0x54`, `0x57`, `0x58`) | `src/engine/script_machine.cpp` | `script` (`test_region_codes`, `test_start_without_waiting`) |
+| Timers: the value type, its task, the natives, the call from outside the scripts and the tasks of the script manager | `src/engine/script_timer.cpp`, `src/engine/script_machine.cpp` | `script` (`test_timers`) |
 
 ## Checked in the running game
 

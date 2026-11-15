@@ -1,4 +1,5 @@
 #include "bo2/engine/script_machine.hpp"
+#include "bo2/engine/script_timer.hpp"
 
 #include <algorithm>
 #include <array>
@@ -147,6 +148,8 @@ ScriptMachine::ScriptMachine(const ScriptProgram& program)
     register_value_type("effect", std::make_unique<ScriptEngineObjectType>(ScriptEngineObjectType::Kind::effect));
     register_value_type("soundgroup",
                         std::make_unique<ScriptEngineObjectType>(ScriptEngineObjectType::Kind::soundgroup));
+    // NTtimer (0x878c34).
+    register_value_type("timer", std::make_unique<ScriptTimerType>());
     const std::vector<std::string>& names = program_.names();
     name_table_ = memory_.allocate(static_cast<std::uint32_t>(names.size() * 4));
     for (std::size_t index = 0; index < names.size(); ++index) {
@@ -369,6 +372,68 @@ void ScriptMachine::link_object_fields(ScriptObjectId object, const ScriptFinder
 void ScriptMachine::activate(ScriptObjectId object, const ScriptFinder& find) {
     link_object_fields(object, find);
     start(object);
+}
+
+std::uint32_t ScriptMachine::body_in_slot(ScriptObjectId object, std::uint32_t slot) const {
+    const ScriptProgramClass& cls = program_.classes()[class_of(object)];
+    const std::uint32_t state = memory_.u8(data_of(object));
+    if (state >= cls.states.size() || slot >= cls.states[state].size()) {
+        return 0;
+    }
+    return cls.states[state][slot];
+}
+
+// FUN_00580a40 with FUN_0057d810 (the thread and its first frame),
+// FUN_0057dcf0 (one run with 0) and FUN_0057dbe0 (the thread ends).
+void ScriptMachine::call_body(ScriptObjectId object, std::uint32_t body, std::uint32_t argc, ScriptAddress args,
+                              ScriptAddress result) {
+    const ScriptProgramBody& target = program_.bodies().at(body);
+    if (target.source->native()) {
+        const ScriptNative native = natives_[body];
+        if (native == nullptr) {
+            throw ScriptError("native body " + std::to_string(target.index) + " of " +
+                              program_.classes()[target.owner].name + " is not bound");
+        }
+        native(*this, object, argc, args, result);
+        return;
+    }
+    const ScriptMethod& method = *program_.methods().at(method_of_body(body)).source;
+    ScriptThread thread;
+    thread.owner = running_.empty() ? 0 : running_.back();
+    ScriptFrame first = make_frame(object, body);
+    if (method.result.kind != 0) {
+        memory_.set_u32(first.locals, result);
+    }
+    for (std::uint32_t index = 0; index < argc && index < method.params.size(); ++index) {
+        const ScriptVariable& param = method.params[index];
+        copy_argument(first.locals + param.offset, param.type, args + index * 4U);
+    }
+    for (const ScriptVariable& local : target.source->locals) {
+        init_variable(first.locals + local.offset, local.type);
+    }
+    thread.frames.push_back(std::move(first));
+    run_thread(thread, 0);
+    end_thread(thread);
+}
+
+void ScriptMachine::add_update_task(ScriptAddress key, std::unique_ptr<ScriptTask> task) {
+    update_tasks_.emplace(key, std::move(task));
+}
+
+// FUN_00583400: the virtual +8 of each task with the time, then its +4; a
+// task that stops running is destroyed (its virtual 0; FUN_0079c9d0 for the
+// task of a timer) and leaves the set.
+void ScriptMachine::update_tasks(std::uint32_t arg) {
+    for (auto entry = update_tasks_.begin(); entry != update_tasks_.end();) {
+        entry->second->run(*this, arg);
+        if (entry->second->running()) {
+            ++entry;
+            continue;
+        }
+        std::unique_ptr<ScriptTask> task = std::move(entry->second);
+        entry = update_tasks_.erase(entry);
+        task->finish(*this);
+    }
 }
 
 void ScriptMachine::set_creature(ScriptObjectId object, std::uint32_t creature) {

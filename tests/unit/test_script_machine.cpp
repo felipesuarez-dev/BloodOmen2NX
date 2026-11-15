@@ -14,6 +14,7 @@
 #include "bo2/engine/big_archive.hpp"
 #include "bo2/engine/region.hpp"
 #include "bo2/engine/script_creature_natives.hpp"
+#include "bo2/engine/script_timer.hpp"
 #include "bo2/engine/script_machine.hpp"
 #include "bo2/engine/script_memory.hpp"
 #include "bo2/engine/script_program.hpp"
@@ -1499,15 +1500,15 @@ void test_value_field_default() {
 void test_unregistered_value_type() {
     ScriptClass cls = make_class("holder", "", {"default"}, 1);
     cls.data_size = 8;
-    ScriptField timer = field(9, 4, 0);
-    timer.type.name = "timer";
-    timer.default_flag = 0;
-    cls.fields = {timer};
-    const Linked linked = make_program({cls}, {"timer"});
+    ScriptField lamp = field(9, 4, 0);
+    lamp.type.name = "lamp";  // a value class with no type
+    lamp.default_flag = 0;
+    cls.fields = {lamp};
+    const Linked linked = make_program({cls}, {"lamp"});
     ScriptMachine machine(linked.program);
     CHECK(throws([&] { machine.create_object(0); }));
-    CHECK(throws([&] { static_cast<void>(machine.value_type("timer")); }));
-    machine.register_value_type("timer", std::make_unique<bo2::engine::ScriptBlockType>(4, 1));
+    CHECK(throws([&] { static_cast<void>(machine.value_type("lamp")); }));
+    machine.register_value_type("lamp", std::make_unique<bo2::engine::ScriptBlockType>(4, 1));
     const ScriptObjectId object = machine.create_object(0);
     CHECK(machine.memory().u32(machine.data_of(object) + 4) != 0);
 }
@@ -1787,6 +1788,128 @@ void test_creature_natives() {
     creatures.hud = 0;
     CHECK(call(bo2::engine::native_get_hud, nullptr) == 0);
     CHECK(count(lever) == 1);
+}
+
+// Timers (docs/SCRIPTS.md, "Timers"): the value type, the natives, the task
+// the script manager runs once per frame, the call of slot 15 when the time
+// runs out, and play as a task of the frame.
+void test_timers() {
+    ScriptClass timer_class = native_class("timer", "", 6);
+    ScriptClass watcher = make_class("watcher", "", {"default"}, 16);
+    watcher.data_size = 8;
+    ScriptVariable timer_param = variable(9, 4);
+    timer_param.type.name = "timer";
+    watcher.methods = {method_with("ontimer", 15, {timer_param}, 0)};
+    watcher.bodies = {script_body(0, 0, count_into(4), 8)};
+    watcher.slots = {{0, 15, "watcher", 0}};
+    ScriptClass mute = make_class("mute", "", {"default"}, 1);
+    mute.data_size = 4;
+    const Linked linked = make_program({timer_class, watcher, mute}, {"timer"});
+    ScriptMachine machine(linked.program);
+    bo2::engine::bind_timer_natives(machine);
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    const ScriptObjectId object = machine.create_object(1);
+    const ScriptObjectId silent = machine.create_object(2);
+    const std::size_t blocks = memory.live_blocks();
+    ScriptValueType& type = machine.value_type("timer");
+    const ScriptAddress slot = memory.allocate(4);
+    type.init(machine, slot, 0x1234);  // the source does not count
+    const ScriptAddress timer = memory.u32(slot);
+    CHECK(timer != 0 && timer != 0x1234);
+    CHECK(memory.u32(timer + 4) == 1);
+    const ScriptAddress args = memory.allocate(8);
+    const ScriptAddress result = memory.allocate(4);
+    const auto native = [&](bo2::engine::ScriptNative call) {
+        memory.set_u32(result, 0xFFFFFF00U);
+        call(machine, slot, 2, args, result);
+        return memory.u32(result);
+    };
+    const auto start_args = [&](float time, bool repeat) {
+        memory.set_u32(args, bits(time));
+        memory.set_u32(args + 4, repeat ? 1 : 0);
+    };
+    const auto calls = [&] { return memory.u32(machine.data_of(object) + 4); };
+    const auto step = [&](float time) { machine.update_tasks(bits(time)); };
+
+    CHECK(native(bo2::engine::native_timer_is_running) == 0xFFFFFF00U);  // the low byte only
+    CHECK(native(bo2::engine::native_timer_get_id) == timer);
+    memory.set_u32(args, object);
+    native(bo2::engine::native_timer_set_callback);
+    CHECK(memory.u32(timer + 0x10) == machine.handle_of(object));
+    CHECK(memory.u32(machine.handle_of(object) + 4) == 2);
+
+    // starttimer: the script manager runs the task; at 0 the callback.
+    start_args(1.0f, false);
+    native(bo2::engine::native_timer_start);
+    CHECK(machine.update_task_count() == 1);
+    CHECK(native(bo2::engine::native_timer_is_running) == 0xFFFFFF01U);
+    step(0.4f);
+    step(0.4f);
+    CHECK(calls() == 0);
+    step(0.4f);
+    CHECK(calls() == 1);
+    CHECK(machine.update_task_count() == 0);  // it stopped, so it went
+    CHECK(memory.u32(timer + 0xc) == 0);
+
+    // A repeating timer starts again with its time until stopped.
+    start_args(0.5f, true);
+    native(bo2::engine::native_timer_start);
+    step(0.6f);
+    CHECK(calls() == 2);
+    CHECK(memory.u32(timer + 8) == bits(0.5f));
+    step(0.2f);
+    CHECK(memory.u32(timer + 8) == bits(0.3f));
+    native(bo2::engine::native_timer_stop);
+    CHECK(memory.u32(timer + 8) == 0);
+    step(0.2f);
+    CHECK(machine.update_task_count() == 0);
+    CHECK(calls() == 2);
+
+    // play: a task the caller runs; it is not in the script manager.
+    start_args(0.3f, false);
+    std::unique_ptr<bo2::engine::ScriptTask> task = bo2::engine::native_timer_play(machine, slot, 0, 2, args);
+    CHECK(task != nullptr && task->running());
+    CHECK(machine.update_task_count() == 0);
+    task->run(machine, bits(0.2f));
+    CHECK(task->running());
+    task->run(machine, bits(0.2f));
+    CHECK(calls() == 3);
+    CHECK(!task->running());
+    task->finish(machine);
+    CHECK(memory.u32(timer + 0xc) == 0);
+
+    // A timer that has a task: play is not ported.
+    start_args(1.0f, false);
+    native(bo2::engine::native_timer_start);
+    CHECK(throws([&] { static_cast<void>(bo2::engine::native_timer_play(machine, slot, 0, 2, args)); }));
+
+    // An object with no body in slot 15 gets no call.
+    memory.set_u32(args, silent);
+    native(bo2::engine::native_timer_set_callback);
+    CHECK(memory.u32(machine.handle_of(object) + 4) == 1);  // the old one released
+    step(2.0f);
+    CHECK(calls() == 3);
+
+    // Shared, then destroyed: the last release frees the timer, its task
+    // parts, and the callback goes.
+    const ScriptAddress copy = memory.allocate(4);
+    memory.set_u32(copy, 0);
+    type.assign(machine, copy, timer);
+    CHECK(memory.u32(timer + 4) == 2);
+    type.destroy(machine, copy);
+    CHECK(memory.u32(copy) == timer);  // destroy keeps the slot
+    start_args(1.0f, false);
+    native(bo2::engine::native_timer_start);
+    CHECK(machine.update_task_count() == 1);
+    type.destroy(machine, slot);
+    CHECK(memory.u32(machine.handle_of(silent) + 4) == 1);
+    step(0.1f);
+    CHECK(machine.update_task_count() == 0);
+    memory.release(copy);
+    memory.release(slot);
+    memory.release(args);
+    memory.release(result);
+    CHECK(memory.live_blocks() == blocks);
 }
 
 // 0x59: the copy runs, the frame skips the block and waits for it.
@@ -2074,6 +2197,7 @@ int main() {
     test_activate_links_fields();
     test_creature_and_store_handle();
     test_creature_natives();
+    test_timers();
 
     const char* root = std::getenv("BO2NX_ASSETS_DIR");
     if (root == nullptr) {

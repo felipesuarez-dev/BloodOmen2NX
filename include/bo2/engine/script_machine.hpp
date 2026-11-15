@@ -256,6 +256,26 @@ public:
     // then start it.
     void activate(ScriptObjectId object, const ScriptFinder& find);
 
+    // The body (id + 1, 0 for none) in slot `slot` of the table of the
+    // object's current state (FUN_00580810, which reads past the table; the
+    // port gives 0 there).
+    std::uint32_t body_in_slot(ScriptObjectId object, std::uint32_t slot) const;
+    // Calls `body` on `object` from outside the scripts (FUN_00580a40): a
+    // native body at once; a script body on a thread of its own, owned by
+    // the object running at that moment (0 for none), run once with 0 and
+    // then ended. `args` is the address of the cell of the first argument
+    // and `result` the address of the result (0 for none).
+    void call_body(ScriptObjectId object, std::uint32_t body, std::uint32_t argc, ScriptAddress args,
+                   ScriptAddress result);
+
+    // The tasks the script manager runs once per frame (its set at +0xa4,
+    // in the order of their addresses): FUN_00583200 adds one under `key`;
+    // FUN_00583400 runs each with `arg` (the time of the frame) and ends
+    // and removes those that stop running.
+    void add_update_task(ScriptAddress key, std::unique_ptr<ScriptTask> task);
+    void update_tasks(std::uint32_t arg);
+    std::size_t update_task_count() const { return update_tasks_.size(); }
+
     // The creature an object belongs to (Sbasecreaturescript +0x2c), 0 for
     // none.
     void set_creature(ScriptObjectId object, std::uint32_t creature);
@@ -389,6 +409,7 @@ private:
     std::map<std::string, ScriptAddress> default_names_;
     std::map<std::string, std::unique_ptr<ScriptValueType>> value_types_;
     ScriptCreatureHost* creature_host_ = nullptr;
+    std::map<ScriptAddress, std::unique_ptr<ScriptTask>> update_tasks_;
     std::uint32_t loop_count_ = 0;  // DAT_00a6a57c
     int depth_ = 0;                 // DAT_00a6a578: interpreters running
 };

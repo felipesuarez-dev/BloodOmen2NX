@@ -6299,7 +6299,7 @@ address,name,subsystem,status,notes
 00580730,FUN_00580730,script,translated,src/engine/script_machine.cpp: ScriptMachine::start makes the main thread in state 0 and runs it once or warns
 00580770,FUN_00580770,script,translated,src/engine/script_machine.cpp: ScriptMachine::stop destroys the main thread and goes back to state 0 with no pending state
 005807d0,FUN_005807d0,unknown,todo,ghidra
-00580810,FUN_00580810,script,translated,src/engine/script_machine.cpp: ScriptMachine::body_in_state finds the body in the slot of the method in the table of the state; it throws on a slot past the table where the original reads past it
+00580810,FUN_00580810,script,translated,src/engine/script_machine.cpp: ScriptMachine::body_in_state and body_in_slot read the table of the state; past the table body_in_state throws and body_in_slot gives 0 where the original reads past it
 00580830,FUN_00580830,script,translated,src/engine/script_machine.cpp: ScriptMachine::request_state keeps a valid state pending and changes at once when the object is not running
 00580890,FUN_00580890,script,translated,src/engine/script_machine.cpp: ScriptMachine::change_state destroys the main thread and takes the pending state and makes the new main thread; the virtual +0x18 is empty in a script object
 00580900,FUN_00580900,script,translated,src/engine/script_machine.cpp: ScriptMachine::run runs the main thread when there is one
@@ -6307,7 +6307,7 @@ address,name,subsystem,status,notes
 00580970,FUN_00580970,unknown,todo,ghidra
 005809d0,FUN_005809d0,unknown,todo,ghidra
 00580a30,FUN_00580a30,unknown,todo,ghidra
-00580a40,FUN_00580a40,unknown,todo,ghidra
+00580a40,FUN_00580a40,script,translated,src/engine/script_machine.cpp: ScriptMachine::call_body
 00580af0,FUN_00580af0,unknown,todo,ghidra
 00580be0,FUN_00580be0,script,translated,src/engine/script_machine.cpp: ScriptMachine::make_main_thread makes the main thread on slot 0 of the state from a task native or a script body
 00580cb0,FUN_00580cb0,script,translated,src/engine/script_machine.cpp: ScriptMachine::run_main runs the main thread once and destroys it when it stops and then takes a pending state
@@ -6380,9 +6380,9 @@ address,name,subsystem,status,notes
 00583190,FUN_00583190,unknown,todo,ghidra
 005831b0,FUN_005831b0,unknown,todo,ghidra
 005831e0,FUN_005831e0,unknown,todo,ghidra
-00583200,FUN_00583200,unknown,todo,ghidra
+00583200,FUN_00583200,script,translated,src/engine/script_machine.cpp: ScriptMachine::add_update_task
 005832a0,FUN_005832a0,unknown,todo,ghidra
-00583400,FUN_00583400,unknown,todo,ghidra
+00583400,FUN_00583400,script,translated,src/engine/script_machine.cpp: ScriptMachine::update_tasks
 00583500,FUN_00583500,unknown,todo,ghidra
 00583710,FUN_00583710,unknown,todo,ghidra
 00583720,FUN_00583720,unknown,todo,ghidra
@@ -15534,7 +15534,7 @@ address,name,subsystem,status,notes
 007657b0,FUN_007657b0,unknown,todo,ghidra
 007659f0,FUN_007659f0,unknown,todo,ghidra
 00765af0,FUN_00765af0,unknown,todo,ghidra
-00766300,FUN_00766300,unknown,todo,ghidra
+00766300,FUN_00766300,script,translated,src/engine/script_timer.cpp: tick_timer calls the body in slot 15 of the current state with the timer
 00766770,FUN_00766770,unknown,todo,ghidra
 00766870,FUN_00766870,unknown,todo,ghidra
 007670e0,FUN_007670e0,unknown,todo,ghidra
@@ -15665,6 +15665,13 @@ address,name,subsystem,status,notes
 0076c160,FUN_0076c160,unknown,todo,ghidra
 0076c1e0,FUN_0076c1e0,unknown,todo,ghidra
 0076c210,FUN_0076c210,unknown,todo,ghidra
+0076c220,FUN_0076c220,script,translated,src/engine/script_timer.cpp: bind_timer_natives binds the five natives and the task native
+0076c2b0,FUN_0076c2b0,script,translated,src/engine/script_timer.cpp: native_timer_set_callback
+0076c2d0,FUN_0076c2d0,script,translated,src/engine/script_timer.cpp: native_timer_start
+0076c2f0,FUN_0076c2f0,script,translated,src/engine/script_timer.cpp: native_timer_stop
+0076c300,FUN_0076c300,script,translated,src/engine/script_timer.cpp: native_timer_is_running
+0076c320,FUN_0076c320,script,translated,src/engine/script_timer.cpp: native_timer_get_id
+0076c340,FUN_0076c340,script,wip,src/engine/script_timer.cpp: native_timer_play; a timer that has a task already is refused
 0076c390,FUN_0076c390,unknown,todo,ghidra
 0076c410,FUN_0076c410,unknown,todo,ghidra
 0076c440,FUN_0076c440,unknown,todo,ghidra
@@ -16640,23 +16647,29 @@ address,name,subsystem,status,notes
 0079c8e0,FUN_0079c8e0,unknown,todo,ghidra
 0079c950,FUN_0079c950,unknown,todo,ghidra
 0079c960,FUN_0079c960,unknown,todo,ghidra
-0079c970,FUN_0079c970,unknown,todo,ghidra
-0079ca00,FUN_0079ca00,unknown,todo,ghidra
-0079ca20,FUN_0079ca20,unknown,todo,ghidra
-0079ca40,FUN_0079ca40,unknown,todo,ghidra
-0079ca70,FUN_0079ca70,unknown,todo,ghidra
-0079cac0,FUN_0079cac0,unknown,todo,ghidra
-0079cae0,FUN_0079cae0,unknown,todo,ghidra
-0079cb10,FUN_0079cb10,unknown,todo,ghidra
-0079cb90,FUN_0079cb90,unknown,todo,ghidra
-0079cbb0,FUN_0079cbb0,unknown,todo,ghidra
-0079cca0,FUN_0079cca0,unknown,todo,ghidra
-0079ccd0,FUN_0079ccd0,unknown,todo,ghidra
-0079ccf0,FUN_0079ccf0,unknown,todo,ghidra
-0079cd80,FUN_0079cd80,unknown,todo,ghidra
-0079ce30,FUN_0079ce30,unknown,todo,ghidra
-0079ce40,FUN_0079ce40,unknown,todo,ghidra
-0079cf30,FUN_0079cf30,unknown,todo,ghidra
+0079c970,FUN_0079c970,script,translated,src/engine/script_timer.cpp: a new timer task block set by set_task
+0079c9d0,FUN_0079c9d0,script,translated,src/engine/script_machine.cpp: ScriptMachine::update_tasks ends a task that stops (ScriptTimerTask::finish)
+0079c9e0,FUN_0079c9e0,script,translated,src/engine/script_timer.cpp: ScriptTimerTask::running
+0079ca00,FUN_0079ca00,script,translated,src/engine/script_timer.cpp: ScriptTimerTask::finish frees the task block
+0079ca20,FUN_0079ca20,script,translated,src/engine/script_timer.cpp: ScriptTimerTask::finish parts the task from its timer
+0079ca40,FUN_0079ca40,script,translated,src/engine/script_timer.cpp: set_task gives the task its timer and restart time and the timer its time
+0079ca70,FUN_0079ca70,script,translated,src/engine/script_timer.cpp: ScriptTimerTask::run ticks the timer then restarts or stops it
+0079cac0,FUN_0079cac0,script,translated,src/engine/script_timer.cpp: a new timer block (count time task and callback at 0)
+0079cae0,FUN_0079cae0,script,translated,src/engine/script_timer.cpp: release_timer frees the timer at count 0
+0079cb10,FUN_0079cb10,script,translated,src/engine/script_timer.cpp: release_timer parts the task and releases the callback object
+0079cb90,FUN_0079cb90,script,translated,src/engine/script_timer.cpp: stop_timer
+0079cbb0,FUN_0079cbb0,script,translated,src/engine/script_timer.cpp: tick_timer takes the step and calls slot 15 of the object below 0
+0079cc10,FUN_0079cc10,script,translated,src/engine/script_timer.cpp: ScriptTimerType::read_default reads no default and starts a new timer
+0079cc30,FUN_0079cc30,script,translated,src/engine/script_timer.cpp: ScriptTimerType::init makes a new timer whatever the source
+0079cc80,FUN_0079cc80,script,translated,src/engine/script_timer.cpp: ScriptTimerType::destroy releases the timer and keeps the slot
+0079cca0,FUN_0079cca0,script,translated,src/engine/script_timer.cpp: ScriptTimerType::assign shares the timer counted
+0079ccd0,FUN_0079ccd0,script,translated,src/engine/script_timer.cpp: native_timer_set_callback needs a timer and an object
+0079ccf0,FUN_0079ccf0,script,translated,src/engine/script_timer.cpp: native_timer_set_callback stores the handle counted (ScriptMachine::store_handle)
+0079cd80,FUN_0079cd80,script,translated,src/engine/script_timer.cpp: native_timer_start adds a new task to the script manager or sets the task again
+0079ce30,FUN_0079ce30,script,translated,src/engine/script_timer.cpp: native_timer_stop
+0079ce40,FUN_0079ce40,script,translated,src/engine/script_timer.cpp: native_timer_is_running writes the low byte
+0079ce70,FUN_0079ce70,script,wip,src/engine/script_timer.cpp: native_timer_play; the case of a timer with a task is refused (two owners in the original)
+0079cf30,FUN_0079cf30,script,translated,src/engine/script_timer.cpp: native_timer_get_id writes the address of the timer
 0079cf70,FUN_0079cf70,unknown,todo,ghidra
 0079cf80,FUN_0079cf80,unknown,todo,ghidra
 0079cf90,FUN_0079cf90,unknown,todo,ghidra
