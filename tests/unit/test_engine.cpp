@@ -1170,6 +1170,71 @@ void test_model_render_priority() {
     }));
 }
 
+// A record of the `mdlattr` table with the array flag set is a count and that
+// many values padded to four bytes; the walk accepts it and still reaches the
+// records after it (docs/FORMATS/models.md, "mdlattr").
+void test_model_attribute_arrays() {
+    std::vector<std::uint8_t> attributes;
+    append(attributes, std::string("default\0\0\0\0\0", 8));
+    put32(attributes, 20 + 8 + 12 + 8);
+    put32(attributes, 1);
+    put32(attributes, 2);
+    attributes.push_back(7);  // symbol
+    attributes.push_back(0);
+    put16(attributes, 0);
+    put16(attributes, 0);
+    put16(attributes, 0xFFFF);
+    attributes.push_back(3);  // byte array of four values
+    attributes.push_back(1);
+    put16(attributes, 1);
+    put32(attributes, 4);
+    for (const std::uint8_t value : {std::uint8_t{0x10}, std::uint8_t{0x20}, std::uint8_t{0x30},
+                                     std::uint8_t{0x40}}) {
+        attributes.push_back(value);
+    }
+    attributes.push_back(0);  // float
+    attributes.push_back(0);
+    put16(attributes, 2);
+    put_float(attributes, 30.0f);
+
+    const std::vector<std::uint16_t> symbols = {100, 101, 102};
+    std::vector<std::string> names(103);
+    names[100] = "EntityClass";
+    names[101] = "FogColor";
+    names[102] = "RenderPriority";
+    const bo2::engine::LevelGeometry geometry = bo2::engine::parse_cell_group(
+        build_cell_group(false, false, {}, {}, attributes), symbols, names);
+    CHECK(geometry.model_render_priority.size() == 1);
+    CHECK(std::fabs(geometry.model_render_priority[0] - 30.0f) < 1.0e-5f);
+
+    std::vector<std::uint8_t> cut_array;
+    append(cut_array, std::string("default\0\0\0\0\0", 8));
+    put32(cut_array, 30);
+    put32(cut_array, 1);
+    put32(cut_array, 2);
+    cut_array.push_back(3);
+    cut_array.push_back(1);
+    put16(cut_array, 0);
+    put32(cut_array, 4);
+    cut_array.push_back(0x10);
+    cut_array.push_back(0x20);
+    CHECK(throws([&] {
+        bo2::engine::parse_cell_group(build_cell_group(false, false, {}, {}, cut_array));
+    }));
+
+    std::vector<std::uint8_t> bad_type = attributes;
+    bad_type[20] = 5;
+    CHECK(throws([&] {
+        bo2::engine::parse_cell_group(build_cell_group(false, false, {}, {}, bad_type));
+    }));
+
+    std::vector<std::uint8_t> bad_flag = attributes;
+    bad_flag[21] = 2;
+    CHECK(throws([&] {
+        bo2::engine::parse_cell_group(build_cell_group(false, false, {}, {}, bad_flag));
+    }));
+}
+
 // FUN_005df900: the texfont entry and its upper-case-only rule.
 void test_pixmap_font() {
     const std::vector<std::uint16_t> symbols = {100};
@@ -1279,6 +1344,7 @@ int main() {
     test_material_texture_lists();
     test_material_cull();
     test_model_render_priority();
+    test_model_attribute_arrays();
     test_pixmap_font();
     test_skeleton_bones();
     test_collision_chunk();

@@ -362,10 +362,11 @@ The attribute names are symbols the executable builds at start (the
 `TransparentToLineOfSight` 3, and `VertexAlpha`, `DFacade`, `Lightmaps`,
 `SkySphere` and `SortBias` 2 each.
 
-The host reads the `RenderPriority` of each model
-(`LevelGeometry::model_render_priority`). Its reader takes every record to
-be 8 bytes, which fails on the tables with an array: 16 cell groups of the
-game do not load with it.
+The host walks the whole table and keeps the `RenderPriority` of each model
+in `LevelGeometry::model_render_priority`. A record with the array flag set
+is skipped with its count and its values padded to four bytes, so every
+table of the game is consumed exactly, including the 16 cell groups whose
+tables carry a colour array.
 
 ### Render state and draw order
 

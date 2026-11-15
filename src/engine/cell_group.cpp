@@ -904,8 +904,10 @@ ModelSkeleton& skeleton_for(LevelGeometry& geometry, std::uint32_t model) {
 }
 
 // FUN_0056d130: the RenderPriority of a model is the type 0 record of its
-// `mdlattr` table whose key resolves to RenderPriority. The other attributes
-// are not read.
+// `mdlattr` table whose key resolves to RenderPriority. Every record is four
+// header bytes (type, array flag, key) and then one value, or an array count
+// and that many values padded to four bytes (docs/FORMATS/models.md,
+// "mdlattr"). The other attributes are not read.
 float read_render_priority(const common::Reader& reader, const std::vector<Chunk>& chunks,
                            const std::vector<std::uint16_t>& symbols,
                            const std::vector<std::string>& names) {
@@ -913,22 +915,58 @@ float read_render_priority(const common::Reader& reader, const std::vector<Chunk
     if (attributes == nullptr) {
         return 0.0f;
     }
-    if (attributes->data_size < 20 || (attributes->data_size - 20) % 8 != 0) {
+    if (attributes->data_size < 20) {
         throw common::ParseError("bad mdlattr table size");
     }
-    const std::size_t records = (attributes->data_size - 20) / 8;
-    const std::size_t start = attributes->data_offset + 20;
-    for (std::size_t index = 0; index < records; ++index) {
-        const std::size_t record = start + index * 8;
-        if (reader.u8(record) != 0) {
+    const std::size_t end = attributes->data_offset + attributes->data_size;
+    std::size_t position = attributes->data_offset + 20;
+    float priority = 0.0f;
+    bool found = false;
+    while (position < end) {
+        if (end - position < 4) {
+            throw common::ParseError("truncated mdlattr record");
+        }
+        const std::uint8_t type = reader.u8(position);
+        const std::uint8_t array = reader.u8(position + 1);
+        if (type != 0 && type != 3 && type != 7) {
+            throw common::ParseError("bad mdlattr record type");
+        }
+        if (array > 1) {
+            throw common::ParseError("bad mdlattr array flag");
+        }
+        if (array == 0) {
+            if (end - position < 8) {
+                throw common::ParseError("truncated mdlattr value");
+            }
+            if (!found && type == 0 &&
+                resolve_symbol_name(reader.u16(position + 2), symbols, names) ==
+                    "RenderPriority") {
+                priority = read_float(reader, position + 4);
+                found = true;
+            }
+            position += 8;
             continue;
         }
-        const std::uint16_t key = reader.u16(record + 2);
-        if (resolve_symbol_name(key, symbols, names) == "RenderPriority") {
-            return read_float(reader, record + 4);
+        if (end - position < 8) {
+            throw common::ParseError("truncated mdlattr array");
         }
+        const std::uint32_t count = reader.u32(position + 4);
+        const std::size_t width = (type == 0) ? 4 : ((type == 3) ? 1 : 2);
+        const std::size_t available = end - position - 8;
+        if (count > available / width) {
+            throw common::ParseError("mdlattr array is truncated");
+        }
+        const std::size_t payload = static_cast<std::size_t>(count) * width;
+        const std::size_t padded = (payload + 3) & ~std::size_t{3};
+        if (padded > available) {
+            throw common::ParseError("mdlattr array has no padding");
+        }
+        position += 8 + padded;
     }
-    return 0.0f;
+    if (position != end) {
+        throw common::ParseError("mdlattr table has a trailer");
+    }
+    return priority;
 }
 
 void parse_model(const common::Reader& reader, const Chunk& rmd, std::uint32_t model,

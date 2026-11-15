@@ -201,6 +201,51 @@ void test_hud_render_priorities(const bo2::engine::LevelGeometry& scene) {
     }
 }
 
+// The 16 cell groups whose `mdlattr` tables carry array records: the walk of
+// the table consumes each one exactly (docs/FORMATS/models.md, "mdlattr").
+void test_cell_groups_with_attribute_arrays(const std::filesystem::path& root) {
+    struct Case {
+        const char* container;
+        const char* entry;
+    };
+    const Case cases[] = {
+        {"media/gogames/bo2/resources/levels/canyons/cy01.big", "canyons/cy01"},
+        {"media/gogames/bo2/resources/levels/canyons/cy04.big", "canyons/cy04"},
+        {"media/gogames/bo2/resources/levels/canyons/cy04b.big", "canyons/cy04b"},
+        {"media/gogames/bo2/resources/levels/canyons/cy05.big", "canyons/cy05"},
+        {"media/gogames/bo2/resources/levels/canyons/cy06.big", "canyons/cy06"},
+        {"media/gogames/bo2/resources/levels/canyons/cy07.big", "canyons/cy07"},
+        {"media/gogames/bo2/resources/levels/slums/sl07.big", "slums/sl07"},
+        {"media/gogames/bo2/resources/levels/smugglersden/RegionFiles/sd03.big",
+         "smugglersden/regionfiles/sd03"},
+        {"media/gogames/bo2/resources/levels/smugglersden/RegionFiles/sd05.big",
+         "smugglersden/regionfiles/sd05"},
+        {"media/gogames/bo2/resources/levels/uppercitynew/uc02a.big", "uppercitynew/uc02a"},
+        {"media/gogames/bo2/resources/levels/uppercitynew/uc02a2.big", "uppercitynew/uc02a"},
+        {"media/gogames/bo2/resources/levels/wharves/regionfiles/wh01.big",
+         "wharves/regionfiles/wh01"},
+        {"media/gogames/bo2/resources/levels/wharves/regionfiles/wh05.big",
+         "wharves/regionfiles/wh05"},
+        {"media/gogames/bo2/resources/levels/wharves/regionfiles/wh11.big",
+         "wharves/regionfiles/wh11"},
+        {"media/gogames/bo2/resources/levels/wharves/regionfiles/wh12.big",
+         "wharves/regionfiles/wh12"},
+        {"media/gogames/bo2/resources/levels/wharves/regionfiles/wh13.big",
+         "wharves/regionfiles/wh13"},
+    };
+    for (const Case& item : cases) {
+        const bo2::engine::BigArchive archive =
+            bo2::engine::BigArchive::load((root / item.container).string());
+        const bo2::engine::BigEntry* entry = archive.find("cellgrup", item.entry);
+        CHECK(entry != nullptr);
+        if (entry != nullptr) {
+            const bo2::engine::LevelGeometry scene = bo2::engine::parse_cell_group(
+                archive.extract(*entry), entry->symbols, archive.names());
+            CHECK(!scene.model_render_priority.empty());
+        }
+    }
+}
+
 int main() {
     const char* root = std::getenv("BO2NX_ASSETS_DIR");
     if (root == nullptr) {
@@ -279,6 +324,7 @@ int main() {
             }
         }
         test_texture_lists_of_the_game_data(root);
+        test_cell_groups_with_attribute_arrays(root);
     } catch (const std::exception& error) {
         std::cerr << "model asset test: " << error.what() << '\n';
         return 1;
