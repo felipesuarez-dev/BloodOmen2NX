@@ -146,6 +146,7 @@ ScriptObjectId ScriptMachine::create_object(std::uint32_t class_id) {
     object.data = memory_.allocate(program_.classes()[class_id].source->data_size);
     object.handle = memory_.allocate(12);
     const auto id = static_cast<ScriptObjectId>(objects_.size() + 1);
+    memory_.set_u32(object.handle + 4, 1);  // FUN_0057f830: the object holds its handle
     memory_.set_u32(object.handle + 8, id);
     objects_.push_back(object);
     return id;
@@ -198,6 +199,46 @@ std::uint32_t ScriptMachine::body_in_state(ScriptObjectId object, std::uint32_t 
     return cls.states[state][slot];
 }
 
+namespace {
+
+// The size of a value of the type (FUN_00587d30): one byte for a boolean and
+// a byte, the elements of an array, four bytes for the others.
+std::uint32_t type_size(const ScriptType& type) {
+    switch (type.kind) {
+    case 1:
+    case 5:
+        return 1;
+    case 2:
+    case 3:
+    case 4:
+    case 7:
+    case 8:
+    case 9:
+    case 10:
+    case 11:
+        return 4;
+    case 6:
+        return type.inner.empty() ? 0 : type_size(type.inner[0]) * type.count;
+    default:
+        return 0;
+    }
+}
+
+const ScriptType& element_of(const ScriptType& array) {
+    if (array.inner.empty()) {
+        throw ScriptError("script array type has no element type");
+    }
+    return array.inner[0];
+}
+
+// Kind 7 (a collection) appears in no package of the game data
+// (docs/SCRIPTS.md, "Values").
+[[noreturn]] void collection_kind() {
+    throw ScriptError("script variable of kind 7 is not used by the game data");
+}
+
+}  // namespace
+
 // The initial value of a variable (FUN_00588390) by the kind of its type.
 void ScriptMachine::init_variable(ScriptAddress address, const ScriptType& type) {
     switch (type.kind) {
@@ -207,6 +248,7 @@ void ScriptMachine::init_variable(ScriptAddress address, const ScriptType& type)
         break;
     case 2:
     case 3:
+    case 8:
     case 10:
     case 11:
         memory_.set_u32(address, 0);
@@ -215,19 +257,24 @@ void ScriptMachine::init_variable(ScriptAddress address, const ScriptType& type)
         memory_.set_u32(address, empty_record_);
         memory_.set_u32(empty_record_, memory_.u32(empty_record_) + 1);
         break;
-    case 6:
+    case 6: {
+        const ScriptType& element = element_of(type);
+        const std::uint32_t size = type_size(element);
+        for (std::uint32_t index = 0; index < type.count; ++index) {
+            init_variable(address + index * size, element);
+        }
+        break;
+    }
+    case 7:
+        collection_kind();
     case 9:
-        throw ScriptError("script variable of kind " + std::to_string(type.kind) + " is not ported");
+        throw ScriptError("script variable of kind 9 is not ported");
     default:
-        throw ScriptError("script variable of kind " + std::to_string(type.kind) +
-                          " is not used by the game data");
+        break;  // the original leaves a variable of any other kind as it is
     }
 }
 
-// A parameter of a new frame takes the value of its argument cell
-// (FUN_00587fc0) by the kind of its type.
-void ScriptMachine::copy_argument(ScriptAddress address, const ScriptType& type, ScriptAddress cell) {
-    const std::uint32_t value = memory_.u32(cell);
+void ScriptMachine::store_value(ScriptAddress address, const ScriptType& type, std::uint32_t value) {
     switch (type.kind) {
     case 1:
     case 5:
@@ -238,29 +285,123 @@ void ScriptMachine::copy_argument(ScriptAddress address, const ScriptType& type,
     case 11:
         memory_.set_u32(address, value);
         break;
-    case 10: {
-        const ScriptAddress handle = value != 0 ? handle_of(value) : 0;
-        memory_.set_u32(address, handle);
-        if (handle != 0) {
-            memory_.set_u32(handle + 4, memory_.u32(handle + 4) + 1);
-        }
+    case 8:
+        memory_.set_u32(address, 0);
         break;
-    }
     case 4: {
-        const ScriptAddress record = value != 0 ? memory_.u32(value) : 0;
+        // The cell's string, counted; no cell gives the shared empty string.
+        const ScriptAddress record = value != 0 ? memory_.u32(value) : empty_record_;
         memory_.set_u32(address, record);
         if (record != 0) {
             memory_.set_u32(record, memory_.u32(record) + 1);
         }
         break;
     }
-    case 6:
-    case 9:
-        throw ScriptError("script parameter of kind " + std::to_string(type.kind) + " is not ported");
-    default:
-        throw ScriptError("script parameter of kind " + std::to_string(type.kind) +
-                          " is not used by the game data");
+    case 10:
+        memory_.set_u32(address, value);
+        if (value != 0) {
+            memory_.set_u32(value + 4, memory_.u32(value + 4) + 1);
+        }
+        break;
+    case 6: {
+        // Arrays and values of a class take the address of the source
+        // element; the other elements take its value, and with no source
+        // their initial value.
+        const ScriptType& element = element_of(type);
+        const std::uint32_t size = type_size(element);
+        ScriptAddress source = value;
+        for (std::uint32_t index = 0; index < type.count; ++index) {
+            const ScriptAddress target = address + index * size;
+            if (element.kind == 6 || element.kind == 9) {
+                store_value(target, element, source);
+            } else if (source == 0) {
+                init_variable(target, element);
+            } else {
+                store_value(target, element, size == 1 ? memory_.u8(source) : memory_.u32(source));
+            }
+            if (source != 0) {
+                source += size;
+            }
+        }
+        break;
     }
+    case 7:
+        collection_kind();
+    case 9:
+        throw ScriptError("script value of kind 9 is not ported");
+    default:
+        break;
+    }
+}
+
+void ScriptMachine::copy_argument(ScriptAddress address, const ScriptType& type, ScriptAddress cell) {
+    std::uint32_t value = memory_.u32(cell);
+    if (type.kind == 10 && value != 0) {
+        value = handle_of(value);
+    }
+    store_value(address, type, value);
+}
+
+// FUN_00588570: a variable gives back what it holds.
+void ScriptMachine::destroy_variable(ScriptAddress address, const ScriptType& type) {
+    switch (type.kind) {
+    case 4: {
+        // The original also frees the 4-byte holder of the string; the
+        // port's variable is the holder (docs/ARCHITECTURE.md).
+        const ScriptAddress record = memory_.u32(address);
+        if (record != 0) {
+            release_record(record);
+        }
+        break;
+    }
+    case 6: {
+        const ScriptType& element = element_of(type);
+        const std::uint32_t size = type_size(element);
+        for (std::uint32_t index = 0; index < type.count; ++index) {
+            destroy_variable(address + index * size, element);
+        }
+        break;
+    }
+    case 7:
+        collection_kind();
+    case 9:
+        throw ScriptError("script value of kind 9 is not ported");
+    case 10: {
+        const ScriptAddress handle = memory_.u32(address);
+        if (handle != 0) {
+            release_handle(handle);
+        }
+        break;
+    }
+    default:
+        break;  // the value holds nothing to give back
+    }
+}
+
+// The count of a handle goes down by 1; at 0 the handle frees itself (its
+// virtual +4, vtable 0x86df04). While its object lives the count is at least
+// the object's own 1 (FUN_0057f830).
+void ScriptMachine::release_handle(ScriptAddress handle) {
+    const std::uint32_t count = memory_.u32(handle + 4) - 1;
+    memory_.set_u32(handle + 4, count);
+    if (count == 0) {
+        memory_.release(handle);
+    }
+}
+
+// FUN_0057d690: the parameters of the method and then the locals of the body
+// give back what they hold, and the stack and the locals are freed.
+void ScriptMachine::end_frame(ScriptFrame& frame) {
+    const ScriptProgramBody& body = program_.bodies().at(frame.body);
+    const ScriptMethod& method = *program_.methods().at(method_of_body(frame.body)).source;
+    for (const ScriptVariable& param : method.params) {
+        destroy_variable(frame.locals + param.offset, param.type);
+    }
+    for (const ScriptVariable& local : body.source->locals) {
+        destroy_variable(frame.locals + local.offset, local.type);
+    }
+    memory_.release(frame.stack);
+    memory_.release(frame.locals);
 }
 
 // FUN_0057f580 (and 0x47): pops the arguments, the result address and, for
@@ -326,10 +467,8 @@ bool ScriptMachine::run_thread(ScriptThread& thread) {
             return true;
         }
         if (thread.frames.size() == frames) {
-            const ScriptFrame ended = thread.frames.back();
+            end_frame(thread.frames.back());
             thread.frames.pop_back();
-            memory_.release(ended.stack);
-            memory_.release(ended.locals);
         }
     }
     return false;
@@ -525,7 +664,7 @@ bool ScriptMachine::interpret(ScriptThread& thread) {
             }
             const ScriptAddress old_handle = memory_.u32(address);
             if (old_handle != 0) {
-                memory_.set_u32(old_handle + 4, memory_.u32(old_handle + 4) - 1);
+                release_handle(old_handle);
             }
             if (object == 0) {
                 memory_.set_u32(address, 0);

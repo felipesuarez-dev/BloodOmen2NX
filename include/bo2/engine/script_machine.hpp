@@ -53,8 +53,9 @@ public:
 
     // Creates an object of the class `class_id` (program id): a zeroed data
     // block of the size the class declares and its 12-byte handle (word 0
-    // unused, the count at +4, the object at +8). The count starts at 0 and
-    // counts the variables that hold the handle.
+    // unused, the count at +4, the object at +8). The count starts at 1, the
+    // object's own (FUN_0057f830), and counts the variables that hold the
+    // handle.
     ScriptObjectId create_object(std::uint32_t class_id);
     ScriptAddress data_of(ScriptObjectId object) const;
     ScriptAddress handle_of(ScriptObjectId object) const;
@@ -105,7 +106,17 @@ private:
     std::uint32_t method_of_body(std::uint32_t body) const;
     std::uint32_t body_in_state(ScriptObjectId object, std::uint32_t method, bool state_zero) const;
     void init_variable(ScriptAddress address, const ScriptType& type);
+    // Stores `value` into a variable (FUN_00587fc0): a string is the address
+    // of a cell, an object is a handle, an array is the address of its first
+    // element (0: initial values).
+    void store_value(ScriptAddress address, const ScriptType& type, std::uint32_t value);
+    // A parameter of a new frame from its argument cell (FUN_0057d3e0): an
+    // object argument is stored as the object's handle.
     void copy_argument(ScriptAddress address, const ScriptType& type, ScriptAddress cell);
+    void destroy_variable(ScriptAddress address, const ScriptType& type);
+    void release_handle(ScriptAddress handle);
+    // The end of a frame (FUN_0057d690): its variables, stack and locals.
+    void end_frame(ScriptFrame& frame);
     // Pops the cells of a call and makes it; returns true when it pushed a
     // frame.
     bool call(ScriptThread& thread, std::uint32_t op, ScriptObjectId object, std::uint32_t body,

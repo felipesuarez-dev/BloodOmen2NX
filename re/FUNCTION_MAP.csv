@@ -6269,7 +6269,7 @@ address,name,subsystem,status,notes
 0057d3e0,FUN_0057d3e0,script,wip,src/engine/script_machine.cpp: ScriptMachine::call builds the frame of a script body with its result address and parameters and locals
 0057d550,FUN_0057d550,unknown,todo,ghidra
 0057d5c0,FUN_0057d5c0,unknown,todo,ghidra
-0057d690,FUN_0057d690,unknown,todo,ghidra
+0057d690,FUN_0057d690,script,wip,src/engine/script_machine.cpp: ScriptMachine::end_frame destroys the parameters and the locals and frees the stack and the locals; the copy of a frame and the child threads are not ported
 0057d810,FUN_0057d810,unknown,todo,ghidra
 0057da30,FUN_0057da30,unknown,todo,ghidra
 0057da50,FUN_0057da50,unknown,todo,ghidra
@@ -6283,7 +6283,7 @@ address,name,subsystem,status,notes
 0057f560,FUN_0057f560,unknown,todo,ghidra
 0057f580,FUN_0057f580,script,wip,src/engine/script_machine.cpp: ScriptMachine::call runs a native body at once or pushes the frame of a script body
 0057f6d0,FUN_0057f6d0,unknown,todo,ghidra
-0057f830,FUN_0057f830,unknown,todo,ghidra
+0057f830,FUN_0057f830,script,wip,src/engine/script_machine.cpp: ScriptMachine::create_object makes the data block and the handle the object counts once; the initial values and the manager lists are not ported
 0057f9f0,FUN_0057f9f0,unknown,todo,ghidra
 0057fa20,FUN_0057fa20,unknown,todo,ghidra
 0057fd00,FUN_0057fd00,unknown,todo,ghidra
@@ -6526,14 +6526,14 @@ address,name,subsystem,status,notes
 00587cf0,FUN_00587cf0,unknown,todo,ghidra
 00587d00,FUN_00587d00,unknown,todo,ghidra
 00587d10,FUN_00587d10,unknown,todo,ghidra
-00587d30,FUN_00587d30,unknown,todo,ghidra
+00587d30,FUN_00587d30,script,wip,src/engine/script_machine.cpp: type_size gives the size of each kind; no test pins the one-byte kinds
 00587d90,FUN_00587d90,unknown,todo,ghidra
 00587dd0,FUN_00587dd0,unknown,todo,ghidra
 00587fa0,FUN_00587fa0,unknown,todo,ghidra
-00587fc0,FUN_00587fc0,script,wip,src/engine/script_machine.cpp: ScriptMachine::copy_argument stores a value by the kind of its type; kinds 6 and 9 are not ported
+00587fc0,FUN_00587fc0,script,wip,src/engine/script_machine.cpp: ScriptMachine::store_value and copy_argument store every kind but 9 (not ported) and 7 (in no game data)
 005882f0,FUN_005882f0,unknown,todo,ghidra
-00588390,FUN_00588390,script,wip,src/engine/script_machine.cpp: ScriptMachine::init_variable gives a variable its initial value by kind; kinds 6 and 9 are not ported
-00588570,FUN_00588570,unknown,todo,ghidra
+00588390,FUN_00588390,script,wip,src/engine/script_machine.cpp: ScriptMachine::init_variable gives every kind but 9 (not ported) and 7 (in no game data) its initial value
+00588570,FUN_00588570,script,wip,src/engine/script_machine.cpp: ScriptMachine::destroy_variable releases strings and handles and walks arrays; kind 9 is not ported and kind 7 is in no game data
 00588670,FUN_00588670,unknown,todo,ghidra
 00588740,FUN_00588740,unknown,todo,ghidra
 005887d0,FUN_005887d0,unknown,todo,ghidra

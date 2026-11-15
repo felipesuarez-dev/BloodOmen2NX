@@ -418,16 +418,17 @@ void test_store() {
         op(0x03, 0), op(0x02), 2, op(0x1E),             // address 0: nothing
         op(0x5C)}));
     bo2::engine::ScriptMemory& memory = run.machine->memory();
-    CHECK(run.handle_count(1) == 0);
-    CHECK(run.handle_count(2) == 0);
+    // Each object holds its own handle once (FUN_0057f830).
+    CHECK(run.handle_count(1) == 1);
+    CHECK(run.handle_count(2) == 1);
     CHECK(run.machine->interpret(run.thread));
     CHECK(run.frame().top == -1);
     CHECK(memory.u32(run.frame().locals) == 0xDD);
     CHECK(memory.u32(run.frame().locals + 4) == 0x11223344U);
     CHECK(memory.u32(run.frame().locals + 8) == run.machine->handle_of(2));
     CHECK(memory.u32(run.machine->data_of(1)) == run.machine->handle_of(1));
-    CHECK(run.handle_count(1) == 1);
-    CHECK(run.handle_count(2) == 1);
+    CHECK(run.handle_count(1) == 2);
+    CHECK(run.handle_count(2) == 2);
 }
 
 void test_store_null_object() {
@@ -435,7 +436,7 @@ void test_store_null_object() {
                                   op(0x1E), op(0x5C)}));
     CHECK(run.machine->interpret(run.thread));
     CHECK(run.machine->memory().u32(run.frame().locals) == 0);
-    CHECK(run.handle_count(2) == 0);
+    CHECK(run.handle_count(2) == 1);
 }
 
 // 0x04 comes from a reference of kind 0; 0x1f takes the record of the name,
@@ -878,6 +879,86 @@ void test_string_param() {
     CHECK(machine.memory().u32(locals + 8) != 0);
 }
 
+ScriptVariable array_variable(std::uint16_t element_kind, std::uint32_t count, std::uint32_t offset) {
+    ScriptVariable out = variable(6, offset);
+    ScriptType element;
+    element.kind = element_kind;
+    out.type.inner = {element};
+    out.type.count = count;
+    return out;
+}
+
+// The end of a frame (FUN_0057d690, FUN_00588570): the parameters and the
+// locals give back the strings and the handles they hold, and the stack and
+// the locals are freed.
+void test_frame_end() {
+    ScriptClass cls = machine_class({0, op(0x02), 2, op(0x48), 0, op(0x5D), op(0x5C)},
+                                    {make_reference(0, 0, "hello"), make_reference(4, 4, "alpha", 1)});
+    cls.methods.push_back(method_with("keep", bo2::engine::kScriptNoSlot, {variable(4, 4), variable(10, 8)}, 0));
+    ScriptBody keep = script_body(1, 0, {op(0x5D), op(0x5C)}, 20);
+    keep.locals = {variable(4, 12), variable(10, 16)};
+    cls.bodies.push_back(keep);
+    MachineRun run(cls);
+    ScriptMachine& machine = *run.machine;
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    const ScriptAddress record = memory.u32(machine.name_cell(0));
+    const std::size_t blocks = memory.live_blocks();
+    CHECK(machine.run_thread(run.thread));  // the callee yields
+    CHECK(run.thread.frames.size() == 2);
+    const ScriptAddress locals = run.frame().locals;
+    const ScriptAddress empty = memory.u32(locals + 12);
+    const std::uint32_t empty_count = memory.u32(empty);
+    CHECK(memory.u32(record) == 2);
+    CHECK(run.handle_count(2) == 2);
+    CHECK(memory.u32(locals + 16) == 0);
+    CHECK(machine.run_thread(run.thread));  // the callee ends, the caller yields
+    CHECK(run.thread.frames.size() == 1);
+    CHECK(memory.u32(record) == 1);
+    CHECK(run.handle_count(2) == 1);
+    CHECK(memory.u32(empty) == empty_count - 1);
+    CHECK(memory.live_blocks() == blocks);
+    CHECK(!machine.run_thread(run.thread));
+}
+
+// Arrays (kind 6): an argument is the address of the source elements, and 0
+// gives each element its initial value; a local array starts element by
+// element and gives each string back at the end.
+void test_array_variables() {
+    ScriptClass cls = machine_class({op(0x0B, 4), op(0x03, 0), op(0x48), 0, op(0x48), 0, op(0x5D), op(0x5C)},
+                                    {make_reference(4, 3, "alpha", 1), make_reference(4, 5, "alpha", 2)});
+    cls.methods.push_back(method_with("take", bo2::engine::kScriptNoSlot,
+                                      {array_variable(2, 3, 4), array_variable(2, 2, 16)}, 0));
+    cls.methods.push_back(make_method("names", bo2::engine::kScriptNoSlot));
+    ScriptBody take = script_body(1, 0, {op(0x06, 4), op(0x06, 8), op(0x28), op(0x06, 12), op(0x28),
+                                         op(0x06, 16), op(0x28), op(0x06, 20), op(0x28), op(0x5D), op(0x5C)}, 24);
+    ScriptBody names = script_body(2, 0, {op(0x5D), op(0x5C)}, 12);
+    names.locals = {array_variable(4, 2, 4)};
+    cls.bodies.push_back(take);
+    cls.bodies.push_back(names);
+    MachineRun run(cls);
+    ScriptMachine& machine = *run.machine;
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    const ScriptAddress data = machine.data_of(1);
+    memory.set_u32(data + 4, 10);
+    memory.set_u32(data + 8, 20);
+    memory.set_u32(data + 12, 12);
+    const std::size_t blocks = memory.live_blocks();
+    CHECK(machine.run_thread(run.thread));
+    CHECK(run.thread.frames.size() == 2);
+    CHECK(run.frame().top == 0);
+    CHECK(run.cell(0) == 42);  // 10 + 20 + 12, and the second array is zero
+    CHECK(machine.run_thread(run.thread));
+    CHECK(run.thread.frames.size() == 2);  // now in names
+    const ScriptAddress locals = run.frame().locals;
+    const ScriptAddress empty = memory.u32(locals + 4);
+    CHECK(empty != 0);
+    CHECK(memory.u32(locals + 8) == empty);
+    const std::uint32_t empty_count = memory.u32(empty);
+    CHECK(machine.run_thread(run.thread));
+    CHECK(memory.u32(empty) == empty_count - 2);
+    CHECK(memory.live_blocks() == blocks);
+}
+
 // The game data. Containers are read with one sized read: the stream
 // iterator of BigArchive::load takes over a minute for the whole game in a
 // debug build.
@@ -1062,6 +1143,8 @@ int main() {
     test_table_call();
     test_call_on_null();
     test_string_param();
+    test_frame_end();
+    test_array_variables();
 
     const char* root = std::getenv("BO2NX_ASSETS_DIR");
     if (root == nullptr) {
