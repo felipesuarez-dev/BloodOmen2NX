@@ -299,6 +299,57 @@ class for each scripted entity, named like the entity (`sfxobj002`,
 Each of those classes derives from a class of `creatures` or `native` and
 can add fields, states and bodies. 165 regions, 13,158 classes.
 
+## The script objects of a level
+
+Read from the code (dumps in `re/decomp/script_runtime/`) and checked with a
+live trace of the oracle in `sl01` (below):
+
+- A scripted entity of a region becomes a `Creature` (vtable `0x87721c`).
+  `FUN_0070e450` sets its script path (+0x134): when the script name has no
+  `/` and the creature has a package (+0x144), the path is the name of that
+  package (`FUN_00732a30`: the name table entry of its id at +8), `/` and the
+  script name; otherwise the script name as given. Then it calls
+  `FUN_0070e560`.
+- `FUN_0070e560` creates the object when the path is not empty:
+  `FUN_00582f50` splits the path at `/` and needs exactly two parts, finds
+  the package by name (manager +0x14) and the class in it, and when the
+  class has its flag +0x22 set, calls the factory of the class (+0x10,
+  virtual +0x10; `FUN_005831b0`). The object must derive from
+  `basecreaturescript` (`FUN_00580a30`); if not, the creature logs a warning
+  and keeps no script (+0x138 = 0). Otherwise the creature holds the object,
+  counted (+0x130), the object points back at the creature (+0x2c) and
+  +0x138 = 1.
+- `FUN_0070e8b0` handles the messages of a creature (called from
+  `FUN_0070ee70`, the slot +0x54 of `Creature` and of `CameraMark`, vtable
+  `0x8793cc`). For the message type `DAT_00910640`, when +0x138 is set, the
+  path is not empty and the class has its flag +0x22, it runs the object
+  once (virtual +0x10, `FUN_00580900`) with the second word of the message.
+  The trace below shows it is a message of every frame.
+- A scripted sound instance (`ScriptedSoundInst`, vtable `0x87a11c`) holds
+  its own object (+0x48). Its slot +0x3c (`FUN_007a2b20`) runs it once per
+  update; when the object is then not in state 2 and has no main thread,
+  it calls `FUN_006e20d0(0)`. Its slot +0x1c (`FUN_007a2bf0`,
+  `FUN_00799a60`) asks the object for state 2 and runs it once.
+
+Checked in the oracle (`re/decomp/script_runtime/objects.gdb`,
+`owner_probe.py`, route `re/decomp/script/probe_route.txt`):
+
+- 20,000 calls of `FUN_00580900` after the spawn in `sl01`: 17,552 from
+  `FUN_0070e8b0`, 2,356 from `FUN_007a2b20` and 92 from `FUN_00799a60`.
+- 792 constructions of script objects (`FUN_0057f830`) from the start of the
+  game to the spawn, all of them through the factory call of
+  `FUN_005831b0`.
+- The 396 objects at the spawn: 272 belong to a `Creature`, 93 to a
+  `ScriptedSound`, 26 (`camerasetup`), 4 (`stringtable`) and 1
+  (`gamecameraimpl`) to other owners. Of the 272, 240 have a path
+  `<package>/<class>` whose second part is the class of the object:
+  `slums_sl01` 78 (the 78 entities of the `sl01` region with a
+  `reserved.script`, which name the class alone), `slums_sl02` 66,
+  `slums_sl_music` 94, and `native` 2 (`native/hud`,
+  `native/hudhintpopup`); the other 32 are `exportedcamera` objects with an
+  empty path. So the package of a region carries the name of the region
+  with `_` for `/`, not the `default` of the file.
+
 ## Checked in the running game
 
 A local probe (`re/decomp/script/live_probe.py`, route
@@ -342,9 +393,18 @@ owner, has the slot count of its class.
 
 - What each native function does: one function per row of the table of
   `natives.py`.
-- Who creates the script objects of a level and who runs them each frame.
-  The lead: the entities that name a class in `reserved.script`
-  (`FUN_00737a80`, `FUN_007828c0`) and the factory +0x10 of the class.
+- Where the package of a region gets the name of the region with `_` for
+  `/` (measured, above; the region loader is `FUN_00791ee0`), and who calls
+  `FUN_0070e450` for each entity of a region (callers: `FUN_0070d0c0`, and
+  the HUD's `FUN_0052ef60` and `FUN_0053b6d0`).
+- The argument of the update message that `FUN_0070e8b0` passes to the run
+  of the object, and the order in which the creatures get the message.
+- What `FUN_006e20d0(0)` does to a scripted sound instance.
+- The properties `<class>.<field>` of an entity (for example
+  `levelkeeperintro.commondata.farClip`), which look like overrides of the
+  defaults of the fields of its object (`FUN_00737a80` applies them).
+- What the end of a frame does with the strings and handles its locals
+  hold (the destructor of the frame of `FUN_0057d3e0`).
 - The virtual +0x18 of a script object (`0x580880`), called after a state
   change.
 - The collection type (kind 7) and the type with kind 8: no data uses them.
