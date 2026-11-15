@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "bo2/engine/big_archive.hpp"
+#include "bo2/engine/dds.hpp"
 #include "bo2/engine/pixmap_font.hpp"
 #include "bo2/engine/string_table.hpp"
 
@@ -186,6 +187,64 @@ void test_game_font(const bo2::engine::BigArchive& archive) {
 // The upper-case codes each language's table uses, outside the control codes
 // (the lone backslash included) and spaces, without the savedgame_ps2icon
 // values. Only counts and letter sets: the game text stays out of the repo.
+// FUN_005df900: the alpha shapes of the game font. The counts are the texels
+// with alpha greater than 127 of each control glyph.
+void test_game_font_glyphs(const bo2::engine::BigArchive& archive) {
+    const bo2::engine::BigEntry* font_entry = archive.find("texfont", "main/main");
+    const bo2::engine::BigEntry* texture_entry = archive.find("texture", "fonts/revised");
+    CHECK(font_entry != nullptr);
+    CHECK(texture_entry != nullptr);
+    if (font_entry == nullptr || texture_entry == nullptr) {
+        return;
+    }
+    const bo2::engine::PixmapFont font = bo2::engine::parse_pixmap_font(
+        archive.extract(*font_entry), font_entry->symbols, archive.names());
+    const bo2::engine::Image texture = bo2::engine::decode_dds(archive.extract(*texture_entry));
+    CHECK(texture.width == 256);
+    CHECK(texture.height == 256);
+    const auto count = [&font, &texture](std::uint8_t code) {
+        const bo2::engine::GlyphBitmap bitmap = bo2::engine::glyph_bitmap(font, texture, code);
+        std::size_t total = 0;
+        for (const std::uint8_t alpha : bitmap.alpha) {
+            if (alpha > 127) {
+                ++total;
+            }
+        }
+        return total;
+    };
+    CHECK(count('a') == 76);
+    CHECK(count('A') == 42);
+    CHECK(count('T') == 66);
+    CHECK(count('0') == 55);
+    CHECK(count('?') == 35);
+    CHECK(count('S') == 35);
+    CHECK(count('.') == 4);
+    CHECK(count('i') == 33);
+    CHECK(count(0xc8) == 255);
+    std::size_t total = 0;
+    for (const bo2::engine::FontGlyph& glyph : font.glyphs) {
+        total += count(glyph.code);
+    }
+    CHECK(total == 6917);
+    const bo2::engine::GlyphBitmap a = bo2::engine::glyph_bitmap(font, texture, 'a');
+    CHECK(a.width == 12);
+    CHECK(a.height == 20);
+    std::size_t first = 0;
+    while (first < a.height) {
+        bool any = false;
+        for (std::uint32_t column = 0; column < a.width; ++column) {
+            if (a.alpha[first * a.width + column] != 0) {
+                any = true;
+            }
+        }
+        if (any) {
+            break;
+        }
+        ++first;
+    }
+    CHECK(first == 1);
+}
+
 void test_marker_use_per_language(const bo2::engine::BigArchive& archive) {
     struct Expected {
         const char* locale;
@@ -261,6 +320,7 @@ int main() {
     try {
         const bo2::engine::BigArchive archive = bo2::engine::BigArchive::load(path.string());
         test_game_font(archive);
+        test_game_font_glyphs(archive);
         test_marker_use_per_language(archive);
         // Every installed container starts its name table with the language names.
         const std::vector<std::string> expected = {"default", "english", "french",

@@ -1,6 +1,7 @@
 #include "bo2/engine/pixmap_font.hpp"
 
 #include <cstring>
+#include <stdexcept>
 
 #include "bo2/common/reader.hpp"
 
@@ -86,6 +87,46 @@ PixmapFont parse_pixmap_font(const std::vector<std::uint8_t>& data,
         }
     }
     return font;
+}
+
+// FUN_005df900: the rectangle of a glyph is measured from the bottom of the
+// texture, so its first row is height - y - glyph height. The alpha channel
+// is copied with the rows from top to bottom.
+GlyphBitmap glyph_bitmap(const PixmapFont& font, const Image& texture, std::uint8_t code) {
+    const FontGlyph* glyph = font.find(code);
+    if (glyph == nullptr) {
+        throw std::out_of_range("font has no glyph for the code");
+    }
+    if (texture.width == 0 || texture.height == 0 ||
+        texture.rgba.size() <
+            static_cast<std::size_t>(texture.width) * texture.height * 4) {
+        throw common::ParseError("font texture is invalid");
+    }
+    if (glyph->x < 0.0f || glyph->y < 0.0f || glyph->width <= 0.0f ||
+        glyph->height <= 0.0f ||
+        glyph->x + glyph->width > static_cast<float>(texture.width) ||
+        glyph->y + glyph->height > static_cast<float>(texture.height)) {
+        throw common::ParseError("glyph rectangle is outside the texture");
+    }
+    const std::uint32_t width = static_cast<std::uint32_t>(glyph->width);
+    const std::uint32_t height = static_cast<std::uint32_t>(glyph->height);
+    const std::uint32_t left = static_cast<std::uint32_t>(glyph->x);
+    const std::uint32_t first_row =
+        texture.height - static_cast<std::uint32_t>(glyph->y + glyph->height);
+    GlyphBitmap bitmap;
+    bitmap.width = width;
+    bitmap.height = height;
+    bitmap.alpha.resize(static_cast<std::size_t>(width) * height);
+    for (std::uint32_t row = 0; row < height; ++row) {
+        for (std::uint32_t column = 0; column < width; ++column) {
+            const std::size_t source =
+                (static_cast<std::size_t>(first_row + row) * texture.width + left + column) *
+                4;
+            bitmap.alpha[static_cast<std::size_t>(row) * width + column] =
+                texture.rgba[source + 3];
+        }
+    }
+    return bitmap;
 }
 
 }  // namespace bo2::engine

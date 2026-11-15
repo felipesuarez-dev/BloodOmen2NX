@@ -19,7 +19,9 @@ of `code.big` (a second entry, `main/main.fnt`, has the same bytes) and the
 texture it names, `fonts/revised`, an uncompressed A8R8G8B8 image of
 256 x 256. The loader is `FUN_005df900`; it keeps the four header values as
 `base_height`, `kerning`, `leading` and `space_width` (20, 2, 5 and 8 in the
-game font).
+game font). The shape of a glyph is the alpha channel of its rectangle;
+`glyph_bitmap` in `include/bo2/engine/pixmap_font.hpp` returns it with the
+rows from top to bottom.
 
 ```
 char[8] "texfont"

@@ -1601,6 +1601,38 @@ void test_pixmap_font() {
     CHECK(throws([&] { bo2::engine::parse_pixmap_font(data, no_symbols, names); }));
 }
 
+// FUN_005df900: a glyph rectangle is measured from the bottom of the texture.
+// A 2x2 glyph at (1, 0) of a 4x4 texture takes the two bottom rows, columns
+// 1 and 2, and the bitmap keeps them from top to bottom.
+void test_glyph_bitmap() {
+    bo2::engine::Image texture;
+    texture.width = 4;
+    texture.height = 4;
+    texture.rgba.assign(4 * 4 * 4, 0);
+    for (std::uint32_t row = 0; row < 4; ++row) {
+        for (std::uint32_t column = 0; column < 4; ++column) {
+            const std::size_t index = (static_cast<std::size_t>(row) * 4 + column) * 4;
+            texture.rgba[index + 3] = static_cast<std::uint8_t>(row * 10 + column + 1);
+        }
+    }
+    bo2::engine::PixmapFont font;
+    font.glyphs.push_back(bo2::engine::FontGlyph{'a', 1.0f, 0.0f, 2.0f, 2.0f});
+    const bo2::engine::GlyphBitmap bitmap = bo2::engine::glyph_bitmap(font, texture, 'a');
+    CHECK(bitmap.width == 2);
+    CHECK(bitmap.height == 2);
+    CHECK(bitmap.alpha.size() == 4);
+    if (bitmap.alpha.size() == 4) {
+        CHECK(bitmap.alpha[0] == 22);
+        CHECK(bitmap.alpha[1] == 23);
+        CHECK(bitmap.alpha[2] == 32);
+        CHECK(bitmap.alpha[3] == 33);
+    }
+    CHECK(throws([&] { bo2::engine::glyph_bitmap(font, texture, 'b'); }));
+    bo2::engine::PixmapFont outside;
+    outside.glyphs.push_back(bo2::engine::FontGlyph{'a', 3.0f, 0.0f, 2.0f, 2.0f});
+    CHECK(throws([&] { bo2::engine::glyph_bitmap(outside, texture, 'a'); }));
+}
+
 // The data checker counts every entry of a container by type and reports the
 // ones whose reader throws, without stopping the walk (docs/DATA_COVERAGE.md).
 void test_data_check() {
@@ -1883,6 +1915,7 @@ int main() {
     test_model_attribute_arrays();
     test_model_attributes();
     test_pixmap_font();
+    test_glyph_bitmap();
     test_data_check();
     test_data_check_cellgrup();
     test_data_check_model();
