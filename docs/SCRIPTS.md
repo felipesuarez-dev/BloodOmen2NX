@@ -604,19 +604,7 @@ Every frame the game tick (`FUN_0072edba`) does, in this order:
 
 1. `FUN_0073e840` gives each creature of the creature list (`DAT_00a836a8`)
    its time for the frame (+0xfc) and marks the creatures that sleep (bit
-   1 of +0xf0). A creature with bit 2 of +0xf0 gets the whole frame time.
-   Another creature is measured by `FUN_0073e330`: the smallest squared
-   distance from its position (+0xb4) to the viewers of the list
-   `FUN_007544d0` (each one's position at its +0x2c, +0xb4). Beyond a
-   radius it sleeps. Within it, the frame time adds up at +0x100. A
-   creature processed in the last frame (+0x140) and nearer than its +0x104
-   gets the whole sum. Another one gets time only once the sum passes a
-   step: the step itself while the sum is below two steps, else the sum
-   less one step, and the rest stays at +0x100. The step is 1/60 s, or 1
-   over the field +0x14 of the level keeper (`FUN_0072c300` finds the
-   creature `levelkeeper`); once in 100 frames it is scaled at random
-   (`FUN_007a4289`, the `rand` of the C library). Not read yet: the radius
-   (`FUN_0072c580`), the second mode (`FUN_0072c450`) and the viewers.
+   1 of +0xf0); "The simulation scheduler" below has its two modes.
 2. The tasks of the script manager run with the frame time times the first
    time scale (`FUN_00583400`; "Timers").
 3. `FUN_00718490` processes the creatures of the group `process_msg`
@@ -656,6 +644,64 @@ the search by name finds a hibernating creature after the active ones.
 Read live in `sl01`, without breakpoints (`update_probe.py`, ten samples two
 seconds apart): 393 creatures, all ten scales 1.0. In each sample about 110
 creatures have a time near 0.01 s, about 260 have 0, and 5 to 29 have 0.1.
+
+### The simulation scheduler
+
+`FUN_0073e840` takes its settings from the tune data of the level keeper
+(the `tunedata` entry `levelkeeper` of `code.big`; its header,
+`levelkeepertune.h`, names the fields of `CommonLevelKeeperTune`):
++0x08 `creatureCullDist` (0), +0x10 `periodicSimDist` (1200), +0x14
+`periodicSimRate` (10) and +0x34 `screenCullData` (1, then the floats 14
+and 10). `FUN_0072c300` finds that data through the template named
+`levelkeeper`; with none, the step is 1/60 s. The radius is
+`creatureCullDist` (`DAT_00a8377c`, set by `FUN_0072c910`). A radius of 0
+or less means no limit.
+
+Each creature has two squared distances (+0x104, +0x108), set when it is
+built and when the level keeper starts (`FUN_0073e0c0`):
+
+- `screenCullData` is 1 (`FUN_0073e1a0`). The creature keeps a radius R
+  at +0x10c, from the bounding radius of its model (the model's virtual
+  +0x3c; 24 when it has none), a size the caller passes and what +0x10c
+  held: the largest of them, and at least 24. A creature with no visual
+  part (+0x58 is not the visual list, `DAT_00a83da8` +4) gets
+  `3.4e38` (`FLT_MAX`) for both distances. Otherwise the near distance is
+  `20 / 14 × R × 40`, at least 100, and the far one `20 / 10 × R × 40`, at
+  least 200. With R = 24 that gives 1371.4 and 1920, whose squares are the
+  1,880,816 and 3,686,400 read live in `sl01`.
+- Otherwise (`FUN_0073e0f0`), for a visual creature, the near distance is
+  the bounding radius of its model × 40 (1,000,000 without a model), at
+  least `periodicSimDist`; a creature with no visual part gets 1,000,000.
+
+Each frame, for each creature of the list:
+
+- A creature with bit 2 of +0xf0 (`disablesimcull`) gets the whole frame
+  time, and bit 1 is cleared.
+- In the first mode (`screenCullData` is not 1), a creature whose squared
+  distance to the nearest viewer (`FUN_0073e330`: the positions, +0xb4, of
+  the holders of the list `FUN_007544d0`) is beyond the squared radius
+  sleeps: bit 1 set, no time. Otherwise its time adds up at +0x100. The
+  creature takes it all when it was drawn in the last frame (+0x140 is not
+  below the frame counter less 1) and it is not farther than its near
+  distance (+0x104). If not, it gets time only in steps of
+  1 / `periodicSimRate`: the step itself while the sum is below two steps,
+  else the sum less one step, and the rest stays.
+- In the second mode, the distance is measured again only one frame in six
+  (`DAT_00a83c94`) and kept at +0x114. Within the far distance (+0x108) the
+  rule is the same as above. Beyond it the creature waits on a timer
+  (+0x110): while the timer runs, the creature sleeps with no time (with
+  flag 0x800 its time keeps adding up at +0x100). When the timer runs out it
+  restarts at `3 × (1 + 0.01 × (rand() % 40 − 20))` seconds. The creature
+  then gets one update, of 0.01 s, or of the time it saved with flag 0x800.
+- Once in 100 frames (`rand() % 100 == 0`, drawn once per frame) every step
+  of that frame is scaled by `1 + 0.01 × (rand() % 10)`.
+
+Each operation rounds to a float: the x87 unit runs in single precision
+(docs/PORTING_GUIDE.md, "Floating point"). `rand` is the C library one
+(docs/GAMEPLAY.md, "Random numbers"). In
+`sl01` the second mode runs: +0x110 holds timers between 0.7 and 3.0 s,
+and 0.1 s, the step of a rate of 10, is the time most of the far creatures
+get.
 
 ## Timers
 
@@ -833,7 +879,7 @@ not drive the level yet.
 | The natives that find creatures (`creaturebyname`, `creatureself`, `getkain`, `creaturescriptbyname`, `gethud`) | `src/engine/script_creature_natives.cpp` | `script` (`test_creature_natives`; the bodies they bind to in `test_create_sl01_objects`) |
 | The codes only the region packages use (`0x0d`, `0x17`, `0x18`, `0x37`, `0x53`, `0x54`, `0x57`, `0x58`) | `src/engine/script_machine.cpp` | `script` (`test_region_codes`, `test_start_without_waiting`) |
 | Timers: the value type, its task, the natives, the call from outside the scripts and the tasks of the script manager | `src/engine/script_timer.cpp`, `src/engine/script_machine.cpp` | `script` (`test_timers`) |
-| The creatures of a level and their objects: one creature per entity, the object of each scripted one, activation in build order, the update of each frame, hibernation and removal (the scheduler is not ported: the caller gives each creature its time) | `src/engine/script_level.cpp` | `script` (`test_script_level`; `test_sl01_level`: the 104 creatures and 78 objects of `sl01` activate and run 120 updates) |
+| The creatures of a level and their objects: one creature per entity, the object of each scripted one, activation in build order, the update of each frame, hibernation and removal, and the simulation scheduler (the caller gives the model radii, the visual list, the drawn frames, the viewers and the keeper tune) | `src/engine/script_level.cpp`, `src/engine/crt_random.cpp` | `script` (`test_script_level`, `test_scheduler`; `test_sl01_level`: the 104 creatures and 78 objects of `sl01` activate and run 120 updates); `engine` (`test_crt_random`) |
 
 ## Checked in the running game
 
@@ -880,9 +926,9 @@ owner, has the slot count of its class.
   `natives.py`.
 - The order of the creature list `DAT_00a836a8`, which is the order in
   which the creatures of a region are activated.
-- The radius, the second mode and the viewers of the simulation
-  (`FUN_0072c580`, `FUN_0072c450`, `FUN_007544d0`), and who sets +0x104,
-  +0x108 and +0x140 of a creature ("The update of the objects of a level").
+- Which holders the viewers of the simulation are (`FUN_007544d0`; one in
+  `sl01`), what the model's virtual +0x3c measures, and which creatures are
+  in the visual list (`DAT_00a83da8`).
 - What `FUN_006e20d0(0)` does to a scripted sound instance.
 - The properties `<class>.<field>` of an entity (for example
   `levelkeeperintro.commondata.farClip`), which look like overrides of the

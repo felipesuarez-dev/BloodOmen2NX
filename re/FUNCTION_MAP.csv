@@ -14272,11 +14272,11 @@ address,name,subsystem,status,notes
 0072c220,FUN_0072c220,unknown,todo,ghidra
 0072c2b0,FUN_0072c2b0,unknown,todo,ghidra
 0072c2e0,FUN_0072c2e0,unknown,todo,ghidra
-0072c300,FUN_0072c300,unknown,todo,ghidra
+0072c300,FUN_0072c300,script,wip,src/engine/script_level.cpp: ScriptLevel::KeeperTune is the data it finds; the template lookup by name is not ported
 0072c3b0,FUN_0072c3b0,unknown,todo,ghidra
 0072c3e0,FUN_0072c3e0,unknown,todo,ghidra
 0072c400,FUN_0072c400,unknown,todo,ghidra
-0072c450,FUN_0072c450,unknown,todo,ghidra
+0072c450,FUN_0072c450,script,wip,src/engine/script_level.cpp: ScriptLevel::schedule reads the keeper's screenCullData; the settings object DAT_00a83778 is not read
 0072c4c0,FUN_0072c4c0,unknown,todo,ghidra
 0072c4d0,FUN_0072c4d0,unknown,todo,ghidra
 0072c4f0,FUN_0072c4f0,unknown,todo,ghidra
@@ -14645,12 +14645,12 @@ address,name,subsystem,status,notes
 0073de90,FUN_0073de90,unknown,todo,ghidra
 0073df50,FUN_0073df50,unknown,todo,ghidra
 0073df80,FUN_0073df80,unknown,todo,ghidra
-0073e0c0,FUN_0073e0c0,unknown,todo,ghidra
-0073e0f0,FUN_0073e0f0,unknown,todo,ghidra
-0073e1a0,FUN_0073e1a0,unknown,todo,ghidra
-0073e330,FUN_0073e330,unknown,todo,ghidra
+0073e0c0,FUN_0073e0c0,script,translated,src/engine/script_level.cpp: ScriptLevel::set_distances picks FUN_0073e1a0 or FUN_0073e0f0 by the keeper's screenCullData
+0073e0f0,FUN_0073e0f0,script,translated,src/engine/script_level.cpp: ScriptLevel::set_distances gives the near distance of the first mode
+0073e1a0,FUN_0073e1a0,script,translated,src/engine/script_level.cpp: ScriptLevel::set_distances keeps the radius and the near and far distances of the second mode
+0073e330,FUN_0073e330,script,translated,src/engine/script_level.cpp: nearest_viewer gives the squared distance to the nearest viewer
 0073e3a0,FUN_0073e3a0,unknown,todo,ghidra
-0073e840,FUN_0073e840,unknown,todo,ghidra
+0073e840,FUN_0073e840,script,wip,src/engine/script_level.cpp: ScriptLevel::schedule gives the time of both modes; the debug switch that gives every creature the whole frame is not ported
 0073e920,FUN_0073e920,unknown,todo,ghidra
 0073f170,FUN_0073f170,unknown,todo,ghidra
 0073f1a0,FUN_0073f1a0,unknown,todo,ghidra

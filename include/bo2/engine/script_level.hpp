@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "bo2/engine/crt_random.hpp"
 #include "bo2/engine/region.hpp"
 #include "bo2/engine/script_machine.hpp"
 
@@ -16,9 +17,12 @@ namespace bo2::engine {
 // their activation in build order and their update once per frame. It is
 // the creature host of the machine.
 //
-// Not ported yet: the simulation scheduler (FUN_0073e840), so the caller
-// gives each creature its time for the frame (`time`); the creatures that
-// are not entities (Kain, the cameras, the HUD) are added by the caller.
+// The simulation scheduler (FUN_0073e840, `schedule`) gives each creature
+// its time for the frame. The caller gives what the port does not compute
+// yet: the bounding radius of each creature's model, whether it is in the
+// visual list, the frame it was last drawn in, the positions of the
+// viewers and the tune of the level keeper; it also adds the creatures that
+// are not entities (Kain, the cameras, the HUD).
 class ScriptLevel final : public ScriptCreatureHost {
 public:
     struct Creature {
@@ -30,6 +34,14 @@ public:
         std::uint32_t flags = 0;              // +0xf0
         std::uint32_t drawn = 0;              // +0x140
         float time = 0.0f;                    // +0xfc, the time of the next update
+        float saved = 0.0f;                   // +0x100, time not given yet
+        float near2 = 0.0f;                   // +0x104, squared
+        float far2 = 0.0f;                    // +0x108, squared
+        float radius = 0.0f;                  // +0x10c
+        float wake = 0.0f;                    // +0x110, the timer of a far creature
+        float distance = 0.0f;                // +0x114, squared, to the nearest viewer
+        float model_radius = 0.0f;            // its model's bounding radius (virtual +0x3c), 0 for none
+        bool visual = false;                  // in the visual list (+0x58, DAT_00a83da8)
         bool kain = false;                    // made by the factory of "kain" (FUN_00428640)
         bool activated = false;               // FUN_0070e010
         bool hibernating = false;             // +0x160
@@ -39,7 +51,20 @@ public:
         bool deleted = false;                 // gone
     };
 
-    explicit ScriptLevel(ScriptMachine& machine);
+    // The tune of the level keeper the scheduler reads
+    // (CommonLevelKeeperTune of levelkeepertune.h; the tunedata entry
+    // "levelkeeper" of code.big holds 0, 1200, 10, 1, 14 and 10).
+    struct KeeperTune {
+        float cull_dist = 0.0f;            // +0x08 creatureCullDist (DAT_00a8377c)
+        float periodic_dist = 1000000.0f;  // +0x10 periodicSimDist
+        float periodic_rate = 60.0f;       // +0x14 periodicSimRate
+        std::uint32_t screen_cull = 0;     // +0x34 screenCullData: 1 picks the second mode
+        float screen_near = 20.0f;         // +0x38
+        float screen_far = 10.0f;          // +0x3c
+    };
+
+    // `random` is the C library rand the whole game draws from.
+    ScriptLevel(ScriptMachine& machine, CrtRandom& random);
     ~ScriptLevel() override;
     ScriptLevel(const ScriptLevel&) = delete;
     ScriptLevel& operator=(const ScriptLevel&) = delete;
@@ -53,6 +78,17 @@ public:
     // class of that name in the program, when it derives from
     // basecreaturescript; else it has none.
     std::uint32_t add_creature(Creature creature);
+
+    // The level keeper's tune (FUN_0072c300); every creature gets its
+    // distances again (FUN_0072c910).
+    void set_keeper(const KeeperTune& tune);
+    // The squared near and far distances of a creature (FUN_0073e0c0):
+    // FUN_0073e1a0 in the second mode, else FUN_0073e0f0. `size` is the
+    // size the caller passes, 0 when a creature is built.
+    void set_distances(std::uint32_t word, float size = 0.0f);
+    // FUN_0073e840: the time of each creature of the creature list for a
+    // frame of `frame_time` seconds, and the sleeping bit (1) of its flags.
+    void schedule(float frame_time, const std::vector<std::array<float, 3>>& viewers);
 
     // FUN_00718290: each creature of the list not activated yet, in order,
     // has its object activated (FUN_0070e0c0).
@@ -96,7 +132,15 @@ private:
     void stop_object(Creature& creature, const std::string& error);
     void move(std::vector<std::uint32_t>& from, std::vector<std::uint32_t>& to, std::uint32_t word);
 
+    // FUN_0072c450: the second mode runs when the screenCullData of the
+    // keeper is 1 (its settings object DAT_00a83778 is not read).
+    bool second_mode() const { return has_keeper_ && keeper_.screen_cull == 1; }
+
     ScriptMachine& machine_;
+    CrtRandom& random_;
+    KeeperTune keeper_;
+    bool has_keeper_ = false;
+    std::uint32_t refresh_ = 0;                // DAT_00a83c94
     std::vector<Creature> creatures_;          // word = index + 1, in build order
     std::vector<std::uint32_t> active_;        // DAT_00a836a8
     std::vector<std::uint32_t> hibernating_;   // DAT_00a83680

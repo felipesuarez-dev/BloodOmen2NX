@@ -31,6 +31,16 @@ provenance"):
 6. Commit as one work unit: code, tests and docs of that change.
 7. The port must stay buildable and runnable at every commit.
 
+## Floating point
+
+The x87 unit of the original runs in single precision: each operation
+rounds its result to a float. Write float arithmetic in the port as
+`float` operations, one at a time, not in `double` with one rounding at
+the end. Checked on live data: the scheduler's near distance for a radius
+of 24 is `(20 / 14) × 24 × 40`, squared, and the game holds 1,880,816.0,
+the value with a rounding after each operation; one rounding at the end
+gives 1,880,816.375 (docs/SCRIPTS.md, "The simulation scheduler").
+
 ## Ambiguity policy
 
 If a behaviour is unclear, leave a documented stub and move on:

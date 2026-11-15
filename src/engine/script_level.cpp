@@ -2,11 +2,15 @@
 
 #include <algorithm>
 #include <cstring>
+#include <limits>
 #include <utility>
 
 namespace bo2::engine {
 
 namespace {
+
+constexpr float kLargest = std::numeric_limits<float>::max();  // DAT_00877e30
+constexpr float kHundredth = 0.01f;                             // _DAT_00841c08
 
 std::uint32_t float_bits(float value) {
     std::uint32_t bits = 0;
@@ -16,7 +20,9 @@ std::uint32_t float_bits(float value) {
 
 }  // namespace
 
-ScriptLevel::ScriptLevel(ScriptMachine& machine) : machine_(machine) { machine_.set_creature_host(this); }
+ScriptLevel::ScriptLevel(ScriptMachine& machine, CrtRandom& random) : machine_(machine), random_(random) {
+    machine_.set_creature_host(this);
+}
 
 ScriptLevel::~ScriptLevel() {
     if (machine_.creature_host() == this) {
@@ -61,7 +67,152 @@ std::uint32_t ScriptLevel::add_creature(Creature creature) {
         }
     }
     active_.push_back(word);
+    set_distances(word);  // the constructor, 0x70d7f8
     return word;
+}
+
+void ScriptLevel::set_keeper(const KeeperTune& tune) {
+    keeper_ = tune;
+    has_keeper_ = true;
+    for (std::uint32_t word = 1; word <= creatures_.size(); ++word) {
+        set_distances(word);
+    }
+}
+
+// FUN_0073e0c0 with FUN_0073e1a0 and FUN_0073e0f0. The x87 unit of the
+// original runs in single precision, so each operation rounds to a float
+// (docs/SCRIPTS.md, "The simulation scheduler").
+void ScriptLevel::set_distances(std::uint32_t word, float size) {
+    Creature& current = creature(word);
+    if (second_mode()) {
+        const float model = current.model_radius > 0.0f ? current.model_radius : 24.0f;
+        current.radius = std::max({model, size, current.radius, 24.0f});
+        if (!current.visual) {
+            current.near2 = kLargest;
+            current.far2 = kLargest;
+            return;
+        }
+        float near = 20.0f / keeper_.screen_near * current.radius * 40.0f;
+        float far = 20.0f / keeper_.screen_far * current.radius * 40.0f;
+        near = near < 100.0f ? 100.0f : near;
+        far = far < 200.0f ? 200.0f : far;
+        current.near2 = near * near;
+        current.far2 = far * far;
+        return;
+    }
+    float near = 1000000.0f;
+    if (current.visual) {
+        if (current.model_radius > 0.0f) {
+            near = current.model_radius * 40.0f;
+        }
+        const float least = has_keeper_ ? keeper_.periodic_dist : kLargest;
+        if (near < least) {
+            current.near2 = least * least;
+            return;
+        }
+    }
+    current.near2 = near * near;
+}
+
+namespace {
+
+// FUN_0073e330: the squared distance to the nearest viewer.
+float nearest_viewer(const std::array<float, 3>& position, const std::vector<std::array<float, 3>>& viewers) {
+    float nearest = kLargest;
+    for (const auto& viewer : viewers) {
+        const float dx = viewer[0] - position[0];
+        const float dy = viewer[1] - position[1];
+        const float dz = viewer[2] - position[2];
+        const float distance = dy * dy + dz * dz + dx * dx;
+        if (distance < nearest) {
+            nearest = distance;
+        }
+    }
+    return nearest;
+}
+
+// The time a creature within its distance gets: all of what it saved when
+// `least` is 0, else only past one step (the step itself while the sum is
+// below two steps, else the sum less one step).
+void take_time(ScriptLevel::Creature& creature, float frame_time, float least) {
+    const float sum = frame_time + creature.saved;
+    creature.saved = sum;
+    if (!(least < sum)) {
+        creature.time = 0.0f;
+    } else if (least + least <= sum) {
+        creature.time = sum - least;
+        creature.saved = least;
+    } else {
+        creature.saved = sum - least;
+        creature.time = least;
+    }
+}
+
+}  // namespace
+
+void ScriptLevel::schedule(float frame_time, const std::vector<std::array<float, 3>>& viewers) {
+    const float step = has_keeper_ ? 1.0f / keeper_.periodic_rate : 0.016666668f;
+    const std::uint32_t frame_draw = random_.next();
+    const bool scaled = frame_draw % 100 == 0;
+    const bool second = second_mode();
+    float radius2 = kLargest;
+    bool refresh = false;
+    if (second) {
+        refresh = ++refresh_ > 5;
+        if (refresh) {
+            refresh_ = 0;
+        }
+    } else if (has_keeper_ && keeper_.cull_dist > 0.0f) {
+        radius2 = keeper_.cull_dist * keeper_.cull_dist;
+    }
+    for (const std::uint32_t word : active_) {
+        Creature& current = creature(word);
+        if ((current.flags & 4U) != 0) {
+            current.flags &= ~2U;
+            current.time = frame_time;
+            current.saved = 0.0f;
+            continue;
+        }
+        float distance = current.distance;
+        if (!second || refresh) {
+            distance = nearest_viewer(current.position, viewers);
+            if (second) {
+                current.distance = distance;
+            }
+        }
+        const float bound = second ? current.far2 : radius2;
+        if (distance <= bound) {
+            current.flags &= ~2U;
+            float least = 0.0f;
+            if (current.drawn < frame_ - 1U || current.near2 < distance) {
+                least = step;
+            }
+            if (scaled) {
+                least = (static_cast<float>(random_.next() % 10) * kHundredth + 1.0f) * least;
+            }
+            take_time(current, frame_time, least);
+            continue;
+        }
+        if (!second) {
+            current.flags |= 2U;
+            current.saved = 0.0f;
+            current.time = 0.0f;
+            continue;
+        }
+        // Beyond the far distance: asleep until the timer runs out.
+        current.wake = current.wake - frame_time;
+        if (current.wake >= 0.0f) {
+            current.flags |= 2U;
+            current.time = 0.0f;
+            current.saved = (current.flags & 0x800U) != 0 ? current.saved + frame_time : 0.0f;
+            continue;
+        }
+        const int draw = static_cast<int>(random_.next() % 40) - 20;
+        current.wake = (static_cast<float>(draw) * kHundredth + 1.0f) * 3.0f;
+        current.flags &= ~2U;
+        current.time = (current.flags & 0x800U) != 0 ? current.saved : kHundredth;
+        current.saved = 0.0f;
+    }
 }
 
 ScriptLevel::Creature& ScriptLevel::creature(std::uint32_t word) {

@@ -14,6 +14,7 @@
 #include "bo2/engine/big_archive.hpp"
 #include "bo2/engine/region.hpp"
 #include "bo2/engine/script_creature_natives.hpp"
+#include "bo2/engine/crt_random.hpp"
 #include "bo2/engine/script_level.hpp"
 #include "bo2/engine/script_timer.hpp"
 #include "bo2/engine/script_machine.hpp"
@@ -1965,7 +1966,8 @@ void test_script_level() {
     broken.bodies[0].code = {op(0x10, 0), op(0x5C)};  // a code the machine does not run
     const Linked linked = make_program({base, counter_class("counter"), plain, broken});
     ScriptMachine machine(linked.program);
-    bo2::engine::ScriptLevel level(machine);
+    bo2::engine::CrtRandom random;
+    bo2::engine::ScriptLevel level(machine, random);
     CHECK(machine.creature_host() == &level);
     using Creature = bo2::engine::ScriptLevel::Creature;
     const auto make = [](const std::string& name, const std::string& package, const std::string& script) {
@@ -2057,6 +2059,85 @@ void test_script_level() {
     CHECK(task_seen.runs == 1);
     CHECK(task_seen.last_arg == bits(0.5f));
     CHECK(level.frame() == 11);  // eleven updates
+}
+
+// The simulation scheduler (FUN_0073e840) in its second mode with the tune
+// of the level keeper of code.big. The distances are the ones read live in
+// sl01; the times follow the C library rand from state 1 (the fourth frame
+// is scaled: 26500 % 100 == 0) and the distance cache, measured again in
+// the sixth frame.
+void test_scheduler() {
+    ScriptClass base = make_class("basecreaturescript", "", {"default"}, 1);
+    base.data_size = 4;
+    const Linked linked = make_program({base});
+    ScriptMachine machine(linked.program);
+    bo2::engine::CrtRandom random;
+    bo2::engine::ScriptLevel level(machine, random);
+    using Creature = bo2::engine::ScriptLevel::Creature;
+    const auto make = [](const std::string& name, float x, bool visual, float radius) {
+        Creature creature;
+        creature.name = name;
+        creature.position = {x, 0.0f, 0.0f};
+        creature.visual = visual;
+        creature.model_radius = radius;
+        return creature;
+    };
+    const std::uint32_t near = level.add_creature(make("near", 100.0f, true, 0.0f));
+    const std::uint32_t hidden = level.add_creature(make("hidden", 0.0f, false, 0.0f));
+    const std::uint32_t far = level.add_creature(make("far", 5000.0f, true, 0.0f));
+    Creature always_on = make("always", 9000.0f, true, 0.0f);
+    always_on.flags = 4;  // disablesimcull
+    const std::uint32_t always = level.add_creature(always_on);
+    const std::uint32_t seen = level.add_creature(make("seen", 50.0f, true, 0.0f));
+    const std::uint32_t wide = level.add_creature(make("wide", 0.0f, true, 160.0f));
+    const std::uint32_t mid = level.add_creature(make("mid", 0.0f, true, 30.0f));
+    bo2::engine::ScriptLevel::KeeperTune tune;
+    tune.cull_dist = 0.0f;
+    tune.periodic_dist = 1200.0f;
+    tune.periodic_rate = 10.0f;
+    tune.screen_cull = 1;
+    tune.screen_near = 14.0f;
+    tune.screen_far = 10.0f;
+    level.set_keeper(tune);
+    CHECK(level.creature(near).near2 == 1880816.0f);
+    CHECK(level.creature(near).far2 == 3686400.0f);
+    CHECK(level.creature(hidden).near2 == std::numeric_limits<float>::max());
+    CHECK(level.creature(hidden).far2 == std::numeric_limits<float>::max());
+    CHECK(level.creature(wide).near2 == 83591840.0f);
+    CHECK(level.creature(wide).far2 == 163840000.0f);
+    CHECK(level.creature(mid).near2 == 2938775.75f);
+    CHECK(level.creature(mid).far2 == 5760000.0f);
+    CHECK(level.creature(near).radius == 24.0f);
+    // Only these five take part in the rand draws below.
+    level.remove_creature(wide);
+    level.remove_creature(mid);
+    level.update(0.0f);
+    level.update(0.0f);  // frame 2
+    level.creature(seen).drawn = 2;
+    const std::vector<std::array<float, 3>> viewers = {{0.0f, 0.0f, 0.0f}};
+    const auto time_bits = [&](std::uint32_t word) { return bits(level.creature(word).time); };
+    for (int frame = 1; frame <= 11; ++frame) {
+        level.schedule(0.01f, viewers);
+        CHECK(time_bits(always) == 0x3c23d70aU);  // the whole frame time
+        CHECK(time_bits(seen) == 0x3c23d70aU);    // drawn and near: all of it
+        if (frame < 11) {
+            CHECK(time_bits(near) == 0);  // not drawn: steps of 1/10 s
+            CHECK(time_bits(hidden) == 0);
+        }
+        if (frame < 6) {
+            CHECK(time_bits(far) == 0);  // the cached distance is still 0
+        } else if (frame == 6) {
+            CHECK(time_bits(far) == 0x3c23d70aU);  // the timer ran out: one update of 0.01 s
+            CHECK(bits(level.creature(far).wake) == 0x40499999U);
+            CHECK((level.creature(far).flags & 2U) == 0);
+        } else {
+            CHECK(time_bits(far) == 0);
+            CHECK((level.creature(far).flags & 2U) != 0);  // asleep
+        }
+    }
+    CHECK(time_bits(near) == 0x3dcccccdU);  // the sum passed the step
+    CHECK(time_bits(hidden) == 0x3dcccccdU);
+    CHECK(random.state() == 2179684817U);  // every draw, in order
 }
 
 // 0x59: the copy runs, the frame skips the block and waits for it.
@@ -2280,7 +2361,8 @@ void test_sl01_level(const std::filesystem::path& root) {
     }
     bo2::engine::bind_creature_natives(machine);
     bo2::engine::bind_timer_natives(machine);
-    bo2::engine::ScriptLevel level(machine);
+    bo2::engine::CrtRandom random;
+    bo2::engine::ScriptLevel level(machine, random);
     std::vector<bo2::engine::RegionEntityTable> tables;
     for (const bo2::engine::BigEntry& entry : archive.entries()) {
         if (entry.type == "region") {
@@ -2415,6 +2497,7 @@ int main() {
     test_creature_natives();
     test_timers();
     test_script_level();
+    test_scheduler();
 
     const char* root = std::getenv("BO2NX_ASSETS_DIR");
     if (root == nullptr) {
