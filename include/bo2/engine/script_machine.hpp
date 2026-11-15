@@ -142,6 +142,30 @@ public:
     void read_default(ScriptMachine& machine, ScriptAddress slot, const std::vector<std::uint8_t>& chunk) override;
 };
 
+// The value types that hold an engine object found by the name of their
+// default: sound (NTsound 0x878c08, a counted sound instance), effect
+// (NTeffect 0x878ce4, a counted effect instance) and soundgroup
+// (NTsoundgroup 0x878bdc, a group, not counted). The port has no sound or
+// effect system yet, so no name is found, and the original leaves the slot
+// at 0 for a name it does not find (FUN_0079c0b0, 0x515140, 0x79b410);
+// assign shares the object (counted for sound and effect: FUN_0079c1d0,
+// 0x5151f0; a copy of the word for soundgroup: 0x79b450); destroy releases a
+// counted object (sound keeps the slot: FUN_0079c1b0; effect clears it:
+// 0x5151d0; soundgroup does nothing: 0x79b440).
+class ScriptEngineObjectType final : public ScriptValueType {
+public:
+    enum class Kind { sound, effect, soundgroup };
+    explicit ScriptEngineObjectType(Kind kind) : kind_(kind) {}
+
+    void init(ScriptMachine& machine, ScriptAddress slot, ScriptAddress source) override;
+    void destroy(ScriptMachine& machine, ScriptAddress slot) override;
+    void assign(ScriptMachine& machine, ScriptAddress slot, ScriptAddress source) override;
+    void read_default(ScriptMachine& machine, ScriptAddress slot, const std::vector<std::uint8_t>& chunk) override;
+
+private:
+    Kind kind_;
+};
+
 // A native function (docs/SCRIPTS.md, "Native functions"): the machine, the
 // object, the argument count, the address of the cell of the first argument
 // and the address of the result (0 when the method has none).

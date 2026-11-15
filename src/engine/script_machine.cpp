@@ -142,6 +142,11 @@ ScriptMachine::ScriptMachine(const ScriptProgram& program)
     // CreatureNativeType (0x878b58) and NTcreaturecontroller (0x878c60).
     register_value_type("creature", std::make_unique<ScriptWordType>());
     register_value_type("creaturecontroller", std::make_unique<ScriptCountedType>());
+    // NTsound (0x878c08), NTeffect (0x878ce4), NTsoundgroup (0x878bdc).
+    register_value_type("sound", std::make_unique<ScriptEngineObjectType>(ScriptEngineObjectType::Kind::sound));
+    register_value_type("effect", std::make_unique<ScriptEngineObjectType>(ScriptEngineObjectType::Kind::effect));
+    register_value_type("soundgroup",
+                        std::make_unique<ScriptEngineObjectType>(ScriptEngineObjectType::Kind::soundgroup));
     const std::vector<std::string>& names = program_.names();
     name_table_ = memory_.allocate(static_cast<std::uint32_t>(names.size() * 4));
     for (std::size_t index = 0; index < names.size(); ++index) {
@@ -631,6 +636,56 @@ void ScriptCountedType::assign(ScriptMachine& machine, ScriptAddress slot, Scrip
 
 void ScriptCountedType::read_default(ScriptMachine& machine, ScriptAddress slot,
                                      const std::vector<std::uint8_t>& chunk) {
+    static_cast<void>(chunk);
+    init(machine, slot, 0);
+}
+
+// No engine system finds a name yet: the slot starts at 0 as for a name the
+// original does not find (FUN_0079c0b0, FUN_00515140, FUN_0079b410). Destroy:
+// FUN_0079c1b0, FUN_005151d0, FUN_0079b440. Assign: FUN_0079c1d0, FUN_005151f0,
+// FUN_0079b450.
+void ScriptEngineObjectType::init(ScriptMachine& machine, ScriptAddress slot, ScriptAddress source) {
+    static_cast<void>(source);
+    machine.memory().set_u32(slot, 0);
+}
+
+void ScriptEngineObjectType::destroy(ScriptMachine& machine, ScriptAddress slot) {
+    ScriptMemory& memory = machine.memory();
+    const ScriptAddress object = memory.u32(slot);
+    if (kind_ == Kind::soundgroup || object == 0) {
+        return;  // 0x79b440 does nothing
+    }
+    release_counted(memory, object);
+    if (kind_ == Kind::effect) {
+        memory.set_u32(slot, 0);  // 0x5151d0; the sound keeps its slot (FUN_0079c1b0)
+    }
+}
+
+void ScriptEngineObjectType::assign(ScriptMachine& machine, ScriptAddress slot, ScriptAddress source) {
+    ScriptMemory& memory = machine.memory();
+    if (kind_ == Kind::soundgroup) {
+        memory.set_u32(slot, source);  // 0x79b450
+        return;
+    }
+    // FUN_0079c1d0, 0x5151f0: share the counted object.
+    const ScriptAddress old = memory.u32(slot);
+    if (old == source) {
+        return;
+    }
+    if (old != 0) {
+        release_counted(memory, old);
+    }
+    memory.set_u32(slot, source);
+    if (source != 0) {
+        memory.set_u32(source + 4, memory.u32(source + 4) + 1);
+    }
+}
+
+// The default is a name the engine would look up (FUN_0079c010, FUN_005150a0,
+// FUN_0079b320); with no engine system the result is the slot of a name not
+// found.
+void ScriptEngineObjectType::read_default(ScriptMachine& machine, ScriptAddress slot,
+                                          const std::vector<std::uint8_t>& chunk) {
     static_cast<void>(chunk);
     init(machine, slot, 0);
 }

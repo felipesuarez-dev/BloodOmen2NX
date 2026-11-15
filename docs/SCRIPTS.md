@@ -15,9 +15,12 @@ values of their fields, their main thread and their states, strings,
 frames and every instruction the game data uses, with the loop guard, the
 calls, the child threads and tasks, the binding of native functions, the
 end of a frame and the value types `position`, `rotation`, `color`,
-`gridposition`, `waypoints`, `creature` and `creaturecontroller`; `sound`,
-`soundgroup`, `effect` and `timer` need the sound and effect systems of the
-engine, and the native functions are not ported yet).
+`gridposition`, `waypoints`, `creature` and `creaturecontroller`, and
+`sound`, `effect` and `soundgroup` with no engine system behind them: a slot
+starts at 0, as the original leaves it for a name it does not find; `timer`
+and the native functions are not ported yet). Every class of the region
+package of `sl01` gets its object with the initial values of its fields
+(79 classes, 78 of them scripted entities).
 
 ## Objects, classes and states
 
@@ -461,6 +464,24 @@ can add fields, states and bodies. 165 regions, 13,158 classes.
 Read from the code (dumps in `re/decomp/script_runtime/`) and checked with a
 live trace of the oracle in `sl01` (below):
 
+- The package of a region. When the region loader (`FUN_00791ee0`) meets
+  the `packages` section of a region, it makes the name of the region's
+  package once (`FUN_00783900`): from the name of the region (`slums/sl01`)
+  it drops what comes before the first letter (`isalpha`), drops the
+  trailing ` `, `\t`, `\r` and `\n`, turns every character that is not a
+  letter or a digit (`isalnum`) into `_`, and lowers the case (`tolower`):
+  `slums_sl01`. `FUN_00783ab0` then makes a package of that name that
+  imports `creatures` (or reuses one of the same name, with the warning
+  `Script package for this region already exists!`); the classes of the
+  section's package are found in it (the objects of the oracle below have the
+  paths `slums_sl01/<class>`).
+- The check of a region's scripts (`FUN_00737a80`): for each entity of the
+  region database with a `reserved.script` property (`FUN_007828c0` gives
+  its value, or an empty string), the value is split at `/` and the class is
+  looked up in the region's package; when it is missing the game logs
+  `'reserved.script' keyword found, but no script '<script>' in package
+  '<package>' was found.  RegionDBase is being cleaned.` and removes the
+  property.
 - A scripted entity of a region becomes a `Creature` (vtable `0x87721c`).
   `FUN_0070e450` sets its script path (+0x134): when the script name has no
   `/` and the creature has a package (+0x144), the path is the name of that
@@ -577,7 +598,8 @@ owner, has the slot count of its class.
 - What `FUN_006e20d0(0)` does to a scripted sound instance.
 - The properties `<class>.<field>` of an entity (for example
   `levelkeeperintro.commondata.farClip`), which look like overrides of the
-  defaults of the fields of its object (`FUN_00737a80` applies them).
+  defaults of the fields of its object: who reads them is not found yet
+  (`FUN_00737a80` is the check of `reserved.script` above, not this).
 - The collection type (kind 7) and the type with kind 8: no data uses them.
 - The text compiler (`FUN_00793280` imports a package from source); the
   game data has only compiled packages.

@@ -4433,8 +4433,9 @@ address,name,subsystem,status,notes
 00515020,FUN_00515020,unknown,todo,ghidra
 005150a0,FUN_005150a0,unknown,todo,ghidra
 00515100,FUN_00515100,unknown,todo,ghidra
-005151d0,FUN_005151d0,unknown,todo,ghidra
-005151f0,FUN_005151f0,unknown,todo,ghidra
+00515140,FUN_00515140,script,wip,src/engine/script_machine.cpp: ScriptEngineObjectType::init leaves 0 as for an effect name not found; the effect resource lookup is not ported
+005151d0,FUN_005151d0,script,translated,src/engine/script_machine.cpp: ScriptEngineObjectType::destroy releases the counted effect instance and clears the slot
+005151f0,FUN_005151f0,script,translated,src/engine/script_machine.cpp: ScriptEngineObjectType::assign shares the counted effect instance
 00515220,FUN_00515220,unknown,todo,ghidra
 005155e0,FUN_005155e0,unknown,todo,ghidra
 00515610,FUN_00515610,unknown,todo,ghidra
@@ -16569,6 +16570,9 @@ address,name,subsystem,status,notes
 0079b2c0,FUN_0079b2c0,unknown,todo,ghidra
 0079b320,FUN_0079b320,unknown,todo,ghidra
 0079b3d0,FUN_0079b3d0,unknown,todo,ghidra
+0079b410,FUN_0079b410,script,wip,src/engine/script_machine.cpp: ScriptEngineObjectType::init leaves 0 as for a sound group name not found; the group lookup is not ported
+0079b440,FUN_0079b440,script,translated,src/engine/script_machine.cpp: ScriptEngineObjectType::destroy does nothing for a sound group
+0079b450,FUN_0079b450,script,translated,src/engine/script_machine.cpp: ScriptEngineObjectType::assign copies the sound group word
 0079b460,FUN_0079b460,unknown,todo,ghidra
 0079b480,FUN_0079b480,unknown,todo,ghidra
 0079b4a0,FUN_0079b4a0,unknown,todo,ghidra
@@ -16604,8 +16608,10 @@ address,name,subsystem,status,notes
 0079bf90,FUN_0079bf90,unknown,todo,ghidra
 0079c010,FUN_0079c010,unknown,todo,ghidra
 0079c070,FUN_0079c070,unknown,todo,ghidra
+0079c0b0,FUN_0079c0b0,script,wip,src/engine/script_machine.cpp: ScriptEngineObjectType::init leaves 0 as for a sound name not found; the lookup in the sound bank is not ported
 0079c190,FUN_0079c190,unknown,todo,ghidra
-0079c1d0,FUN_0079c1d0,unknown,todo,ghidra
+0079c1b0,FUN_0079c1b0,script,translated,src/engine/script_machine.cpp: ScriptEngineObjectType::destroy releases the counted sound instance and keeps the slot
+0079c1d0,FUN_0079c1d0,script,translated,src/engine/script_machine.cpp: ScriptEngineObjectType::assign shares the counted sound instance
 0079c200,FUN_0079c200,unknown,todo,ghidra
 0079c220,FUN_0079c220,unknown,todo,ghidra
 0079c2b0,FUN_0079c2b0,unknown,todo,ghidra

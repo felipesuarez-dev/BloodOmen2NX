@@ -1637,6 +1637,49 @@ void test_link_sl01(const std::filesystem::path& root) {
     CHECK(bare_zero == 36);
 }
 
+// Every class of the region package of sl01 gets an object with the initial
+// values of its fields: the value types of the level scripts are all there
+// (the engine objects start at 0, as a name the engine does not find).
+void test_create_sl01_objects(const std::filesystem::path& root) {
+    const bo2::engine::BigArchive archive =
+        load_container(root / "media/gogames/bo2/resources/levels/slums/sl01.big");
+    const RegionPrograms container = read_container(archive);
+    if (container.regions.size() != 1) {
+        CHECK(container.regions.size() == 1);
+        return;
+    }
+    const ScriptPackage& region = *container.regions[0].second;
+    const ScriptProgram program = link_region(container, region, kNativeTypes);
+    ScriptMachine machine(program);
+    std::size_t created = 0;
+    std::size_t creatures = 0;
+    std::vector<std::string> refused;
+    for (std::uint32_t id = 0; id < program.classes().size(); ++id) {
+        const auto& cls = program.classes()[id];
+        if (cls.source < region.classes.data() || cls.source >= region.classes.data() + region.classes.size()) {
+            continue;  // not a class of the region package
+        }
+        try {
+            machine.create_object(id);
+            ++created;
+        } catch (const bo2::engine::ScriptError& error) {
+            refused.push_back(cls.name + ": " + error.what());
+        }
+        for (std::uint32_t up = id + 1; up != 0; up = program.classes()[up - 1].parent) {
+            if (program.classes()[up - 1].name == "basecreaturescript") {
+                ++creatures;
+                break;
+            }
+        }
+    }
+    for (const std::string& failure : refused) {
+        std::cerr << "sl01 object: " << failure << '\n';
+    }
+    CHECK(refused.empty());
+    CHECK(created == 79);
+    CHECK(creatures == 78);  // every class but resourcedb derives from basecreaturescript
+}
+
 // Every region of the game links (BO2NX-151): 165 programs, 81,752 classes.
 // The packages of a container start with native, and every state table, own
 // or copied from its owner, has the slot count of its class.
@@ -1735,6 +1778,7 @@ int main() {
     } else {
         try {
             test_link_sl01(root);
+            test_create_sl01_objects(root);
             test_link_all_regions(root);
         } catch (const std::exception& error) {
             std::cerr << "script machine asset tests: " << error.what() << '\n';
