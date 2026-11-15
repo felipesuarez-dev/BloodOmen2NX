@@ -110,7 +110,7 @@ Source of truth: [`STATE.md`](STATE.md) and [`ROADMAP.md`](ROADMAP.md).
 
 | Area | State |
 |---|---|
-| Asset pipeline | The installer is decoded and materialises a 227-file tree; the `.big` parser reads all 179 containers (246,332 entries) and `pc.rkv` yields 2,666 Ogg Vorbis streams; DDS textures and `game.erg` are read |
+| Asset pipeline | The port reads a tree made by the official installer (227 files); the `.big` parser reads all 179 containers (246,332 entries) and `pc.rkv` yields 2,666 Ogg Vorbis streams; DDS textures and `game.erg` are read |
 | Level rendering | A level renders headless (software rasterizer, PPM output) and in an SDL2 + OpenGL window with textures, cell grid, visibility BSP, placed instances, lights and markers parsed. Helper objects (`flag helperobj` in their `.etp` template) are hidden like the original. Lighting is incomplete |
 | Original as oracle | The pristine `bo2.exe` runs under Wine on a private Xvfb with scripted input. Frames and video are grabbed from the Xvfb (x11grab at 30 fps); Kain's state, his animation and the follow camera are read from process memory every 20 ms. A native Windows harness is the cross-check |
 | Oracle replay and state comparison | The port replays a Wine capture's input timeline and compares the player, camera and velocity state frame by frame. The spawn matches within 0.05 u and the first W and jump divergences are measured |
@@ -202,7 +202,7 @@ There is no Switch preset yet: the Switch backend has not started. There is no W
 
 You must supply your own copy. The project targets the **PC 1.02 Spanish GoldMaster** (the version comes from `data/version.raw`; see [`docs/PROVENANCE.md`](docs/PROVENANCE.md)). Hashes of the reference media and the provenance of every external artifact are in [`docs/PROVENANCE.md`](docs/PROVENANCE.md); nothing is downloaded by the build.
 
-1. Materialize an installed copy of the game (`tools/bo2fmt/installer.py` rebuilds the tree from the installer media) so you have a directory with `data/game.erg` and `media/gogames/bo2/`.
+1. Install the game with its official installer, on Windows or under Wine, so you have a directory with `data/game.erg` and `media/gogames/bo2/`. The repository carries no tool to extract the installer.
 2. Put it under `external/installed/` (gitignored).
 3. Game files are never in the repository.
 

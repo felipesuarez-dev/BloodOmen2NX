@@ -48,12 +48,9 @@ entity data lives in the `.big` files (`docs/FORMATS/big.md`).
 The hashes of the reference copy and the provenance of every external
 artifact are in `docs/PROVENANCE.md`. Nothing is downloaded by the build.
 
-## Installing from the ISO
+## Installing the game
 
-The reference ISO is an installer, not an installed game. The chunks are
-decoded; `tools/bo2fmt/installer.py` materializes the tree from the ISO,
-the SFXI resources and the 198 `data/*.dat` files. See
-`docs/FORMATS/dat.md` for the pipeline and the `--data-dir` layout.
-
-A Windows or GOG/Steam installation remains a valid oracle, but it is no
-longer required to obtain the tree.
+The reference ISO is an installer, not an installed game. Install it with
+the official installer, on Windows or under Wine (`wine setup.exe` in a
+32-bit prefix), and use the installed directory. The repository carries no
+tool to extract the installer media ([`FORMATS/dat.md`](FORMATS/dat.md)).

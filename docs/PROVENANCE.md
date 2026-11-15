@@ -53,9 +53,11 @@ shape, not their content.
 
 ## Installed tree
 
-Materialized with `tools/bo2fmt/installer.py` from the reference ISO, the
-SFXI resources of `install2.dat` and the 198 `data/*.dat` chunks. The
-local copy is `external/installed/` (gitignored).
+Rebuilt during M1 from the reference ISO, the SFXI resources of
+`install2.dat` and the 198 `data/*.dat` chunks with a tool that was removed
+from the repository on 2026-11-15 ([`FORMATS/dat.md`](FORMATS/dat.md)).
+The official installer gives the same tree. The local copy is
+`external/installed/` (gitignored).
 
 | Metric | Value |
 |---|---:|

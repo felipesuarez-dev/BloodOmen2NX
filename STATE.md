@@ -18,9 +18,10 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   exported, 18,097 game candidates seeded in `re/FUNCTION_MAP.csv`.
 - Prior art integrated (`docs/PRIOR_ART.md`): `.big` (`goefile`) and
   `pc.rkv` audio formats documented, DDS textures and Ogg audio confirmed.
-- Installer chunk pipeline decoded: `tools/bo2fmt/installer.py` and
-  `tools/bo2fmt/bo2cipher.c`; 198/198 chunks; a 227-file tree (1.9 GB) in
-  `external/installed`, with its manifest hash in `docs/PROVENANCE.md`.
+- Installer chunks decoded during M1: 198/198 chunks, a 227-file tree
+  (1.9 GB) in `external/installed`, with its manifest hash in
+  `docs/PROVENANCE.md`. The decoder was removed from the repository on
+  2026-11-15; the port reads a tree made by the official installer.
 - `.big` parser validated against the installed tree: 179 files, 246,332
   entries, 0 parse errors; 22,483 DDS textures and 5,168 models.
 - `pc.rkv` validated: 2,666 Ogg Vorbis streams; the first is mono

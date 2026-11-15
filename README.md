@@ -110,7 +110,7 @@ Fuente de verdad: [`STATE.md`](STATE.md) y [`ROADMAP.md`](ROADMAP.md) (en inglé
 
 | Área | Estado |
 |---|---|
-| Canalización de recursos | El instalador está decodificado y materializa un árbol de 227 archivos; el parser de `.big` lee los 179 contenedores (246 332 entradas) y `pc.rkv` entrega 2666 flujos Ogg Vorbis; se leen las texturas DDS y `game.erg` |
+| Canalización de recursos | El port lee el árbol que deja el instalador oficial (227 archivos); el parser de `.big` lee los 179 contenedores (246 332 entradas) y `pc.rkv` entrega 2666 flujos Ogg Vorbis; se leen las texturas DDS y `game.erg` |
 | Renderizado de niveles | Un nivel se renderiza sin ventana (rasterizador por software, salida PPM) y en una ventana SDL2 + OpenGL, con texturas, cuadrícula de celdas, BSP de visibilidad, instancias colocadas, luces y marcadores analizados. Los objetos auxiliares (`flag helperobj` en su plantilla `.etp`) se ocultan como en el original. La iluminación está incompleta |
 | Original como oráculo | El `bo2.exe` intacto se ejecuta bajo Wine en un Xvfb privado con entrada guiada por script. Los fotogramas y el video se capturan del Xvfb (x11grab a 30 fps); el estado de Kain, su animación y la cámara de seguimiento se leen de la memoria del proceso cada 20 ms. Un arnés nativo de Windows sirve de verificación cruzada |
 | Reproducción del oráculo y comparación de estado | El port reproduce el timeline de entrada de una captura Wine y compara el estado del jugador, la cámara y la velocidad frame a frame. El spawn coincide dentro de 0,05 u y se miden las primeras divergencias de W y salto |
@@ -202,7 +202,7 @@ Todavía no hay un preset de Switch: el backend de Switch no se ha iniciado. No 
 
 Debes aportar tu propia copia. El proyecto apunta al **PC 1.02 GoldMaster en español** (la versión sale de `data/version.raw`; consulta [`docs/PROVENANCE.md`](docs/PROVENANCE.md)). Los hashes de los medios de referencia y la procedencia de cada artefacto externo están en [`docs/PROVENANCE.md`](docs/PROVENANCE.md); la compilación no descarga nada.
 
-1. Materializa una copia instalada del juego (`tools/bo2fmt/installer.py` reconstruye el árbol a partir de los medios del instalador) para tener un directorio con `data/game.erg` y `media/gogames/bo2/`.
+1. Instala el juego con su instalador oficial, en Windows o con Wine, para tener un directorio con `data/game.erg` y `media/gogames/bo2/`. El repositorio no trae ninguna herramienta para extraer el instalador.
 2. Colócala en `external/installed/` (ignorado por git).
 3. Los archivos del juego nunca están en el repositorio.
 

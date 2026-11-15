@@ -145,30 +145,12 @@ provide symbols.
   chunks also expand to `code.big`, `PreCode.big`, level `.big` files and
   `.san` animations.
 
-## Installer chunks (M1, done)
+## Installer chunks (M1, done, tool removed)
 
-The chunk executor is `install2.dat` at `0x401b30`; the script parser is
-`0x401540`/`0x4019e0`. For `InstallType = decompress` it:
-
-1. reads the first four bytes of `data/<hash>.dat` as the size seed;
-2. builds a XOR key from the size, the chunk hash (the decimal file name)
-   and the lowercased target name, then reads the chunk through the
-   wrapper at `0x404f60`;
-3. parses the RAR headers (`0x405b90`/`0x4059f0`), sets up the cipher
-   (`0x405490`) and reads/decrypts the packed data through `0x4069a0`;
-4. decompresses the RAR data in `0x4060b0` (method `0x35`).
-
-The cipher is the installer's own: S-box shuffle and key schedule at
-`0x405490`, CRC-table generator `0x4050a0`, key mix `0x405280`, encrypt
-`0x405110`, decrypt `0x405300`. The S-box (256 bytes) and the password are
-read from the installer's data; the repository does not contain them.
-
-The previous assumption that the chunks were "not RAR" was wrong: the
-outer XOR and the header parser hid a standard single-file RAR 4 archive.
-The complete pipeline is in `docs/FORMATS/dat.md` and
-`tools/bo2fmt/installer.py`.
-
-Result: 198/198 chunks decoded, 227 installed files (1.9 GB), 179 `.big`
-files (246,332 entries) and 2,666 `pc.rkv` streams. An owner's Windows or
-GOG install is still a valid oracle, but it is no longer needed to
-materialize the tree.
+The numbered `data/*.dat` chunks are encrypted archives that the official
+installer expands. During M1 the project decoded all 198 and rebuilt the
+installed tree (227 files, 1.9 GB, 179 `.big` files with 246,332 entries,
+2,666 `pc.rkv` streams). The decoder and the notes on the installer's
+encryption were removed from the repository on 2026-11-15
+([`FORMATS/dat.md`](FORMATS/dat.md)): the port reads a tree installed with
+the official installer, on Windows or under Wine.

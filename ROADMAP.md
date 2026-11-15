@@ -29,7 +29,7 @@ comparison.
 | Host diagnostics | done | `--stats`: load breakdown, render, RSS/peak; hardware in #49 |
 | Input layer | done | Keyboard + Switch maps, SDL controller, player marker; actor in M3 |
 | Installer container (SFXI) | done | Reader and synthetic test |
-| Installer chunk decompressor | done | 198/198 chunks; 227-file tree |
+| Installer chunk decompressor | removed | Decoded 198/198 chunks during M1; removed from the repository on 2026-11-15 (install with the official installer) |
 | BIG/RKV parsers | done | 179 `.big`/246,332 entries; 2,666 RKV streams |
 | Validated asset extraction | done | DDS and model extracted; manifest in `docs/PROVENANCE.md` |
 | Headless host first frame | done | Real DDS texture, free camera, PPM output |

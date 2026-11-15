@@ -7,7 +7,7 @@ by a parser or the original game; **observed** = seen but not decoded;
 | Format | Status | Doc |
 |---|---|---|
 | SFXI installer container | verified | [`sfxi.md`](sfxi.md) |
-| `.dat` installer chunk | verified: decoded and validated | [`dat.md`](dat.md) |
+| `.dat` installer chunk | not read by the port: install with the official installer (decoder removed on 2026-11-15) | [`dat.md`](dat.md) |
 | `game.erg` | verified: parser and round-trip fixture | [`erg.md`](erg.md) |
 | `.big` container (`goefile`) | verified: 179 files, 246,332 entries | [`big.md`](big.md) |
 | `strtable` string tables and locale | verified: layout on 92 entries, accent mapping inferred | [`strtable.md`](strtable.md) |

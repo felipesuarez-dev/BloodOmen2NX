@@ -54,35 +54,12 @@ manifest and is byte-identical when the extracted data is unchanged.
 `verify` performs the full unpack/repack cycle and fails unless the bytes
 match. RKV containers can be listed and unpacked; they are not repacked.
 
-## Installer extraction
+## Installer media
 
-The 198 numbered installer chunks are decoded. Materialize the reference
-tree from the ISO, the SFXI resources and the chunks:
-
-```sh
-python3 tools/bo2fmt/installer.py \
-  --script external/installer/sfxi/script.txt \
-  --installer external/iso/install2.dat \
-  --data external/iso/data \
-  --sfxi external/installer/sfxi \
-  --iso external/iso \
-  --out external/installed \
-  --unrar /path/to/unrar
-```
-
-The output path can also be the first positional argument. `--dry-run`
-prints the plan, `--only <name>` extracts one entry, and
-`--skip-existing` resumes.
-
-Requirements:
-
-- `unrar` (the pipeline rebuilds a standard RAR with the password flag
-  cleared and streams `unrar p` into the target).
-- A C compiler for `bo2cipher.c`. Without one, `--cipher auto` falls back
-  to the slow Python reference; `--cipher native` requires the helper.
-- The user's own `install2.dat`: the S-box and password are read from it
-  at the offsets documented in `docs/FORMATS/dat.md`. They are not stored
-  in the repository.
+The repository has no tool to extract the installer: install the game with
+its official installer (on Windows or under Wine) and point the tools at
+the installed tree. `sfxi.py` still lists the SFXI resource container of
+`install2.dat` (`docs/FORMATS/sfxi.md`).
 
 ## Rules
 
@@ -97,8 +74,6 @@ Requirements:
 | Module | Target | State |
 |---|---|---|
 | `sfxi.py` | Installer SFXI container | Verified against the reference installer |
-| `installer.py` | Installer `data/*.dat` chunks | Verified: 198/198 chunks, 227-file tree |
-| `bo2cipher.c` | Block cipher accelerator | Verified against the Python reference |
 | `big.py` | `.big` (`goefile`) content container, locale-aware lookup (`find_localized`) | Verified: 179 files, 246,332 entries |
 | `rkv.py` | `pc.rkv` audio archive | Verified: 2,666 Ogg streams |
 | `bo2fmt.py` | Umbrella list/unpack/repack CLI | BIG and RKV list/unpack; BIG repack verified byte-identical |

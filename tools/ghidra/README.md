@@ -79,6 +79,6 @@ strings or game text into the repository.
 
 ## Status
 
-Available. The installer decompilation that produced
-`tools/bo2fmt/installer.py` used `DecompileAt.java`, `XrefsTo.java` and
-`MakeFunction.java`; the outputs stayed in `re/decomp/`.
+Available. The installer decompilation of M1 used `DecompileAt.java`,
+`XrefsTo.java` and `MakeFunction.java`; the outputs stayed in `re/decomp/`.
+The tool it produced was removed from the repository on 2026-11-15.

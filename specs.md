@@ -51,10 +51,9 @@ Reference media hash and chain of custody: `docs/PROVENANCE.md`.
 - The ISO root holds nine Bink videos (`awakens.dat`, `bo2intro.dat`,
   `credits.dat`, `crystal.dat`, `eidos.dat`, `install2.dat`, `outro.dat`,
   `spooky.dat`, `sr2_trailer.dat`).
-- The 198 files under `data/` are installer chunks: a XOR layer over a
-  single-file RAR 4 archive whose packed data uses the installer's own
-  32-round block cipher. `tools/bo2fmt/installer.py` decodes them and
-  materializes the 227-file tree. See `docs/FORMATS/dat.md`.
+- The 198 files under `data/` are installer chunks: encrypted archives
+  the official installer expands into the 227-file tree. The port does not
+  read them (`docs/FORMATS/dat.md`).
 - The installed layout expects `data/game.erg`; the file is not present in
   the ISO, so the installer creates or extracts it.
 - `bo2.exe` imports `d3d8.dll`, `d3d8d.dll`, `DINPUT.dll` and
@@ -102,7 +101,7 @@ possible, after a re-pack is accepted by the original game.
 
 ## 8. Asset pipeline
 
-1. Materialize an installed copy from the user's media (`tools/bo2fmt/installer.py`).
+1. Install the game from the user's media with the official installer.
 2. Parse containers with a Python reference implementation (`tools/bo2fmt`).
 3. Validate with synthetic fixtures first, then with real assets.
 4. Re-pack one asset and confirm the original game accepts it.
