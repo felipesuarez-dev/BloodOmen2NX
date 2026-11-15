@@ -24,7 +24,7 @@ Lee esto en español: [README.md](README.md)
 <!-- badges:start -->
 [status-badge]: https://img.shields.io/badge/phase-M3%20in%20progress-orange
 [overall-badge]: https://img.shields.io/badge/overall-8.2%25-yellow
-[fn-badge]: https://img.shields.io/badge/functions-82%20%2F%2016951-lightgrey
+[fn-badge]: https://img.shields.io/badge/functions-85%20%2F%2016951-lightgrey
 [levels-badge]: https://img.shields.io/badge/levels-0%20%2F%2011-lightgrey
 <!-- badges:end -->
 [cpp-badge]: https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white
@@ -74,11 +74,11 @@ The original is used as a reference, not shipped.
 
 | Component | Weight | Progress | Score |
 |---|---:|---:|---:|
-| Functions translated / in scope | 60% | 82 / 16,951 | 0.48% |
+| Functions translated / in scope | 60% | 85 / 16,951 | 0.50% |
 | Levels completable (campaign chapters) | 30% | 0 / 11 | 0.00% |
 | Platform features | 10% | 9 / 12 + 1 partial | 79.17% |
 
-Function map: 35,553 rows: 82 translated, 168 in progress, 16,701 to do, 18,602 external (not game code).
+Function map: 35,553 rows: 85 translated, 165 in progress, 16,701 to do, 18,602 external (not game code).
 
 ![Map of the game code: one rectangle per 64 KiB of bo2.exe, sized by code bytes, the greener the more of it is translated, amber when it is only in progress](docs/progress.svg)
 

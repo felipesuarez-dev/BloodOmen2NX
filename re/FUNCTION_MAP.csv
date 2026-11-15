@@ -6184,11 +6184,11 @@ address,name,subsystem,status,notes
 0057a4f0,FUN_0057a4f0,unknown,todo,ghidra
 0057a6d0,FUN_0057a6d0,unknown,todo,ghidra
 0057a710,FUN_0057a710,unknown,todo,ghidra
-0057a7a0,FUN_0057a7a0,script,wip,src/engine/script_program.cpp: link_class gives a state with no owner a table of slot_count empty slots
-0057a800,FUN_0057a800,script,wip,src/engine/script_program.cpp: link_class copies the table of the same state of the owner class
+0057a7a0,FUN_0057a7a0,script,translated,src/engine/script_program.cpp: link_class gives a state with no owner a table of slot_count empty slots
+0057a800,FUN_0057a800,script,translated,src/engine/script_program.cpp: link_class copies the table of the same state of the owner class; the original shares it until a slot write differs (copy on write) and the tables come out the same
 0057a840,FUN_0057a840,unknown,todo,ghidra
 0057a870,FUN_0057a870,unknown,todo,ghidra
-0057a890,FUN_0057a890,script,wip,src/engine/script_program.cpp: link_class writes the body of a slot entry into the state table
+0057a890,FUN_0057a890,script,translated,src/engine/script_program.cpp: link_class writes the body of a slot entry into the state table; the copy on write of a shared table is the copy above
 0057a910,FUN_0057a910,unknown,todo,ghidra
 0057a940,FUN_0057a940,unknown,todo,ghidra
 0057a980,FUN_0057a980,unknown,todo,ghidra
