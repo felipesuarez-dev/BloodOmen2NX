@@ -612,13 +612,63 @@ slot +0xc of `0x866a78` (`FUN_004d1b60`). The calls of `sl01` (above):
 | `monsterscript` | 50 | `wait` (task) | `FUN_004d5350` | 59 | `FUN_004e5cf0`: a command to the AI (slot +0x28 with `FUN_0073dd20`) |
 | `monsterscript` | 58 | `start` (task) | `FUN_004d5600` | 9 | `FUN_004e5d10`: `FUN_004e4900(FUN_00481720)` |
 | `detectorscript` | 0 to 4 | | `FUN_004d1c10` to `FUN_004d1e10` | 0 | Nothing: each calls an empty function (`FUN_004e1820` to `FUN_004e1860`) |
-| `detectorscript` | 5 | `removeallrangethresholds()` | `0x4d1eb0` | 6 | `FUN_004e1890`: when the object has a detector behavior (+0xa0), empties its set of thresholds (`FUN_0049a9f0`: the tree at +0x70, its count at +0x74) |
-| `detectorscript` | 6 | `addrangethreshold(float)` | `FUN_004d1ec0` | 12 | `FUN_004e1870`: when the object has a detector behavior (+0xa0), adds the value to the set unless it is there (`FUN_0049aa50`, an ordered set of floats) |
+| `detectorscript` | 5 | `removeallrangethresholds()` | `0x4d1eb0` | 6 | `FUN_004e1890`: when the object has a sensor (+0xa0, below), empties its set of range thresholds (`FUN_0049a9f0`: the tree at +0x70, its count at +0x74) |
+| `detectorscript` | 6 | `addrangethreshold(float)` | `FUN_004d1ec0` | 12 | `FUN_004e1870`: when the object has a sensor, adds the value to the set unless it is there (`FUN_0049aa50`, an ordered set of floats) |
 
 The monster natives need the AI of the monsters (the `toplevelai` behavior,
-its commands and when a command ends), and the two detector natives the
-behavior a `detectorscript` gets from the template line `behavior detector`
-and what it does with the thresholds. Neither system is read yet.
+its commands and when a command ends). The two detector natives need the
+sensor of the object.
+
+### The sensor of a detectorscript
+
+`FUN_004e13c0` (slot +0x24 of the `Sdetectorscript` vtable `0x865b64`)
+gives the object a sensor (+0xa0) when its class has a script body (not a
+native one, `FUN_004e1a10`) for one of the four events, kept as flags:
+`onplayerinrange` (+0xa4, slot 22), `oncreatureinrange` (+0xa5, slot 23),
+`oncreatureinsight` (+0xa6, slot 24) and `oncreatureleftsight` (+0xa7,
+slot 25). The sensor (0x80 bytes, `FUN_0049b210`) gets the creature, the
+16 floats at +0x60 (512, 45, 30, 30, 96, 90, 45, 45, 64, 45, 30, 30, 640,
+0.2, 0 by default; the creature's slot +0x6c data replaces them when its
+first word is 1), a range of 1200, a mask of the kinds it senses (1 when
+the class has only `onplayerinrange`, else `DAT_0091e2fc`), what it looks
+for (1 for the range events, 2 for the sight events) and 0.25. Its range
+thresholds start as 128, 256 and 512; natives 5 and 6 replace them.
+
+Each update of the object (message `DAT_00910640`, slot +0x50,
+`FUN_004e1aa0`) runs the sensor with the step (`FUN_0049bc90`) and adds the
+step at +0x5c; past 0.25 s (`0x83f760`) it sends the events (slot +0x7c,
+`FUN_004e18a0`) and starts again from 0. Each event calls the body of its
+slot (`FUN_00580810`, `FUN_00580a40`) with two arguments: the sensed
+creature's name (the address of its +0xb0, a string holder) and the value at
++0x28 of its entry (the distance): the entries of the list +0x40 get
+`oncreatureinsight`, those of +0x50 `oncreatureleftsight`, and those of +0x60
+`oncreatureinrange` and, when the entry's kind is 0 (the player; +0x28 of
+the node), `onplayerinrange` as well.
+
+The sensor (`FUN_0049bc90`) works in steps of 0.1 s (+0xc). When its scan
+timer (+0x28) is out it scans (`FUN_0049b5f0`) and draws the next scan time
+from the C library `rand`: `1 × (1 + (rand() % 100 × 0.02 − 1) × 0.5)`. The
+scan walks the creatures that can be sensed (`DAT_0091dc90`, each with a
+kind; `FUN_0049a910` adds them: Kain with kind 0 from `FUN_0042af90`, and
+two other callers, `FUN_004da655` and `FUN_004e9a7b`). It keeps those of the same package as the sensor's
+creature, or with no package, that are not that creature, closer than the
+range (squared distance below 1200²) and whose kind is in the mask. A new
+one gets an entry when it answers the state query its message handler gets
+(slot +0x54, message kind `0x1b`), and a timer drawn the same way from
+0.25. Each step, an entry whose timer is out (`FUN_0049ad00`) asks the state
+again, measures the distance (`FUN_0047dab0`: `sqrt((z² + y²) + x²)`),
+draws its timer again, and counts the thresholds not above the distance;
+when that count or the state changed, the entry goes to the list +0x60 (an
+in-range event). An entry the scan no longer finds is dropped. Every scan,
+every entry and every new entry draws `rand`, so the sensors take part in
+the sequence the scheduler draws from.
+
+In `sl01` six objects have a sensor: `hint_proximity001` to `006` (class
+`hint_proximity`, only `onplayerinrange`), and they are the six that call
+native 5 and then native 6 twice when they start. `detector01` to `04` and
+`levelloader01` have none of the four events, so they get no sensor. Not
+read yet: who calls slot +0x24, what the state query asks and what Kain's
+creature answers, and when a scanned creature gets its first entry.
 
 ## The update of the objects of a level
 
@@ -788,6 +838,27 @@ decimals the trace prints) and all 82 of `sl02` is the one the rule gives. 16 of
 their template's (`psntcnf` 40.428162, `0x4221b670`; `umahvf` 40.246319, `psntanm`
 38.104610, `checkpoint` 37.416573, `sfxobj` 27.712812, `levelkeeper` and
 `regionkeeper` 24.494898, `camera/exportedcamera` 10.375216).
+
+### The drawn frame
+
+A creature's +0x140 is the frame counter (`DAT_008ff180`) of the last frame
+it was drawn in. The draw of a creature (`FUN_0070f100`, slot +0x14 of
+`Creature`) returns at once for a creature with +0x139 set, with flag 0x200
+(the template flag `helperobj`) or whose model has no data; otherwise it
+draws the model (`FUN_005c9b50`) and sets +0x140 when that draw says it drew.
+That draw is called only for the objects of the cells that are visible
+(`FUN_007f69e0`: the cells of the camera, `FUN_00607b60`, and the walk
+through the portals, `FUN_007f5d60`, which clips each portal to a screen
+rectangle; then `FUN_007f6340`, cell by cell), and of those only for an
+object with no flag 1 or 2, not drawn yet in this pass, and with flag 4 or
+a sphere (+0x10, radius +0x1c) the renderer does not find outside the view
+(its slot 0xc8; `FUN_005fbea0`).
+
+Read live (`drawn_probe.py`, ten samples one second apart, standing at the
+start of `sl01` with its neighbours loaded): 11 creatures are drawn each
+frame (Kain, `ocean`, two glass models and seven parts of the HUD). Of the
+230 creatures with a script object only `ocean` is drawn; the other 229 have
++0x140 at 0, never drawn since the load.
 
 ## Timers
 
@@ -1018,8 +1089,10 @@ owner, has the slot count of its class.
 - Where `FUN_00699d90` gets its known root and its two lists of directory
   prefixes (+4, +0x250, +0x25c); no template model name of the slums
   regions needs them.
-- The AI of the monsters behind the `monsterscript` natives, and the
-  detector behavior behind the `detectorscript` natives 5 and 6.
+- The AI of the monsters behind the `monsterscript` natives, and the open
+  points of the sensor of a `detectorscript` (its section above).
+- The visible cells and objects of a frame (`FUN_007f69e0`), which the
+  drawn frame of a creature depends on ("The drawn frame").
 - What `FUN_006e20d0(0)` does to a scripted sound instance.
 - The properties `<class>.<field>` of an entity (for example
   `levelkeeperintro.commondata.farClip`), which look like overrides of the
