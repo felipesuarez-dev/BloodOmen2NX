@@ -1473,6 +1473,44 @@ void test_waypoints_type() {
     CHECK(throws([&] { type.read_default(machine, slot, std::vector<std::uint8_t>{3, 0, 0, 0, 1, 2}); }));
 }
 
+// creature (CreatureNativeType) copies a word; creaturecontroller
+// (NTcreaturecontroller) shares a counted object and frees it at 0.
+void test_creature_value_types() {
+    MachineRun run(machine_class({op(0x5C)}));
+    ScriptMachine& machine = *run.machine;
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    const ScriptAddress slot = memory.allocate(4);
+    ScriptValueType& creature = machine.value_type("creature");
+    creature.init(machine, slot, 0x1234);
+    CHECK(memory.u32(slot) == 0x1234);
+    creature.assign(machine, slot, 0x55);
+    CHECK(memory.u32(slot) == 0x55);
+    creature.destroy(machine, slot);
+    CHECK(memory.u32(slot) == 0);
+    creature.read_default(machine, slot, {});
+    CHECK(memory.u32(slot) == 0);
+
+    ScriptValueType& controller = machine.value_type("creaturecontroller");
+    const ScriptAddress object = memory.allocate(8);
+    memory.set_u32(object + 4, 1);  // its owner's count
+    const std::size_t blocks = memory.live_blocks();
+    controller.init(machine, slot, object);
+    CHECK(memory.u32(slot) == 0);  // init ignores the source
+    controller.assign(machine, slot, object);
+    CHECK(memory.u32(slot) == object);
+    CHECK(memory.u32(object + 4) == 2);
+    controller.assign(machine, slot, object);  // the same object: nothing
+    CHECK(memory.u32(object + 4) == 2);
+    controller.destroy(machine, slot);
+    CHECK(memory.u32(slot) == 0);
+    CHECK(memory.u32(object + 4) == 1);
+    controller.assign(machine, slot, object);
+    memory.set_u32(object + 4, 1);  // its owner let it go
+    controller.assign(machine, slot, 0);
+    CHECK(memory.u32(slot) == 0);
+    CHECK(memory.live_blocks() == blocks - 1);  // freed at count 0
+}
+
 // 0x59: the copy runs, the frame skips the block and waits for it.
 void test_fork_waits() {
     MachineRun run(machine_class(join({{op(0x59, 2), op(0x5D), op(0x5C)}, mark(), {op(0x5D), op(0x5C)}})));
@@ -1689,6 +1727,7 @@ int main() {
     test_value_field_default();
     test_unregistered_value_type();
     test_waypoints_type();
+    test_creature_value_types();
 
     const char* root = std::getenv("BO2NX_ASSETS_DIR");
     if (root == nullptr) {

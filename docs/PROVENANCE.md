@@ -133,7 +133,7 @@ design. `third_party/stb_vorbis.c` is third-party code (`NOTICE`).
 | `src/engine/region.cpp` | Reader of the region entities and script package | data format | analysis | 0 |
 | `src/engine/script_package.cpp` | Reader of the compiled script packages | data format | analysis | 10 |
 | `src/engine/script_program.cpp` | Linker of the script packages of a region | behaviour | analysis | 4 |
-| `src/engine/script_machine.cpp` | Interpreter of the script machine | behaviour | analysis | 43 |
+| `src/engine/script_machine.cpp` | Interpreter of the script machine | behaviour | analysis | 51 |
 | `src/engine/script_memory.cpp` | 32-bit memory of the script machine | port's own; the 4-byte cells of the original | analysis | 0 |
 | `src/engine/string_table.cpp` | Reader of the string tables | data format | analysis, then specification | 0 |
 | `src/engine/erg.cpp` | Reader of `game.erg` | data format | analysis | 0 |

@@ -15,8 +15,9 @@ values of their fields, their main thread and their states, strings,
 frames and every instruction the game data uses, with the loop guard, the
 calls, the child threads and tasks, the binding of native functions, the
 end of a frame and the value types `position`, `rotation`, `color`,
-`gridposition` and `waypoints`; the other value types and the native
-functions are not ported yet).
+`gridposition`, `waypoints`, `creature` and `creaturecontroller`; `sound`,
+`soundgroup`, `effect` and `timer` need the sound and effect systems of the
+engine, and the native functions are not ported yet).
 
 ## Objects, classes and states
 
@@ -274,6 +275,8 @@ packages: `sound` 5,078, `waypoints` 1,532, `soundgroup` 231, `effect` 166,
 | `waypoints` | `0x878d94` | a list {u32 count, address of the points, count points of three floats} | the source list, shared (`FUN_0079e6e0`; assign `FUN_0079e700` shares too; destroy `FUN_0079e6f0` does nothing) | a u32 count, then the points (`FUN_0079e650`): checked on the 1,529 defaults of the regions, 0 to 18 points; read once, so every object of the class shares the list |
 | `sound` | `0x878c08` | a counted sound instance of 0x18 bytes (`FUN_0079ba00`) | 0 with no source; with a source, the sound found by name in the sound bank (`FUN_006cde30`) wrapped in a new instance (`FUN_0079c0b0`); destroy releases it (`FUN_0079c1b0`); assign shares it, counted (`FUN_0079c1d0`) | a name, 2 bytes holding a name index (`0x79bff0`, `FUN_0079c010`; 4-byte chunk) |
 | `soundgroup` | `0x878bdc` | the sound group found by name (`FUN_006cdbb0`), not counted | the group of the source name, or 0 (`0x79b410`); destroy does nothing (`0x79b440`); assign copies the word (`0x79b450`) | a name (`FUN_0079b320`; 4-byte chunk) |
+| `creature` | `0x878b58` (`CreatureNativeType`, a native type with no class) | the word of an engine creature, not counted | the source word (`FUN_0076b2f0`); destroy leaves 0 (`FUN_0076b300`); assign copies the word (`FUN_0076b310`) | none (`0x4cb480`) |
+| `creaturecontroller` | `0x878c60` | a counted engine object (count at +4) | 0 whatever the source (`0x79d4b0`); destroy releases it and leaves 0 (`FUN_0079d4c0`); assign shares it, counted (`FUN_0079d4e0`) | none (`0x79d490`) |
 | `effect` | `0x878ce4` | a counted effect instance made by the effect resource of the name (`FUN_005fc7f0`, then its virtual +0x10) | 0 with no source (`0x515140`); destroy releases it and leaves 0 (`0x5151d0`); assign shares it, counted (`0x5151f0`) | a name (`0x515080`, `FUN_005150a0`; 4-byte chunk) |
 
 For the four block types, +0x18 with a source copies the source block into

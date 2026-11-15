@@ -139,6 +139,9 @@ ScriptMachine::ScriptMachine(const ScriptProgram& program)
     register_value_type("color", std::make_unique<ScriptBlockType>(16, 4));
     register_value_type("gridposition", std::make_unique<ScriptBlockType>(8, 0));
     register_value_type("waypoints", std::make_unique<ScriptWaypointsType>());
+    // CreatureNativeType (0x878b58) and NTcreaturecontroller (0x878c60).
+    register_value_type("creature", std::make_unique<ScriptWordType>());
+    register_value_type("creaturecontroller", std::make_unique<ScriptCountedType>());
     const std::vector<std::string>& names = program_.names();
     name_table_ = memory_.allocate(static_cast<std::uint32_t>(names.size() * 4));
     for (std::size_t index = 0; index < names.size(); ++index) {
@@ -566,6 +569,70 @@ void ScriptWaypointsType::read_default(ScriptMachine& machine, ScriptAddress slo
     }
     defaults_.emplace(chunk.data(), list);
     init(machine, slot, list);
+}
+
+// CreatureNativeType: FUN_0076b2f0, FUN_0076b300, FUN_0076b310; no default (FUN_004cb480).
+void ScriptWordType::init(ScriptMachine& machine, ScriptAddress slot, ScriptAddress source) {
+    machine.memory().set_u32(slot, source);
+}
+
+void ScriptWordType::destroy(ScriptMachine& machine, ScriptAddress slot) { machine.memory().set_u32(slot, 0); }
+
+void ScriptWordType::assign(ScriptMachine& machine, ScriptAddress slot, ScriptAddress source) {
+    machine.memory().set_u32(slot, source);
+}
+
+void ScriptWordType::read_default(ScriptMachine& machine, ScriptAddress slot, const std::vector<std::uint8_t>& chunk) {
+    static_cast<void>(chunk);
+    init(machine, slot, 0);
+}
+
+namespace {
+
+void release_counted(ScriptMemory& memory, ScriptAddress object) {
+    const std::uint32_t count = memory.u32(object + 4) - 1;
+    memory.set_u32(object + 4, count);
+    if (count == 0) {
+        memory.release(object);  // the object's virtual +4 in the original
+    }
+}
+
+}  // namespace
+
+// NTcreaturecontroller: FUN_0079d4b0, FUN_0079d4c0, FUN_0079d4e0; no default (FUN_0079d490).
+void ScriptCountedType::init(ScriptMachine& machine, ScriptAddress slot, ScriptAddress source) {
+    static_cast<void>(source);
+    machine.memory().set_u32(slot, 0);
+}
+
+void ScriptCountedType::destroy(ScriptMachine& machine, ScriptAddress slot) {
+    ScriptMemory& memory = machine.memory();
+    const ScriptAddress object = memory.u32(slot);
+    if (object != 0) {
+        release_counted(memory, object);
+        memory.set_u32(slot, 0);
+    }
+}
+
+void ScriptCountedType::assign(ScriptMachine& machine, ScriptAddress slot, ScriptAddress source) {
+    ScriptMemory& memory = machine.memory();
+    const ScriptAddress old = memory.u32(slot);
+    if (old == source) {
+        return;
+    }
+    if (source != 0) {
+        memory.set_u32(source + 4, memory.u32(source + 4) + 1);
+    }
+    memory.set_u32(slot, source);
+    if (old != 0) {
+        release_counted(memory, old);
+    }
+}
+
+void ScriptCountedType::read_default(ScriptMachine& machine, ScriptAddress slot,
+                                     const std::vector<std::uint8_t>& chunk) {
+    static_cast<void>(chunk);
+    init(machine, slot, 0);
 }
 
 // The initial value of a variable (FUN_00588390) by the kind of its type.

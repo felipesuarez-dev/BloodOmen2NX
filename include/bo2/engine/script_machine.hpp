@@ -117,6 +117,31 @@ private:
     std::map<const std::uint8_t*, ScriptAddress> defaults_;  // one list per default chunk
 };
 
+// A value type whose slot holds a word the engine owns, such as a creature
+// (CreatureNativeType, vtable 0x878b58): init and assign copy the word
+// (FUN_0076b2f0, FUN_0076b310), destroy leaves 0 (FUN_0076b300) and a field
+// has no default (0x4cb480 reads none).
+class ScriptWordType final : public ScriptValueType {
+public:
+    void init(ScriptMachine& machine, ScriptAddress slot, ScriptAddress source) override;
+    void destroy(ScriptMachine& machine, ScriptAddress slot) override;
+    void assign(ScriptMachine& machine, ScriptAddress slot, ScriptAddress source) override;
+    void read_default(ScriptMachine& machine, ScriptAddress slot, const std::vector<std::uint8_t>& chunk) override;
+};
+
+// A value type whose slot holds a counted object (its count at +4), such as
+// a creature controller (NTcreaturecontroller, vtable 0x878c60): init leaves
+// 0 whatever the source (0x79d4b0), destroy releases the object and leaves 0
+// (FUN_0079d4c0), assign shares it, counted (FUN_0079d4e0), and a field has
+// no default (0x79d490). An object whose count reaches 0 is freed.
+class ScriptCountedType final : public ScriptValueType {
+public:
+    void init(ScriptMachine& machine, ScriptAddress slot, ScriptAddress source) override;
+    void destroy(ScriptMachine& machine, ScriptAddress slot) override;
+    void assign(ScriptMachine& machine, ScriptAddress slot, ScriptAddress source) override;
+    void read_default(ScriptMachine& machine, ScriptAddress slot, const std::vector<std::uint8_t>& chunk) override;
+};
+
 // A native function (docs/SCRIPTS.md, "Native functions"): the machine, the
 // object, the argument count, the address of the cell of the first argument
 // and the address of the result (0 when the method has none).

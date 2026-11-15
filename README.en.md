@@ -23,8 +23,8 @@ Lee esto en español: [README.md](README.md)
 
 <!-- badges:start -->
 [status-badge]: https://img.shields.io/badge/phase-M3%20in%20progress-orange
-[overall-badge]: https://img.shields.io/badge/overall-8.2%25-yellow
-[fn-badge]: https://img.shields.io/badge/functions-89%20%2F%2016955-lightgrey
+[overall-badge]: https://img.shields.io/badge/overall-8.3%25-yellow
+[fn-badge]: https://img.shields.io/badge/functions-97%20%2F%2016962-lightgrey
 [levels-badge]: https://img.shields.io/badge/levels-0%20%2F%2011-lightgrey
 <!-- badges:end -->
 [cpp-badge]: https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white
@@ -70,15 +70,15 @@ The original is used as a reference, not shipped.
 **Where the project stands: M0, M1 and M2 are done and M3 is in progress.** The data pipeline, the level renderer and the oracle work. Kain walks, runs and jumps (with air control) with the original movement tuning and the port picks Spanish like the original. The machine that runs the game's scripts is ported, but it does not run the scripts of a level yet, and combat and enemies are not translated, so **no chapter can be completed**. The numbers below are generated and measure what the port translates, not how playable it feels (see [what the percentages measure](#what-the-percentages-measure)).
 
 <!-- progress:start -->
-**Overall progress: 8.2%**
+**Overall progress: 8.3%**
 
 | Component | Weight | Progress | Score |
 |---|---:|---:|---:|
-| Functions translated / in scope | 60% | 89 / 16,955 | 0.52% |
+| Functions translated / in scope | 60% | 97 / 16,962 | 0.57% |
 | Levels completable (campaign chapters) | 30% | 0 / 11 | 0.00% |
 | Platform features | 10% | 9 / 12 + 1 partial | 79.17% |
 
-Function map: 35,557 rows: 89 translated, 165 in progress, 16,701 to do, 18,602 external (not game code).
+Function map: 35,564 rows: 97 translated, 165 in progress, 16,700 to do, 18,602 external (not game code).
 
 ![Map of the game code: one rectangle per function of bo2.exe, sized by its code and grouped by system; green is translated, amber is in progress](docs/progress.svg)
 

@@ -3229,6 +3229,7 @@ address,name,subsystem,status,notes
 004cace0,FUN_004cace0,unknown,todo,ghidra
 004cb3d0,FUN_004cb3d0,unknown,todo,ghidra
 004cb450,FUN_004cb450,unknown,todo,ghidra
+004cb480,FUN_004cb480,script,translated,src/engine/script_machine.cpp: ScriptWordType::read_default reads no default (the native types with no class)
 004cb4b0,FUN_004cb4b0,unknown,todo,ghidra
 004cb4e0,FUN_004cb4e0,unknown,todo,ghidra
 004cb510,FUN_004cb510,unknown,todo,ghidra
@@ -15641,6 +15642,9 @@ address,name,subsystem,status,notes
 0076b220,FUN_0076b220,unknown,todo,ghidra
 0076b2b0,FUN_0076b2b0,unknown,todo,ghidra
 0076b2e0,FUN_0076b2e0,unknown,todo,ghidra
+0076b2f0,FUN_0076b2f0,script,translated,src/engine/script_machine.cpp: ScriptWordType::init copies the source word (creature)
+0076b300,FUN_0076b300,script,translated,src/engine/script_machine.cpp: ScriptWordType::destroy leaves 0 (creature)
+0076b310,FUN_0076b310,script,translated,src/engine/script_machine.cpp: ScriptWordType::assign copies the word (creature)
 0076b350,FUN_0076b350,unknown,todo,ghidra
 0076b3d0,FUN_0076b3d0,unknown,todo,ghidra
 0076b400,FUN_0076b400,unknown,todo,ghidra
@@ -16658,7 +16662,10 @@ address,name,subsystem,status,notes
 0079d2f0,FUN_0079d2f0,unknown,todo,ghidra
 0079d3c0,FUN_0079d3c0,unknown,todo,ghidra
 0079d3e0,FUN_0079d3e0,unknown,todo,ghidra
-0079d4c0,FUN_0079d4c0,unknown,todo,ghidra
+0079d490,FUN_0079d490,script,translated,src/engine/script_machine.cpp: ScriptCountedType::read_default reads no default (creaturecontroller)
+0079d4b0,FUN_0079d4b0,script,translated,src/engine/script_machine.cpp: ScriptCountedType::init leaves 0 whatever the source (creaturecontroller)
+0079d4c0,FUN_0079d4c0,script,translated,src/engine/script_machine.cpp: ScriptCountedType::destroy releases the counted object and leaves 0
+0079d4e0,FUN_0079d4e0,script,translated,src/engine/script_machine.cpp: ScriptCountedType::assign shares the counted object
 0079d570,FUN_0079d570,unknown,todo,ghidra
 0079d600,FUN_0079d600,unknown,todo,ghidra
 0079d650,FUN_0079d650,unknown,todo,ghidra

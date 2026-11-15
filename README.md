@@ -23,8 +23,8 @@ English version: [README.en.md](README.en.md)
 
 <!-- badges:start -->
 [status-badge]: https://img.shields.io/badge/fase-M3%20en%20curso-orange
-[overall-badge]: https://img.shields.io/badge/global-8.2%25-yellow
-[fn-badge]: https://img.shields.io/badge/funciones-89%20%2F%2016955-lightgrey
+[overall-badge]: https://img.shields.io/badge/global-8.3%25-yellow
+[fn-badge]: https://img.shields.io/badge/funciones-97%20%2F%2016962-lightgrey
 [levels-badge]: https://img.shields.io/badge/niveles-0%20%2F%2011-lightgrey
 <!-- badges:end -->
 [cpp-badge]: https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white
@@ -70,15 +70,15 @@ El original se usa como referencia; no se distribuye.
 **Dónde está el proyecto: M0, M1 y M2 están completos y M3 está en curso.** La canalización de datos, el renderizador de niveles y el oráculo funcionan. Kain camina, corre y salta (con control en el aire) con los ajustes de movimiento originales y el port elige el español como el original. La máquina que ejecuta los scripts del juego está portada, pero todavía no corre los scripts de un nivel, y el combate y los enemigos no están traducidos, así que **no se puede completar ningún capítulo**. Los números de abajo se generan y miden lo que el port traduce, no qué tan jugable se siente (consulta [qué miden los porcentajes](#qué-miden-los-porcentajes)).
 
 <!-- progress:start -->
-**Progreso global: 8.2%**
+**Progreso global: 8.3%**
 
 | Componente | Peso | Avance | Puntaje |
 |---|---:|---:|---:|
-| Funciones traducidas / en alcance | 60% | 89 / 16 955 | 0.52% |
+| Funciones traducidas / en alcance | 60% | 97 / 16 962 | 0.57% |
 | Niveles completables (capítulos de la campaña) | 30% | 0 / 11 | 0.00% |
 | Características de plataforma | 10% | 9 / 12 + 1 parcial | 79.17% |
 
-Mapa de funciones: 35 557 filas: 89 traducidas, 165 en curso, 16 701 pendientes, 18 602 externas (no son código del juego).
+Mapa de funciones: 35 564 filas: 97 traducidas, 165 en curso, 16 700 pendientes, 18 602 externas (no son código del juego).
 
 ![Mapa del código del juego: un rectángulo por cada función de bo2.exe, del tamaño de su código y agrupado por sistema; verde lo traducido y ámbar lo que está en curso](docs/progress.svg)
 
