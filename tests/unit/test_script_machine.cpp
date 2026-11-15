@@ -476,10 +476,6 @@ void test_unported_code() {
         MachineRun run(machine_class({op(0x61), op(0x5C)}));
         run.machine->interpret(run.thread);
     }));
-    CHECK(throws([] {  // a change of state: not ported yet
-        MachineRun run(machine_class({op(0x03, 1), op(0x5E), op(0x5C)}));
-        run.machine->interpret(run.thread);
-    }));
     CHECK(throws([] {  // a call word that names no body
         MachineRun run(machine_class({op(0x48), 0, op(0x5C)}));
         run.machine->interpret(run.thread);
@@ -1131,6 +1127,147 @@ void test_parallel_block() {
     CHECK(memory.live_blocks() == blocks - 2);
 }
 
+// Objects and states (BO2NX-156).
+using bo2::engine::ScriptField;
+
+ScriptField field(std::uint16_t kind, std::uint32_t offset, std::uint32_t value, const std::string& name = {}) {
+    ScriptField out;
+    out.offset = offset;
+    out.type.kind = kind;
+    out.default_flag = 1;
+    out.default_value = value;
+    out.default_name = name;
+    return out;
+}
+
+// FUN_0057fa20: the class first, then its ancestors; an offset the class
+// already wrote keeps the class's default.
+void test_field_defaults() {
+    ScriptClass base = make_class("base", "", {"default"}, 1);
+    base.data_size = 36;
+    base.fields = {field(2, 4, 11), field(4, 8, 0, "basename"), field(1, 12, 1)};
+    ScriptClass child = make_class("child", "base", {"default"}, 1);
+    child.data_size = 36;
+    float one_and_half = 1.5f;
+    std::uint32_t half_bits = 0;
+    std::memcpy(&half_bits, &one_and_half, sizeof half_bits);
+    child.fields = {field(2, 4, 22), field(3, 16, half_bits), field(5, 20, 0x1FF), field(4, 24, 0, "hello"),
+                    field(10, 28, 0), field(11, 32, 3)};
+    const Linked linked = make_program({child, base});
+    ScriptMachine machine(linked.program);
+    const ScriptObjectId object = machine.create_object(0);
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    const ScriptAddress data = machine.data_of(object);
+    CHECK(machine.state_of(object) == 0);
+    CHECK(memory.u32(data + 4) == 22);  // the child's default wins
+    CHECK(machine.string_at(data + 8) == "basename");
+    CHECK(memory.u8(data + 12) == 1);
+    CHECK(memory.f32(data + 16) == 1.5f);
+    CHECK(memory.u8(data + 20) == 0xFF);
+    CHECK(memory.u8(data + 21) == 0);
+    CHECK(machine.string_at(data + 24) == "hello");
+    CHECK(memory.u32(data + 28) == 0);
+    CHECK(memory.u32(data + 32) == 3);
+    const ScriptAddress hello = memory.u32(data + 24);
+    CHECK(memory.u32(hello) == 2);  // the machine's own and the field's
+    const ScriptObjectId second = machine.create_object(0);
+    CHECK(memory.u32(machine.data_of(second) + 24) == hello);
+    CHECK(memory.u32(hello) == 3);
+}
+
+// Two states whose start adds 1 to data + 4 (default) or data + 8 (busy).
+ScriptClass two_state_class(std::vector<std::uint32_t> default_start) {
+    ScriptClass cls = machine_class(std::move(default_start));
+    cls.states = {"default", "busy"};
+    cls.state_owners = {"", ""};
+    cls.bodies.push_back(script_body(0, 1, count_into(8)));
+    cls.slots = {{0, 0, "alpha", 0}, {1, 0, "alpha", 1}};
+    return cls;
+}
+
+void test_start_runs_state_start() {
+    MachineRun run(two_state_class(count_into(4)));
+    ScriptMachine& machine = *run.machine;
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    const ScriptAddress data = machine.data_of(2);
+    machine.start(2);
+    CHECK(memory.u32(data + 4) == 1);
+    CHECK(machine.main_thread(2) == nullptr);  // the start ended
+    machine.request_state(2, 1);
+    CHECK(machine.state_of(2) == 1);
+    CHECK(machine.main_thread(2) != nullptr);  // made, not run
+    CHECK(memory.u32(data + 8) == 0);
+    machine.run(2);
+    CHECK(memory.u32(data + 8) == 1);
+    CHECK(machine.main_thread(2) == nullptr);
+    machine.start(2);  // not in state 0
+    CHECK(memory.u32(data + 4) == 1);
+    CHECK(!machine.warnings().empty());
+    CHECK(machine.warnings().back() == "WARNING: Branch occurred before ScriptObject::StartObject() called!");
+}
+
+// 0x5e while the object runs: the state waits, the frame ends, and the state
+// is taken when the run ends; the new start runs at the next run.
+void test_request_state() {
+    MachineRun run(two_state_class(
+        {op(0x0B, 4), op(0x03, 1), op(0x1D), op(0x03, 1), op(0x5E), op(0x0B, 12), op(0x03, 1), op(0x1D),
+         op(0x5C)}));
+    ScriptMachine& machine = *run.machine;
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    const ScriptAddress data = machine.data_of(2);
+    machine.start(2);
+    CHECK(memory.u32(data + 4) == 1);
+    CHECK(memory.u32(data + 12) == 0);  // the frame ended at 0x5e
+    CHECK(machine.state_of(2) == 1);
+    CHECK(machine.pending_state_of(2) == 0);
+    CHECK(memory.u32(data + 8) == 0);
+    machine.run(2);
+    CHECK(memory.u32(data + 8) == 1);
+}
+
+void native_go_busy(ScriptMachine& machine, ScriptObjectId self, std::uint32_t, ScriptAddress, ScriptAddress) {
+    machine.request_state(self, 1);
+}
+
+// A native that leaves a state pending on the owner ends the frame
+// (FUN_0057f580).
+void test_native_state_ends_frame() {
+    ScriptClass cls = two_state_class({op(0x48), 0, op(0x0B, 12), op(0x03, 1), op(0x1D), op(0x5C)});
+    cls.methods.push_back(make_method("go", bo2::engine::kScriptNoSlot));
+    cls.bodies.push_back(native_body(1));
+    cls.references = {{make_reference(4, 1, "alpha", 2)}};
+    MachineRun run(cls);
+    ScriptMachine& machine = *run.machine;
+    machine.bind_native("alpha", 2, native_go_busy);
+    machine.start(2);
+    CHECK(machine.memory().u32(machine.data_of(2) + 12) == 0);
+    CHECK(machine.state_of(2) == 1);
+}
+
+void test_request_invalid_state() {
+    MachineRun run(two_state_class(count_into(4)));
+    ScriptMachine& machine = *run.machine;
+    machine.request_state(2, 0);
+    machine.request_state(2, 2);
+    machine.request_state(2, -1);
+    CHECK(machine.state_of(2) == 0);
+    CHECK(machine.pending_state_of(2) == 0);
+    CHECK(machine.main_thread(2) == nullptr);
+}
+
+void test_stop() {
+    MachineRun run(two_state_class({op(0x5D), op(0x5C)}));
+    ScriptMachine& machine = *run.machine;
+    const std::size_t blocks = machine.memory().live_blocks();
+    machine.start(2);
+    CHECK(machine.main_thread(2) != nullptr);  // it yielded
+    CHECK(machine.memory().live_blocks() == blocks + 2);
+    machine.stop(2);
+    CHECK(machine.main_thread(2) == nullptr);
+    CHECK(machine.state_of(2) == 0);
+    CHECK(machine.memory().live_blocks() == blocks);
+}
+
 // 0x59: the copy runs, the frame skips the block and waits for it.
 void test_fork_waits() {
     MachineRun run(machine_class(join({{op(0x59, 2), op(0x5D), op(0x5C)}, mark(), {op(0x5D), op(0x5C)}})));
@@ -1334,6 +1471,12 @@ int main() {
     test_task_native();
     test_parallel_block();
     test_fork_waits();
+    test_field_defaults();
+    test_start_runs_state_start();
+    test_request_state();
+    test_native_state_ends_frame();
+    test_request_invalid_state();
+    test_stop();
 
     const char* root = std::getenv("BO2NX_ASSETS_DIR");
     if (root == nullptr) {

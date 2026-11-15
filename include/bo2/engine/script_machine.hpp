@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -85,15 +86,36 @@ public:
     const ScriptMemory& memory() const { return memory_; }
     const ScriptProgram& program() const { return program_; }
 
-    // Creates an object of the class `class_id` (program id): a zeroed data
-    // block of the size the class declares and its 12-byte handle (word 0
-    // unused, the count at +4, the object at +8). The count starts at 1, the
-    // object's own (FUN_0057f830), and counts the variables that hold the
-    // handle.
+    // Creates an object of the class `class_id` (program id): a data block of
+    // the size the class declares, state 0, with the initial values of the
+    // fields of the class and its ancestors (FUN_0057fa20), and its 12-byte
+    // handle (word 0 unused, the count at +4, the object at +8). The count
+    // starts at 1, the object's own (FUN_0057f830), and counts the variables
+    // that hold the handle.
     ScriptObjectId create_object(std::uint32_t class_id);
     ScriptAddress data_of(ScriptObjectId object) const;
     ScriptAddress handle_of(ScriptObjectId object) const;
     std::uint32_t class_of(ScriptObjectId object) const;
+
+    // The state of an object: the first byte of its data.
+    std::uint32_t state_of(ScriptObjectId object) const;
+    // The state waiting to replace the current one, 0 for none.
+    std::uint32_t pending_state_of(ScriptObjectId object) const;
+    // The main thread of an object (a thread, or the task of a native start),
+    // null when it has none.
+    const ScriptTask* main_thread(ScriptObjectId object) const;
+    // Starts an object (FUN_00580730): in state 0 only, makes the main thread
+    // on the start of the state and runs it once; in another state it warns.
+    void start(ScriptObjectId object);
+    // Runs the main thread once with `arg` (FUN_00580900, FUN_00580cb0); a
+    // main thread that stops is destroyed, then a pending state is taken.
+    void run(ScriptObjectId object, std::uint32_t arg = 0);
+    // Destroys the main thread and goes back to state 0 (FUN_00580770).
+    void stop(ScriptObjectId object);
+    // Asks for the state `state` (FUN_00580830): 0 < state < the number of
+    // states, else nothing. While the object runs its main thread the state
+    // waits; otherwise it is taken at once (FUN_00580890).
+    void request_state(ScriptObjectId object, std::int32_t state);
 
     // A frame on the body `body` (program id) for `object`: a zeroed stack of
     // stack_size cells and zeroed locals of max(locals_size, 4) bytes, ip 0.
@@ -137,9 +159,22 @@ private:
         std::uint32_t class_id = 0;
         ScriptAddress data = 0;
         ScriptAddress handle = 0;
+        std::uint32_t pending = 0;          // +0x14
+        std::unique_ptr<ScriptTask> main;   // +0x18
     };
 
     const Object& object_at(ScriptObjectId object) const;
+    Object& object_at(ScriptObjectId object);
+    void init_fields(ScriptObjectId object);    // FUN_0057fa20
+    ScriptAddress name_record(const std::string& name);
+    void make_main_thread(ScriptObjectId object);  // FUN_00580be0
+    void run_main(ScriptObjectId object, std::uint32_t arg);  // FUN_00580cb0
+    void change_state(ScriptObjectId object);   // FUN_00580890
+    // The objects whose main thread is running (DAT_00a6a588).
+    void push_running(ScriptObjectId object);
+    bool is_running(ScriptObjectId object) const;
+    // A state is waiting on the owner of the thread.
+    bool owner_pending(const ScriptThread& thread) const;
     ScriptAddress new_record(std::string_view text);
     void release_record(ScriptAddress record);
 
@@ -185,6 +220,10 @@ private:
     std::vector<ScriptTaskNative> task_natives_;  // one per body of the program
     ScriptAddress empty_record_ = 0;      // the shared empty string
     std::vector<std::string> warnings_;
+    std::vector<ScriptObjectId> running_;
+    // The record of each name a field defaults to, held once like the
+    // original's global name table.
+    std::map<std::string, ScriptAddress> default_names_;
     std::uint32_t loop_count_ = 0;  // DAT_00a6a57c
     int depth_ = 0;                 // DAT_00a6a578: interpreters running
 };

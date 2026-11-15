@@ -133,7 +133,7 @@ design. `third_party/stb_vorbis.c` is third-party code (`NOTICE`).
 | `src/engine/region.cpp` | Reader of the region entities and script package | data format | analysis | 0 |
 | `src/engine/script_package.cpp` | Reader of the compiled script packages | data format | analysis | 10 |
 | `src/engine/script_program.cpp` | Linker of the script packages of a region | behaviour | analysis | 4 |
-| `src/engine/script_machine.cpp` | Interpreter of the script machine | behaviour | analysis | 22 |
+| `src/engine/script_machine.cpp` | Interpreter of the script machine | behaviour | analysis | 26 |
 | `src/engine/script_memory.cpp` | 32-bit memory of the script machine | port's own; the 4-byte cells of the original | analysis | 0 |
 | `src/engine/string_table.cpp` | Reader of the string tables | data format | analysis, then specification | 0 |
 | `src/engine/erg.cpp` | Reader of `game.erg` | data format | analysis | 0 |
@@ -162,7 +162,7 @@ design. `third_party/stb_vorbis.c` is third-party code (`NOTICE`).
 | `src/common/version.cpp` | Version string | port's own | own design | 0 |
 | `tools/bo2fmt/big.py` | Python reader of the `.big` containers | data format | analysis | 1 |
 | `tools/bo2fmt/animatio.py` | Python reader of the animation graphs | data format | analysis | 40 |
-| `tools/bo2fmt/animreel.py` | Python reader of the animation clips | data format | analysis | 22 |
+| `tools/bo2fmt/animreel.py` | Python reader of the animation clips | data format | analysis | 26 |
 | `tools/bo2fmt/audio.py` | Python reader of the sound tables | data format | analysis | 0 |
 | `tools/bo2fmt/bo2fmt.py` | Command line of the Python readers | port's own tooling | own design | 0 |
 | `tools/bo2fmt/font.py` | Python reader of the game font | data format | specification | 1 |

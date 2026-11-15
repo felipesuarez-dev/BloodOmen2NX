@@ -6279,35 +6279,35 @@ address,name,subsystem,status,notes
 0057dbe0,FUN_0057dbe0,script,translated,src/engine/script_machine.cpp: ScriptThread::finish ends the frames (FUN_0057dc80); the frame list is a vector
 0057dc70,FUN_0057dc70,script,translated,src/engine/script_machine.cpp: ScriptMachine::destroy_task is the virtual +0 of a thread
 0057dc80,FUN_0057dc80,script,translated,src/engine/script_machine.cpp: ScriptMachine::end_thread ends the frames from the last one
-0057dcf0,FUN_0057dcf0,script,wip,src/engine/script_machine.cpp: ScriptMachine::run_thread runs the children of the last frame with the argument and then interprets; the stop on a pending state of the owner is not ported
+0057dcf0,FUN_0057dcf0,script,translated,src/engine/script_machine.cpp: ScriptMachine::run_thread runs the children of the last frame with the argument and then interprets and stops on a pending state of the owner
 0057de60,FUN_0057de60,unknown,todo,ghidra
-0057de80,FUN_0057de80,script,wip,src/engine/script_machine.cpp: ScriptMachine::interpret runs the value and arithmetic and logic and jump instructions and the loop guard and the calls that return; child threads and tasks and state changes are not ported
+0057de80,FUN_0057de80,script,wip,src/engine/script_machine.cpp: ScriptMachine::interpret runs every instruction the game data uses but 0x21 (the value types are not ported)
 0057f560,FUN_0057f560,unknown,todo,ghidra
-0057f580,FUN_0057f580,script,wip,src/engine/script_machine.cpp: ScriptMachine::call runs a native body at once or pushes the frame of a script body
+0057f580,FUN_0057f580,script,translated,src/engine/script_machine.cpp: ScriptMachine::call pops the cells and runs a native body at once (ending the frame on a pending state) or pushes the frame of a script body with its parameters and locals
 0057f6d0,FUN_0057f6d0,script,translated,src/engine/script_machine.cpp: ScriptMachine::spawn pops the arguments and starts a script body as a thread of the same owner or calls a task native and runs the child once
 0057f830,FUN_0057f830,script,wip,src/engine/script_machine.cpp: ScriptMachine::create_object makes the data block and the handle the object counts once; the initial values and the manager lists are not ported
 0057f9f0,FUN_0057f9f0,unknown,todo,ghidra
-0057fa20,FUN_0057fa20,unknown,todo,ghidra
+0057fa20,FUN_0057fa20,script,wip,src/engine/script_machine.cpp: ScriptMachine::init_fields writes the defaults of the class and its ancestors once per offset; fields of kind 9 are not ported
 0057fd00,FUN_0057fd00,unknown,todo,ghidra
 0057fe90,FUN_0057fe90,unknown,todo,ghidra
 00580010,FUN_00580010,unknown,todo,ghidra
 005802f0,FUN_005802f0,unknown,todo,ghidra
 005806b0,FUN_005806b0,unknown,todo,ghidra
-00580730,FUN_00580730,unknown,todo,ghidra
-00580770,FUN_00580770,unknown,todo,ghidra
+00580730,FUN_00580730,script,translated,src/engine/script_machine.cpp: ScriptMachine::start makes the main thread in state 0 and runs it once or warns
+00580770,FUN_00580770,script,translated,src/engine/script_machine.cpp: ScriptMachine::stop destroys the main thread and goes back to state 0 with no pending state
 005807d0,FUN_005807d0,unknown,todo,ghidra
-00580810,FUN_00580810,unknown,todo,ghidra
-00580830,FUN_00580830,unknown,todo,ghidra
-00580890,FUN_00580890,unknown,todo,ghidra
-00580900,FUN_00580900,unknown,todo,ghidra
+00580810,FUN_00580810,script,translated,src/engine/script_machine.cpp: ScriptMachine::body_in_state finds the body in the slot of the method in the table of the state; it throws on a slot past the table where the original reads past it
+00580830,FUN_00580830,script,translated,src/engine/script_machine.cpp: ScriptMachine::request_state keeps a valid state pending and changes at once when the object is not running
+00580890,FUN_00580890,script,translated,src/engine/script_machine.cpp: ScriptMachine::change_state destroys the main thread and takes the pending state and makes the new main thread; the virtual +0x18 is empty in a script object
+00580900,FUN_00580900,script,translated,src/engine/script_machine.cpp: ScriptMachine::run runs the main thread when there is one
 00580920,FUN_00580920,unknown,todo,ghidra
 00580970,FUN_00580970,unknown,todo,ghidra
 005809d0,FUN_005809d0,unknown,todo,ghidra
 00580a30,FUN_00580a30,unknown,todo,ghidra
 00580a40,FUN_00580a40,unknown,todo,ghidra
 00580af0,FUN_00580af0,unknown,todo,ghidra
-00580be0,FUN_00580be0,unknown,todo,ghidra
-00580cb0,FUN_00580cb0,unknown,todo,ghidra
+00580be0,FUN_00580be0,script,translated,src/engine/script_machine.cpp: ScriptMachine::make_main_thread makes the main thread on slot 0 of the state from a task native or a script body
+00580cb0,FUN_00580cb0,script,translated,src/engine/script_machine.cpp: ScriptMachine::run_main runs the main thread once and destroys it when it stops and then takes a pending state
 00580d20,FUN_00580d20,unknown,todo,ghidra
 00580d40,FUN_00580d40,unknown,todo,ghidra
 00580d50,FUN_00580d50,unknown,todo,ghidra

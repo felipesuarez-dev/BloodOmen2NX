@@ -10,12 +10,11 @@ was checked in the running game.
 
 Port: `src/engine/script_package.cpp` (the packages),
 `src/engine/script_program.cpp` (linking), `src/engine/script_memory.cpp`
-and `src/engine/script_machine.cpp` (the machine: objects, strings, frames
-and the instructions of "Values and variables", "Arithmetic and logic" and
-"Flow", with the loop guard, the calls that return (`0x47` to `0x4c`) and
-the binding of native functions, the end of a frame, and the child threads
-and tasks (`0x4d` to `0x52`, `0x55`, `0x56`, `0x59` to `0x5b`); the change
-of state (`0x5e`) is not ported yet).
+and `src/engine/script_machine.cpp` (the machine: objects with the initial
+values of their fields, their main thread and their states, strings,
+frames and every instruction the game data uses, with the loop guard, the
+calls, the child threads and tasks, the binding of native functions and
+the end of a frame; the value types (kind 9) are not ported yet).
 
 ## Objects, classes and states
 
@@ -31,25 +30,53 @@ of state (`0x5e`) is not ported yet).
   `0x86df04`).
 - The data block has the size the class declares (`FUN_0057fa20`) and holds
   the fields at their offsets. Its first byte is the current state of the
-  object. `FUN_0057fa20` fills the fields of the class and of its ancestors
-  with their defaults.
+  object. `FUN_0057fa20` fills the fields of the class and then of each
+  ancestor with their defaults, and skips a field whose offset a class
+  nearer the object already filled (it keeps a set of the offsets): a class
+  that declares a field of an ancestor again, at the same offset, gives it
+  its own default. This happens 11,541 times in the data (for example
+  `kainactorscript` declares `captionedname` of `dumbactorscript` again).
+  By kind: 1, 2, 3, 5 and 11 store the default value (`FUN_00587fc0`); 4
+  stores the record of the default name, counted, or the empty string when
+  there is none; 6, 7 and 10 take their initial value (`FUN_00588390`); 9
+  initialises the slot from the default chunk (the value type's +0x18).
+  Every field of kind 1, 2, 3, 4, 5 and 11 in the data has a default
+  (measured).
 - A class has a parent (+0x18), a name (+8) and one slot table per state
   (+0x24, 8 bytes each: the table, its length and whether the class owns
   it). `FUN_00580810` finds the body of a method for an object: the table
   of the current state, at the slot of the method.
 - State 0 is `default`. Slot 0 is the method `start` of the state.
 - `FUN_00580730` (virtual +8) starts an object: it must be in state 0, and
-  `FUN_00580be0` creates the main thread on the `start` of the state.
+  `FUN_00580be0` creates the main thread on the `start` of the state (slot
+  0 of the table of the state; a native body returns the task that becomes
+  the main thread, with the object as both self and owner; a script body
+  becomes a thread with no arguments), then it runs once with 0. Started in
+  another state, the object prints `WARNING: Branch occurred before
+  ScriptObject::StartObject() called!` and does nothing.
   `FUN_00580900` (virtual +0x10) runs the main thread once
-  (`FUN_00580cb0`). `FUN_00580770` (virtual +0xc) stops the object: it
-  destroys the thread and returns to state 0.
+  (`FUN_00580cb0`): a main thread that stops running is destroyed, and a
+  pending state is taken after the run. `FUN_00580770` (virtual +0xc)
+  stops the object: it destroys the thread and returns to state 0 with no
+  pending state.
+- While an object runs, changes state or stops, it is on a stack of
+  running objects (`DAT_00a6a588`, depth `DAT_00a6a580`; past 20 entries
+  the original prints `ScriptObject::PushThread(): Stack size exceeded!
+  The game will likely crash now.`).
 - `FUN_00580830` (virtual +0x14) asks for a state. It accepts a state
   above 0 and below the state count of the class and stores it as pending.
   If the object is not running its thread at that moment, `FUN_00580890`
   changes at once; otherwise the change happens when the run of the thread
   returns (`FUN_00580cb0`). The change destroys the main thread, writes the
-  state in the first byte of the data and starts the `start` of the new
-  state.
+  state in the first byte of the data, clears the pending state and makes
+  the main thread on the `start` of the new state, which first runs at the
+  next run of the object (the virtual +0x18 the change calls last,
+  `0x580880`, does nothing in a script object).
+- A pending state on the owner of a thread stops the thread: `FUN_0057dcf0`
+  checks it after each child and before each pass of the interpreter,
+  `0x5a` checks it after the copy runs, and a native call by `0x48` to
+  `0x4c` that returns with a state pending ends the frame (`FUN_0057f580`;
+  `0x47` calls the native itself and goes on).
 
 ## Threads and frames
 
@@ -435,8 +462,6 @@ owner, has the slot count of its class.
 - The properties `<class>.<field>` of an entity (for example
   `levelkeeperintro.commondata.farClip`), which look like overrides of the
   defaults of the fields of its object (`FUN_00737a80` applies them).
-- The virtual +0x18 of a script object (`0x580880`), called after a state
-  change.
 - The collection type (kind 7) and the type with kind 8: no data uses them.
 - The text compiler (`FUN_00793280` imports a package from source); the
   game data has only compiled packages.

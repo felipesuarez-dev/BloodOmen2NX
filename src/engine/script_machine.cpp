@@ -150,7 +150,8 @@ ScriptObjectId ScriptMachine::create_object(std::uint32_t class_id) {
     const auto id = static_cast<ScriptObjectId>(objects_.size() + 1);
     memory_.set_u32(object.handle + 4, 1);  // FUN_0057f830: the object holds its handle
     memory_.set_u32(object.handle + 8, id);
-    objects_.push_back(object);
+    objects_.push_back(std::move(object));
+    init_fields(id);
     return id;
 }
 
@@ -159,6 +160,191 @@ const ScriptMachine::Object& ScriptMachine::object_at(ScriptObjectId object) con
         throw ScriptError("script object does not exist");
     }
     return objects_[object - 1];
+}
+
+ScriptMachine::Object& ScriptMachine::object_at(ScriptObjectId object) {
+    if (object == 0 || object > objects_.size()) {
+        throw ScriptError("script object does not exist");
+    }
+    return objects_[object - 1];
+}
+
+// The record of a name a field defaults to; the machine holds it once, as the
+// original's global name table does.
+ScriptAddress ScriptMachine::name_record(const std::string& name) {
+    const auto found = default_names_.find(name);
+    if (found != default_names_.end()) {
+        return found->second;
+    }
+    const ScriptAddress record = new_record(name);
+    default_names_.emplace(name, record);
+    return record;
+}
+
+// FUN_0057fa20: the fields of the class and then of each ancestor take their
+// initial value at their offset; an offset already written by a class nearer
+// the object is skipped, so a field a class declares again keeps that class's
+// default (docs/SCRIPTS.md, "Objects, classes and states"). State 0.
+void ScriptMachine::init_fields(ScriptObjectId object) {
+    const ScriptAddress data = data_of(object);
+    memory_.set_u8(data, 0);
+    std::vector<std::uint32_t> written;
+    for (std::uint32_t id = class_of(object) + 1; id != 0; id = program_.classes()[id - 1].parent) {
+        for (const ScriptField& field : program_.classes()[id - 1].source->fields) {
+            if (std::find(written.begin(), written.end(), field.offset) != written.end()) {
+                continue;
+            }
+            written.push_back(field.offset);
+            const ScriptAddress address = data + field.offset;
+            switch (field.type.kind) {
+            case 1:
+            case 2:
+            case 3:
+            case 5:
+            case 11:
+                store_value(address, field.type, field.default_value);
+                break;
+            case 4:
+                if (field.default_flag == 0) {
+                    init_variable(address, field.type);
+                } else {
+                    const ScriptAddress record = name_record(field.default_name);
+                    memory_.set_u32(address, record);
+                    memory_.set_u32(record, memory_.u32(record) + 1);
+                }
+                break;
+            case 6:
+            case 7:
+            case 10:
+                init_variable(address, field.type);
+                break;
+            case 9:
+                throw ScriptError("script field of kind 9 is not ported");
+            default:
+                break;
+            }
+        }
+    }
+}
+
+std::uint32_t ScriptMachine::state_of(ScriptObjectId object) const { return memory_.u8(data_of(object)); }
+
+std::uint32_t ScriptMachine::pending_state_of(ScriptObjectId object) const { return object_at(object).pending; }
+
+const ScriptTask* ScriptMachine::main_thread(ScriptObjectId object) const { return object_at(object).main.get(); }
+
+// ScriptObject::PushThread: the original keeps 20 entries and warns past them.
+void ScriptMachine::push_running(ScriptObjectId object) {
+    if (running_.size() > 0x13) {
+        warnings_.push_back("ScriptObject::PushThread(): Stack size exceeded!  The game will likely crash now.");
+    }
+    running_.push_back(object);
+}
+
+bool ScriptMachine::is_running(ScriptObjectId object) const {
+    return std::find(running_.begin(), running_.end(), object) != running_.end();
+}
+
+bool ScriptMachine::owner_pending(const ScriptThread& thread) const {
+    return thread.owner != 0 && object_at(thread.owner).pending != 0;
+}
+
+// FUN_00580be0: the body in slot 0 of the table of the current state; a
+// native body returns the task that is the main thread (the object is both
+// self and owner), a script body runs as a thread with no arguments.
+void ScriptMachine::make_main_thread(ScriptObjectId object) {
+    const ScriptProgramClass& cls = program_.classes()[class_of(object)];
+    const std::uint32_t state = state_of(object);
+    if (state >= cls.states.size() || cls.states[state].empty()) {
+        throw ScriptError("script object has no slot 0 in state " + std::to_string(state));
+    }
+    const std::uint32_t found = cls.states[state][0];
+    if (found == 0) {
+        return;
+    }
+    const std::uint32_t body = found - 1;
+    const ScriptProgramBody& target = program_.bodies().at(body);
+    if (target.source->native()) {
+        const ScriptTaskNative native = task_natives_[body];
+        if (native == nullptr) {
+            throw ScriptError("task body " + std::to_string(target.index) + " of " +
+                              program_.classes()[target.owner].name + " is not bound");
+        }
+        object_at(object).main = native(*this, object, object, 0, 0);
+        return;
+    }
+    auto thread = std::make_unique<ScriptThread>();
+    thread->owner = object;
+    ScriptFrame first = make_frame(object, body);
+    for (const ScriptVariable& local : target.source->locals) {
+        init_variable(first.locals + local.offset, local.type);
+    }
+    thread->frames.push_back(std::move(first));
+    object_at(object).main = std::move(thread);
+}
+
+void ScriptMachine::run_main(ScriptObjectId object, std::uint32_t arg) {
+    push_running(object);
+    ScriptTask& main = *object_at(object).main;
+    main.run(*this, arg);
+    if (!main.running()) {
+        destroy_task(object_at(object).main);
+    }
+    running_.pop_back();
+    if (object_at(object).pending != 0) {
+        change_state(object);
+    }
+}
+
+void ScriptMachine::start(ScriptObjectId object) {
+    if (state_of(object) != 0) {
+        warnings_.push_back("WARNING: Branch occurred before ScriptObject::StartObject() called!");
+        return;
+    }
+    make_main_thread(object);
+    if (object_at(object).main != nullptr) {
+        run_main(object, 0);
+    }
+}
+
+void ScriptMachine::run(ScriptObjectId object, std::uint32_t arg) {
+    if (object_at(object).main != nullptr) {
+        run_main(object, arg);
+    }
+}
+
+void ScriptMachine::stop(ScriptObjectId object) {
+    if (object_at(object).main != nullptr) {
+        push_running(object);
+        destroy_task(object_at(object).main);
+        running_.pop_back();
+    }
+    memory_.set_u8(data_of(object), 0);
+    object_at(object).pending = 0;
+}
+
+void ScriptMachine::request_state(ScriptObjectId object, std::int32_t state) {
+    const ScriptProgramClass& cls = program_.classes()[class_of(object)];
+    if (state <= 0 || static_cast<std::uint32_t>(state) >= cls.states.size()) {
+        return;
+    }
+    object_at(object).pending = static_cast<std::uint32_t>(state);
+    if (!is_running(object)) {
+        change_state(object);
+    }
+}
+
+// FUN_00580890: the main thread is destroyed, the pending state becomes the
+// state and the main thread is made on its start, which runs at the next run
+// of the object (the virtual +0x18 called last, 0x580880, does nothing in a
+// script object).
+void ScriptMachine::change_state(ScriptObjectId object) {
+    push_running(object);
+    destroy_task(object_at(object).main);
+    memory_.set_u8(data_of(object), static_cast<std::uint8_t>(object_at(object).pending & 0xFFU));
+    object_at(object).pending = 0;
+    make_main_thread(object);
+    running_.pop_back();
 }
 
 ScriptAddress ScriptMachine::data_of(ScriptObjectId object) const { return object_at(object).data; }
@@ -569,7 +755,9 @@ bool ScriptMachine::call(ScriptThread& thread, std::uint32_t op, ScriptObjectId 
                               program_.classes()[target.owner].name + " is not bound");
         }
         native(*this, object, argc, args, result);
-        return false;
+        // FUN_0057f580: a native that leaves a state pending on the owner of
+        // the thread ends the frame; 0x47 calls the native itself and goes on.
+        return op != 0x47 && owner_pending(thread);
     }
     ScriptFrame callee = make_frame(object, body);
     if (has_result) {
@@ -600,6 +788,9 @@ bool ScriptMachine::run_thread(ScriptThread& thread, std::uint32_t arg) {
             destroy_task(children[index]);
             children.erase(children.begin() + static_cast<std::ptrdiff_t>(index));
         }
+        if (owner_pending(thread)) {
+            return true;  // the owner changes state at the end of its run
+        }
     }
     if (thread.frames.back().waiting) {
         if (!children.empty()) {
@@ -608,6 +799,9 @@ bool ScriptMachine::run_thread(ScriptThread& thread, std::uint32_t arg) {
         thread.frames.back().waiting = false;
     }
     while (!thread.frames.empty()) {
+        if (owner_pending(thread)) {
+            return true;
+        }
         const std::size_t frames = thread.frames.size();
         if (!interpret(thread)) {
             return true;
@@ -1086,6 +1280,9 @@ bool ScriptMachine::interpret(ScriptThread& thread) {
                 frame.waiting = true;
                 return false;
             }
+            if (owner_pending(thread)) {
+                return false;
+            }
             break;
         case 0x5B:
             // The frame ends once it has no children; until then it waits
@@ -1097,6 +1294,11 @@ bool ScriptMachine::interpret(ScriptThread& thread) {
             frame.waiting = true;
             return false;
         case 0x5C:
+            return true;
+        case 0x5E:
+            // A state for the object of the frame (its virtual +0x14,
+            // FUN_00580830); the frame ends.
+            request_state(frame.object, static_cast<std::int32_t>(stack.pop()));
             return true;
         case 0x5D:
             return false;
