@@ -494,6 +494,45 @@ gives 0:
   or `sarafan`;
 - the 2 conversations, which are `conversationscript`.
 
+## The update of the objects of a level
+
+Every frame the game tick (`FUN_0072edba`) does, in this order:
+
+1. `FUN_0073e840` gives each creature of the creature list (`DAT_00a836a8`)
+   its time for the frame (+0xfc) and marks the creatures that sleep (bit
+   1 of +0xf0). A creature with bit 2 of +0xf0 gets the whole frame time.
+   Another creature is measured by `FUN_0073e330`: the smallest squared
+   distance from its position (+0xb4) to the viewers of the list
+   `FUN_007544d0` (each one's position at its +0x2c, +0xb4). Beyond a
+   radius it sleeps. Within it, the frame time adds up at +0x100. A
+   creature processed in the last frame (+0x140) and nearer than its +0x104
+   gets the whole sum. Another one gets time only once the sum passes a
+   step: the step itself while the sum is below two steps, else the sum
+   less one step, and the rest stays at +0x100. The step is 1/60 s, or 1
+   over the field +0x14 of the level keeper (`FUN_0072c300` finds the
+   creature `levelkeeper`); once in 100 frames it is scaled at random
+   (`FUN_007a4289`, the `rand` of the C library). Not read yet: the radius
+   (`FUN_0072c580`), the second mode (`FUN_0072c450`) and the viewers.
+2. The tasks of the script manager run with the frame time times the first
+   time scale (`FUN_00583400`; "Timers").
+3. `FUN_00718490` processes the creatures of the group `process_msg`
+   (`DAT_00a83754`, `FUN_0072b120`), in the order they joined it: the
+   constructor of `Creature` adds each new creature at the end
+   (`FUN_0072b4d0`, 0x70d82e) unless `DAT_00a836d6` is set. Every 60 frames
+   `FUN_00718340` takes out of the group the creatures with bit 0 of +0xf2
+   whose object has no main thread.
+4. For each creature that does not sleep and whose byte +0x160 is 0, the
+   update message (vtable `0x8420e0`, type `DAT_00910640`) carries its time
+   times its time scale: `+0xfc * DAT_00910b10[+0xf8]`, then +0xfc and the
+   scale. The ten scales are 1.0, and `FUN_00718220` sets all of them, 0 to
+   pause the game. The creature gets the message only when that time is
+   above 0, and `FUN_0070e8b0` runs its object once with the time as the
+   argument of the run.
+
+Read live in `sl01`, without breakpoints (`update_probe.py`, ten samples two
+seconds apart): 393 creatures, all ten scales 1.0. In each sample about 110
+creatures have a time near 0.01 s, about 260 have 0, and 5 to 29 have 0.1.
+
 ## Timers
 
 A timer counts down a time and calls an object back when it runs out. It
@@ -715,8 +754,9 @@ owner, has the slot count of its class.
   `natives.py`.
 - The order of the creature list `DAT_00a836a8`, which is the order in
   which the creatures of a region are activated.
-- The argument of the update message that `FUN_0070e8b0` passes to the run
-  of the object, and the order in which the creatures get the message.
+- The radius, the second mode and the viewers of the simulation
+  (`FUN_0072c580`, `FUN_0072c450`, `FUN_007544d0`), and who sets +0x104,
+  +0x108 and +0x140 of a creature ("The update of the objects of a level").
 - What `FUN_006e20d0(0)` does to a scripted sound instance.
 - The properties `<class>.<field>` of an entity (for example
   `levelkeeperintro.commondata.farClip`), which look like overrides of the
