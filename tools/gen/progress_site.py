@@ -28,6 +28,8 @@ TEXT = {
         "overall": "progreso global",
         "phase": "Fase {phase} en curso",
         "summary": "{done} de {scope} funciones del juego traducidas · {chapters} de {levels} capítulos completables",
+        "shot_alt": "Kain corriendo en el primer nivel de los barrios bajos (sl01), dibujado por el port con el HUD del original",
+        "shot_caption": "Kain en sl01, dibujado por el port con su modelo, su animación y el HUD del original.",
         "components": "Componentes",
         "weight": "peso",
         "functions": "Funciones traducidas",
@@ -94,6 +96,8 @@ TEXT = {
         "overall": "overall progress",
         "phase": "Phase {phase} in progress",
         "summary": "{done} of {scope} game functions translated · {chapters} of {levels} chapters completable",
+        "shot_alt": "Kain running in the first level of the slums (sl01), drawn by the port with the original HUD",
+        "shot_caption": "Kain in sl01, drawn by the port with his model, his animation and the original HUD.",
         "components": "Components",
         "weight": "weight",
         "functions": "Functions translated",
@@ -179,6 +183,9 @@ margin:0 0 14px}
 .cell span{display:block;font-size:12px;color:var(--muted)}
 .cell.done{border-color:var(--ok)}.cell.partial{border-color:var(--wip)}
 .map img{width:100%;height:auto;border-radius:8px;display:block}
+figure.shot{margin:0 0 18px}
+figure.shot img{width:100%;height:auto;display:block;border-radius:14px;border:1px solid var(--line)}
+figure.shot figcaption{font-size:13px;color:var(--muted);margin-top:8px}
 ol.steps{list-style:none;margin:0;padding:0}
 ol.steps li{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:4px 10px;padding:9px 0;
 border-top:1px solid var(--line);font-size:14px}
@@ -245,6 +252,10 @@ def build_page(lang: str, m: dict, systems: list[tuple[str, int, int]], levels: 
         f'<span>{_e(t["summary"].format(done=number(lang, m["done"]), scope=number(lang, m["in_scope"]), chapters=m["done_levels"], levels=m["total_levels"]))}</span>',
         "</div>",
         "</div>",
+        '<figure class="shot">',
+        f'<img src="{t["root"]}media/port-sl01.jpg" alt="{_e(t["shot_alt"])}" width="1280" height="720">',
+        f"<figcaption>{_e(t['shot_caption'])}</figcaption>",
+        "</figure>",
     ]
 
     def component(name: str, weight: str, value: str, score: float) -> list[str]:

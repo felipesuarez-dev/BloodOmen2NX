@@ -34,6 +34,9 @@ Lee esto en español: [README.md](README.md)
 
 ---
 
+<p align="center"><img src="docs/media/port-sl01.jpg" width="820" alt="Kain running in the first level of the slums (sl01), drawn by the port with the original HUD"></p>
+<p align="center"><sub>Kain running in <code>sl01</code>, drawn by the port (software renderer) with his model, his animation and the original HUD, from the data of an original copy.</sub></p>
+
 ## What this is
 
 | | |
@@ -48,7 +51,7 @@ Lee esto en español: [README.md](README.md)
 
 This port is an independent, non-profit fan project made for preservation and interoperability. It is not affiliated with, endorsed by or sponsored by Crystal Dynamics, Eidos Interactive or Square Enix. *Blood Omen 2*, *Legacy of Kain* and all related names and trademarks belong to their respective owners.
 
-This repository holds only the code written for the project and its documentation. **It does not include the game**: no executables, no game code, and no graphics, models, sounds, music, videos or data files. It will not include them once the port is playable either; only the program itself will be released.
+This repository holds only the code written for the project and its documentation. **It does not include the game**: no executables, no game code, and no graphics, models, sounds, music, videos or data files. The only picture is the frame above, drawn by the port, as an illustration. It will not include them once the port is playable either; only the program itself will be released.
 
 Using the port requires an original, legally obtained copy of the PC version of *Blood Omen 2*. The port reads the files of that copy on the player's own computer or console, without changing or sharing them. [Game data](#game-data) and [`docs/GAME_DATA.md`](docs/GAME_DATA.md) explain which files it needs and where they go.
 

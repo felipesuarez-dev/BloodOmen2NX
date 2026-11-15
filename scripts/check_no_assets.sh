@@ -19,6 +19,9 @@ PATTERN='\.(iso|cue|bin|chd|img|nrg|mdf|exe|dll|sys|pdb|so|dylib|o|obj|lib|a|dat
 
 ALLOWED=(
   "external/README.txt"
+  # One frame rendered by the port, for the README and the progress page
+  # (approved by the maintainer on 2026-11-15).
+  "docs/media/port-sl01.jpg"
 )
 
 is_allowed() {

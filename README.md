@@ -34,6 +34,9 @@ English version: [README.en.md](README.en.md)
 
 ---
 
+<p align="center"><img src="docs/media/port-sl01.jpg" width="820" alt="Kain corriendo en el primer nivel de los barrios bajos (sl01), dibujado por el port con el HUD del original"></p>
+<p align="center"><sub>Kain corriendo en <code>sl01</code>, dibujado por el port (renderizador por software) con su modelo, su animación y el HUD del original, a partir de los datos de una copia original.</sub></p>
+
 ## Qué es esto
 
 | | |
@@ -48,7 +51,7 @@ English version: [README.en.md](README.en.md)
 
 Este port es un proyecto de aficionados, independiente y sin fines de lucro, hecho con fines de preservación e interoperabilidad. No está afiliado a Crystal Dynamics, Eidos Interactive ni Square Enix, ni cuenta con su respaldo o patrocinio. *Blood Omen 2*, *Legacy of Kain* y los demás nombres y marcas relacionados pertenecen a sus respectivos dueños.
 
-Este repositorio contiene solo el código escrito para el proyecto y su documentación. **No incluye el juego**: ni sus ejecutables, ni su código, ni gráficos, modelos, sonidos, música, videos o archivos de datos. Tampoco los incluirá cuando el port sea jugable; lo que se publique será únicamente el programa.
+Este repositorio contiene solo el código escrito para el proyecto y su documentación. **No incluye el juego**: ni sus ejecutables, ni su código, ni gráficos, modelos, sonidos, música, videos o archivos de datos. La única imagen es la captura de arriba, dibujada por el port, como ilustración. Tampoco los incluirá cuando el port sea jugable; lo que se publique será únicamente el programa.
 
 Para usar el port hace falta una copia original de la versión para PC de *Blood Omen 2*, obtenida de forma legal. El port lee los archivos de esa copia en el propio equipo o consola de quien lo usa, sin modificarlos ni compartirlos. En [Datos del juego](#datos-del-juego) y en [`docs/GAME_DATA.md`](docs/GAME_DATA.md) se explica qué archivos necesita y dónde van.
 
