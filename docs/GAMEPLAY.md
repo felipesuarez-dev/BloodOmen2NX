@@ -13,7 +13,7 @@ translated and verified.
 | Dark gifts | todo | Unlock and use |
 | Weapons and inventory | todo | Pick up, equip, drop |
 | Enemies and AI | todo | Behaviours, patrol, combat |
-| Scripting and triggers | todo | Level events and dialogue |
+| Scripting and triggers | partial | The script machine runs the game's compiled code in tests ([`SCRIPTS.md`](SCRIPTS.md), "In the port"); no object of a level runs yet, the native functions and the triggers are todo |
 | HUD and menus | todo | Health, rage, prompts |
 | Saves and checkpoints | todo | Format and flow |
 | Audio events | todo | Dialogue, effects, music |

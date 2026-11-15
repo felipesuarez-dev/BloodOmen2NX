@@ -99,6 +99,9 @@ Current concrete modules:
 | `PlayerController` | Kain movement and follow camera | Tunedata constants, ground movement from the root motion of the animation graph, combat mode; air control and glide pending |
 | `SaveGame` | canonical save/checkpoint bytes | Round-trip and slot tests |
 | `EntityWorld` combat | health/damage and sphere queries | Attack foundation |
+| `script_memory` | 32-bit arena of the script machine | Checked bounds; blocks zeroed and aligned |
+| `script_program` | Links the script packages of a region | Every region of the game links |
+| `script_machine` | Runs the compiled scripts | Every instruction the data uses, objects and states, four value types; no native function of the game yet ([`SCRIPTS.md`](SCRIPTS.md), "In the port") |
 
 Each interface is implemented by the platform backend. The engine owns
 the data structures; the platform owns the device objects.

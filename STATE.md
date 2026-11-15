@@ -229,9 +229,12 @@ Current milestone: **M3 — playable slice**. M0 (binary truth), M1
   (`src/engine/script_package.cpp`) and the package of each of the 165
   regions (`src/engine/region.cpp`), links them into one program per region
   (`src/engine/script_program.cpp`) and has the first part of the machine
-  (`src/engine/script_machine.cpp`: objects, strings, frames, the value,
-  arithmetic, logic and jump instructions, calls and native functions); it
-  runs no script of the game yet. Combat has attack cooldown,
+  (`src/engine/script_machine.cpp`: every instruction the game data uses,
+  calls, native functions, child threads and tasks, objects with their
+  initial values, main thread and states, and the value types `position`,
+  `rotation`, `color` and `gridposition`). It runs the game's compiled code
+  in synthetic tests but no object of a level yet: that needs the native
+  functions and the other value types. Combat has attack cooldown,
   combo state, entity health/damage and a forward hit-sphere query; the
   faithful original values and animation/weapon effects are still pending.
   The compressed `collmodc` runtime and game-specific entities remain

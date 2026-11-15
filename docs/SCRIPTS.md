@@ -423,6 +423,24 @@ Checked in the oracle (`re/decomp/script_runtime/objects.gdb`,
   empty path. So the package of a region carries the name of the region
   with `_` for `/`, not the `default` of the file.
 
+## In the port
+
+The machine runs the game's compiled code as it is; the tests feed it
+synthetic classes whose code and expected values come from the rules on
+this page. No object of a level runs yet: that needs the native functions
+of the game and the value types other than the four block types.
+
+| Part | File | Tests (`ctest -R`) |
+|---|---|---|
+| Package reader (`bpackage`, the packages of the regions) | `src/engine/script_package.cpp`, `src/engine/region.cpp` | `script_package`, `region`; `bo2nx_check_data` reads all 480 and 165 |
+| 32-bit memory | `src/engine/script_memory.cpp` | `script` (`test_memory_*`) |
+| Linker: classes, state tables, code words | `src/engine/script_program.cpp` | `script` (`test_link_*`, every region of the game) |
+| Values, arithmetic, logic, jumps, loop guard | `src/engine/script_machine.cpp` | `script` (`test_push` to `test_cast`) |
+| Calls, natives, the end of a frame | `src/engine/script_machine.cpp` | `script` (`test_native_call` to `test_array_variables`) |
+| Child threads, tasks, parallel blocks | `src/engine/script_machine.cpp` | `script` (`test_spawn_waits` to `test_fork_waits`) |
+| Objects: initial values, main thread, states | `src/engine/script_machine.cpp` | `script` (`test_field_defaults` to `test_stop`) |
+| Value types `position`, `rotation`, `color`, `gridposition` | `src/engine/script_machine.cpp` | `script` (`test_position_type` to `test_unregistered_value_type`) |
+
 ## Checked in the running game
 
 A local probe (`re/decomp/script/live_probe.py`, route
