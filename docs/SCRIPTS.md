@@ -405,6 +405,47 @@ The game data calls `position` 0 to 6, `rotation` 0 to 2, `color` 0 and
 `gridposition` 0, 1 and 4. The natives of `timer` (six, one a task) need
 the timer object and are not read.
 
+## The natives the scripts of sl01 call
+
+Measured on the program of `sl01` (its `bpackage` entries and its region
+package; the calls `0x47`, `0x48`, `0x4b`, `0x4d`, `0x4e` and `0x51` whose
+word names a native body, and the virtual calls whose method has one): 2,614
+call sites reach 162 distinct native functions. By class: `basescript` 730,
+`effect` 601, `sound` 379, `creaturescript` 323, `bo2creaturescript` 161,
+`monsterscript` 108, `soundscript` 78, `soundgroup` 48, `position` 33,
+`gamecamera` 31, `cinematicscript` 30, `creaturecontroller` 27,
+`conversationscript` 14, `detectorscript` 13, `timer` 8, `gridposition` 8,
+`rotation` 6, and fewer than 6 for seven more classes.
+
+The most called:
+
+| Calls | Class | Method | Function | Needs |
+|---:|---|---|---|---|
+| 235 | `basescript` | `self` | `FUN_007644a0` | nothing |
+| 170 | `effect` | `starteffect` | `FUN_0076cd10` | the effects |
+| 167 | `basescript` | `position` | `FUN_007645e0` | nothing |
+| 158 | `effect` | `stop` | `FUN_0076cd30` | the effects |
+| 155 | `basescript` | `rotation` | `FUN_00764600` | nothing |
+| 132 | `sound` | `startsound` | `FUN_0076bf20` | the sound |
+| 118 | `creaturescript` | `creaturebyname` | `FUN_00767270` | the creatures of the level |
+| 113 | `effect` | `moverelative` | `FUN_0076cc60` | the effects |
+| 110 | `sound` | `moverelative` | `FUN_0076bf00` | the sound |
+| 73 | `sound` | `stop` | `FUN_0076bf30` | the sound |
+| 65 | `basescript` | `printstring` | `FUN_00764650` | nothing (a debug overlay) |
+| 62 | `effect` | `moverelativetocreature` | `FUN_0076cc80` | the effects |
+| 52 | `effect` | `settrackbone` | `FUN_0076ccf0` | the effects |
+| 45 | `creaturescript` | `creatureself` | `FUN_00767310` | the creatures of the level |
+| 42 | `bo2creaturescript` | `gethud` | `FUN_004cdf20` | the HUD |
+| 42 | `bo2creaturescript` | `creaturescriptbyname` | `FUN_004cd760` | the creatures of the level |
+| 41 | `basescript` | `random` | `FUN_007647d0` | the random generator |
+| 38 | `bo2creaturescript` | `getkain` | `FUN_004cd750` | the player |
+| 38 | `basescript` | `color` | `FUN_00764620` | nothing |
+| 32 | `monsterscript` | `playanimation` (task) | `FUN_004d44a0` | the animation of a creature |
+
+The natives of `basescript` and of the value classes need no engine system
+(BO2NX-163, BO2NX-172). The rest needs the effects, the sound, the creatures
+of a level, the HUD and the camera: each is a system of its own.
+
 ## The classes of a level
 
 Every region carries, in its `packages` section, one more compiled package
