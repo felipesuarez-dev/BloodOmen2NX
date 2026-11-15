@@ -229,6 +229,9 @@ public:
     virtual void leave_group(std::uint32_t creature, Group group) = 0;
     // The switch of the level of detail of the models (DAT_00a79e75).
     virtual void set_model_lod(bool on) = 0;
+    // A request to load the region `name` (FUN_0074b270 with FUN_0074b3a0,
+    // kind 1; docs/SCRIPTS.md, "More natives of creaturescript").
+    virtual void load_region(const std::string& name) = 0;
 };
 
 class ScriptMachine {

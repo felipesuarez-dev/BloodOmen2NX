@@ -20,6 +20,20 @@ std::uint32_t float_bits(float value) {
     return bits;
 }
 
+// FUN_0074b3a0: `\` becomes `/` (FUN_0068f830) and the letters lower case
+// (FUN_0068f430, the C library tolower FUN_007a4456).
+std::string region_key(const std::string& name) {
+    std::string key = name;
+    for (char& c : key) {
+        if (c == '\\') {
+            c = '/';
+        } else if (c >= 'A' && c <= 'Z') {
+            c = static_cast<char>(c + ('a' - 'A'));
+        }
+    }
+    return key;
+}
+
 }  // namespace
 
 ScriptLevel::ScriptLevel(ScriptMachine& machine, CrtRandom& random) : machine_(machine), random_(random) {
@@ -35,6 +49,10 @@ ScriptLevel::~ScriptLevel() {
 std::size_t ScriptLevel::add_region(const std::string& region_name, const std::vector<RegionEntityTable>& tables,
                                     const ModelRadius& model_radius) {
     const std::string package = region_package_name(region_name);
+    const std::string key = region_key(region_name);
+    if (std::find(loaded_regions_.begin(), loaded_regions_.end(), key) == loaded_regions_.end()) {
+        loaded_regions_.push_back(key);
+    }
     std::size_t added = 0;
     for (const RegionEntityTable& table : tables) {
         for (const RegionEntity& entity : table.entities) {
@@ -225,6 +243,40 @@ ScriptLevel::Creature& ScriptLevel::creature(std::uint32_t word) {
         throw ScriptError("no creature " + std::to_string(word));
     }
     return creatures_[word - 1];
+}
+
+// FUN_0074b4a0. The region being unloaded (DAT_00a83d60) and the one being
+// loaded (DAT_00a83d64) are empty in the port, which loads nothing while it
+// runs.
+bool ScriptLevel::region_will_load(const std::string& name) const {
+    const std::string unloading;
+    const std::string loading;
+    bool loads = std::find(loaded_regions_.begin(), loaded_regions_.end(), name) != loaded_regions_.end();
+    if (name == unloading) {
+        loads = false;
+    }
+    if (name == loading) {
+        loads = true;
+    }
+    for (const RegionRequest& request : region_requests_) {
+        if (request.name == name) {
+            if (request.kind == 0) {
+                loads = false;
+            }
+            if (request.kind == 1) {
+                loads = true;
+            }
+        }
+    }
+    return loads;
+}
+
+// FUN_0074b270 makes a request of kind 1 and FUN_0074b3a0 queues it.
+void ScriptLevel::load_region(const std::string& name) {
+    const std::string key = region_key(name);
+    if (!region_will_load(key)) {
+        region_requests_.push_back({1, key});
+    }
 }
 
 // FUN_0070e6e0 for an object that hit an error: it stops and the creature

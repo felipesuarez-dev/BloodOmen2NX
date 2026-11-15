@@ -1740,6 +1740,8 @@ struct FakeCreatures final : bo2::engine::ScriptCreatureHost {
     std::uint32_t frame() override { return 0; }
     void leave_group(std::uint32_t, Group) override {}
     void set_model_lod(bool) override {}
+    void load_region(const std::string& name) override { regions.push_back(name); }
+    std::vector<std::string> regions;
 };
 
 // A class with `count` native bodies, one method each.
@@ -2239,6 +2241,32 @@ void test_object_hooks() {
     CHECK(machine.memory().live_blocks() == blocks);
 }
 
+// The queue of region requests of loadregion (FUN_0074b270, FUN_0074b3a0,
+// FUN_0074b4a0): the regions the level loaded will load; a request goes to
+// the end of the queue unless one for that region is there.
+void test_region_requests() {
+    const Linked linked = make_program({});
+    ScriptMachine machine(linked.program);
+    bo2::engine::CrtRandom random;
+    bo2::engine::ScriptLevel level(machine, random);
+    std::vector<bo2::engine::RegionEntityTable> no_tables;
+    level.add_region("Slums\\SL01", no_tables);
+    CHECK(level.region_will_load("slums/sl01"));
+    level.load_region("slums/sl01");  // loaded: nothing
+    CHECK(level.region_requests().empty());
+    level.load_region("Slums\\SL_Music");
+    level.load_region("slums/sl02");
+    level.load_region("slums/sl_music");  // queued already
+    CHECK(level.region_requests().size() == 2);
+    CHECK(level.region_requests()[0].kind == 1 && level.region_requests()[0].name == "slums/sl_music");
+    CHECK(level.region_requests()[1].kind == 1 && level.region_requests()[1].name == "slums/sl02");
+    CHECK(level.region_will_load("slums/sl02"));
+    CHECK(!level.region_will_load("slums/sl03"));
+    level.load_region("");  // the empty name matches the empty regions being loaded and unloaded
+    CHECK(level.region_requests().size() == 2);
+
+}
+
 // 0x59: the copy runs, the frame skips the block and waits for it.
 void test_fork_waits() {
     MachineRun run(machine_class(join({{op(0x59, 2), op(0x5D), op(0x5C)}, mark(), {op(0x5D), op(0x5C)}})));
@@ -2634,6 +2662,7 @@ int main() {
     test_scheduler();
     test_region_model_radius();
     test_object_hooks();
+    test_region_requests();
 
     const char* root = std::getenv("BO2NX_ASSETS_DIR");
     if (root == nullptr) {

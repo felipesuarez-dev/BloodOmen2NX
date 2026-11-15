@@ -14953,10 +14953,10 @@ address,name,subsystem,status,notes
 0074b1e0,FUN_0074b1e0,unknown,todo,ghidra
 0074b200,FUN_0074b200,unknown,todo,ghidra
 0074b230,FUN_0074b230,unknown,todo,ghidra
-0074b270,FUN_0074b270,unknown,todo,ghidra
-0074b3a0,FUN_0074b3a0,unknown,todo,ghidra
+0074b270,FUN_0074b270,script,wip,src/engine/script_level.cpp: ScriptLevel::load_region makes the request of kind 1 with the name
+0074b3a0,FUN_0074b3a0,script,wip,src/engine/script_level.cpp: ScriptLevel::load_region makes the name canonical and queues a load request (kind 1); the other kinds are not ported
 0074b470,FUN_0074b470,unknown,todo,ghidra
-0074b4a0,FUN_0074b4a0,unknown,todo,ghidra
+0074b4a0,FUN_0074b4a0,script,wip,src/engine/script_level.cpp: ScriptLevel::region_will_load checks the loaded regions and the queue; the regions being unloaded and loaded (DAT_00a83d60 and DAT_00a83d64) are empty in the port
 0074b540,FUN_0074b540,unknown,todo,ghidra
 0074b610,FUN_0074b610,unknown,todo,ghidra
 0074b740,FUN_0074b740,unknown,todo,ghidra

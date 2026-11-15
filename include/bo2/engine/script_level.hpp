@@ -160,6 +160,25 @@ public:
     void leave_group(std::uint32_t creature, Group group) override;
     void set_model_lod(bool on) override { model_lod_ = on; }
     bool model_lod() const { return model_lod_; }
+    // FUN_0074b3a0 with kind 1: the name with `\` as `/` and in lower case
+    // (the C locale); nothing when the region will be loaded (FUN_0074b4a0),
+    // else a load request at the end of the queue. The port does not load
+    // the regions of the queue yet.
+    void load_region(const std::string& name) override;
+
+    // A request of the region queue (DAT_00a83d6c): kind 0 unloads, 1 loads.
+    struct RegionRequest {
+        std::uint32_t kind = 0;
+        std::string name;
+    };
+    const std::vector<RegionRequest>& region_requests() const { return region_requests_; }
+    // Whether the region `name` (as load_region makes it) will be loaded
+    // (FUN_0074b4a0): it is loaded (the map at 0xa83d70; add_region adds
+    // its region), unless it is the region being unloaded (DAT_00a83d60),
+    // or it is the region being loaded (DAT_00a83d64); then the last
+    // request of the queue for it decides: unload no, load yes. The port
+    // loads and unloads nothing while it runs, so those two are empty.
+    bool region_will_load(const std::string& name) const;
 
 private:
     void stop_object(Creature& creature, const std::string& error);
@@ -184,6 +203,8 @@ private:
     bool model_lod_ = false;                   // DAT_00a79e75
     std::vector<std::string> errors_;
     std::vector<ObjectHooks> hooks_;
+    std::vector<std::string> loaded_regions_;          // 0xa83d70
+    std::vector<RegionRequest> region_requests_;       // DAT_00a83d6c
 };
 
 // The KeeperTune fields of the `levelkeeper` tunedata entry of code.big
