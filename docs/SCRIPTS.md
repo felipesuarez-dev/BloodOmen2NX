@@ -497,6 +497,33 @@ live trace of the oracle in `sl01` (below):
   and keeps no script (+0x138 = 0). Otherwise the creature holds the object,
   counted (+0x130), the object points back at the creature (+0x2c) and
   +0x138 = 1.
+- The creatures of a region (`FUN_00736da0`): the region database spawns
+  its entities with the starts held (`DAT_00a836d4 = 1`). Each entity goes
+  through the factory of its template (`FUN_00728fd0`, virtual +0x20); the
+  creature factory (`FUN_007289d0`, `CreatureFactory`) builds a `Creature`
+  (`FUN_0070d0c0`) with the value of the entity's `reserved.script` as its
+  script name and the region's package as its package (+0x144). When every
+  entity is built, `FUN_00718290` activates, in the order of the creature
+  list (`DAT_00a836a8`), every creature not activated yet (`FUN_0070e010`,
+  bit 0 of +0xf0). A creature built while the starts are not held activates
+  at once from its constructor. Traced in the oracle (`start.gdb`,
+  `factory.gdb`): the 78 scripted creatures of `sl01` start in the order in
+  which they were built, except `regionkeeper001`, whose object its own
+  creature class starts (`0x4ef66a`).
+- Activating a creature (`FUN_0070e0c0`), when it has an object whose class
+  has its flag +0x22: every field of kind 10 of the object
+  (`FUN_00589030(object, 10)`) is linked to the creature found by the name
+  of the field's type class (`FUN_00718160`: the creature of that name in
+  the same package, or a creature with no package, searched in the lists
+  `DAT_00a836a8` and then `DAT_00a83680`): the field takes the handle of
+  that creature's object, counted (names compare with case, `FUN_0068ec30`).
+  Then the object starts (virtual +8, `FUN_00580730`). Read in the oracle two
+  minutes after the spawn (`links_probe.py`): of 50 object fields of the
+  `sl01` classes, 13 hold the object of the creature named like the field's
+  type and none the one named like the field; the 33 whose type is
+  `exportedcamera` (no creature has that name) are empty; 4 hold another
+  object (a script can store into them) and 5 could not be read. A monster brought back to life (`FUN_004ec3f0`) gets the
+  initial values again (`FUN_0057fa20`) and is activated again.
 - `FUN_0070e8b0` handles the messages of a creature (called from
   `FUN_0070ee70`, the slot +0x54 of `Creature` and of `CameraMark`, vtable
   `0x8793cc`). For the message type `DAT_00910640`, when +0x138 is set, the
@@ -589,10 +616,8 @@ owner, has the slot count of its class.
 
 - What each native function does: one function per row of the table of
   `natives.py`.
-- Where the package of a region gets the name of the region with `_` for
-  `/` (measured, above; the region loader is `FUN_00791ee0`), and who calls
-  `FUN_0070e450` for each entity of a region (callers: `FUN_0070d0c0`, and
-  the HUD's `FUN_0052ef60` and `FUN_0053b6d0`).
+- The order of the creature list `DAT_00a836a8`, which is the order in
+  which the creatures of a region are activated.
 - The argument of the update message that `FUN_0070e8b0` passes to the run
   of the object, and the order in which the creatures get the message.
 - What `FUN_006e20d0(0)` does to a scripted sound instance.
