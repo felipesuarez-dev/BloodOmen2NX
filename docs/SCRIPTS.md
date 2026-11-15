@@ -648,14 +648,29 @@ The two behaviors `playanimation` uses:
   +0x4c is clear, the behavior ends. A count of 0 plays for ever.
 
 The animation instance of a creature is `*(*(creature + 0x98) + 0x4c)`
-(the slot +0x10 of its member at +0x90, `FUN_005dcab0`; the member is made
-by `FUN_005dc790` with the creature's model and its set of animations).
+(the slot +0x10 of its member at +0x90, `FUN_005dcab0`). `FUN_005dc790`
+makes the member with the creature's model and its animation set (the
+fourth argument of `FUN_005c9340`, the sixth of `FUN_0070d0c0`), and asks
+the set for the instance (its slot +8); with no set there is none. The set
+is the spawner's when it passes one (`FUN_007289d0` `param_10`, `0x728c7c`:
+`FUN_00736a40` passes the marker data's +0x54 when its +0x6c is set), else
+the factory's (+0x38, `FUN_00727b70`). `FUN_0077a0b0` makes the factory's
+(`FUN_0060f820`) from the animations its template names when at least one
+of them is found (`FUN_0060f010`, which logs `Unable to find animation
+%s`) and a flag of the parse is clear; the template lines are `anim`,
+`aniscript`, `forceDummyAnims` and `noDummyAnims` (`FUN_00785c8d`).
+
 Read live in `sl01` (`re/decomp/creature/anim_probe.py`): 90 creatures of
-the active list have one, of two classes: vtable `0x86ec4c` (the
-characters, Kain, the gates, the doors and the levers) and `0x872164` (the
-birds, the boats, the spotlight, the cameras and the animated parts of the
-HUD). Which creature gets one, and what the instance's slots +4 (find a
-name), +0x10 (play) and +0x24 (advance) do, is not read.
+the active list have one, of two classes. Vtable `0x86ec4c`: the creatures
+whose template names animations (the peasants, the rats, the umahs, the
+Kain actors, the gates, the doors, `leverf` with its `anim` line) and Kain.
+Vtable `0x872164`: the markers with a clip (the birds, the boats, the
+spotlight, the cameras with a clip) and the animated parts of the HUD. The
+rest have none (the particle markers, the detectors, the hints, the
+helpers, `ocean`, whose marker has no clip). `gate01` has both a marker
+clip and an `aniscript` and gets a `0x86ec4c` instance; which set wins
+there, and what the instance's slots +4 (find a name), +0x10 (play) and
++0x24 (advance) do, is not read.
 
 Traced (`re/decomp/creature/behaviors.gdb` on
 `tools/oracle/routes/sl01_watch.txt`): `glyphsmoke2marker` has no animation
