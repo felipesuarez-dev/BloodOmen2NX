@@ -30,7 +30,7 @@ exit code is 2.
 | animatio | 4,081 | 0 | 0 |
 | animreel | 32,791 | 0 | 0 |
 | bpackage | 480 | 0 | 0 |
-| cellgrup | 236 | 0 | 0 |
+| cellgrup | 236 | 236 | 30 |
 | effect | 7,865 | 0 | 0 |
 | lipsync | 71,182 | 0 | 0 |
 | litedata | 142 | 0 | 0 |
@@ -47,9 +47,45 @@ exit code is 2.
 | texture | 22,483 | 22,483 | 11 |
 | tunedata | 1,720 | 0 | 0 |
 
-`texfont` and `texture` have a registered reader. The other types are
-counted but not read yet; each following issue adds the reader of one type
-and its row here. The four `texfont` entries are read without a failure.
+`cellgrup`, `texfont` and `texture` have a registered reader. The other
+types are counted but not read yet; each following issue adds the reader of
+one type and its row here. The four `texfont` entries are read without a
+failure.
+
+## cellgrup
+
+30 of the 236 entries fail, all with the same message:
+
+| Message | Entries |
+|---|---|
+| `cell group has no cellmdls section` | 30 |
+
+They are the cinematic cell groups and the weapon cell groups of a level:
+they carry markers only, without the `cellmdls` section the reader starts
+from. Reading them is still open. The first 20 failures:
+
+| Container | Entry |
+|---|---|
+| `resources/levels/bossrooms/sarafanlordarena/slarena.big` | `bossrooms/sarafanlordarena/cinematics/hyldencity_1` |
+| `resources/levels/bossrooms/sarafanlordarena/slarena.big` | `bossrooms/sarafanlordarena/cinematics/hyldencity_2` |
+| `resources/levels/bossrooms/sarafanlordarena/slarena.big` | `bossrooms/sarafanlordarena/cinematics/hyldencity_3` |
+| `resources/levels/bossrooms/sarafanlordarena/slarena.big` | `bossrooms/sarafanlordarena/cinematics/hyldencity_4` |
+| `resources/levels/bossrooms/speedvampirearena/svarena.big` | `bossrooms/speedvampirearena/cinematics/speedvampire` |
+| `resources/levels/canyons/cy07.big` | `canyons/cinematics/meeting_seer` |
+| `resources/levels/device/devicesanctuary.big` | `device/deviceweapons` |
+| `resources/levels/device/dv01.big` | `device/deviceweapons` |
+| `resources/levels/device/dv02.big` | `device/deviceweapons` |
+| `resources/levels/device/dv03.big` | `device/deviceweapons` |
+| `resources/levels/device/dv04.big` | `device/deviceweapons` |
+| `resources/levels/device/dv05.big` | `device/deviceweapons` |
+| `resources/levels/device/dv06.big` | `device/deviceweapons` |
+| `resources/levels/device/dv07.big` | `device/deviceweapons` |
+| `resources/levels/device/dv08.big` | `device/deviceweapons` |
+| `resources/levels/device/dv09.big` | `device/deviceweapons` |
+| `resources/levels/device/dv10.big` | `device/deviceweapons` |
+| `resources/levels/eternal prison/ep07.big` | `eternal prison/cinematics/mad_vampire` |
+| `resources/levels/hyldencity/hc_01.big` | `hyldencity/cinematics/kain_arrives` |
+| `resources/levels/hyldencity/hc_10.big` | `hyldencity/cinematics/calvary_arrives` |
 
 ## texture
 

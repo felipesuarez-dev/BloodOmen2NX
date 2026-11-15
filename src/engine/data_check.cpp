@@ -2,12 +2,17 @@
 
 #include <exception>
 
+#include "bo2/engine/cell_group.hpp"
 #include "bo2/engine/dds.hpp"
 #include "bo2/engine/pixmap_font.hpp"
 
 namespace bo2::engine {
 
 namespace {
+
+void check_cellgrup(const BigArchive& archive, const BigEntry& entry) {
+    static_cast<void>(parse_cell_group(archive.extract(entry), entry.symbols, archive.names()));
+}
 
 void check_texfont(const BigArchive& archive, const BigEntry& entry) {
     static_cast<void>(parse_pixmap_font(archive.extract(entry), entry.symbols, archive.names()));
@@ -21,6 +26,7 @@ void check_texture(const BigArchive& archive, const BigEntry& entry) {
 
 const std::map<std::string, EntryCheck>& entry_checks() {
     static const std::map<std::string, EntryCheck> checks = {
+        {"cellgrup", &check_cellgrup},
         {"texfont", &check_texfont},
         {"texture", &check_texture},
     };

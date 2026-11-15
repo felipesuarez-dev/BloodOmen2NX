@@ -1312,6 +1312,29 @@ void test_data_check() {
     CHECK(!report.failures[0].message.empty());
 }
 
+// A cell group that the model reader rejects is one failure; the entries
+// after it are still checked (docs/DATA_COVERAGE.md, "cellgrup").
+void test_data_check_cellgrup() {
+    const std::vector<std::uint8_t> group = build_cell_group();
+    std::vector<std::uint8_t> cut = group;
+    cut.resize(cut.size() / 2);
+    const std::vector<std::uint8_t> data = build_big({
+        {"cellgrup", "level/cut", cut, {}},
+        {"cellgrup", "level/ok", group, {}},
+    });
+    const bo2::engine::BigArchive archive = bo2::engine::BigArchive::parse(data);
+    bo2::engine::DataReport report;
+    bo2::engine::check_archive(archive, "test.big", report);
+    CHECK(report.containers == 1);
+    const bo2::engine::TypeCount& count = report.types.at("cellgrup");
+    CHECK(count.entries == 2);
+    CHECK(count.checked == 2);
+    CHECK(count.failed == 1);
+    CHECK(report.failures.size() == 1);
+    CHECK(report.failures[0].type == "cellgrup");
+    CHECK(report.failures[0].entry == "level/cut");
+}
+
 // A texture entry that the DDS reader rejects is one failure; the entries
 // after it are still checked (docs/DATA_COVERAGE.md, "texture").
 void test_data_check_texture() {
@@ -1402,6 +1425,7 @@ int main() {
     test_model_attribute_arrays();
     test_pixmap_font();
     test_data_check();
+    test_data_check_cellgrup();
     test_data_check_texture();
     test_skeleton_bones();
     test_collision_chunk();
