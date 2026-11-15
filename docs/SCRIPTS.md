@@ -14,9 +14,9 @@ and `src/engine/script_machine.cpp` (the machine: objects with the initial
 values of their fields, their main thread and their states, strings,
 frames and every instruction the game data uses, with the loop guard, the
 calls, the child threads and tasks, the binding of native functions, the
-end of a frame and the value types `position`, `rotation`, `color` and
-`gridposition`; the other value types and the native functions are not
-ported yet).
+end of a frame and the value types `position`, `rotation`, `color`,
+`gridposition` and `waypoints`; the other value types and the native
+functions are not ported yet).
 
 ## Objects, classes and states
 
@@ -259,7 +259,10 @@ the class. The default value of a field of kind 9 is the chunk +0x14 wrote:
 12 bytes for `position` and `rotation` (three floats), 4 bytes for
 `effect`, `sound` and `soundgroup` (measured on `sl01`).
 
-The blocks of the value types read so far:
+The value types read so far (the fields of kind 9 of the 165 region
+packages: `sound` 5,078, `waypoints` 1,532, `soundgroup` 231, `effect` 166,
+`creaturecontroller` 97 and `creature` 71 with no default, `position` 58,
+`rotation` 20, `color` 3, `timer` 2):
 
 | Type | Vtable | Block | Initial block (+0x18 with no source) | Default chunk (+0x10) |
 |---|---|---|---|---|
@@ -268,6 +271,10 @@ The blocks of the value types read so far:
 | `color` | `0x878d10` | 16 bytes, four floats | zeroed (`FUN_0079ddd0`) | four floats (`FUN_0079dd50`) |
 | `gridposition` | `0x878bb0` | 8 bytes | left as the allocator gives it (`FUN_0079b080`) | none: +0x10 returns 0 (`FUN_0079b060`) |
 | `timer` | `0x878c34` | a counted timer object of 0x14 bytes (`FUN_0079cac0`); assign shares it (`FUN_0079cca0`) | a new timer (`0x79cc30`) | not read |
+| `waypoints` | `0x878d94` | a list {u32 count, address of the points, count points of three floats} | the source list, shared (`FUN_0079e6e0`; assign `FUN_0079e700` shares too; destroy `FUN_0079e6f0` does nothing) | a u32 count, then the points (`FUN_0079e650`): checked on the 1,529 defaults of the regions, 0 to 18 points; read once, so every object of the class shares the list |
+| `sound` | `0x878c08` | a counted sound instance of 0x18 bytes (`FUN_0079ba00`) | 0 with no source; with a source, the sound found by name in the sound bank (`FUN_006cde30`) wrapped in a new instance (`FUN_0079c0b0`); destroy releases it (`FUN_0079c1b0`); assign shares it, counted (`FUN_0079c1d0`) | a name, 2 bytes holding a name index (`0x79bff0`, `FUN_0079c010`; 4-byte chunk) |
+| `soundgroup` | `0x878bdc` | the sound group found by name (`FUN_006cdbb0`), not counted | the group of the source name, or 0 (`0x79b410`); destroy does nothing (`0x79b440`); assign copies the word (`0x79b450`) | a name (`FUN_0079b320`; 4-byte chunk) |
+| `effect` | `0x878ce4` | a counted effect instance made by the effect resource of the name (`FUN_005fc7f0`, then its virtual +0x10) | 0 with no source (`0x515140`); destroy releases it and leaves 0 (`0x5151d0`); assign shares it, counted (`0x5151f0`) | a name (`0x515080`, `FUN_005150a0`; 4-byte chunk) |
 
 For the four block types, +0x18 with a source copies the source block into
 a new one; +0x1c frees the block and leaves 0 in the slot (`FUN_0079e430`,

@@ -138,6 +138,7 @@ ScriptMachine::ScriptMachine(const ScriptProgram& program)
     register_value_type("rotation", std::make_unique<ScriptBlockType>(12, 3));
     register_value_type("color", std::make_unique<ScriptBlockType>(16, 4));
     register_value_type("gridposition", std::make_unique<ScriptBlockType>(8, 0));
+    register_value_type("waypoints", std::make_unique<ScriptWaypointsType>());
     const std::vector<std::string>& names = program_.names();
     name_table_ = memory_.allocate(static_cast<std::uint32_t>(names.size() * 4));
     for (std::size_t index = 0; index < names.size(); ++index) {
@@ -522,6 +523,49 @@ void ScriptBlockType::read_default(ScriptMachine& machine, ScriptAddress slot,
     for (std::uint32_t index = 0; index < floats_ * 4U; ++index) {
         memory.set_u8(block + index, chunk[index]);
     }
+}
+
+void ScriptWaypointsType::init(ScriptMachine& machine, ScriptAddress slot, ScriptAddress source) {
+    machine.memory().set_u32(slot, source);
+}
+
+void ScriptWaypointsType::destroy(ScriptMachine& machine, ScriptAddress slot) {
+    static_cast<void>(machine);
+    static_cast<void>(slot);
+}
+
+void ScriptWaypointsType::assign(ScriptMachine& machine, ScriptAddress slot, ScriptAddress source) {
+    machine.memory().set_u32(slot, source);
+}
+
+// FUN_0079e650: a u32 count, then count points of three floats; the list is
+// made once for the chunk and every slot shares it.
+void ScriptWaypointsType::read_default(ScriptMachine& machine, ScriptAddress slot,
+                                       const std::vector<std::uint8_t>& chunk) {
+    const auto found = defaults_.find(chunk.data());
+    if (found != defaults_.end()) {
+        init(machine, slot, found->second);
+        return;
+    }
+    if (chunk.size() < 4) {
+        throw ScriptError("script waypoints default has no count");
+    }
+    const std::uint32_t count = static_cast<std::uint32_t>(chunk[0]) | static_cast<std::uint32_t>(chunk[1]) << 8U |
+                                static_cast<std::uint32_t>(chunk[2]) << 16U |
+                                static_cast<std::uint32_t>(chunk[3]) << 24U;
+    if (count > 0x10000U || chunk.size() != 4U + count * 12U) {
+        throw ScriptError("script waypoints default holds " + std::to_string(chunk.size()) + " bytes for " +
+                          std::to_string(count) + " points");
+    }
+    ScriptMemory& memory = machine.memory();
+    const ScriptAddress list = memory.allocate(8U + count * 12U);
+    memory.set_u32(list, count);
+    memory.set_u32(list + 4, list + 8);
+    for (std::uint32_t index = 0; index < count * 12U; ++index) {
+        memory.set_u8(list + 8 + index, chunk[4 + index]);
+    }
+    defaults_.emplace(chunk.data(), list);
+    init(machine, slot, list);
 }
 
 // The initial value of a variable (FUN_00588390) by the kind of its type.

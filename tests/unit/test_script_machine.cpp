@@ -1433,6 +1433,46 @@ void test_unregistered_value_type() {
     CHECK(machine.memory().u32(machine.data_of(object) + 4) != 0);
 }
 
+// waypoints (FUN_0079e650 to FUN_0079e700): the default list is made once and
+// every object shares it; a field without a default holds 0.
+void test_waypoints_type() {
+    ScriptClass cls = make_class("path", "", {"default"}, 1);
+    cls.data_size = 12;
+    ScriptField route = field(9, 4, 0);
+    route.type.name = "waypoints";
+    route.default_object = {2, 0, 0, 0};
+    for (float value : {1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f}) {
+        std::uint8_t bytes[4];
+        std::memcpy(bytes, &value, 4);
+        route.default_object.insert(route.default_object.end(), bytes, bytes + 4);
+    }
+    ScriptField none = field(9, 8, 0);
+    none.type.name = "waypoints";
+    none.default_flag = 0;
+    cls.fields = {route, none};
+    const Linked linked = make_program({cls}, {"waypoints"});
+    ScriptMachine machine(linked.program);
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    const ScriptObjectId first = machine.create_object(0);
+    const std::size_t blocks = memory.live_blocks();
+    const ScriptObjectId second = machine.create_object(0);
+    const ScriptAddress list = memory.u32(machine.data_of(first) + 4);
+    CHECK(list != 0);
+    CHECK(memory.u32(machine.data_of(second) + 4) == list);  // shared
+    CHECK(memory.live_blocks() == blocks + 2);                // the second object's data and handle only
+    CHECK(memory.u32(list) == 2);
+    CHECK(memory.u32(list + 4) == list + 8);
+    CHECK(floats_are(memory, list + 8, {1, 2, 3, 4, 5, 6}));
+    CHECK(memory.u32(machine.data_of(first) + 8) == 0);
+    ScriptValueType& type = machine.value_type("waypoints");
+    const ScriptAddress slot = memory.allocate(4);
+    type.assign(machine, slot, list);
+    CHECK(memory.u32(slot) == list);
+    type.destroy(machine, slot);
+    CHECK(memory.u32(slot) == list);  // the original leaves the slot alone
+    CHECK(throws([&] { type.read_default(machine, slot, std::vector<std::uint8_t>{3, 0, 0, 0, 1, 2}); }));
+}
+
 // 0x59: the copy runs, the frame skips the block and waits for it.
 void test_fork_waits() {
     MachineRun run(machine_class(join({{op(0x59, 2), op(0x5D), op(0x5C)}, mark(), {op(0x5D), op(0x5C)}})));
@@ -1648,6 +1688,7 @@ int main() {
     test_value_param();
     test_value_field_default();
     test_unregistered_value_type();
+    test_waypoints_type();
 
     const char* root = std::getenv("BO2NX_ASSETS_DIR");
     if (root == nullptr) {

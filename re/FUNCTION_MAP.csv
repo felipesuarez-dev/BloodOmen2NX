@@ -16708,7 +16708,11 @@ address,name,subsystem,status,notes
 0079e520,FUN_0079e520,unknown,todo,ghidra
 0079e540,FUN_0079e540,unknown,todo,ghidra
 0079e5b0,FUN_0079e5b0,unknown,todo,ghidra
+0079e650,FUN_0079e650,script,translated,src/engine/script_machine.cpp: ScriptWaypointsType::read_default makes the list of a default once and shares it
 0079e6b0,FUN_0079e6b0,unknown,todo,ghidra
+0079e6e0,FUN_0079e6e0,script,translated,src/engine/script_machine.cpp: ScriptWaypointsType::init shares the source list
+0079e6f0,FUN_0079e6f0,script,translated,src/engine/script_machine.cpp: ScriptWaypointsType::destroy does nothing
+0079e700,FUN_0079e700,script,translated,src/engine/script_machine.cpp: ScriptWaypointsType::assign shares the source list
 0079e710,FUN_0079e710,unknown,todo,ghidra
 0079e730,FUN_0079e730,unknown,todo,ghidra
 0079e7b0,FUN_0079e7b0,unknown,todo,ghidra

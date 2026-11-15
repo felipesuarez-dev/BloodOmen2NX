@@ -100,6 +100,23 @@ private:
     std::uint32_t floats_;
 };
 
+// The value type waypoints (NTwaypoints, vtable 0x878d94): a slot holds the
+// address of a list {u32 count, u32 address of the points, count points of
+// three floats}. The default of a field is read once and shared by every
+// object (FUN_0079e650); init and assign share the source list
+// (FUN_0079e6e0, FUN_0079e700) and destroy leaves the slot as it is
+// (FUN_0079e6f0).
+class ScriptWaypointsType final : public ScriptValueType {
+public:
+    void init(ScriptMachine& machine, ScriptAddress slot, ScriptAddress source) override;
+    void destroy(ScriptMachine& machine, ScriptAddress slot) override;
+    void assign(ScriptMachine& machine, ScriptAddress slot, ScriptAddress source) override;
+    void read_default(ScriptMachine& machine, ScriptAddress slot, const std::vector<std::uint8_t>& chunk) override;
+
+private:
+    std::map<const std::uint8_t*, ScriptAddress> defaults_;  // one list per default chunk
+};
+
 // A native function (docs/SCRIPTS.md, "Native functions"): the machine, the
 // object, the argument count, the address of the cell of the first argument
 // and the address of the result (0 when the method has none).
