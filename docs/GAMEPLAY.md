@@ -182,6 +182,35 @@ needed for the keyboard on this level.
 The `after_a` phase of the first oracle capture (117 back, 88 high) is that
 collision pull-in against a wall, not a yaw lag, as the earlier notes read it.
 
+#### The Hermite blend
+
+The blend (vtable `0x877354`) goes from `p0` with speed `v0` to `p1` with
+speed `v1` in `T` seconds. `FUN_00713360` stores the four ends with `T = 0`
+and `FUN_00713450` computes `T` for an acceleration limit `a`;
+`FUN_007133a0` takes `T` as given. The constants are floats: 6
+(`0x841cbc`), 3 (`0x85cbe0`) and 0.01 (`0x87734c`, `0x3c23d70a`).
+
+- Duration (`FUN_00713450`), with `d = p1 - p0`: four quadratics, in this
+  order: `b = 2 v0 + v1` with the discriminant `b² + 6 d a` and then
+  `b² + 6 d (-a)`; `b = -(2 v1 + v0)` with `b² - 6 d a` and then
+  `b² - 6 d (-a)`. Each one whose discriminant is not below 0 gives the
+  roots `(√disc - b) / s` and `(-b - √disc) / s`, with `s` the limit of
+  that quadratic (`a`, `-a`, `a`, `-a`). When at least one root is not
+  below 0, the chosen root is the larger one if either is negative and
+  the smaller one otherwise. `T` starts at 0 and takes each chosen root
+  that is larger than it.
+- Coefficients, when `|T| >= 0.01` (`FUN_007133a0`, the tail of
+  `FUN_00713450`): with `i = 1 / T`,
+  `a3 = ((v1 + v0) - 2 i d) i²` and `a2 = (3 i d - (2 v0 + v1)) i`.
+- Position at `t` (`FUN_00713810`): when `|T| <= 0.01`, `p0` for
+  `t <= 0` and `p1` otherwise; else `((a3 t + a2) t + v0) t + p0`.
+- Speed at `t` (`FUN_00713870`): when `|T| <= 0.01`, `v0` for `t <= 0`
+  and `v1` otherwise; else `(2 a2 + 3 a3 t) t + v0`.
+
+The coefficient test (`>= 0.01`) and the evaluator test (`<= 0.01`) overlap
+at exactly 0.01: there the original computes the coefficients and still
+returns the ends.
+
 ### Port-only behaviour
 
 These have no original source. They are development aids or placeholders.
