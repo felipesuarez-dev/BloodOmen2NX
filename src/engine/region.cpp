@@ -59,21 +59,52 @@ std::vector<std::uint8_t> region_payload(const std::vector<std::uint8_t>& data) 
     throw common::ParseError("nested region container has no region entry");
 }
 
-RegionEntity parse_entity(const common::Reader& reader, std::size_t offset, std::size_t end) {
-    if (offset + 4 > end) {
+// An entity record between `begin` and `end` (docs/FORMATS/region.md,
+// "Region entity table"); every padding to 4 counts from `begin`.
+RegionEntity parse_entity(const common::Reader& reader, std::size_t begin, std::size_t end) {
+    if (begin + 4 > end) {
         throw common::ParseError("entity is truncated");
     }
+    const auto padded = [begin](std::size_t offset) { return begin + align4(offset - begin); };
     RegionEntity entity;
-    entity.flags = reader.u32(offset);
-    entity.name = reader.cstr(offset + 4, end);
-    offset = offset + 4 + entity.name.size() + 1;
+    entity.flags = reader.u32(begin);
+    entity.name = reader.cstr(begin + 4, end);
+    std::size_t offset = begin + 4 + entity.name.size() + 1;
     entity.model = reader.cstr(offset, end);
-    offset = align4(offset + entity.model.size() + 1);
+    offset = padded(offset + entity.model.size() + 1);
     if (offset + 12 > end) {
         throw common::ParseError("entity position is truncated");
     }
     entity.position = {read_float(reader, offset), read_float(reader, offset + 4),
                        read_float(reader, offset + 8)};
+    // The properties up to the end of the record: the 0 bytes before a key
+    // are skipped; a key (cstr padded to 4), its type, then a cstr padded to
+    // 4 for type 8 or a u32 for the other types.
+    offset += 12;
+    while (offset < end) {
+        if (reader.u8(offset) == 0) {
+            ++offset;
+            continue;
+        }
+        RegionProperty property;
+        property.key = reader.cstr(offset, end);
+        offset = padded(offset + property.key.size() + 1);
+        if (offset + 4 > end) {
+            throw common::ParseError("entity property " + property.key + " is truncated");
+        }
+        property.type = reader.u32(offset);
+        offset += 4;
+        if (property.type == 8) {
+            property.text = reader.cstr(offset, end);
+            offset = padded(offset + property.text.size() + 1);
+        } else if (offset + 4 <= end) {
+            property.number = reader.u32(offset);
+            offset += 4;
+        } else {
+            throw common::ParseError("entity property " + property.key + " has no value");
+        }
+        entity.properties.push_back(std::move(property));
+    }
     return entity;
 }
 
@@ -176,6 +207,43 @@ ScriptPackage parse_region_script_package(const std::vector<std::uint8_t>& data,
         position += size;
     }
     throw common::ParseError("region has no packages section");
+}
+
+// FUN_007828c0.
+std::string reserved_script(const RegionEntity& entity) {
+    for (const RegionProperty& property : entity.properties) {
+        if (property.key == "reserved.script") {
+            return property.text;
+        }
+    }
+    return {};
+}
+
+// FUN_00783900: isalpha 0x7a529f and isalnum 0x7a53c2 of the C locale, the
+// trimmed set " \t\r\n" at 0x90ab0c, tolower 0x7a4456.
+std::string region_package_name(const std::string& region_name) {
+    const auto letter = [](char value) { return (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z'); };
+    const auto digit = [](char value) { return value >= '0' && value <= '9'; };
+    std::size_t first = 0;
+    while (first < region_name.size() && !letter(region_name[first])) {
+        ++first;
+    }
+    std::size_t last = region_name.size();
+    while (last > first && std::string(" \t\r\n").find(region_name[last - 1]) != std::string::npos) {
+        --last;
+    }
+    std::string name;
+    for (std::size_t index = first; index < last; ++index) {
+        const char value = region_name[index];
+        if (!letter(value) && !digit(value)) {
+            name.push_back('_');
+        } else if (value >= 'A' && value <= 'Z') {
+            name.push_back(static_cast<char>(value - 'A' + 'a'));
+        } else {
+            name.push_back(value);
+        }
+    }
+    return name;
 }
 
 }  // namespace bo2::engine

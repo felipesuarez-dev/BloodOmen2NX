@@ -93,6 +93,10 @@ The policy for everything written into this repository:
   in [`SCRIPTS.md`](SCRIPTS.md) and the tracker, without opening the
   decompiled output while writing. Those files are marked *analysis* in the
   table. Everything else keeps the split.
+- **Extension, decided by the maintainer on 2026-11-15 (night).** An issue
+  of the specification queue that blocks the work of the analysis role on
+  the script machine may be done by the analysis role. The tracker says so
+  in the issue, and the files it touches are marked *analysis* in the table.
 - **References, not copies.** An address such as `FUN_00443a50` in a
   comment, in `docs/` or in `re/FUNCTION_MAP.csv` records where a rule was
   observed. Decompiled output, disassembly listings and the game's text,
@@ -130,7 +134,7 @@ design. `third_party/stb_vorbis.c` is third-party code (`NOTICE`).
 | `src/engine/anim_graph.cpp` | Reader of the animation graphs | data format | analysis | 24 |
 | `src/engine/anim_machine.cpp` | Animation state machine | behaviour | analysis | 15 |
 | `src/engine/skeleton_pose.cpp` | Skeleton pose, blending and skinning | behaviour | analysis | 11 |
-| `src/engine/region.cpp` | Reader of the region entities and script package | data format | analysis | 0 |
+| `src/engine/region.cpp` | Reader of the region entities, their properties and the script package | data format | analysis | 2 |
 | `src/engine/script_package.cpp` | Reader of the compiled script packages | data format | analysis | 10 |
 | `src/engine/script_program.cpp` | Linker of the script packages of a region | behaviour | analysis | 4 |
 | `src/engine/script_machine.cpp` | Interpreter of the script machine | behaviour | analysis | 68 |

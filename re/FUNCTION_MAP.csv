@@ -16103,7 +16103,7 @@ address,name,subsystem,status,notes
 00782470,FUN_00782470,unknown,todo,ghidra
 00782620,FUN_00782620,unknown,todo,ghidra
 007826e0,FUN_007826e0,unknown,todo,ghidra
-007828c0,FUN_007828c0,unknown,todo,ghidra
+007828c0,FUN_007828c0,level,translated,src/engine/region.cpp: reserved_script returns the value of reserved.script or an empty string
 007829a0,FUN_007829a0,unknown,todo,ghidra
 00782ab0,FUN_00782ab0,unknown,todo,ghidra
 00782c90,FUN_00782c90,unknown,todo,ghidra
@@ -16128,7 +16128,7 @@ address,name,subsystem,status,notes
 00783740,FUN_00783740,unknown,todo,ghidra
 007837c0,FUN_007837c0,unknown,todo,ghidra
 007837e0,FUN_007837e0,unknown,todo,ghidra
-00783900,FUN_00783900,unknown,todo,ghidra
+00783900,FUN_00783900,level,wip,src/engine/region.cpp: region_package_name builds the name; its registration in the name table is not ported
 00783ab0,FUN_00783ab0,unknown,todo,ghidra
 00783c40,FUN_00783c40,unknown,todo,ghidra
 00783d50,FUN_00783d50,unknown,todo,ghidra

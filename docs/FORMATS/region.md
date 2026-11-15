@@ -104,6 +104,12 @@ path for M3. The entity type (the `model` field above) names an entity
 template, `assets/etypes/**/<type>.etp`, in the same container; types whose
 template has `flag helperobj` are not drawn (see "Helper objects" in
 [`models.md`](models.md)).
+`parse_region_entities` also keeps the properties of each entity, in the
+order of the file. `reserved_script` gives the value of `reserved.script`,
+the class of the entity's script object (`FUN_007828c0`), and
+`region_package_name` gives the name of the region's script package from
+the name of the region entry (`FUN_00783900`; docs/SCRIPTS.md, "The script
+objects of a level").
 
 ## Tools
 
