@@ -670,8 +670,9 @@ has a model. So a factory set wins over the clip of a marker.
 The marker of an entity (`FUN_006836d0` makes one record per `cellmark`
 entry with `FUN_0068b9e0`, vtable `0x876184`) keeps the `cellmdls` block of
 its model index at +0x54, the `cellanim` clip of its clip index in a list
-(+0x58 count, +0x60 array), renamed to the marker's name (`FUN_0063d150` at
-`0x683758`), its name at +0x64, its class at +0x68 and the low byte of its
+(+0x58 count, +0x60 array), renamed to the marker's name (reel +8) and given
+the symbol at +8 of the cell group's +4 (reel +10; `FUN_006074e0` at
+`0x68374c`, `FUN_0063d150` at `0x683758`), its name at +0x64, its class at +0x68 and the low byte of its
 flag at +0x6c. `FUN_00736a40` passes the model block when +0x6c is set and
 the clip list when it holds a clip. Over every `cellmark` of the game (9,455
 markers) the flag is 1 exactly when the model index is 0 or more.
@@ -721,8 +722,9 @@ is at +0x24, the reel in play at +0x1c and its clock at +0x20:
   index 0 at once, so a marker plays its first clip from clock 0.
 - Find (`0x653f30`, `FUN_00653c00` on the set): the first reel whose name
   (the symbol at reel +8) is the name (`FUN_0068ec30`); else, when the set
-  has one reel, `default` gives 0 if the short at reel +10 is not 0; else
-  −1.
+  has one reel, `default` gives 0 if the short at reel +10 is not 0 (it is
+  for a marker's clip, above; `FUN_0063c480` leaves it 0 in a reel it
+  compiles); else −1. The names are symbols, lower case.
 - Start (`FUN_00654220`): an index below the count (a signed test,
   `0x65422a`, so −1 passes and reads the word before the array; the
   natives above look the name up first) sets +0x1c to that reel and +0x20
@@ -1304,8 +1306,10 @@ owner, has the slot count of its class.
   drawn frame of a creature depends on ("The drawn frame").
 - What makes `FUN_0060fa10` build a lite set (`0x86edf8`) or a skeletal
   one (`0x86ec34`) from a list of clips (every set made from marker clips
-  in `sl01` is lite), what fills the factory's clip list (+0x1c, +0x24),
-  and what the short at reel +10 is (not 0 in every reel read in `sl01`).
+  in `sl01` is lite) and what fills the factory's clip list (+0x1c, +0x24).
+- What `FUN_00760900` does before the behaviors for an object whose +0x50
+  is set (`FUN_007422b0`), and in which order a `detectorscript` object
+  runs its sensor and its behaviors.
 - What `FUN_006e20d0(0)` does to a scripted sound instance.
 - The properties `<class>.<field>` of an entity (for example
   `levelkeeperintro.commondata.farClip`), which look like overrides of the
