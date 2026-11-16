@@ -3,6 +3,8 @@
 #include <cmath>
 #include <cstdint>
 #include <cstring>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -714,6 +716,41 @@ void test_big() {
     std::vector<std::uint8_t> truncated = data;
     truncated.resize(truncated.size() - 2);
     CHECK(throws([&] { bo2::engine::BigArchive::parse(truncated); }));
+}
+
+// BO2NX-170: load reads the file in one sized read; its result is parse's.
+void test_big_archive_load_file() {
+    const std::vector<std::uint8_t> data = build_big({
+        {"model", "alpha", {1, 2, 3}, {3, 4}},
+        {"texture", "Beta", {4, 5, 6, 7}, {}},
+    });
+    const std::filesystem::path path =
+        std::filesystem::temp_directory_path() / "bo2nx_load_test.big";
+    {
+        std::ofstream stream(path, std::ios::binary | std::ios::trunc);
+        CHECK(static_cast<bool>(stream));
+        if (!stream) {
+            return;
+        }
+        stream.write(reinterpret_cast<const char*>(data.data()),
+                     static_cast<std::streamsize>(data.size()));
+    }
+    const bo2::engine::BigArchive parsed = bo2::engine::BigArchive::parse(data);
+    const bo2::engine::BigArchive loaded = bo2::engine::BigArchive::load(path.string());
+    CHECK(loaded.entries().size() == parsed.entries().size());
+    CHECK(loaded.names() == parsed.names());
+    for (std::size_t index = 0; index < loaded.entries().size(); ++index) {
+        CHECK(loaded.entries()[index].type == parsed.entries()[index].type);
+        CHECK(loaded.entries()[index].name == parsed.entries()[index].name);
+        CHECK(loaded.entries()[index].symbols == parsed.entries()[index].symbols);
+        CHECK(loaded.extract(loaded.entries()[index]) == parsed.extract(parsed.entries()[index]));
+    }
+    std::error_code ignored;
+    std::filesystem::remove(path, ignored);
+    CHECK(throws([&] {
+        bo2::engine::BigArchive::load(
+            (std::filesystem::temp_directory_path() / "bo2nx_missing.big").string());
+    }));
 }
 
 void test_dds() {
@@ -2167,6 +2204,7 @@ int main() {
     test_reader();
     test_crt_random();
     test_big();
+    test_big_archive_load_file();
     test_dds();
     test_dds_dxt2_dxt4();
     test_texture_blend();

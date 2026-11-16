@@ -1,8 +1,7 @@
 #include <cstdint>
 #include <cstdlib>
-#include <filesystem>
-#include <fstream>
 #include <cstring>
+#include <filesystem>
 #include <functional>
 #include <iostream>
 #include <limits>
@@ -2279,21 +2278,6 @@ void test_fork_waits() {
     CHECK(machine.memory().u32(data + 4) == 7);
 }
 
-// The game data. Containers are read with one sized read: the stream
-// iterator of BigArchive::load takes over a minute for the whole game in a
-// debug build.
-bo2::engine::BigArchive load_container(const std::filesystem::path& path) {
-    std::ifstream stream(path, std::ios::binary | std::ios::ate);
-    if (!stream) {
-        throw std::runtime_error("cannot open " + path.string());
-    }
-    const std::streamsize size = stream.tellg();
-    stream.seekg(0);
-    std::vector<std::uint8_t> data(static_cast<std::size_t>(size));
-    stream.read(reinterpret_cast<char*>(data.data()), size);
-    return bo2::engine::BigArchive::parse(std::move(data));
-}
-
 const std::vector<std::string> kNativeTypes = {"activation_info", "creature"};
 
 struct RegionPrograms {
@@ -2333,8 +2317,8 @@ ScriptProgram link_region(const RegionPrograms& container, const ScriptPackage& 
 // The control values of sl01 (BO2NX-151): native, creatures and sounds, then
 // the region package.
 void test_link_sl01(const std::filesystem::path& root) {
-    const bo2::engine::BigArchive archive =
-        load_container(root / "media/gogames/bo2/resources/levels/slums/sl01.big");
+    const bo2::engine::BigArchive archive = bo2::engine::BigArchive::load(
+        (root / "media/gogames/bo2/resources/levels/slums/sl01.big").string());
     const RegionPrograms container = read_container(archive);
     CHECK(container.packages.size() == 3);
     CHECK(container.regions.size() == 1);
@@ -2397,8 +2381,8 @@ void test_link_sl01(const std::filesystem::path& root) {
 // values of its fields: the value types of the level scripts are all there
 // (the engine objects start at 0, as a name the engine does not find).
 void test_create_sl01_objects(const std::filesystem::path& root) {
-    const bo2::engine::BigArchive archive =
-        load_container(root / "media/gogames/bo2/resources/levels/slums/sl01.big");
+    const bo2::engine::BigArchive archive = bo2::engine::BigArchive::load(
+        (root / "media/gogames/bo2/resources/levels/slums/sl01.big").string());
     const RegionPrograms container = read_container(archive);
     if (container.regions.size() != 1) {
         CHECK(container.regions.size() == 1);
@@ -2468,8 +2452,8 @@ std::unique_ptr<bo2::engine::ScriptTask> task_nothing(ScriptMachine&, ScriptObje
 // with no error, and end in the states the spike of
 // re/decomp/script_runtime measured: 36 in state 0, 33 in 1, 1 in 2, 8 in 3.
 void test_sl01_level(const std::filesystem::path& root) {
-    const bo2::engine::BigArchive archive =
-        load_container(root / "media/gogames/bo2/resources/levels/slums/sl01.big");
+    const bo2::engine::BigArchive archive = bo2::engine::BigArchive::load(
+        (root / "media/gogames/bo2/resources/levels/slums/sl01.big").string());
     const RegionPrograms container = read_container(archive);
     if (container.regions.size() != 1) {
         CHECK(container.regions.size() == 1);
@@ -2530,7 +2514,8 @@ void test_sl01_level(const std::filesystem::path& root) {
 // (read_keeper_tune, load_level_scripts): the program of 497 classes and the
 // 104 entities of the region (docs/SCRIPTS.md).
 void test_level_scripts_sl01(const std::filesystem::path& root) {
-    const bo2::engine::BigArchive code = load_container(root / "media/gogames/bo2/code.big");
+    const bo2::engine::BigArchive code =
+        bo2::engine::BigArchive::load((root / "media/gogames/bo2/code.big").string());
     const bo2::engine::BigEntry* tune_entry = code.find("tunedata", "levelkeeper");
     CHECK(tune_entry != nullptr);
     if (tune_entry != nullptr) {
@@ -2549,8 +2534,8 @@ void test_level_scripts_sl01(const std::filesystem::path& root) {
         short_tune = true;
     }
     CHECK(short_tune);
-    const bo2::engine::BigArchive archive =
-        load_container(root / "media/gogames/bo2/resources/levels/slums/sl01.big");
+    const bo2::engine::BigArchive archive = bo2::engine::BigArchive::load(
+        (root / "media/gogames/bo2/resources/levels/slums/sl01.big").string());
     const bo2::engine::LevelScripts scripts = bo2::engine::load_level_scripts(archive);
     CHECK(scripts.region_name == "slums/sl01");
     CHECK(scripts.program->classes().size() == 497);
@@ -2573,7 +2558,7 @@ void test_link_all_regions(const std::filesystem::path& root) {
         if (item.path().extension() != ".big") {
             continue;
         }
-        const bo2::engine::BigArchive archive = load_container(item.path());
+        const bo2::engine::BigArchive archive = bo2::engine::BigArchive::load(item.path().string());
         const RegionPrograms container = read_container(archive);
         for (const auto& [name, region] : container.regions) {
             other_first += container.names.empty() || container.names.front() != "native" ? 1 : 0;
