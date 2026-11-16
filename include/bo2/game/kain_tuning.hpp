@@ -118,6 +118,10 @@ struct KainTuning {
     RageGiftTuning speed;                      // B+0x64C speedParams
     std::array<float, 4> non_rage_gift_bar{};  // B+0x7A4 nonRageGiftBarR, G, B, A
     float max_rage = 0.0f;                     // B+0xB70 rageParams.maxPoints (FUN_00428fe0)
+    float rage_lost_per_second = 0.0f;         // B+0xB74 rageParams.pointsLostPerSec (FUN_004300d0)
+    float rage_per_normal_block = 0.0f;        // B+0xB78 rageParams.pointsAddedPerNormalBlock
+    float rage_per_special_block = 0.0f;       // B+0xB7C rageParams.pointAdderPerSpecialBlock
+    float rage_per_dodge = 0.0f;               // B+0xB80 rageParams.pointsAddedPerDodge
 };
 
 // Values FUN_00451d00 derives from the jump block.

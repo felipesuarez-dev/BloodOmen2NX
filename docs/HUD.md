@@ -288,8 +288,7 @@ Not ported:
 - The dark gift icon: the spin when the selected gift changes and the timer
   of stealth. The texture of the selected gift and the colour of a gift that
   cannot be used are ported.
-- What changes the rage (blocks, dodges, the drain of `FUN_004300d0`) and
-  the selection of the gifts.
+- What changes the rage (blocks and dodges) and the selection of the gifts.
 - The enemy health bar and the enemy icon (mode 3 only), the pause fade
   (paused only), the charm haze and the highlights (hidden until something
   starts them), the screen cut and the letterbox (nothing starts a cut in

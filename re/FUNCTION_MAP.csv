@@ -876,7 +876,7 @@ address,name,subsystem,status,notes
 0042ff80,FUN_0042ff80,unknown,todo,ghidra
 0042ff90,FUN_0042ff90,unknown,todo,ghidra
 00430060,FUN_00430060,unknown,todo,ghidra
-004300d0,FUN_004300d0,unknown,todo,ghidra
+004300d0,FUN_004300d0,player,wip,src/game/kain_vitals.cpp: drain_rage takes dt times rage_lost_per_second; the game loop does not call it yet and the per-frame cost of each gift is not ported
 00430220,FUN_00430220,unknown,todo,ghidra
 00430280,FUN_00430280,unknown,todo,ghidra
 00430420,FUN_00430420,unknown,todo,ghidra
@@ -1006,8 +1006,8 @@ address,name,subsystem,status,notes
 00436b70,FUN_00436b70,unknown,todo,ghidra
 00436b80,FUN_00436b80,unknown,todo,ghidra
 00436b90,FUN_00436b90,unknown,todo,ghidra
-00436bb0,FUN_00436bb0,unknown,todo,ghidra
-00436c00,FUN_00436c00,unknown,todo,ghidra
+00436bb0,FUN_00436bb0,player,wip,src/game/kain_vitals.cpp: add_rage adds and caps at max_rage; the notice to the selected gift and the per-frame cost of each gift are not ported
+00436c00,FUN_00436c00,player,wip,src/game/kain_vitals.cpp: spend_rage takes the points down to 0; the notice to the selected gift is not ported
 00436ca0,FUN_00436ca0,unknown,todo,ghidra
 00436ce0,FUN_00436ce0,unknown,todo,ghidra
 00436de0,FUN_00436de0,unknown,todo,ghidra

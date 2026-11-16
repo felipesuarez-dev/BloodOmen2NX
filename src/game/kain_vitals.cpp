@@ -1,5 +1,6 @@
 #include "bo2/game/kain_vitals.hpp"
 
+#include <algorithm>
 #include <stdexcept>
 
 namespace bo2::game {
@@ -75,6 +76,18 @@ void reset_gifts(KainVitals& vitals, const KainTuning& tuning) {
     vitals.gifts_owned[static_cast<std::size_t>(DarkGift::Stealth)] = true;
     vitals.rage = 0.0f;
     vitals.max_rage = tuning.max_rage;
+}
+
+void add_rage(KainVitals& vitals, float points) {
+    vitals.rage = std::min(vitals.rage + points, vitals.max_rage);
+}
+
+void spend_rage(KainVitals& vitals, float points) {
+    vitals.rage = std::max(vitals.rage - points, 0.0f);
+}
+
+void drain_rage(KainVitals& vitals, const KainTuning& tuning, float dt) {
+    spend_rage(vitals, dt * tuning.rage_lost_per_second);
 }
 
 std::int32_t gift_icon_texture(DarkGift gift) {

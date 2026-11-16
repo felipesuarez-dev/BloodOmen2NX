@@ -357,6 +357,25 @@ void test_gift_state() {
     }
 }
 
+// FUN_00436bb0, FUN_00436c00 and FUN_004300d0.
+void test_rage_operations() {
+    bo2::game::KainTuning tuning = bo2::game::parse_kain_tuning(make_blob());
+    bo2::game::KainVitals vitals;
+    bo2::game::reset_gifts(vitals, tuning);  // maximum 450
+    bo2::game::add_rage(vitals, 400.0f);
+    CHECK(vitals.rage == 400.0f);
+    bo2::game::add_rage(vitals, 100.0f);
+    CHECK(vitals.rage == 450.0f);
+    bo2::game::spend_rage(vitals, 450.0f);
+    CHECK(vitals.rage == 0.0f);
+    bo2::game::spend_rage(vitals, 10.0f);
+    CHECK(vitals.rage == 0.0f);
+    bo2::game::add_rage(vitals, 200.0f);
+    tuning.rage_lost_per_second = 100.0f;
+    bo2::game::drain_rage(vitals, tuning, 0.5f);
+    CHECK(vitals.rage == 150.0f);
+}
+
 void test_derived_jump_matches_the_original() {
     const bo2::game::KainTuning tuning = bo2::game::parse_kain_tuning(make_blob());
     const bo2::game::JumpDerived derived = bo2::game::derive_jump(tuning);
@@ -480,6 +499,7 @@ int main() {
     test_lore_tables_follow_the_fixups();
     test_start_gifts();
     test_gift_state();
+    test_rage_operations();
     test_derived_jump_matches_the_original();
     test_derived_airtimes_match_the_original();
     test_derived_air_steering_matches_the_original();

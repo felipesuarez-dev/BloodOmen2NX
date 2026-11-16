@@ -75,6 +75,15 @@ float top_max_lore(const KainTuning& tuning);
 // is created.
 void reset_gifts(KainVitals& vitals, const KainTuning& tuning);
 
+// FUN_00436bb0: adds `points` to the rage, capped at the maximum.
+void add_rage(KainVitals& vitals, float points);
+
+// FUN_00436c00: takes `points` from the rage, down to 0.
+void spend_rage(KainVitals& vitals, float points);
+
+// FUN_004300d0: the drain of a frame, `dt` times `pointsLostPerSec`.
+void drain_rage(KainVitals& vitals, const KainTuning& tuning, float dt);
+
 // FUN_00524cd0: the index of the icon texture of `gift` inside the nine of
 // the icon's first material: charm 1, superJump 2, speed 3, telekinesis 4,
 // stealth 5, rupture 6, fury 7, anything else (none included) 0.

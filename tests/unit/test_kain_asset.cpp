@@ -448,6 +448,14 @@ int main() {
             for (const std::size_t index : {1U, 2U, 3U, 4U, 6U}) {
                 CHECK(!owned.gifts_owned[index]);
             }
+            // rageParams: the four fields are finite and not negative.
+            CHECK(std::isfinite(tuning.rage_lost_per_second) &&
+                  tuning.rage_lost_per_second >= 0.0f);
+            CHECK(std::isfinite(tuning.rage_per_normal_block) &&
+                  tuning.rage_per_normal_block >= 0.0f);
+            CHECK(std::isfinite(tuning.rage_per_special_block) &&
+                  tuning.rage_per_special_block >= 0.0f);
+            CHECK(std::isfinite(tuning.rage_per_dodge) && tuning.rage_per_dodge >= 0.0f);
             // Kain enters the slums with 30 hit points and room for 6 lore.
             bo2::game::KainVitals vitals;
             bo2::game::set_lore_level(vitals, tuning,

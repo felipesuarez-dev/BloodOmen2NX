@@ -47,8 +47,12 @@ constexpr std::size_t kRuptureGift = 0x5E4;
 constexpr std::size_t kSpeedGift = 0x64C;
 constexpr std::size_t kNonRageGiftBar = 0x7A4;
 constexpr std::size_t kMaxRage = 0xB70;
+constexpr std::size_t kRageLostPerSecond = 0xB74;
+constexpr std::size_t kRageNormalBlock = 0xB78;
+constexpr std::size_t kRageSpecialBlock = 0xB7C;
+constexpr std::size_t kRageDodge = 0xB80;
 // One past the last field we read.
-constexpr std::size_t kBlobMinimum = kMaxRage + 4;
+constexpr std::size_t kBlobMinimum = kRageDodge + 4;
 
 float read_float(const common::Reader& reader, std::size_t blob_offset) {
     const std::uint32_t bits = reader.u32(kBlobStart + blob_offset);
@@ -220,7 +224,7 @@ KainTuning parse_kain_tuning(const std::vector<std::uint8_t>& bytes) {
     const common::Reader reader(bytes);
     const std::size_t blob_size = reader.u32(0);
     if (blob_size < kBlobMinimum) {
-        throw common::ParseError("kain tunedata size field is too small for the movement fields");
+        throw common::ParseError("kain tunedata size field is too small for the fields the port reads");
     }
     if (bytes.size() - kBlobStart < blob_size) {
         throw common::ParseError("kain tunedata is shorter than its size field");
@@ -243,6 +247,10 @@ KainTuning parse_kain_tuning(const std::vector<std::uint8_t>& bytes) {
     tuning.speed = read_rage_gift(reader, kSpeedGift);
     tuning.non_rage_gift_bar = read_colour(reader, kNonRageGiftBar);
     tuning.max_rage = read_float(reader, kMaxRage);
+    tuning.rage_lost_per_second = read_float(reader, kRageLostPerSecond);
+    tuning.rage_per_normal_block = read_float(reader, kRageNormalBlock);
+    tuning.rage_per_special_block = read_float(reader, kRageSpecialBlock);
+    tuning.rage_per_dodge = read_float(reader, kRageDodge);
     if (!(tuning.stick_deadzone >= 0.0f && tuning.stick_deadzone < 1.0f)) {
         throw common::ParseError("kain tunedata stick deadzone is outside [0, 1)");
     }
