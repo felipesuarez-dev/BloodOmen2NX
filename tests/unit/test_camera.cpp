@@ -281,6 +281,39 @@ void test_a_fall_does_not_start_the_lag() {
     CHECK(std::fabs(camera.pivot_z() - (99.0f + 76.0f)) < 1.0e-4f);
 }
 
+bool near(float got, float want) {
+    return std::fabs(got - want) <= 1.0e-6f * std::fabs(want);
+}
+
+// FUN_00713450: the duration of the blend for an acceleration limit.
+void test_hermite_duration() {
+    CHECK(near(bo2::game::detail::hermite_duration(1.0f, 0.5f, 0.0f, 4.0f), 1.10610723f));
+    CHECK(near(bo2::game::detail::hermite_duration(-2.0f, 1.0f, 0.0f, 3.0f), 2.7748518f));
+    CHECK(near(bo2::game::detail::hermite_duration(0.5f, -1.0f, 0.25f, 2.0f), 2.38019943f));
+    CHECK(near(bo2::game::detail::hermite_duration(0.0f, 0.0f, 0.0f, 4.0f), 0.0f));
+}
+
+// FUN_007133a0, FUN_00713810 and FUN_00713870 with T = 0.5.
+void test_hermite_blend() {
+    const bo2::game::detail::Hermite blend(0.5f, 0.0f, 0.5f, 1.0f, 0.0f);
+    CHECK(blend.a3 == -14.0f);
+    CHECK(blend.a2 == 10.0f);
+    CHECK(blend.position(0.25f) == 0.53125f);
+    CHECK(blend.velocity(0.25f) == 2.875f);
+    CHECK(blend.position(0.5f) == 1.0f);
+    CHECK(blend.velocity(0.5f) == 0.0f);
+}
+
+// The static case is |T| <= 0.01: the ends, and the end values up to t = 0.
+void test_hermite_static() {
+    const bo2::game::detail::Hermite blend(0.01f, 2.0f, 1.0f, 5.0f, 3.0f);
+    CHECK(blend.position(0.0f) == 2.0f);
+    CHECK(blend.position(0.001f) == 5.0f);
+    CHECK(blend.position(-1.0f) == 2.0f);
+    CHECK(blend.velocity(0.0f) == 1.0f);
+    CHECK(blend.velocity(0.001f) == 3.0f);
+}
+
 }  // namespace
 
 int main() {
@@ -295,6 +328,9 @@ int main() {
     test_yaw_takes_the_short_way_round();
     test_pivot_lags_a_jump();
     test_a_fall_does_not_start_the_lag();
+    test_hermite_duration();
+    test_hermite_blend();
+    test_hermite_static();
     if (failures != 0) {
         std::cerr << failures << " check(s) failed\n";
         return 1;

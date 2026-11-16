@@ -39,6 +39,34 @@ constexpr float kRangeTimer = 0.5f;
 constexpr float kRangeMin = 10.0f;
 constexpr float kRangeClearance = 0.2f;  // port safety margin off the hit distance
 
+namespace detail {
+
+// The smallest duration of the cubic Hermite blend from (0, v0) to (delta, v1)
+// whose acceleration at both ends stays within +-accel. Port of FUN_00713450:
+// the end accelerations are 2 a2 and 2 a2 + 6 a3 T, and setting each to +-accel
+// gives four quadratics in T. The duration is the largest of their chosen roots
+// (the smallest non-negative one of each pair).
+float hermite_duration(float delta, float v0, float v1, float accel);
+
+// The cubic Hermite blend of FUN_00713360 / FUN_007133a0 with the evaluators
+// FUN_00713810 (position) and FUN_00713870 (velocity).
+struct Hermite {
+    float duration;
+    float p0;
+    float p1;
+    float v0;
+    float v1;
+    float a2 = 0.0f;
+    float a3 = 0.0f;
+
+    Hermite(float duration_, float p0_, float v0_, float p1_, float v1_);
+
+    float position(float t) const;
+    float velocity(float t) const;
+};
+
+}  // namespace detail
+
 class FollowCamera {
 public:
     FollowCamera() = default;

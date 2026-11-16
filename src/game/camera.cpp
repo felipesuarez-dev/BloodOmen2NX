@@ -11,11 +11,15 @@ constexpr float kPi = 3.14159265358979f;
 // FUN_00713450 and FUN_00713810 treat a duration under 0.01 s as no motion at all.
 constexpr float kMinDuration = 0.01f;
 
-// The smallest duration of the cubic Hermite blend from (0, v0) to (delta, v1)
-// whose acceleration at both ends stays within +-accel. Port of FUN_00713450:
-// the end accelerations are 2 a2 and 2 a2 + 6 a3 T, and setting each to +-accel
-// gives four quadratics in T. The duration is the largest of their chosen roots
-// (the smallest non-negative one of each pair).
+// FUN_00694400: the camera yaw written as the angle closest to the target.
+float closest_angle(float angle, float target) {
+    return target + std::remainder(angle - target, 2.0f * kPi);
+}
+
+}  // namespace
+
+namespace detail {
+
 float hermite_duration(float delta, float v0, float v1, float accel) {
     const float start = v0 + v0 + v1;
     const float end = -(v1 + v1 + v0);
@@ -43,48 +47,34 @@ float hermite_duration(float delta, float v0, float v1, float accel) {
     return duration;
 }
 
-// The cubic Hermite blend of FUN_00713360 / FUN_007133a0 with the evaluators
-// FUN_00713810 (position) and FUN_00713870 (velocity).
-struct Hermite {
-    float duration;
-    float p0;
-    float p1;
-    float v0;
-    float v1;
-    float a2 = 0.0f;
-    float a3 = 0.0f;
-
-    Hermite(float duration_, float p0_, float v0_, float p1_, float v1_)
-        : duration(duration_), p0(p0_), p1(p1_), v0(v0_), v1(v1_) {
-        if (std::fabs(duration) >= kMinDuration) {
-            const float inverse = 1.0f / duration;
-            const float slope = inverse * (p1 - p0);
-            a3 = ((v1 + v0) - (slope + slope)) * inverse * inverse;
-            a2 = (slope * 3.0f - (v0 + v0 + v1)) * inverse;
-        }
+Hermite::Hermite(float duration_, float p0_, float v0_, float p1_, float v1_)
+    : duration(duration_), p0(p0_), p1(p1_), v0(v0_), v1(v1_) {
+    // FUN_007133a0: the coefficients exist from |T| >= 0.01.
+    if (std::fabs(duration) >= kMinDuration) {
+        const float inverse = 1.0f / duration;
+        const float slope = inverse * (p1 - p0);
+        a3 = ((v1 + v0) - (slope + slope)) * inverse * inverse;
+        a2 = (slope * 3.0f - (v0 + v0 + v1)) * inverse;
     }
-
-    float position(float t) const {
-        if (std::fabs(duration) < kMinDuration) {
-            return t < 0.0f ? p0 : p1;
-        }
-        return ((a3 * t + a2) * t + v0) * t + p0;
-    }
-
-    float velocity(float t) const {
-        if (std::fabs(duration) < kMinDuration) {
-            return t < 0.0f ? v0 : v1;
-        }
-        return (a2 + a2 + t * a3 * 3.0f) * t + v0;
-    }
-};
-
-// FUN_00694400: the camera yaw written as the angle closest to the target.
-float closest_angle(float angle, float target) {
-    return target + std::remainder(angle - target, 2.0f * kPi);
 }
 
-}  // namespace
+float Hermite::position(float t) const {
+    // FUN_00713810: the static case is |T| <= 0.01, p0 up to t = 0.
+    if (std::fabs(duration) <= kMinDuration) {
+        return t <= 0.0f ? p0 : p1;
+    }
+    return ((a3 * t + a2) * t + v0) * t + p0;
+}
+
+float Hermite::velocity(float t) const {
+    // FUN_00713870: the same static case, v0 up to t = 0.
+    if (std::fabs(duration) <= kMinDuration) {
+        return t <= 0.0f ? v0 : v1;
+    }
+    return (a2 + a2 + t * a3 * 3.0f) * t + v0;
+}
+
+}  // namespace detail
 
 void FollowCamera::update(const PlayerState& player, const bo2::engine::CollisionWorld& collision,
                           double seconds) {
@@ -106,8 +96,9 @@ void FollowCamera::update(const PlayerState& player, const bo2::engine::Collisio
         // Yaw, FUN_00407ec0: a Hermite blend from the camera's yaw and yaw
         // speed to Kain's yaw at rest. Each frame advances it by min(dt, duration).
         const float from = closest_angle(yaw_, target_yaw);
-        const float duration = hermite_duration(target_yaw - from, yaw_velocity_, 0.0f, kFollowYawAccel);
-        const Hermite blend(duration, from, yaw_velocity_, target_yaw, 0.0f);
+        const float duration =
+            detail::hermite_duration(target_yaw - from, yaw_velocity_, 0.0f, kFollowYawAccel);
+        const detail::Hermite blend(duration, from, yaw_velocity_, target_yaw, 0.0f);
         const float advance = std::min(dt, duration);
         yaw_ = blend.position(advance);
         yaw_velocity_ = blend.velocity(advance);
@@ -136,7 +127,7 @@ void FollowCamera::update(const PlayerState& player, const bo2::engine::Collisio
             if (progress >= 1.0f) {
                 lag_running_ = false;
             } else {
-                const Hermite height(1.0f, 0.0f, lag_velocity_, 1.0f, 0.0f);
+                const detail::Hermite height(1.0f, 0.0f, lag_velocity_, 1.0f, 0.0f);
                 const float blend_weight = height.position(progress);
                 pivot_z_ = (1.0f - blend_weight) * lag_start_ + blend_weight * target_pivot;
                 pivot_z_ = std::max(pivot_z_, player.position.z);  // never below Kain's feet
@@ -177,8 +168,8 @@ void FollowCamera::update(const PlayerState& player, const bo2::engine::Collisio
             const float accel =
                 range_timer_ > 0.0f ? kRangeAccel * kRangeSlowFactor : kRangeAccel;
             const float duration =
-                hermite_duration(range_target - range_, range_velocity_, 0.0f, accel);
-            const Hermite blend(duration, range_, range_velocity_, range_target, 0.0f);
+                detail::hermite_duration(range_target - range_, range_velocity_, 0.0f, accel);
+            const detail::Hermite blend(duration, range_, range_velocity_, range_target, 0.0f);
             const float advance = std::min(dt, duration);
             range_ = blend.position(advance);
             range_velocity_ = blend.velocity(advance);

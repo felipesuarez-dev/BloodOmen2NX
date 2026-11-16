@@ -13684,11 +13684,11 @@ address,name,subsystem,status,notes
 00712f70,FUN_00712f70,unknown,todo,ghidra
 00713060,FUN_00713060,unknown,todo,ghidra
 00713240,FUN_00713240,unknown,todo,ghidra
-00713360,FUN_00713360,camera,wip,src/game/camera.cpp: Hermite set-up; pinned only through FollowCamera tests
-007133a0,FUN_007133a0,camera,wip,src/game/camera.cpp: Hermite set-up with velocities; pinned only through FollowCamera tests
-00713450,FUN_00713450,camera,wip,src/game/camera.cpp: hermite_duration quadratic roots; pinned only through FollowCamera tests
-00713810,FUN_00713810,camera,wip,src/game/camera.cpp: Hermite position evaluator; pinned only through FollowCamera tests
-00713870,FUN_00713870,camera,wip,src/game/camera.cpp: Hermite velocity evaluator; pinned only through FollowCamera tests
+00713360,FUN_00713360,camera,translated,src/game/camera.cpp: the Hermite blend set-up stores the four ends (detail::Hermite); tests/unit/test_camera.cpp
+007133a0,FUN_007133a0,camera,translated,src/game/camera.cpp: the Hermite coefficients a3 and a2 from |T| >= 0.01; tests/unit/test_camera.cpp
+00713450,FUN_00713450,camera,translated,src/game/camera.cpp: hermite_duration and its four quadratics; tests/unit/test_camera.cpp
+00713810,FUN_00713810,camera,translated,src/game/camera.cpp: the Hermite position evaluator; tests/unit/test_camera.cpp
+00713870,FUN_00713870,camera,translated,src/game/camera.cpp: the Hermite velocity evaluator; tests/unit/test_camera.cpp
 00713b80,FUN_00713b80,unknown,todo,ghidra
 00713bd0,FUN_00713bd0,unknown,todo,ghidra
 00713ca0,FUN_00713ca0,unknown,todo,ghidra
