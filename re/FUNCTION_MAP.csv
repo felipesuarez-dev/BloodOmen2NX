@@ -15513,9 +15513,23 @@ address,name,subsystem,status,notes
 00763e20,FUN_00763e20,unknown,todo,ghidra
 00764130,FUN_00764130,unknown,todo,ghidra
 00764230,FUN_00764230,unknown,todo,ghidra
-007644a0,FUN_007644a0,unknown,todo,ghidra
-00764650,FUN_00764650,unknown,todo,ghidra
-00764710,FUN_00764710,unknown,todo,ghidra
+007644a0,FUN_007644a0,script,translated,src/engine/script_natives.cpp: native_self body 0 with FUN_00798b30; tests/unit/test_script_machine.cpp
+00764550,FUN_00764550,script,translated,src/engine/script_natives.cpp: native_get_state body 1 with FUN_00798e20; tests/unit/test_script_machine.cpp
+00764560,FUN_00764560,script,translated,src/engine/script_natives.cpp: native_is_null body 2 with FUN_00798b40; tests/unit/test_script_machine.cpp
+00764580,FUN_00764580,script,translated,src/engine/script_natives.cpp: native_is_equal body 3 with FUN_00798b60; tests/unit/test_script_machine.cpp
+007645c0,FUN_007645c0,script,translated,src/engine/script_natives.cpp: native_is_running body 5 with FUN_00798c90; tests/unit/test_script_machine.cpp
+007645e0,FUN_007645e0,script,translated,src/engine/script_natives.cpp: native_position body 7 with FUN_00798e30; tests/unit/test_script_machine.cpp
+00764600,FUN_00764600,script,translated,src/engine/script_natives.cpp: native_rotation body 8 with FUN_00798e60; tests/unit/test_script_machine.cpp
+00764620,FUN_00764620,script,translated,src/engine/script_natives.cpp: native_color body 9 with FUN_00798eb0; tests/unit/test_script_machine.cpp
+00764650,FUN_00764650,script,translated,src/engine/script_natives.cpp: native_print_string body 10 with FUN_00798f00; tests/unit/test_script_machine.cpp
+007646f0,FUN_007646f0,script,translated,src/engine/script_natives.cpp: native_print_number body 11 with FUN_00798f30; tests/unit/test_script_machine.cpp
+00764710,FUN_00764710,script,translated,src/engine/script_natives.cpp: native_log_string body 12 with FUN_00798f80; tests/unit/test_script_machine.cpp
+007647b0,FUN_007647b0,script,translated,src/engine/script_natives.cpp: native_log_number body 13 with FUN_00798fa0 (nothing); tests/unit/test_script_machine.cpp
+007647d0,FUN_007647d0,script,translated,src/engine/script_natives.cpp: native_random body 15 with FUN_00798fb0; tests/unit/test_script_machine.cpp
+007647f0,FUN_007647f0,script,translated,src/engine/script_natives.cpp: native_random_int body 16 with FUN_00798ff0; tests/unit/test_script_machine.cpp
+00764810,FUN_00764810,script,translated,src/engine/script_natives.cpp: native_distance body 17 with FUN_00799060; tests/unit/test_script_machine.cpp
+00764830,FUN_00764830,script,translated,src/engine/script_natives.cpp: native_deg_to_rad body 18 with FUN_007990d0; tests/unit/test_script_machine.cpp
+00764850,FUN_00764850,script,translated,src/engine/script_natives.cpp: native_rad_to_deg body 19 with FUN_007990f0; tests/unit/test_script_machine.cpp
 00764890,FUN_00764890,unknown,todo,ghidra
 007648a0,FUN_007648a0,unknown,todo,ghidra
 00764b50,FUN_00764b50,unknown,todo,ghidra
@@ -16457,28 +16471,28 @@ address,name,subsystem,status,notes
 00798a80,FUN_00798a80,unknown,todo,ghidra
 00798ab0,FUN_00798ab0,unknown,todo,ghidra
 00798ae0,FUN_00798ae0,unknown,todo,ghidra
-00798b30,FUN_00798b30,unknown,todo,ghidra
-00798b40,FUN_00798b40,unknown,todo,ghidra
-00798b60,FUN_00798b60,unknown,todo,ghidra
+00798b30,FUN_00798b30,script,translated,src/engine/script_natives.cpp: helper of native_self (the handle and its count); tests/unit/test_script_machine.cpp
+00798b40,FUN_00798b40,script,translated,src/engine/script_natives.cpp: helper of native_is_null; tests/unit/test_script_machine.cpp
+00798b60,FUN_00798b60,script,translated,src/engine/script_natives.cpp: helper of native_is_equal; tests/unit/test_script_machine.cpp
 00798b80,FUN_00798b80,unknown,todo,ghidra
-00798c90,FUN_00798c90,unknown,todo,ghidra
+00798c90,FUN_00798c90,script,translated,src/engine/script_natives.cpp: helper of native_is_running; tests/unit/test_script_machine.cpp
 00798cb0,FUN_00798cb0,unknown,todo,ghidra
 00798d50,FUN_00798d50,unknown,todo,ghidra
 00798db0,FUN_00798db0,unknown,todo,ghidra
 00798dd0,FUN_00798dd0,unknown,todo,ghidra
-00798e20,FUN_00798e20,unknown,todo,ghidra
-00798e30,FUN_00798e30,unknown,todo,ghidra
-00798e60,FUN_00798e60,unknown,todo,ghidra
-00798eb0,FUN_00798eb0,unknown,todo,ghidra
-00798f00,FUN_00798f00,unknown,todo,ghidra
-00798f30,FUN_00798f30,unknown,todo,ghidra
-00798f80,FUN_00798f80,unknown,todo,ghidra
-00798fa0,FUN_00798fa0,unknown,todo,ghidra
-00798fb0,FUN_00798fb0,unknown,todo,ghidra
-00798ff0,FUN_00798ff0,unknown,todo,ghidra
-00799060,FUN_00799060,unknown,todo,ghidra
-007990d0,FUN_007990d0,unknown,todo,ghidra
-007990f0,FUN_007990f0,unknown,todo,ghidra
+00798e20,FUN_00798e20,script,translated,src/engine/script_natives.cpp: helper of native_get_state; tests/unit/test_script_machine.cpp
+00798e30,FUN_00798e30,script,translated,src/engine/script_natives.cpp: helper of native_position; tests/unit/test_script_machine.cpp
+00798e60,FUN_00798e60,script,translated,src/engine/script_natives.cpp: helper of native_rotation; tests/unit/test_script_machine.cpp
+00798eb0,FUN_00798eb0,script,translated,src/engine/script_natives.cpp: helper of native_color; tests/unit/test_script_machine.cpp
+00798f00,FUN_00798f00,script,translated,src/engine/script_natives.cpp: helper of native_print_string; tests/unit/test_script_machine.cpp
+00798f30,FUN_00798f30,script,translated,src/engine/script_natives.cpp: helper of native_print_number; tests/unit/test_script_machine.cpp
+00798f80,FUN_00798f80,script,translated,src/engine/script_natives.cpp: helper of native_log_string; tests/unit/test_script_machine.cpp
+00798fa0,FUN_00798fa0,script,translated,src/engine/script_natives.cpp: helper of native_log_number (nothing); tests/unit/test_script_machine.cpp
+00798fb0,FUN_00798fb0,script,translated,src/engine/script_natives.cpp: helper of native_random; tests/unit/test_script_machine.cpp
+00798ff0,FUN_00798ff0,script,translated,src/engine/script_natives.cpp: helper of native_random_int; tests/unit/test_script_machine.cpp
+00799060,FUN_00799060,script,translated,src/engine/script_natives.cpp: helper of native_distance; tests/unit/test_script_machine.cpp
+007990d0,FUN_007990d0,script,translated,src/engine/script_natives.cpp: helper of native_deg_to_rad; tests/unit/test_script_machine.cpp
+007990f0,FUN_007990f0,script,translated,src/engine/script_natives.cpp: helper of native_rad_to_deg; tests/unit/test_script_machine.cpp
 00799110,FUN_00799110,unknown,todo,ghidra
 00799160,FUN_00799160,unknown,todo,ghidra
 00799170,FUN_00799170,unknown,todo,ghidra

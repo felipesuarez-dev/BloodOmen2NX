@@ -19,6 +19,7 @@
 #include "bo2/engine/script_timer.hpp"
 #include "bo2/engine/script_machine.hpp"
 #include "bo2/engine/script_memory.hpp"
+#include "bo2/engine/script_natives.hpp"
 #include "bo2/engine/script_program.hpp"
 
 namespace {
@@ -1824,6 +1825,276 @@ void test_creature_natives() {
     CHECK(count(lever) == 1);
 }
 
+// The class basescript of docs/SCRIPTS.md: 20 bodies, 17 of them native.
+ScriptClass basescript_class() {
+    ScriptClass cls = make_class("basescript", "", {"default"}, 1);
+    cls.data_size = 4;
+    cls.methods = {
+        method_with("self", bo2::engine::kScriptNoSlot, {}, 10),
+        method_with("getstate", bo2::engine::kScriptNoSlot, {}, 2),
+        method_with("isnull", bo2::engine::kScriptNoSlot, {variable(2, 0)}, 2),
+        method_with("isequal", bo2::engine::kScriptNoSlot, {variable(2, 0), variable(2, 4)}, 2),
+        method_with("del", bo2::engine::kScriptNoSlot, {variable(10, 0)}, 0),
+        method_with("isrunning", bo2::engine::kScriptNoSlot, {}, 2),
+        method_with("join", bo2::engine::kScriptNoSlot, {variable(10, 0)}, 0),
+        method_with("position", bo2::engine::kScriptNoSlot,
+                    {variable(3, 0), variable(3, 4), variable(3, 8)}, 9),
+        method_with("rotation", bo2::engine::kScriptNoSlot,
+                    {variable(3, 0), variable(3, 4), variable(3, 8)}, 9),
+        method_with("color", bo2::engine::kScriptNoSlot,
+                    {variable(3, 0), variable(3, 4), variable(3, 8), variable(3, 12)}, 9),
+        method_with("printstring", bo2::engine::kScriptNoSlot, {variable(4, 0)}, 0),
+        method_with("printnumber", bo2::engine::kScriptNoSlot, {variable(3, 0)}, 0),
+        method_with("logstring", bo2::engine::kScriptNoSlot, {variable(4, 0)}, 0),
+        method_with("lognumber", bo2::engine::kScriptNoSlot, {variable(3, 0)}, 0),
+        method_with("wait", bo2::engine::kScriptNoSlot, {variable(3, 0)}, 0),
+        method_with("random", bo2::engine::kScriptNoSlot, {variable(3, 0), variable(3, 4)}, 3),
+        method_with("randomint", bo2::engine::kScriptNoSlot, {variable(2, 0), variable(2, 4)}, 2),
+        method_with("distance", bo2::engine::kScriptNoSlot, {variable(9, 0), variable(9, 4)}, 3),
+        method_with("degtorad", bo2::engine::kScriptNoSlot, {variable(3, 0)}, 3),
+        method_with("radtodeg", bo2::engine::kScriptNoSlot, {variable(3, 0)}, 3),
+    };
+    cls.bodies.reserve(cls.methods.size());
+    for (std::uint16_t index = 0; index < static_cast<std::uint16_t>(cls.methods.size()); ++index) {
+        cls.bodies.push_back(native_body(index));
+    }
+    return cls;
+}
+
+struct BasescriptRun {
+    Linked linked;
+    std::unique_ptr<ScriptMachine> machine;
+    ScriptObjectId object = 0;
+
+    BasescriptRun() : linked(make_program({machine_class({op(0x5D), op(0x5C)}), basescript_class()})) {
+        machine = std::make_unique<ScriptMachine>(linked.program);
+        object = machine->create_object(0);
+    }
+};
+
+std::uint32_t float_bits(float value) {
+    std::uint32_t bits = 0;
+    std::memcpy(&bits, &value, sizeof bits);
+    return bits;
+}
+
+// The natives of basescript (BO2NX-163; docs/SCRIPTS.md).
+void test_native_self_and_state() {
+    BasescriptRun run;
+    ScriptMachine& machine = *run.machine;
+    bo2::engine::GameRandom random;
+    bo2::engine::bind_basescript_natives(machine, random);
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    const ScriptAddress result = memory.allocate(4);
+    const ScriptAddress args = memory.allocate(8);
+
+    bo2::engine::native_self(machine, run.object, 0, args, result);
+    CHECK(memory.u32(result) == machine.handle_of(run.object));
+    CHECK(memory.u32(machine.handle_of(run.object) + 4) == 2);
+    bo2::engine::native_self(machine, run.object, 0, args, result);
+    CHECK(memory.u32(machine.handle_of(run.object) + 4) == 2);  // the same handle: nothing
+    machine.store_handle(result, 0);  // the result is reused by the next natives
+
+    bo2::engine::native_get_state(machine, run.object, 0, args, result);
+    CHECK(memory.u8(result) == machine.state_of(run.object));
+    bo2::engine::native_is_running(machine, run.object, 0, args, result);
+    CHECK(memory.u8(result) == 0);
+    machine.start(run.object);
+    bo2::engine::native_is_running(machine, run.object, 0, args, result);
+    CHECK(memory.u8(result) == 1);
+
+    memory.release(result);
+    memory.release(args);
+}
+
+void test_native_compare() {
+    BasescriptRun run;
+    ScriptMachine& machine = *run.machine;
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    const ScriptAddress result = memory.allocate(4);
+    const ScriptAddress args = memory.allocate(8);
+
+    memory.set_u32(args, 0);
+    bo2::engine::native_is_null(machine, run.object, 1, args, result);
+    CHECK(memory.u8(result) == 1);
+    memory.set_u32(args, 7);
+    bo2::engine::native_is_null(machine, run.object, 1, args, result);
+    CHECK(memory.u8(result) == 0);
+
+    memory.set_u32(args, 5);
+    memory.set_u32(args + 4, 5);
+    bo2::engine::native_is_equal(machine, run.object, 2, args, result);
+    CHECK(memory.u8(result) == 1);
+    memory.set_u32(args + 4, 6);
+    bo2::engine::native_is_equal(machine, run.object, 2, args, result);
+    CHECK(memory.u8(result) == 0);
+
+    memory.release(result);
+    memory.release(args);
+}
+
+void test_native_angles() {
+    BasescriptRun run;
+    ScriptMachine& machine = *run.machine;
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    const ScriptAddress result = memory.allocate(4);
+    const ScriptAddress args = memory.allocate(4);
+
+    memory.set_f32(args, 180.0f);
+    bo2::engine::native_deg_to_rad(machine, run.object, 1, args, result);
+    CHECK(memory.u32(result) == 0x40490FDBU);
+    memory.set_f32(args, 1.0f);
+    bo2::engine::native_rad_to_deg(machine, run.object, 1, args, result);
+    CHECK(memory.u32(result) == 0x42652EE1U);
+
+    memory.release(result);
+    memory.release(args);
+}
+
+void test_native_random() {
+    BasescriptRun run;
+    ScriptMachine& machine = *run.machine;
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    const ScriptAddress result = memory.allocate(4);
+    const ScriptAddress args = memory.allocate(8);
+
+    bo2::engine::GameRandom first;
+    bo2::engine::bind_basescript_natives(machine, first);
+    memory.set_f32(args, 0.0f);
+    memory.set_f32(args + 4, 10.0f);
+    bo2::engine::native_random(machine, run.object, 2, args, result);
+    CHECK(std::fabs(memory.f32(result) - 4.55329084f) < 1.0e-6f);
+
+    bo2::engine::GameRandom second;
+    bo2::engine::bind_basescript_natives(machine, second);
+    memory.set_u32(args, 1);
+    memory.set_u32(args + 4, 6);
+    bo2::engine::native_random_int(machine, run.object, 2, args, result);
+    CHECK(memory.u32(result) == 3);
+
+    memory.release(result);
+    memory.release(args);
+}
+
+void test_native_position_and_distance() {
+    BasescriptRun run;
+    ScriptMachine& machine = *run.machine;
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    const ScriptAddress result = memory.allocate(4);
+    const ScriptAddress args = memory.allocate(16);
+    bo2::engine::ScriptValueType& position = machine.value_type("position");
+    bo2::engine::ScriptValueType& rotation = machine.value_type("rotation");
+    bo2::engine::ScriptValueType& color = machine.value_type("color");
+    const ScriptAddress slot = memory.allocate(4);
+
+    position.init(machine, slot, 0);
+    memory.set_f32(args, 1.5f);
+    memory.set_f32(args + 4, -2.0f);
+    memory.set_f32(args + 8, 3.25f);
+    bo2::engine::native_position(machine, run.object, 3, args, slot);
+    CHECK(floats_are(memory, memory.u32(slot), {1.5f, -2.0f, 3.25f}));
+    position.destroy(machine, slot);
+
+    rotation.init(machine, slot, 0);
+    memory.set_f32(args, 90.0f);
+    memory.set_f32(args + 4, 0.0f);
+    memory.set_f32(args + 8, 0.0f);
+    bo2::engine::native_rotation(machine, run.object, 3, args, slot);
+    CHECK(memory.u32(memory.u32(slot)) == 0x3FC90FDBU);
+    rotation.destroy(machine, slot);
+
+    color.init(machine, slot, 0);
+    memory.set_f32(args, 0.25f);
+    memory.set_f32(args + 4, 0.5f);
+    memory.set_f32(args + 8, 0.75f);
+    memory.set_f32(args + 12, 1.0f);
+    bo2::engine::native_color(machine, run.object, 4, args, slot);
+    CHECK(floats_are(memory, memory.u32(slot), {0.25f, 0.5f, 0.75f, 1.0f}));
+    color.destroy(machine, slot);
+
+    const ScriptAddress first_slot = memory.allocate(4);
+    const ScriptAddress second_slot = memory.allocate(4);
+    position.init(machine, first_slot, 0);
+    position.init(machine, second_slot, 0);
+    set_floats(memory, memory.u32(first_slot), {0.0f, 0.0f, 0.0f});
+    set_floats(memory, memory.u32(second_slot), {3.0f, 4.0f, 12.0f});
+    memory.set_u32(args, first_slot);
+    memory.set_u32(args + 4, second_slot);
+    bo2::engine::native_distance(machine, run.object, 2, args, result);
+    CHECK(memory.f32(result) == 13.0f);
+    memory.set_u32(second_slot, 0);
+    bo2::engine::native_distance(machine, run.object, 2, args, result);
+    CHECK(memory.f32(result) == 0.0f);
+
+    position.destroy(machine, second_slot);
+    position.destroy(machine, first_slot);
+    memory.release(second_slot);
+    memory.release(first_slot);
+    memory.release(slot);
+    memory.release(args);
+    memory.release(result);
+}
+
+void test_native_log() {
+    BasescriptRun run;
+    ScriptMachine& machine = *run.machine;
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    const ScriptAddress args = memory.allocate(4);
+    const std::size_t before = machine.warnings().size();
+
+    const ScriptAddress text = machine.new_string_cell("hola");
+    memory.set_u32(args, text);
+    bo2::engine::native_print_string(machine, run.object, 1, args, 0);
+    CHECK(machine.warnings().size() == before + 1);
+    CHECK(machine.warnings().back() == "hola");
+
+    memory.set_f32(args, 1.5f);
+    bo2::engine::native_print_number(machine, run.object, 1, args, 0);
+    CHECK(machine.warnings().back() == "1.500000");
+
+    const ScriptAddress x = machine.new_string_cell("x");
+    memory.set_u32(args, x);
+    bo2::engine::native_log_string(machine, run.object, 1, args, 0);
+    CHECK(machine.warnings().back() == "x");
+
+    const std::size_t count = machine.warnings().size();
+    bo2::engine::native_log_number(machine, run.object, 1, args, 0);
+    CHECK(machine.warnings().size() == count);
+
+    const ScriptAddress empty = machine.new_string_cell("");
+    memory.set_u32(args, empty);
+    bo2::engine::native_print_string(machine, run.object, 1, args, 0);
+    CHECK(machine.warnings().back().empty());
+    bo2::engine::native_log_string(machine, run.object, 1, args, 0);
+    CHECK(machine.warnings().back().empty());
+
+    machine.release_string_cell(empty);
+    machine.release_string_cell(x);
+    machine.release_string_cell(text);
+    memory.release(args);
+}
+
+// The binder and the 0x47 call with a synthetic basescript package.
+void test_native_binding() {
+    std::vector<std::uint32_t> code;
+    code.push_back(op(0x02));
+    code.push_back(float_bits(180.0f));
+    code.push_back(op(0x07, 0));
+    code.push_back(op(0x02));
+    code.push_back(1);
+    const std::size_t call = code.size();
+    code.push_back(op(0x47));
+    code.push_back(0);
+    code.push_back(op(0x5C));
+    ScriptClass caller =
+        machine_class(code, {make_reference(4, static_cast<std::uint16_t>(call + 1), "basescript", 18)});
+    MachineRun run(std::vector<ScriptClass>{caller, basescript_class()});
+    bo2::engine::GameRandom random;
+    bo2::engine::bind_basescript_natives(*run.machine, random);
+    CHECK(run.machine->interpret(run.thread));
+    CHECK(run.machine->memory().u32(run.frame().locals) == 0x40490FDBU);
+}
+
 // Timers (docs/SCRIPTS.md, "Timers"): the value type, the natives, the task
 // the script manager runs once per frame, the call of slot 15 when the time
 // runs out, and play as a task of the frame.
@@ -2642,6 +2913,13 @@ int main() {
     test_activate_links_fields();
     test_creature_and_store_handle();
     test_creature_natives();
+    test_native_self_and_state();
+    test_native_compare();
+    test_native_angles();
+    test_native_random();
+    test_native_position_and_distance();
+    test_native_log();
+    test_native_binding();
     test_timers();
     test_script_level();
     test_scheduler();
