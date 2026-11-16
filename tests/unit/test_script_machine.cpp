@@ -20,6 +20,7 @@
 #include "bo2/engine/script_machine.hpp"
 #include "bo2/engine/script_memory.hpp"
 #include "bo2/engine/script_natives.hpp"
+#include "bo2/engine/script_value_natives.hpp"
 #include "bo2/engine/script_program.hpp"
 
 namespace {
@@ -2095,6 +2096,241 @@ void test_native_binding() {
     CHECK(run.machine->memory().u32(run.frame().locals) == 0x40490FDBU);
 }
 
+// The natives of the five value classes (BO2NX-172; docs/SCRIPTS.md, "The
+// natives of the value classes").
+struct ValueRun {
+    Linked linked;
+    std::unique_ptr<ScriptMachine> machine;
+
+    ValueRun() : linked(make_program({machine_class({op(0x5C)})})) {
+        machine = std::make_unique<ScriptMachine>(linked.program);
+    }
+};
+
+void test_position_natives() {
+    ValueRun run;
+    ScriptMachine& machine = *run.machine;
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    bo2::engine::ScriptValueType& position = machine.value_type("position");
+    const ScriptAddress slot = memory.allocate(4);
+    const ScriptAddress args = memory.allocate(16);
+    const ScriptAddress result = memory.allocate(4);
+    position.init(machine, slot, 0);
+    const ScriptAddress block = memory.u32(slot);
+
+    set_floats(memory, block, {1.5f, -2.0f, 3.25f});
+    bo2::engine::position_getx(machine, slot, 0, args, result);
+    CHECK(memory.f32(result) == 1.5f);
+    bo2::engine::position_gety(machine, slot, 0, args, result);
+    CHECK(memory.f32(result) == -2.0f);
+    bo2::engine::position_getz(machine, slot, 0, args, result);
+    CHECK(memory.f32(result) == 3.25f);
+
+    memory.set_f32(args, 4.0f);
+    memory.set_f32(args + 4, 5.0f);
+    memory.set_f32(args + 8, 6.0f);
+    bo2::engine::position_setvalue(machine, slot, 3, args, result);
+    CHECK(floats_are(memory, block, {4.0f, 5.0f, 6.0f}));
+    memory.set_f32(args, 7.0f);
+    bo2::engine::position_setx(machine, slot, 1, args, result);
+    CHECK(memory.f32(block) == 7.0f);
+
+    position.destroy(machine, slot);
+    memory.release(result);
+    memory.release(args);
+    memory.release(slot);
+}
+
+void test_rotation_natives() {
+    ValueRun run;
+    ScriptMachine& machine = *run.machine;
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    bo2::engine::ScriptValueType& rotation = machine.value_type("rotation");
+    const ScriptAddress slot = memory.allocate(4);
+    const ScriptAddress args = memory.allocate(16);
+    const ScriptAddress result = memory.allocate(4);
+    rotation.init(machine, slot, 0);
+    const ScriptAddress block = memory.u32(slot);
+
+    memory.set_f32(args, 90.0f);
+    bo2::engine::rotation_setx(machine, slot, 1, args, result);
+    CHECK(memory.u32(block) == 0x3FC90FDBU);
+    bo2::engine::rotation_getx(machine, slot, 0, args, result);
+    CHECK(memory.u32(result) == 0x42B40000U);  // 90.0
+
+    set_floats(memory, block, {1.0f, 0.0f, 0.0f});
+    bo2::engine::rotation_getx(machine, slot, 0, args, result);
+    CHECK(memory.u32(result) == 0x42652EE1U);  // 57.2957802
+
+    set_floats(memory, block, {0.0f, 0.0f, 0.5f});
+    memory.set_f32(args, 30.0f);
+    bo2::engine::rotation_rotatez(machine, slot, 1, args, result);
+    CHECK(memory.u32(block + 8) == 0x3F830549U);
+
+    rotation.destroy(machine, slot);
+    memory.release(result);
+    memory.release(args);
+    memory.release(slot);
+}
+
+void test_color_natives() {
+    ValueRun run;
+    ScriptMachine& machine = *run.machine;
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    bo2::engine::ScriptValueType& color = machine.value_type("color");
+    const ScriptAddress slot = memory.allocate(4);
+    const ScriptAddress args = memory.allocate(16);
+    const ScriptAddress result = memory.allocate(4);
+    color.init(machine, slot, 0);
+    const ScriptAddress block = memory.u32(slot);
+
+    memory.set_f32(args, 0.25f);
+    memory.set_f32(args + 4, 0.5f);
+    memory.set_f32(args + 8, 0.75f);
+    memory.set_f32(args + 12, 1.0f);
+    bo2::engine::color_setvalue(machine, slot, 4, args, result);
+    CHECK(floats_are(memory, block, {0.25f, 0.5f, 0.75f, 1.0f}));
+    memory.set_f32(args, 0.5f);
+    bo2::engine::color_setalpha(machine, slot, 1, args, result);
+    CHECK(memory.f32(block + 12) == 0.5f);
+    memory.set_f32(args, 0.125f);
+    bo2::engine::color_setred(machine, slot, 1, args, result);
+    CHECK(memory.f32(block) == 0.125f);
+
+    color.destroy(machine, slot);
+    memory.release(result);
+    memory.release(args);
+    memory.release(slot);
+}
+
+void test_grid_natives() {
+    ValueRun run;
+    ScriptMachine& machine = *run.machine;
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    bo2::engine::ScriptValueType& grid = machine.value_type("gridposition");
+    const ScriptAddress slot = memory.allocate(4);
+    const ScriptAddress args = memory.allocate(8);
+    const ScriptAddress result = memory.allocate(4);
+    grid.init(machine, slot, 0);
+    const ScriptAddress block = memory.u32(slot);
+
+    memory.set_u32(args, 3);
+    memory.set_u32(args + 4, static_cast<std::uint32_t>(-4));
+    bo2::engine::gridposition_setvalue(machine, slot, 2, args, result);
+    CHECK(memory.u32(block) == 3);
+    CHECK(memory.u32(block + 4) == 0xFFFFFFFCU);
+    bo2::engine::gridposition_getx(machine, slot, 0, args, result);
+    CHECK(memory.u32(result) == 3);
+    bo2::engine::gridposition_gety(machine, slot, 0, args, result);
+    CHECK(memory.u32(result) == 0xFFFFFFFCU);
+
+    grid.destroy(machine, slot);
+    memory.release(result);
+    memory.release(args);
+    memory.release(slot);
+}
+
+void test_value_natives_without_block() {
+    ValueRun run;
+    ScriptMachine& machine = *run.machine;
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    const ScriptAddress slot = memory.allocate(4);  // 0: no block
+    const ScriptAddress args = memory.allocate(16);
+    const ScriptAddress result = memory.allocate(4);
+    memory.set_u32(result, 0xAAAAAAAAU);
+
+    bo2::engine::position_getx(machine, slot, 0, args, result);
+    CHECK(memory.f32(result) == 0.0f);
+    memory.set_u32(result, 0xAAAAAAAAU);
+    bo2::engine::rotation_getx(machine, slot, 0, args, result);
+    CHECK(memory.f32(result) == 0.0f);
+    memory.set_u32(result, 0xAAAAAAAAU);
+    bo2::engine::gridposition_getx(machine, slot, 0, args, result);
+    CHECK(memory.u32(result) == 0);
+
+    memory.set_f32(args, 4.0f);
+    memory.set_f32(args + 4, 5.0f);
+    memory.set_f32(args + 8, 6.0f);
+    bo2::engine::position_setvalue(machine, slot, 3, args, result);
+    CHECK(memory.u32(slot) == 0);
+    bo2::engine::color_setvalue(machine, slot, 4, args, result);
+    CHECK(memory.u32(slot) == 0);
+    bo2::engine::gridposition_setvalue(machine, slot, 2, args, result);
+    CHECK(memory.u32(slot) == 0);
+    bo2::engine::waypoints_count(machine, slot, 0, args, result);
+    CHECK(memory.u32(result) == 0);
+
+    memory.release(result);
+    memory.release(args);
+    memory.release(slot);
+}
+
+void test_waypoints_natives() {
+    ValueRun run;
+    ScriptMachine& machine = *run.machine;
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    bo2::engine::ScriptValueType& waypoints = machine.value_type("waypoints");
+    bo2::engine::ScriptValueType& position = machine.value_type("position");
+    const ScriptAddress slot = memory.allocate(4);
+    const ScriptAddress list = memory.allocate(8 + 2 * 12);
+    const ScriptAddress args = memory.allocate(4);
+    const ScriptAddress count_result = memory.allocate(4);
+    const ScriptAddress point_result = memory.allocate(4);
+
+    memory.set_u32(list, 2);
+    memory.set_u32(list + 4, list + 8);
+    set_floats(memory, list + 8, {1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f});
+    waypoints.init(machine, slot, list);
+
+    bo2::engine::waypoints_count(machine, slot, 0, args, count_result);
+    CHECK(memory.u32(count_result) == 2);
+
+    position.init(machine, point_result, 0);
+    const ScriptAddress point = memory.u32(point_result);
+    memory.set_u32(args, 1);
+    bo2::engine::waypoints_getwaypoint(machine, slot, 1, args, point_result);
+    CHECK(floats_are(memory, point, {4.0f, 5.0f, 6.0f}));
+    memory.set_u32(args, 2);
+    bo2::engine::waypoints_getwaypoint(machine, slot, 1, args, point_result);
+    CHECK(floats_are(memory, point, {0.0f, 0.0f, 0.0f}));
+    memory.set_u32(args, static_cast<std::uint32_t>(-1));
+    bo2::engine::waypoints_getwaypoint(machine, slot, 1, args, point_result);
+    CHECK(floats_are(memory, point, {0.0f, 0.0f, 0.0f}));
+
+    bo2::engine::waypoints_count(machine, 0, 0, args, count_result);
+    CHECK(memory.u32(count_result) == 0);
+    memory.set_u32(args, 0);
+    bo2::engine::waypoints_getwaypoint(machine, 0, 1, args, point_result);
+    CHECK(floats_are(memory, point, {0.0f, 0.0f, 0.0f}));
+    // A result with no block is left alone (the original would fail).
+    memory.set_u32(point_result, 0);
+    bo2::engine::waypoints_getwaypoint(machine, slot, 1, args, 0);
+    CHECK(memory.u32(point_result) == 0);
+
+    position.destroy(machine, point_result);
+    memory.release(point_result);
+    memory.release(count_result);
+    memory.release(args);
+    memory.release(list);
+    memory.release(slot);
+}
+
+void test_bind_value_natives() {
+    const Linked linked = make_program({machine_class({op(0x5C)}),
+                                        native_class("position", "", 7),
+                                        native_class("rotation", "", 8),
+                                        native_class("color", "", 5),
+                                        native_class("gridposition", "", 5),
+                                        native_class("waypoints", "", 2)});
+    ScriptMachine machine(linked.program);
+    CHECK(!throws([&] { bo2::engine::bind_value_natives(machine); }));
+
+    // A program without the value classes is not an error.
+    const Linked bare = make_program({machine_class({op(0x5C)})});
+    ScriptMachine bare_machine(bare.program);
+    CHECK(!throws([&] { bo2::engine::bind_value_natives(bare_machine); }));
+}
+
 // Timers (docs/SCRIPTS.md, "Timers"): the value type, the natives, the task
 // the script manager runs once per frame, the call of slot 15 when the time
 // runs out, and play as a task of the frame.
@@ -2920,6 +3156,13 @@ int main() {
     test_native_position_and_distance();
     test_native_log();
     test_native_binding();
+    test_position_natives();
+    test_rotation_natives();
+    test_color_natives();
+    test_grid_natives();
+    test_value_natives_without_block();
+    test_waypoints_natives();
+    test_bind_value_natives();
     test_timers();
     test_script_level();
     test_scheduler();

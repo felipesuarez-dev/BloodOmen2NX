@@ -15676,6 +15676,11 @@ address,name,subsystem,status,notes
 0076b620,FUN_0076b620,unknown,todo,ghidra
 0076b6a0,FUN_0076b6a0,unknown,todo,ghidra
 0076b6d0,FUN_0076b6d0,unknown,todo,ghidra
+0076b760,FUN_0076b760,script,translated,src/engine/script_value_natives.cpp: gridposition_getx native (FUN_0079b130); tests/unit/test_script_machine.cpp
+0076b780,FUN_0076b780,script,translated,src/engine/script_value_natives.cpp: gridposition_gety native (FUN_0079b150); tests/unit/test_script_machine.cpp
+0076b7a0,FUN_0076b7a0,script,translated,src/engine/script_value_natives.cpp: gridposition_setx native (FUN_0079b170); tests/unit/test_script_machine.cpp
+0076b7c0,FUN_0076b7c0,script,translated,src/engine/script_value_natives.cpp: gridposition_sety native (FUN_0079b190); tests/unit/test_script_machine.cpp
+0076b7e0,FUN_0076b7e0,script,translated,src/engine/script_value_natives.cpp: gridposition_setvalue native (FUN_0079b1b0); tests/unit/test_script_machine.cpp
 0076b830,FUN_0076b830,unknown,todo,ghidra
 0076b8b0,FUN_0076b8b0,unknown,todo,ghidra
 0076b8e0,FUN_0076b8e0,unknown,todo,ghidra
@@ -15708,15 +15713,37 @@ address,name,subsystem,status,notes
 0076cdf0,FUN_0076cdf0,unknown,todo,ghidra
 0076ce70,FUN_0076ce70,unknown,todo,ghidra
 0076cea0,FUN_0076cea0,unknown,todo,ghidra
+0076cf30,FUN_0076cf30,script,translated,src/engine/script_value_natives.cpp: color_setvalue native (FUN_0079dee0); tests/unit/test_script_machine.cpp
+0076cf60,FUN_0076cf60,script,translated,src/engine/script_value_natives.cpp: color_setred native (FUN_0079df10); tests/unit/test_script_machine.cpp
+0076cf80,FUN_0076cf80,script,translated,src/engine/script_value_natives.cpp: color_setgreen native (FUN_0079df30); tests/unit/test_script_machine.cpp
+0076cfa0,FUN_0076cfa0,script,translated,src/engine/script_value_natives.cpp: color_setblue native (FUN_0079df50); tests/unit/test_script_machine.cpp
+0076cfc0,FUN_0076cfc0,script,translated,src/engine/script_value_natives.cpp: color_setalpha native (FUN_0079df70); tests/unit/test_script_machine.cpp
 0076d010,FUN_0076d010,unknown,todo,ghidra
 0076d090,FUN_0076d090,unknown,todo,ghidra
 0076d0c0,FUN_0076d0c0,unknown,todo,ghidra
+0076d190,FUN_0076d190,script,translated,src/engine/script_value_natives.cpp: rotation_getx native (FUN_0079e180); tests/unit/test_script_machine.cpp
+0076d1b0,FUN_0076d1b0,script,translated,src/engine/script_value_natives.cpp: rotation_gety native (FUN_0079e1a0); tests/unit/test_script_machine.cpp
+0076d1d0,FUN_0076d1d0,script,translated,src/engine/script_value_natives.cpp: rotation_getz native (FUN_0079e1d0); tests/unit/test_script_machine.cpp
+0076d1f0,FUN_0076d1f0,script,translated,src/engine/script_value_natives.cpp: rotation_setx native (FUN_0079e200); tests/unit/test_script_machine.cpp
+0076d210,FUN_0076d210,script,translated,src/engine/script_value_natives.cpp: rotation_sety native (FUN_0079e220); tests/unit/test_script_machine.cpp
+0076d230,FUN_0076d230,script,translated,src/engine/script_value_natives.cpp: rotation_setz native (FUN_0079e240); tests/unit/test_script_machine.cpp
+0076d250,FUN_0076d250,script,translated,src/engine/script_value_natives.cpp: rotation_setvalue native (FUN_0079e260); tests/unit/test_script_machine.cpp
+0076d270,FUN_0076d270,script,translated,src/engine/script_value_natives.cpp: rotation_rotatez native (FUN_0079e2a0); tests/unit/test_script_machine.cpp
 0076d2c0,FUN_0076d2c0,unknown,todo,ghidra
 0076d340,FUN_0076d340,unknown,todo,ghidra
 0076d370,FUN_0076d370,unknown,todo,ghidra
+0076d420,FUN_0076d420,script,translated,src/engine/script_value_natives.cpp: position_getx native (FUN_0079e4a0); tests/unit/test_script_machine.cpp
+0076d440,FUN_0076d440,script,translated,src/engine/script_value_natives.cpp: position_gety native (FUN_0079e4c0); tests/unit/test_script_machine.cpp
+0076d460,FUN_0076d460,script,translated,src/engine/script_value_natives.cpp: position_getz native (FUN_0079e4e0); tests/unit/test_script_machine.cpp
+0076d480,FUN_0076d480,script,translated,src/engine/script_value_natives.cpp: position_setx native (FUN_0079e500); tests/unit/test_script_machine.cpp
+0076d4a0,FUN_0076d4a0,script,translated,src/engine/script_value_natives.cpp: position_sety native (FUN_0079e520); tests/unit/test_script_machine.cpp
+0076d4c0,FUN_0076d4c0,script,translated,src/engine/script_value_natives.cpp: position_setz native (FUN_0079e540); tests/unit/test_script_machine.cpp
+0076d4e0,FUN_0076d4e0,script,translated,src/engine/script_value_natives.cpp: position_setvalue native (FUN_0079e560); tests/unit/test_script_machine.cpp
 0076d530,FUN_0076d530,unknown,todo,ghidra
 0076d5b0,FUN_0076d5b0,unknown,todo,ghidra
 0076d5e0,FUN_0076d5e0,unknown,todo,ghidra
+0076d630,FUN_0076d630,script,translated,src/engine/script_value_natives.cpp: waypoints_count native (FUN_0079e710); tests/unit/test_script_machine.cpp
+0076d650,FUN_0076d650,script,translated,src/engine/script_value_natives.cpp: waypoints_getwaypoint native (FUN_0079e730); tests/unit/test_script_machine.cpp
 0076d6a0,FUN_0076d6a0,unknown,todo,ghidra
 0076d720,FUN_0076d720,unknown,todo,ghidra
 0076d740,FUN_0076d740,unknown,todo,ghidra
@@ -16591,11 +16618,11 @@ address,name,subsystem,status,notes
 0079b080,FUN_0079b080,script,translated,src/engine/script_machine.cpp: ScriptBlockType::init makes the block of gridposition (zeroed by the arena where the original leaves the allocator's bytes) or copies it
 0079b0d0,FUN_0079b0d0,script,translated,src/engine/script_machine.cpp: ScriptBlockType::destroy frees the block of gridposition and leaves 0
 0079b0f0,FUN_0079b0f0,script,translated,src/engine/script_machine.cpp: ScriptBlockType::assign gives the block of gridposition the source value
-0079b130,FUN_0079b130,unknown,todo,ghidra
-0079b150,FUN_0079b150,unknown,todo,ghidra
-0079b170,FUN_0079b170,unknown,todo,ghidra
-0079b190,FUN_0079b190,unknown,todo,ghidra
-0079b1b0,FUN_0079b1b0,unknown,todo,ghidra
+0079b130,FUN_0079b130,script,translated,src/engine/script_value_natives.cpp: helper of gridposition_getx (FUN_0076b760); tests/unit/test_script_machine.cpp
+0079b150,FUN_0079b150,script,translated,src/engine/script_value_natives.cpp: helper of gridposition_gety (FUN_0076b780); tests/unit/test_script_machine.cpp
+0079b170,FUN_0079b170,script,translated,src/engine/script_value_natives.cpp: helper of gridposition_setx (FUN_0076b7a0); tests/unit/test_script_machine.cpp
+0079b190,FUN_0079b190,script,translated,src/engine/script_value_natives.cpp: helper of gridposition_sety (FUN_0076b7c0); tests/unit/test_script_machine.cpp
+0079b1b0,FUN_0079b1b0,script,translated,src/engine/script_value_natives.cpp: helper of gridposition_setvalue (FUN_0076b7e0); tests/unit/test_script_machine.cpp
 0079b2c0,FUN_0079b2c0,unknown,todo,ghidra
 0079b320,FUN_0079b320,unknown,todo,ghidra
 0079b3d0,FUN_0079b3d0,unknown,todo,ghidra
@@ -16725,44 +16752,46 @@ address,name,subsystem,status,notes
 0079ddd0,FUN_0079ddd0,script,translated,src/engine/script_machine.cpp: ScriptBlockType::init makes the block of color zeroed or copied
 0079de50,FUN_0079de50,script,translated,src/engine/script_machine.cpp: ScriptBlockType::destroy frees the block of color and leaves 0
 0079de70,FUN_0079de70,script,translated,src/engine/script_machine.cpp: ScriptBlockType::assign gives the block of color the source value
-0079dee0,FUN_0079dee0,unknown,todo,ghidra
-0079df10,FUN_0079df10,unknown,todo,ghidra
-0079df30,FUN_0079df30,unknown,todo,ghidra
-0079df50,FUN_0079df50,unknown,todo,ghidra
-0079df70,FUN_0079df70,unknown,todo,ghidra
+0079dee0,FUN_0079dee0,script,translated,src/engine/script_value_natives.cpp: helper of color_setvalue (FUN_0076cf30); tests/unit/test_script_machine.cpp
+0079df10,FUN_0079df10,script,translated,src/engine/script_value_natives.cpp: helper of color_setred (FUN_0076cf60); tests/unit/test_script_machine.cpp
+0079df30,FUN_0079df30,script,translated,src/engine/script_value_natives.cpp: helper of color_setgreen (FUN_0076cf80); tests/unit/test_script_machine.cpp
+0079df50,FUN_0079df50,script,translated,src/engine/script_value_natives.cpp: helper of color_setblue (FUN_0076cfa0); tests/unit/test_script_machine.cpp
+0079df70,FUN_0079df70,script,translated,src/engine/script_value_natives.cpp: helper of color_setalpha (FUN_0076cfc0); tests/unit/test_script_machine.cpp
 0079dfc0,FUN_0079dfc0,unknown,todo,ghidra
 0079e020,FUN_0079e020,script,translated,src/engine/script_machine.cpp: ScriptBlockType::read_default reads the three floats of a rotation default
 0079e070,FUN_0079e070,unknown,todo,ghidra
 0079e0a0,FUN_0079e0a0,script,translated,src/engine/script_machine.cpp: ScriptBlockType::init makes the block of rotation zeroed or copied
 0079e110,FUN_0079e110,script,translated,src/engine/script_machine.cpp: ScriptBlockType::destroy frees the block of rotation and leaves 0
 0079e130,FUN_0079e130,script,translated,src/engine/script_machine.cpp: ScriptBlockType::assign gives the block of rotation the source value
-0079e180,FUN_0079e180,unknown,todo,ghidra
-0079e1a0,FUN_0079e1a0,unknown,todo,ghidra
-0079e1d0,FUN_0079e1d0,unknown,todo,ghidra
-0079e200,FUN_0079e200,unknown,todo,ghidra
-0079e220,FUN_0079e220,unknown,todo,ghidra
-0079e240,FUN_0079e240,unknown,todo,ghidra
-0079e2a0,FUN_0079e2a0,unknown,todo,ghidra
+0079e180,FUN_0079e180,script,translated,src/engine/script_value_natives.cpp: helper of rotation_getx (FUN_0076d190); tests/unit/test_script_machine.cpp
+0079e1a0,FUN_0079e1a0,script,translated,src/engine/script_value_natives.cpp: helper of rotation_gety (FUN_0076d1b0); tests/unit/test_script_machine.cpp
+0079e1d0,FUN_0079e1d0,script,translated,src/engine/script_value_natives.cpp: helper of rotation_getz (FUN_0076d1d0); tests/unit/test_script_machine.cpp
+0079e200,FUN_0079e200,script,translated,src/engine/script_value_natives.cpp: helper of rotation_setx (FUN_0076d1f0); tests/unit/test_script_machine.cpp
+0079e220,FUN_0079e220,script,translated,src/engine/script_value_natives.cpp: helper of rotation_sety (FUN_0076d210); tests/unit/test_script_machine.cpp
+0079e240,FUN_0079e240,script,translated,src/engine/script_value_natives.cpp: helper of rotation_setz (FUN_0076d230); tests/unit/test_script_machine.cpp
+0079e260,FUN_0079e260,script,translated,src/engine/script_value_natives.cpp: helper of rotation_setvalue (FUN_0076d250); tests/unit/test_script_machine.cpp
+0079e2a0,FUN_0079e2a0,script,translated,src/engine/script_value_natives.cpp: helper of rotation_rotatez (FUN_0076d270); tests/unit/test_script_machine.cpp
 0079e2f0,FUN_0079e2f0,unknown,todo,ghidra
 0079e350,FUN_0079e350,script,translated,src/engine/script_machine.cpp: ScriptBlockType::read_default reads the three floats of a position default
 0079e390,FUN_0079e390,unknown,todo,ghidra
 0079e3c0,FUN_0079e3c0,script,translated,src/engine/script_machine.cpp: ScriptBlockType::init makes the block of position zeroed or copied
 0079e430,FUN_0079e430,script,translated,src/engine/script_machine.cpp: ScriptBlockType::destroy frees the block of position and leaves 0
 0079e450,FUN_0079e450,script,translated,src/engine/script_machine.cpp: ScriptBlockType::assign gives the block of position the source value
-0079e4a0,FUN_0079e4a0,unknown,todo,ghidra
-0079e4c0,FUN_0079e4c0,unknown,todo,ghidra
-0079e4e0,FUN_0079e4e0,unknown,todo,ghidra
-0079e500,FUN_0079e500,unknown,todo,ghidra
-0079e520,FUN_0079e520,unknown,todo,ghidra
-0079e540,FUN_0079e540,unknown,todo,ghidra
+0079e4a0,FUN_0079e4a0,script,translated,src/engine/script_value_natives.cpp: helper of position_getx (FUN_0076d420); tests/unit/test_script_machine.cpp
+0079e4c0,FUN_0079e4c0,script,translated,src/engine/script_value_natives.cpp: helper of position_gety (FUN_0076d440); tests/unit/test_script_machine.cpp
+0079e4e0,FUN_0079e4e0,script,translated,src/engine/script_value_natives.cpp: helper of position_getz (FUN_0076d460); tests/unit/test_script_machine.cpp
+0079e500,FUN_0079e500,script,translated,src/engine/script_value_natives.cpp: helper of position_setx (FUN_0076d480); tests/unit/test_script_machine.cpp
+0079e520,FUN_0079e520,script,translated,src/engine/script_value_natives.cpp: helper of position_sety (FUN_0076d4a0); tests/unit/test_script_machine.cpp
+0079e540,FUN_0079e540,script,translated,src/engine/script_value_natives.cpp: helper of position_setz (FUN_0076d4c0); tests/unit/test_script_machine.cpp
+0079e560,FUN_0079e560,script,translated,src/engine/script_value_natives.cpp: helper of position_setvalue (FUN_0076d4e0); tests/unit/test_script_machine.cpp
 0079e5b0,FUN_0079e5b0,unknown,todo,ghidra
 0079e650,FUN_0079e650,script,translated,src/engine/script_machine.cpp: ScriptWaypointsType::read_default makes the list of a default once and shares it
 0079e6b0,FUN_0079e6b0,unknown,todo,ghidra
 0079e6e0,FUN_0079e6e0,script,translated,src/engine/script_machine.cpp: ScriptWaypointsType::init shares the source list
 0079e6f0,FUN_0079e6f0,script,translated,src/engine/script_machine.cpp: ScriptWaypointsType::destroy does nothing
 0079e700,FUN_0079e700,script,translated,src/engine/script_machine.cpp: ScriptWaypointsType::assign shares the source list
-0079e710,FUN_0079e710,unknown,todo,ghidra
-0079e730,FUN_0079e730,unknown,todo,ghidra
+0079e710,FUN_0079e710,script,translated,src/engine/script_value_natives.cpp: helper of waypoints_count (FUN_0076d630); tests/unit/test_script_machine.cpp
+0079e730,FUN_0079e730,script,translated,src/engine/script_value_natives.cpp: helper of waypoints_getwaypoint (FUN_0076d650); tests/unit/test_script_machine.cpp
 0079e7b0,FUN_0079e7b0,unknown,todo,ghidra
 0079e8c0,FUN_0079e8c0,unknown,todo,ghidra
 0079e8f0,FUN_0079e8f0,unknown,todo,ghidra
