@@ -264,10 +264,30 @@ and whose link is the terminator starts the requested state again.
 
 A call moves one clip once: FUN_00643f80 calls FUN_005e1f80 a single time,
 and when the clip ends it only starts the next link. The frame time the
-finished clip did not use goes back to the caller, and the callers
-(FUN_005e3ea0, FUN_0041fb00) do not spend it. The Wine oracle shows it: at
-each end of the run clip one sample has a lower speed (132.98 instead of
-230 u/s in `wine_probe_20261111`).
+finished clip did not use goes back to the caller; Kain's (FUN_0041fb00)
+does not spend it, while the play behavior of a script calls again with it
+([`../SCRIPTS.md`](../SCRIPTS.md), "Creature behaviors"). The Wine oracle
+shows it for Kain: at each end of the run clip one sample has a lower speed
+(132.98 instead of 230 u/s in `wine_probe_20261111`).
+
+**Result and time left.** FUN_00643030 returns flags:
+
+- 4 at once, without moving anything, when the machine has no state (+0x9c)
+  and no layer entity (+0xa4).
+- From FUN_00643f80: 0 while the clip has not reached its end; at its end,
+  1 when the next chain link has a clip (it starts), 3 when the link in play
+  is the terminator or the next one is.
+- When the requested state has a function and it fails, the child state
+  starts and the flags go back as they are. Otherwise 4 is added when the
+  clock is at the end of the clip (`out`, or `in` for a rate of 0 or less),
+  the link is the terminator and the state is the requested one.
+
+FUN_005e1f80 takes from the time what the clip used: all of it for a clip
+at rate 0 past its blend (such a clip holds its frame and never reaches its
+end); during a blend, what the clock moved (its opposite for a negative
+rate); otherwise what the clock moved divided by the rate. The time left is
+the time minus that, and 0 when it is below 0.001 (the float at
+`0x8612b0`).
 
 **Root motion** (FUN_005e1f80, FUN_005ceef0, FUN_0063d080). Every call also
 returns what the root moved by, nine floats: translation, rotation, scale.

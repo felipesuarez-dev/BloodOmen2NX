@@ -659,13 +659,39 @@ factory's (+0x38, `FUN_00727b70`). `FUN_0077a0b0` makes the factory's
 of them is found (`FUN_0060f010`, which logs `Unable to find animation
 %s`) and a flag of the parse is clear; the template lines are `anim`,
 `aniscript`, `forceDummyAnims` and `noDummyAnims` (`FUN_00785c8d`).
-`FUN_00728fd0` makes a set only for a factory that has none of its own
-(+0x38 is 0): the clips of the creature's marker (the list `FUN_00736a40`
-passes, below) followed by the factory's list at +0x1c (count) and +0x24
-(array), when the two give at least one clip; `FUN_0060f820` makes it on
-the set cache `DAT_00a6ad44`, with the skeleton of the factory's model
-(+0x34, `FUN_005d8bd0`: the model's slot +8, its +0x20) when the factory
-has a model. So a factory set wins over the clip of a marker.
+Both ask the set cache (`FUN_0060f820` on `DAT_00a6ad44`) by a name:
+
+- `FUN_0077a0b0` asks for the factory's set by the name of the entity type
+  (`leverf`, `kainactor`, `psntcnf`), with the reels its `anim` lines
+  found.
+- `FUN_00728fd0` asks only for a factory with no set of its own (+0x38 is
+  0), when the clips of the creature's marker (the list `FUN_00736a40`
+  passes, below) and the factory's list at +0x1c (count) and +0x24 (array)
+  give at least one clip. The name is the entity's name, `:` (`0x8f02d4`)
+  and the region's name (`gate01:slums/sl01`, `birds02:slums/sl01`).
+
+The cache gives the set of the `animatio` entry of that name: the loader of
+the entries (`FUN_0066a850`, slot of the resource table at `0x8723cc`) makes
+each one's set with `FUN_005e9ae0` when the container loads. A graph
+(version 0) gives a set of vtable `0x86ec34`, whose instance is an
+`AnimInst`; an alias list (version 1) gives one of vtable `0x86edf8`, whose
+instance is an `AnimLiteInst`, with the reel of each reference
+(`FUN_005e9840`): with a package (a region name), the first clip of the
+marker of that name in that region's cell group (a marker's clip carries
+the marker's name, below); with none, the reel of that name
+([`FORMATS/animatio.md`](FORMATS/animatio.md), "Container"). Only a name
+with no entry makes the cache build a set (`FUN_0060fa10`: an alias list of
+the clips when there is no `aniscript` name, else a graph compiled from the
+`aniscript` source, which the game data does not ship).
+
+Traced (`re/decomp/animinst/animinst.gdb` and `build.gdb` on
+`tools/oracle/routes/sl01_watch.txt`): every request of `sl01` and of
+`kain.big` is found, `FUN_0060fa10` never runs and 31 entry sets are loaded
+by then (7 of `kain.big`, the 24 `animatio` entries of `sl01.big`). The
+rule, applied to the data (an `anim` line in the template asks for the type's
+set; else a marker with a clip asks for `<entity>:<region>`), gives the
+class read live for every entity of `sl01` (101 seen live of 104), `sl02`
+(79) and `sl03` (57).
 
 The marker of an entity (`FUN_006836d0` makes one record per `cellmark`
 entry with `FUN_0068b9e0`, vtable `0x876184`) keeps the `cellmdls` block of
@@ -686,8 +712,9 @@ line) and Kain. Vtable `0x872164` (`AnimLiteInst`): the markers with a clip
 animated parts of the HUD, all from sets of vtable `0x86edf8`
 (`re/decomp/creature/lite_probe.py`). The rest have none (the particle
 markers, the detectors, the hints, the helpers, `ocean`, whose marker has
-no clip). `gate01` has both a marker clip and an `aniscript`: its factory
-has a set, so it gets an `AnimInst` and its marker's clip is not used.
+no clip). `gate01`'s template (`animgate`) has an `aniscript` and no
+`anim` line, so its factory has no set and the marker's request finds the
+graph `gate01:slums/sl01` (states `st_open` and `st_close`).
 
 ### Animation instances
 
@@ -702,17 +729,30 @@ result is left in `eax` for the caller.
 graph ([`FORMATS/animatio.md`](FORMATS/animatio.md), "State machine
 runtime"):
 
+- The set's slot +8 (`FUN_005e3430`) makes it (`FUN_005e34f0`, 0x14c
+  bytes) and starts on layer 0 the state at +0 of the graph (the first int
+  of the stream: 0 in all 2,156 graphs of the game), so a creature plays its
+  graph's state 0 from the start (`st_idle` for `kainactor`, `st_up` for
+  `leverf`, `st_open` for `gate01`).
 - Find (`FUN_005e37b0`): the state of that symbol in the graph's map
-  (`*(*(instance + 0x1c) + 8) + 0x9c`, a tree keyed by the symbol), −2 when
-  it has none.
+  (section 13; `*(*(instance + 0x1c) + 8) + 0x9c`, a tree keyed by the
+  symbol), −2 when it has none. A graph maps `end` to −1.
 - Start (`FUN_005e3bf0`): an index of −1 on layer 0 logs `Animation
-  StateMachine 0 not allowed...` and gives 0; otherwise the layer's machine
-  (made when missing) starts the state (`FUN_00642bc0`), whose result it
-  gives.
+  StateMachine 0 not allowed to end` (`0x9029d8`) and gives 0; otherwise
+  the layer's machine (made when missing, `FUN_005e3aa0`) starts it with
+  `FUN_00642bc0`: an index from −1 to the state count less one starts that
+  state (−1: none) with `FUN_00642c00`, which gives 1; any other gives 0.
 - Advance (`FUN_005e3ea0`): every one of the 16 layers with a machine
-  advances from the same time (`FUN_00643030`); the result of layer `i`
-  goes to bits `3 * i` and up, and the time left is the smallest the
-  layers leave. The flag 4 is the end of layer 0's chain.
+  advances from the same time (`FUN_00643030`; its flags and time left are
+  in [`FORMATS/animatio.md`](FORMATS/animatio.md), "Result and time left");
+  the flags of layer `i` go to bits `3 * i` and up, and the time left is
+  the smallest the layers leave. The flag 4 of layer 0 is the end of its
+  sequence in the requested state.
+
+Traced (`re/decomp/animinst/animinst.gdb`): `leverf002` plays `up` with a
+count of 1 (`st_up` plays `cl_up`: `in` and `out` 0, rate 0): at every
+update the flags are 0, the clock 0 and the time left 0, so its play never
+ends. The `kainactor` creatures hibernate and their plays get no update.
 
 `AnimLiteInst` (vtable `0x872164`, 0x114 bytes) plays one reel at a time,
 with no graph. The set (vtable `0x86edf8`: +8 count, +0x10 array of reels)
@@ -1304,9 +1344,9 @@ owner, has the slot count of its class.
   `FUN_00424a80` measures.
 - The visible cells and objects of a frame (`FUN_007f69e0`), which the
   drawn frame of a creature depends on ("The drawn frame").
-- What makes `FUN_0060fa10` build a lite set (`0x86edf8`) or a skeletal
-  one (`0x86ec34`) from a list of clips (every set made from marker clips
-  in `sl01` is lite) and what fills the factory's clip list (+0x1c, +0x24).
+- What fills the factory's clip list (+0x1c, +0x24), the flag of the
+  template parse that stops `FUN_0077a0b0` from asking for a set, and what
+  it does when none of the `anim` lines finds its reel.
 - What `FUN_00760900` does before the behaviors for an object whose +0x50
   is set (`FUN_007422b0`), and in which order a `detectorscript` object
   runs its sensor and its behaviors.
