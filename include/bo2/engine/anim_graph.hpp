@@ -33,10 +33,11 @@ struct AnimClipNode {
     std::uint32_t reel_index() const { return reel_tag >> 1; }
 };
 
-// FUN_005e9840: two u16 indexes into the entry's BIG symbol list.
+// FUN_005e9840: two u16 indexes into the entry's BIG symbol list, the name of
+// the resource and the name of the package that holds it.
 struct AnimReelRef {
     std::uint16_t name_symbol = 0;
-    std::uint16_t type_symbol = 0;
+    std::uint16_t package_symbol = 0;
 };
 
 // One action of a transition (FUN_005e8e00, run by FUN_00642c00). Kind 1
@@ -128,6 +129,27 @@ struct AnimGraph {
     // The index of the state with this name, or -1.
     std::int32_t find_state(const std::string& name) const;
 };
+
+// One reference of a version 1 `animatio` entry (FUN_005e9840): the name of a
+// resource and the name of the package that holds it, empty for the current
+// package. The entry only names other resources; it has no graph.
+struct AnimAlias {
+    std::string name;
+    std::string package;
+};
+
+// `bytes` is the extracted `animatio` entry. Reads the format and version ints
+// that FUN_005e9ae0 reads first: 0 for a graph, 1 for an alias list. Throws
+// common::ParseError on another format id or a truncated stream.
+std::int32_t anim_entry_version(const std::vector<std::uint8_t>& bytes);
+
+// `bytes` is a version 1 entry (FUN_005e9ae0, FUN_005e9840). Each reference is
+// two u16 indexes into the entry's symbol list, resolved through `names`.
+// Throws common::ParseError on a version other than 1, on an index out of
+// range, on a count that cannot fit in the stream or on bytes after the list.
+std::vector<AnimAlias> parse_anim_aliases(const std::vector<std::uint8_t>& bytes,
+                                          const std::vector<std::uint16_t>& symbols,
+                                          const std::vector<std::string>& names);
 
 // `bytes` is the extracted `animatio` entry. Reads the whole version 0 stream
 // (FUN_005e9ae0, FUN_005e8ee0) and keeps the tables the state machine needs;

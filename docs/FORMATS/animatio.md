@@ -11,8 +11,8 @@ the state machine runs on one layer in the port.
 Verified on all 4,081 `animatio` entries of the installed game: every one
 parses and consumes its payload exactly (2,156 graphs with 86,920 clip nodes,
 1,925 version 1 aliases). Reader: `tools/bo2fmt/animatio.py`; C++ port:
-`src/engine/anim_graph.cpp` (the reader) and `src/engine/anim_machine.cpp`
-(the state machine).
+`src/engine/anim_graph.cpp` (the reader of graphs and of the version 1 alias
+lists) and `src/engine/anim_machine.cpp` (the state machine).
 
 Sources are `bo2.exe` functions; dumps are in `re/decomp/animatio_graph/`
 (local, not committed). Facts not read from the code are marked *inferred*.

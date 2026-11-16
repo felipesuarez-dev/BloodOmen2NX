@@ -135,11 +135,49 @@ std::string pool_name(const std::vector<std::uint8_t>& pool, std::uint32_t tag) 
 AnimReelRef read_ref(Cursor& in) {
     AnimReelRef ref;
     ref.name_symbol = in.u16();
-    ref.type_symbol = in.u16();
+    ref.package_symbol = in.u16();
     return ref;
 }
 
 }  // namespace
+
+std::int32_t anim_entry_version(const std::vector<std::uint8_t>& bytes) {
+    Cursor in(bytes);
+    if (in.i32() != kFormatId) {
+        throw common::ParseError("animatio: unsupported format id");
+    }
+    return in.i32();
+}
+
+std::vector<AnimAlias> parse_anim_aliases(const std::vector<std::uint8_t>& bytes,
+                                          const std::vector<std::uint16_t>& symbols,
+                                          const std::vector<std::string>& names) {
+    Cursor in(bytes);
+    if (in.i32() != kFormatId) {
+        throw common::ParseError("animatio: unsupported format id");
+    }
+    if (in.i32() != kVersionAlias) {
+        throw common::ParseError("animatio: version is not an alias list");
+    }
+    const std::size_t count = in.count(4);
+    const auto resolve = [&](std::uint16_t symbol) -> std::string {
+        if (symbol >= symbols.size() || symbols[symbol] >= names.size()) {
+            throw common::ParseError("animatio: symbol index out of range");
+        }
+        return names[symbols[symbol]];
+    };
+    std::vector<AnimAlias> aliases;
+    aliases.reserve(count);
+    for (std::size_t index = 0; index < count; ++index) {
+        const std::uint16_t name_symbol = in.u16();
+        const std::uint16_t package_symbol = in.u16();
+        aliases.push_back({resolve(name_symbol), resolve(package_symbol)});
+    }
+    if (!in.at_end()) {
+        throw common::ParseError("animatio: bytes after the alias list");
+    }
+    return aliases;
+}
 
 AnimGraph parse_anim_graph(const std::vector<std::uint8_t>& bytes) {
     Cursor in(bytes);

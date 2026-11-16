@@ -46,11 +46,11 @@ numbers; to stay under its 60-second budget it checks the four cell groups of
 `code.big` and the nine of the slums levels, and the rest of the file is
 checked by the tool. Regenerate the file when a reader change is deliberate.
 
-## Reads of 2026-11-15 (texture row updated after BO2NX-118, bpackage after BO2NX-146)
+## Reads of 2026-11-16 (texture row updated after BO2NX-118, bpackage after BO2NX-146, animatio after BO2NX-165)
 
 | Type | Entries | Checked | Failed |
 |---|---|---|---|
-| animatio | 4,081 | 4,081 | 1,925 |
+| animatio | 4,081 | 4,081 | 0 |
 | animreel | 32,791 | 32,791 | 0 |
 | bpackage | 480 | 480 | 0 |
 | cellgrup | 236 | 236 | 30 |
@@ -73,43 +73,10 @@ checked by the tool. Regenerate the file when a reader change is deliberate.
 `animatio`, `animreel`, `bpackage`, `cellgrup`, `litedata`, `model`, `region`,
 `strtable`, `texfont` and `texture` have a registered reader. The other types are counted but not
 read yet; each following issue adds the reader of one type and its row here.
-The 142 `litedata` entries, the 92 `strtable` entries, the 165 `region`
-entries (their entities and their script package), the 32,791 `animreel` entries, the 22,483 `texture` entries and
-the four `texfont` entries are read without a failure.
-
-## animatio
-
-1,925 of the 4,081 entries fail, all with the same message:
-
-| Message | Entries |
-|---|---|
-| `animatio: version 1 entries are alias lists, not graphs` | 1,925 |
-
-`parse_anim_graph` reads the version 0 graphs. The version 1 entries are
-alias lists, still unread. The first 20 failures:
-
-| Container | Entry |
-|---|---|
-| `code.big` | `ui_hud_intent_glow:ui/hud` |
-| `code.big` | `ui_hud_anim_charm_haze:ui/hud` |
-| `code.big` | `ui_hud_enemy_health_bar:ui/hud` |
-| `code.big` | `ui_hud_health_bar:ui/hud` |
-| `code.big` | `ui_hud_lore_bar:ui/hud` |
-| `code.big` | `ui_hud_rage_bar:ui/hud` |
-| `code.big` | `ui_hud_letterbox:ui/hud` |
-| `code.big` | `ui_hud_dg_charm_icon:ui/darkgifts` |
-| `code.big` | `ui_hud_dg_fury_icon:ui/darkgifts` |
-| `code.big` | `ui_hud_dg_rupture_icon:ui/darkgifts` |
-| `code.big` | `ui_hud_dg_speed_icon:ui/darkgifts` |
-| `code.big` | `ui_hud_dg_stealth_icon:ui/darkgifts` |
-| `code.big` | `ui_hud_dg_superjump_icon:ui/darkgifts` |
-| `code.big` | `ui_hud_dg_telekinesis_icon:ui/darkgifts` |
-| `code.big` | `ui_hud_dg_metalring:ui/darkgifts` |
-| `resources/levels/bossrooms/CharmVampireArena/cvarena.big` | `dagger_actor` |
-| `resources/levels/bossrooms/CharmVampireArena/cvarena.big` | `mesh15a:bossrooms/charmvampirearena/cvarena` |
-| `resources/levels/bossrooms/CharmVampireArena/cvarena.big` | `camera01:bossrooms/charmvampirearena/cvarena` |
-| `resources/levels/bossrooms/CharmVampireArena/cvarena.big` | `camera02:bossrooms/charmvampirearena/cvarena` |
-| `resources/levels/bossrooms/CharmVampireArena/cvarena.big` | `camera03:bossrooms/charmvampirearena/cvarena` |
+The 4,081 `animatio` entries, the 142 `litedata` entries, the 92 `strtable`
+entries, the 165 `region` entries (their entities and their script package),
+the 32,791 `animreel` entries, the 22,483 `texture` entries and the four
+`texfont` entries are read without a failure.
 
 ## cellgrup
 

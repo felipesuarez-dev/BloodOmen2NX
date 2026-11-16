@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <iostream>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "bo2/common/reader.hpp"
@@ -199,6 +200,139 @@ bool throws_parse_error(const Bytes& bytes) {
     return false;
 }
 
+template <typename Function>
+bool throws_parse_error_in(Function&& function) {
+    try {
+        function();
+    } catch (const bo2::common::ParseError&) {
+        return true;
+    }
+    return false;
+}
+
+// A version 1 alias list: int 0, int 1, int count, then two u16 per reference.
+Bytes make_alias_list(const std::vector<std::pair<std::uint16_t, std::uint16_t>>& refs,
+                      std::int32_t version = 1, std::size_t tail = 0) {
+    Writer out;
+    out.i32(0);
+    out.i32(version);
+    out.i32(static_cast<std::int32_t>(refs.size()));
+    for (const auto& [name, package] : refs) {
+        out.u16(name);
+        out.u16(package);
+    }
+    out.out.insert(out.out.end(), tail, 0);
+    return out.out;
+}
+
+Bytes build_big(const std::vector<std::string>& names, const Bytes& payload,
+                const std::vector<std::uint16_t>& symbols);
+
+// FUN_005e9ae0 and FUN_005e9840: a version 1 entry names one resource and the
+// package that holds it, through two u16 indexes into the entry's symbols.
+void test_anim_aliases() {
+    const Bytes payload = make_alias_list({{1, 3}, {2, 2}});
+    const Bytes container =
+        build_big({"g", "kain/run", "", "slums/sl01"}, payload, {0, 1, 2, 3});
+    const bo2::engine::BigArchive archive = bo2::engine::BigArchive::parse(container);
+    CHECK(archive.entries().size() == 1);
+    if (archive.entries().size() != 1) {
+        return;
+    }
+    const bo2::engine::BigEntry& entry = archive.entries()[0];
+    const Bytes data = archive.extract(entry);
+    CHECK(bo2::engine::anim_entry_version(data) == 1);
+    const std::vector<bo2::engine::AnimAlias> aliases =
+        bo2::engine::parse_anim_aliases(data, entry.symbols, archive.names());
+    CHECK(aliases.size() == 2);
+    if (aliases.size() == 2) {
+        CHECK(aliases[0].name == "kain/run" && aliases[0].package == "slums/sl01");
+        CHECK(aliases[1].name.empty() && aliases[1].package.empty());
+    }
+
+    // A version 0 graph is not an alias list.
+    const Bytes graph = make_graph();
+    CHECK(throws_parse_error_in([&] {
+        bo2::engine::parse_anim_aliases(graph, entry.symbols, archive.names());
+    }));
+    // A reference whose symbol index is outside the entry's symbol list.
+    const Bytes outside = make_alias_list({{9, 0}});
+    CHECK(throws_parse_error_in([&] {
+        bo2::engine::parse_anim_aliases(outside, entry.symbols, archive.names());
+    }));
+    // A symbol whose name index is outside the archive name table.
+    const Bytes bad_name = make_alias_list({{0, 3}});
+    std::vector<std::uint16_t> short_names = entry.symbols;
+    short_names[0] = 99;
+    CHECK(throws_parse_error_in([&] {
+        bo2::engine::parse_anim_aliases(bad_name, short_names, archive.names());
+    }));
+    // Truncated: the count says two references and only one fits.
+    Bytes truncated = payload;
+    truncated.resize(truncated.size() - 4);
+    CHECK(throws_parse_error_in([&] {
+        bo2::engine::parse_anim_aliases(truncated, entry.symbols, archive.names());
+    }));
+    // Bytes after the list.
+    const Bytes trailing = make_alias_list({{1, 3}}, 1, 4);
+    CHECK(throws_parse_error_in([&] {
+        bo2::engine::parse_anim_aliases(trailing, entry.symbols, archive.names());
+    }));
+}
+
+// Asset-gated: every version 1 entry of the installed game.
+void test_anim_aliases_in_the_game() {
+    const char* root = std::getenv("BO2NX_ASSETS_DIR");
+    if (root == nullptr) {
+        std::cout << "animatio alias check skipped (BO2NX_ASSETS_DIR is unset)\n";
+        return;
+    }
+    const std::filesystem::path base(root);
+    std::size_t aliases = 0;
+    for (const std::filesystem::directory_entry& item :
+         std::filesystem::recursive_directory_iterator(base)) {
+        if (!item.is_regular_file() || item.path().extension() != ".big") {
+            continue;
+        }
+        const bo2::engine::BigArchive archive = bo2::engine::BigArchive::load(item.path().string());
+        for (const bo2::engine::BigEntry& entry : archive.entries()) {
+            if (entry.type != "animatio") {
+                continue;
+            }
+            const Bytes data = archive.extract(entry);
+            if (bo2::engine::anim_entry_version(data) != 1) {
+                continue;
+            }
+            const std::vector<bo2::engine::AnimAlias> list =
+                bo2::engine::parse_anim_aliases(data, entry.symbols, archive.names());
+            CHECK(list.size() == 1);
+            ++aliases;
+        }
+    }
+    CHECK(aliases == 1925);
+
+    const std::filesystem::path kain =
+        base / "media/gogames/bo2/resources/levels/kain/kain.big";
+    if (!std::filesystem::exists(kain)) {
+        std::cout << "kain animatio alias check skipped (kain.big not found)\n";
+        return;
+    }
+    const bo2::engine::BigArchive archive = bo2::engine::BigArchive::load(kain.string());
+    const bo2::engine::BigEntry* entry = archive.find("animatio", "nexus_stone");
+    CHECK(entry != nullptr);
+    if (entry == nullptr) {
+        return;
+    }
+    CHECK(archive.extract(*entry).size() == 16);
+    const std::vector<bo2::engine::AnimAlias> list =
+        bo2::engine::parse_anim_aliases(archive.extract(*entry), entry->symbols, archive.names());
+    CHECK(list.size() == 1);
+    if (list.size() == 1) {
+        CHECK(list[0].name == "accessories/nexusstone");
+        CHECK(list[0].package.empty());
+    }
+}
+
 void test_clip_nodes_and_reels() {
     const bo2::engine::AnimGraph graph = bo2::engine::parse_anim_graph(make_graph());
     CHECK(graph.clips.size() == 2);
@@ -210,8 +344,8 @@ void test_clip_nodes_and_reels() {
     CHECK(graph.clips[1].speed == 1.7f);
     CHECK(!graph.clips[1].has_reel());
     CHECK(graph.reels.size() == 2);
-    CHECK(graph.reels[0].name_symbol == 0 && graph.reels[0].type_symbol == 1);
-    CHECK(graph.reels[1].name_symbol == 2 && graph.reels[1].type_symbol == 1);
+    CHECK(graph.reels[0].name_symbol == 0 && graph.reels[0].package_symbol == 1);
+    CHECK(graph.reels[1].name_symbol == 2 && graph.reels[1].package_symbol == 1);
 }
 
 void test_states_and_tables() {
@@ -421,6 +555,8 @@ int main() {
         test_states_and_tables();
         test_rejections();
         test_reel_names();
+        test_anim_aliases();
+        test_anim_aliases_in_the_game();
         test_kain_graph();
     } catch (const std::exception& error) {
         std::cerr << "anim graph test: " << error.what() << '\n';

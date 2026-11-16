@@ -8340,8 +8340,8 @@ address,name,subsystem,status,notes
 005e9460,FUN_005e9460,animation,wip,src/engine/anim_graph.cpp: the count at +0x98 is read; the rest of the block is skipped
 005e95d0,FUN_005e95d0,unknown,todo,ghidra
 005e9820,FUN_005e9820,unknown,todo,ghidra
-005e9840,FUN_005e9840,animation,translated,src/engine/anim_graph.cpp: AnimReelRef (two u16 symbol indexes); tests/unit/test_anim_graph.cpp
-005e9ae0,FUN_005e9ae0,animation,wip,src/engine/anim_graph.cpp: version 0 graphs only; a version 1 alias list is rejected
+005e9840,FUN_005e9840,animation,translated,src/engine/anim_graph.cpp: AnimReelRef reads the two u16 symbol indexes (resource name and package); the lookup in the package is not ported; tests/unit/test_anim_graph.cpp
+005e9ae0,FUN_005e9ae0,animation,wip,src/engine/anim_graph.cpp: reads the format and version ints; version 0 graphs and version 1 alias lists; the lookup of the named resource in its package is not ported
 005e9d20,FUN_005e9d20,unknown,todo,ghidra
 005e9ee0,FUN_005e9ee0,unknown,todo,ghidra
 005e9f10,FUN_005e9f10,unknown,todo,ghidra

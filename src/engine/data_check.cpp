@@ -20,7 +20,12 @@ void check_bpackage(const BigArchive& archive, const BigEntry& entry) {
 }
 
 void check_animatio(const BigArchive& archive, const BigEntry& entry) {
-    static_cast<void>(parse_anim_graph(archive.extract(entry)));
+    const std::vector<std::uint8_t> data = archive.extract(entry);
+    if (anim_entry_version(data) == 1) {
+        static_cast<void>(parse_anim_aliases(data, entry.symbols, archive.names()));
+    } else {
+        static_cast<void>(parse_anim_graph(data));
+    }
 }
 
 void check_animreel(const BigArchive& archive, const BigEntry& entry) {
