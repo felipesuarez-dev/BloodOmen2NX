@@ -500,7 +500,8 @@ has seven clips of 11 to 101 frames, each on the scale of bone 0, and
 
 `parse_cell_group` keeps them in `LevelGeometry::cell_animations`, in file
 order; `tools/bo2fmt/animreel.py` has the reference reader
-(`parse_cellanim`). Which model a clip belongs to is not decoded.
+(`parse_cellanim`). A clip belongs to the marker that names it in `cellmark`
+(below).
 
 ### `cells`
 
@@ -635,7 +636,17 @@ bar has clip 0, the lore bar 1, the letterbox 2, the charm haze 3, the intent
 glow 4, the rage bar 5, the enemy health bar 6). In `sl01` the 19 clips are
 named once each: by the eight animated models (the gate, the spotlight, four
 flocks of birds and two boats) and by eleven camera markers that have a clip
-and no model. The flag, the value and the number are open. The host exposes
+and no model.
+
+The game keeps one record per marker (`FUN_006836d0`, `FUN_0068b9e0`): the
+`cellmdls` block of the model index, the `cellanim` clip of the clip index
+renamed to the marker's name (`FUN_0063d150` at `0x683758`), the name, the
+class and the low byte of the flag. The flag says whether the marker passes
+its model to the creature it makes (`FUN_00736a40`); over every `cellmark`
+of the game (9,455 markers) it is 1 exactly when the model index is 0 or
+more. The clip becomes the creature's animation when its type has no
+animation set of its own ([`../SCRIPTS.md`](../SCRIPTS.md), "Creature
+behaviors"). The value and the number are open. The host exposes
 the markers but does not render them.
 
 ### `portal2`
@@ -1038,7 +1049,7 @@ interior, while the default isometric frame shows the level.
   plane/index and the BSP traversal.
 - `cellinst` external references, flags and the Euler order.
 - `cellight` type-specific parameters and the marker symbol semantics.
-- Which model each `cellanim` clip belongs to, and what plays it in a level.
+- What plays a `cellanim` clip in a level besides `playanimation`.
 - `model 74` has no `rmd`; its role is unknown.
 - The `RO`, `JO`, `Rot` and `Scl` vectors of the bone record, `rotOrder`, the
   state mask/value and the other `chanMask` bits.

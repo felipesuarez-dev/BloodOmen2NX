@@ -80,8 +80,17 @@ floats so small LSC channels cannot amplify a file; that cap is port-only.
 
 ## Duration
 
-`(frames - 1) * (1 / 30)`. FUN_0068ada0 and FUN_0068a9b0 use the double
-constant 1/30 at 0x872498, not the fps field.
+A channel lasts `(frames - 1) / 30` seconds, whatever the fps field says
+(the channel's slot +0x18). LC (FUN_0068a9b0), LSC (FUN_0068ada0) and
+the stream codec (`0x6711a0`, from the reel's frame count at +0x12)
+multiply `frames - 1` by the double 1/30 at 0x872498; UC (`0x67aa70`)
+divides it by the 30 its constructor stores (FUN_0067ad20, +4).
+
+The reel's duration (vtable 0x86fa4c, slot +8, `FUN_0063cdb0`) is the
+largest duration of its channels that are not constants (bit 0 of the
+channel word), and at least 1/30 (the float `0x3d08882f`) when it has a
+channel; a reel with no channel lasts 0. A clip of one frame therefore
+lasts 1/30 s. The port's `AnimReel::duration` is `(frames - 1) / 30`.
 
 ## Descriptor keys
 

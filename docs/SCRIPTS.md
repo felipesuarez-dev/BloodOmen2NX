@@ -587,7 +587,7 @@ address is not 0.
 | 12 | `hibernatecreature(creature)` | `FUN_00767420` | `FUN_00760410` | With a creature, `FUN_00718cf0` |
 | 13 | `unhibernatecreature(creature)` | `FUN_00767440` | `FUN_00760430` | With a creature, `FUN_00718d30` |
 | 16 | `getscript(creature)` | `FUN_00767630` | `FUN_00760450` | The object of the creature (+0x130), or 0, stored as a handle, counted, whatever its class |
-| 27 | `playanimation(string, kind 2)` (task) | `FUN_00767930` | `FUN_0075fbc0` | A name with no characters, or a creature with no animation instance (the slot +0x10 of its +0x90 gives 0), gives no task. Otherwise the name is looked up in that instance (its slot +4 on the name's symbol): when it is missing the log gets `<creature> : Animation <name> requested but ...` (`0x8ed1fc`) and the task is the one of a wait of 10 s (the object's slot +0x28 with `FUN_0073dd20`); when it is there the task is the one of a play behavior (slot +0x28 with `FUN_007965a0`, vtable `0x879b0c`) given the name and the second argument, which keeps it as its count of plays when it is 1 or more, else 0 (`FUN_00796720`). The behavior is the task ("Creature behaviors" below); when a play ends depends on the creature's animation instance, whose slots are not read. In `sl01`: `("default", 0)` from `glyphsmoke2marker` and `("idle", 1)` from `kainactor001` |
+| 27 | `playanimation(string, kind 2)` (task) | `FUN_00767930` | `FUN_0075fbc0` | A name with no characters, or a creature with no animation instance (the slot +0x10 of its +0x90 gives 0), gives no task. Otherwise the name is looked up in that instance (its slot +4 on the name's symbol): when it is missing the log gets `<creature> : Animation <name> requested but ...` (`0x8ed1fc`) and the task is the one of a wait of 10 s (the object's slot +0x28 with `FUN_0073dd20`); when it is there the task is the one of a play behavior (slot +0x28 with `FUN_007965a0`, vtable `0x879b0c`) given the name and the second argument, which keeps it as its count of plays when it is 1 or more, else 0 (`FUN_00796720`). The behavior is the task ("Creature behaviors" below); when a play ends depends on the creature's animation instance ("Animation instances"). In `sl01`: `("default", 0)` from `glyphsmoke2marker` and `("idle", 1)` from `kainactor001` |
 | 47 | `wasdrawnlastframe()` | `FUN_00767f80` | `FUN_00760df0` | Whether the frame the creature was last drawn in (+0x140) is not below the frame counter (`DAT_008ff180`) less 1, compared unsigned |
 | 69 | `disablesimulate()` | `FUN_007686a0` | `FUN_00762480` | The creature leaves the group `process_msg` (`FUN_0072b550` with `DAT_00a83754`) |
 | 70 | `disableeotsimulate()` | `FUN_007686b0` | `FUN_00762420` | The creature leaves the second group (`DAT_00a83744`) |
@@ -652,25 +652,95 @@ The animation instance of a creature is `*(*(creature + 0x98) + 0x4c)`
 makes the member with the creature's model and its animation set (the
 fourth argument of `FUN_005c9340`, the sixth of `FUN_0070d0c0`), and asks
 the set for the instance (its slot +8); with no set there is none. The set
-is the spawner's when it passes one (`FUN_007289d0` `param_10`, `0x728c7c`:
-`FUN_00736a40` passes the marker data's +0x54 when its +0x6c is set), else
-the factory's (+0x38, `FUN_00727b70`). `FUN_0077a0b0` makes the factory's
+is the one the factory's slot +0x1c (`FUN_00728fd0`) passes to its slot
++0x20 (`FUN_007289d0` `param_10`, `0x728c7c`) when there is one, else the
+factory's (+0x38, `FUN_00727b70`). `FUN_0077a0b0` makes the factory's
 (`FUN_0060f820`) from the animations its template names when at least one
 of them is found (`FUN_0060f010`, which logs `Unable to find animation
 %s`) and a flag of the parse is clear; the template lines are `anim`,
 `aniscript`, `forceDummyAnims` and `noDummyAnims` (`FUN_00785c8d`).
+`FUN_00728fd0` makes a set only for a factory that has none of its own
+(+0x38 is 0): the clips of the creature's marker (the list `FUN_00736a40`
+passes, below) followed by the factory's list at +0x1c (count) and +0x24
+(array), when the two give at least one clip; `FUN_0060f820` makes it on
+the set cache `DAT_00a6ad44`, with the skeleton of the factory's model
+(+0x34, `FUN_005d8bd0`: the model's slot +8, its +0x20) when the factory
+has a model. So a factory set wins over the clip of a marker.
+
+The marker of an entity (`FUN_006836d0` makes one record per `cellmark`
+entry with `FUN_0068b9e0`, vtable `0x876184`) keeps the `cellmdls` block of
+its model index at +0x54, the `cellanim` clip of its clip index in a list
+(+0x58 count, +0x60 array), renamed to the marker's name (`FUN_0063d150` at
+`0x683758`), its name at +0x64, its class at +0x68 and the low byte of its
+flag at +0x6c. `FUN_00736a40` passes the model block when +0x6c is set and
+the clip list when it holds a clip. Over every `cellmark` of the game (9,455
+markers) the flag is 1 exactly when the model index is 0 or more.
 
 Read live in `sl01` (`re/decomp/creature/anim_probe.py`): 90 creatures of
-the active list have one, of two classes. Vtable `0x86ec4c`: the creatures
-whose template names animations (the peasants, the rats, the umahs, the
-Kain actors, the gates, the doors, `leverf` with its `anim` line) and Kain.
-Vtable `0x872164`: the markers with a clip (the birds, the boats, the
-spotlight, the cameras with a clip) and the animated parts of the HUD. The
-rest have none (the particle markers, the detectors, the hints, the
-helpers, `ocean`, whose marker has no clip). `gate01` has both a marker
-clip and an `aniscript` and gets a `0x86ec4c` instance; which set wins
-there, and what the instance's slots +4 (find a name), +0x10 (play) and
-+0x24 (advance) do, is not read.
+the active list have one, of two classes. Vtable `0x86ec4c` (`AnimInst`):
+the creatures whose template names animations (the peasants, the rats, the
+umahs, the Kain actors, the gates, the doors, `leverf` with its `anim`
+line) and Kain. Vtable `0x872164` (`AnimLiteInst`): the markers with a clip
+(the birds, the boats, the spotlight, the cameras with a clip) and the
+animated parts of the HUD, all from sets of vtable `0x86edf8`
+(`re/decomp/creature/lite_probe.py`). The rest have none (the particle
+markers, the detectors, the hints, the helpers, `ocean`, whose marker has
+no clip). `gate01` has both a marker clip and an `aniscript`: its factory
+has a set, so it gets an `AnimInst` and its marker's clip is not used.
+
+### Animation instances
+
+The slots of an animation instance that the behaviors use: +4 finds a name
+and gives its index, +0x10 plays a name, +0x14 starts an index, +0x24
+advances. Play is the same function in both classes (`FUN_005e3c80`,
+`FUN_00654250`): find; when the index is below 0 the log gets `Animation %s
+requested but could...` (`0x902a04`); then +0x14 with the index, whose
+result is left in `eax` for the caller.
+
+`AnimInst` (vtable `0x86ec4c`) runs the state machines of an `animatio`
+graph ([`FORMATS/animatio.md`](FORMATS/animatio.md), "State machine
+runtime"):
+
+- Find (`FUN_005e37b0`): the state of that symbol in the graph's map
+  (`*(*(instance + 0x1c) + 8) + 0x9c`, a tree keyed by the symbol), −2 when
+  it has none.
+- Start (`FUN_005e3bf0`): an index of −1 on layer 0 logs `Animation
+  StateMachine 0 not allowed...` and gives 0; otherwise the layer's machine
+  (made when missing) starts the state (`FUN_00642bc0`), whose result it
+  gives.
+- Advance (`FUN_005e3ea0`): every one of the 16 layers with a machine
+  advances from the same time (`FUN_00643030`); the result of layer `i`
+  goes to bits `3 * i` and up, and the time left is the smallest the
+  layers leave. The flag 4 is the end of layer 0's chain.
+
+`AnimLiteInst` (vtable `0x872164`, 0x114 bytes) plays one reel at a time,
+with no graph. The set (vtable `0x86edf8`: +8 count, +0x10 array of reels)
+is at +0x24, the reel in play at +0x1c and its clock at +0x20:
+
+- The set's slot +8 (`FUN_00653b60`) makes it (`FUN_00653d40`) and starts
+  index 0 at once, so a marker plays its first clip from clock 0.
+- Find (`0x653f30`, `FUN_00653c00` on the set): the first reel whose name
+  (the symbol at reel +8) is the name (`FUN_0068ec30`); else, when the set
+  has one reel, `default` gives 0 if the short at reel +10 is not 0; else
+  −1.
+- Start (`FUN_00654220`): an index below the count (a signed test,
+  `0x65422a`, so −1 passes and reads the word before the array; the
+  natives above look the name up first) sets +0x1c to that reel and +0x20
+  to 0 and gives 1; an index at or past the count gives 0.
+- Advance (`FUN_006545b0`): with `d` the reel's duration (its slot +8,
+  below), a clock at `d` or more starts over (the clock drops by `d`);
+  the time is added to the clock; at `d` or less the time left is 0 and
+  the result 0; past `d` the clock stays at `d`, the time left is what
+  went past and the result is 7 (the flags 1, 2 and 4).
+
+The duration of a reel (vtable `0x86fa4c`, slot +8, `FUN_0063cdb0`) is
+the largest duration of its channels that are not constants, and at least
+1/30 s (`0x3d08882f`) when the reel has a channel; 0 when it has none. A
+channel's duration is `(frames - 1) / 30` in every codec
+([`FORMATS/animreel.md`](FORMATS/animreel.md), "Duration"). Read live in
+`sl01`: the birds (241 frames, 8 s) and the boats (101 frames, 3.333 s)
+advance 1 s of clock per second of play; the health bar of the HUD (28
+frames) holds at 0.9; the cameras stay at 0.
 
 Traced (`re/decomp/creature/behaviors.gdb` on
 `tools/oracle/routes/sl01_watch.txt`): `glyphsmoke2marker` has no animation
@@ -949,11 +1019,12 @@ through the factory of its type (slot +0x1c, `FUN_00728fd0`, then
   registers (`FUN_005a0f20` calls `FUN_0068f430`, which maps each byte with
   the C library `tolower`, `FUN_007a4456`). Every entity name of the game
   (15,584) is lower case. The marker's model
-  object (marker data +0x58, the `cellmdls` block of its model index) goes
-  to the factory, which uses it instead of its own (`FUN_007289d0`,
-  `param_9`); its clip (+0x54, when +0x6c is set) goes with it. A block
-  with no `rmd` gives no radius. A marker whose model index is −1, and an
-  entity with no marker, pass nothing.
+  object (marker data +0x54, the `cellmdls` block of its model index, when
+  the marker's flag +0x6c is set) goes to the factory, which uses it
+  instead of its own (`FUN_007289d0`, `param_9`); its clips (+0x58) go
+  with it ("Creature behaviors"). A block with no `rmd` gives no radius. A
+  marker whose model index is −1 (its flag is then 0), and an entity with
+  no marker, pass no model.
 - Otherwise the factory's own model (+0x34, `FUN_00727b70`): the first
   `model` line of the type's template (`FUN_0077a0b0`, `FUN_0077b5e0(0)`;
   the next lines are levels of detail), found by name among the loaded
@@ -1231,6 +1302,10 @@ owner, has the slot count of its class.
   `FUN_00424a80` measures.
 - The visible cells and objects of a frame (`FUN_007f69e0`), which the
   drawn frame of a creature depends on ("The drawn frame").
+- What makes `FUN_0060fa10` build a lite set (`0x86edf8`) or a skeletal
+  one (`0x86ec34`) from a list of clips (every set made from marker clips
+  in `sl01` is lite), what fills the factory's clip list (+0x1c, +0x24),
+  and what the short at reel +10 is (not 0 in every reel read in `sl01`).
 - What `FUN_006e20d0(0)` does to a scripted sound instance.
 - The properties `<class>.<field>` of an entity (for example
   `levelkeeperintro.commondata.farClip`), which look like overrides of the
