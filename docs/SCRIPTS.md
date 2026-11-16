@@ -1096,18 +1096,73 @@ it was drawn in. The draw of a creature (`FUN_0070f100`, slot +0x14 of
 (the template flag `helperobj`) or whose model has no data; otherwise it
 draws the model (`FUN_005c9b50`) and sets +0x140 when that draw says it drew.
 That draw is called only for the objects of the cells that are visible
-(`FUN_007f69e0`: the cells of the camera, `FUN_00607b60`, and the walk
-through the portals, `FUN_007f5d60`, which clips each portal to a screen
-rectangle; then `FUN_007f6340`, cell by cell), and of those only for an
-object with no flag 1 or 2, not drawn yet in this pass, and with flag 4 or
-a sphere (+0x10, radius +0x1c) the renderer does not find outside the view
-(its slot 0xc8; `FUN_005fbea0`).
+and for the objects in no cell, below ("Visible cells").
 
 Read live (`drawn_probe.py`, ten samples one second apart, standing at the
 start of `sl01` with its neighbours loaded): 11 creatures are drawn each
 frame (Kain, `ocean`, two glass models and seven parts of the HUD). Of the
 230 creatures with a script object only `ocean` is drawn; the other 229 have
 +0x140 at 0, never drawn since the load.
+
+### Visible cells
+
+The cells of a creature. A creature is its own visual object, and its cell
+proxy sits at creature +0x5c: flags +0x60, the world matrix +0x68, the
+centre of its model sphere in model space +0x6c, the radius +0x78, its list
+of cells +0x80, the scene of the list of objects in no cell +0x84. When it
+moves (`FUN_00711100`, `FUN_005c9cb0`) the model's slot +0x3c gives the
+sphere; the centre goes to world space with the matrix (`FUN_00693c50`) and
+`FUN_00607b60` collects the cells it touches in every loaded cell group of
+its scene (the group's +0x88): the box centre ± radius must overlap the
+group's box (`FUN_00660be0`: both sides strict, an empty box never
+overlaps); with a `cellbsp` (`FUN_0066b1e0`), a sphere query from the root:
+at a split (vtable `0x876138`, `FUN_0068b760`) with `d = n · centre`, the
+first child when `distance < radius + d`, the second when
+`d − radius < distance`; a leaf (`0x876150`, `FUN_0068b5c0`) other than
+`0xFFFF` marks its cell. With no `cellbsp`, every cell whose box overlaps.
+`FUN_005fbbb0` puts the proxy in those cells' lists (cell +0x18) and takes
+it out of the others; with none, or with a model that gives no sphere,
+the proxy goes to the scene's list of objects in no cell (`FUN_005fbe50`).
+Read live in `sl01` with `sl02` loaded (`re/decomp/visible/cells_probe.py`,
+`membership_spike.py`): the rule gives the cells of all 313 proxies of the
+world scene.
+
+The cells of a frame (`FUN_007f69e0`):
+
+1. The camera cells: `FUN_00607b60` at the camera position (the camera's
+   +0x30..+0x38) with a radius of 1.0 (`0x88211c`).
+2. Each camera cell is visited (`FUN_007f5d60`) with the whole screen as
+   its region. A visit adds a record for the cell (or merges the region
+   into the record it already has), then tries each portal of the cell
+   that is open (+0x3f, 1 when the portal is made, `FUN_00661750`;
+   `FUN_007624e0` and `FUN_007625e0` write it and log `... for
+   enableportal`), leads to a cell not being visited (+0x14) and whose
+   mask (+0x40) shares a bit with the visit's: the portal's region
+   (`FUN_00662000`: empty when `n · (v0 − camera) ≥ 0`, with `n` the
+   portal's normal (+0x20) and `v0` its first vertex; otherwise
+   its vertices times the view projection as row vectors, `FUN_006af080`,
+   clipped by `x ≤ w`, `−x ≤ w`, `−y ≤ w`, `y ≤ w`, `z ≤ w`, `−z ≤ w` in that
+   order, `FUN_00661240`, `FUN_00661060`, each point at
+   `(x / w · 0.5 + 0.5, y / w · 0.5 + 0.5)`) intersected with the visit's
+   region; when that is not empty the portal's target is visited with it
+   (`FUN_007f6210`).
+3. Each record draws its cell (`FUN_007f6340`, `FUN_007f5a20`,
+   `FUN_00605be0`): the renderer's view becomes the record's rectangle, the
+   bounding box of its region (`FUN_006615d0`, slot 0x98, `FUN_00566cf0`
+   builds the six planes of that part of the frustum), and the proxies of
+   the cell's list are drawn when `(flags & 3) == 0` and either flag 4 is
+   set or the sphere passes `FUN_00567dd0`: with the centre in world space,
+   `n_i · p + d_i − radius` is negative for all six planes.
+4. Then the whole screen again, and the scene's list of objects in no cell
+   with the same test (`FUN_0065f190`).
+
+Traced (`re/decomp/visible/frame.gdb`, `walk.gdb`): at frame 6000 of
+`tools/oracle/routes/sl01_watch.txt` the camera is in `cell01` only, the
+portal to `cell02` is outside the view, and the proxies that pass are
+exactly the ones the rule gives (`frustum_spike.py`); along
+`tools/oracle/routes/sl01_camera.txt`, in the 84 frames that see `cell02`,
+its rectangle is the bounding box of the portal's region clipped by the
+screen (`portal_spike.py`, to 1e-4).
 
 ## Timers
 
@@ -1342,8 +1397,14 @@ owner, has the slot count of its class.
   part of a sensor (`FUN_004a4e50`, `FUN_0071cf40`) and who makes the
   sensors of Kain and of the monsters; the mask `DAT_0091e2fc`; what
   `FUN_00424a80` measures.
-- The visible cells and objects of a frame (`FUN_007f69e0`), which the
-  drawn frame of a creature depends on ("The drawn frame").
+- The visible cells: where a portal's mask (+0x40) comes from (1 for the
+  traced portal of `cell01`; the visit starts with all bits), the region
+  code of a region that is not one portal clipped by the screen (the hull
+  `FUN_006b51f0`, the polygon intersection `FUN_006b5850` and its
+  epsilon `0x8766d4`, the union of two paths into one cell,
+  `FUN_006615a0`), the order of the two portal lists of `FUN_007f5d60`
+  (portals with and without vertices; no slums portal has none), and the
+  frustum corners of `FUN_00566cf0` against the port's camera.
 - What fills the factory's clip list (+0x1c, +0x24), the flag of the
   template parse that stops `FUN_0077a0b0` from asking for a set, and what
   it does when none of the `anim` lines finds its reel.
