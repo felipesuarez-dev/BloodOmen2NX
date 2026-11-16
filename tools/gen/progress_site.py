@@ -236,6 +236,8 @@ def build_page(lang: str, m: dict, systems: list[tuple[str, int, int]], levels: 
         '<meta charset="utf-8">',
         '<meta name="viewport" content="width=device-width, initial-scale=1">',
         f"<title>{_e(t['title'])}</title>",
+        # docs/favicon.svg: the site's own icon, a drop on the page colours.
+        f'<link rel="icon" href="{"" if "/" not in t["file"] else "../"}favicon.svg" type="image/svg+xml">',
         f'<meta name="description" content="{_e(t["summary"].format(done=m["done"], scope=m["in_scope"], chapters=m["done_levels"], levels=m["total_levels"]))}">',
         f"<style>{CSS}</style>",
         "</head>",

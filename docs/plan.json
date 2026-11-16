@@ -19,16 +19,16 @@
    "open": 5
   },
   "M3": {
-   "discovery": 7,
+   "discovery": 8,
    "done": 22,
    "no_discovery": 4,
-   "open": 15
+   "open": 16
   },
   "M4": {
-   "discovery": 2,
-   "done": 18,
-   "no_discovery": 20,
-   "open": 28
+   "discovery": 3,
+   "done": 23,
+   "no_discovery": 26,
+   "open": 35
   },
   "M5": {
    "discovery": 0,

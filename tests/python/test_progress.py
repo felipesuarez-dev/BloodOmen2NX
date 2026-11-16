@@ -179,6 +179,9 @@ class SiteTest(unittest.TestCase):
         m = progress.measure()
         pages = self.pages()
         self.assertIn(f'{m["overall"] * 100:.1f}<small>%</small>', pages["index.html"])
+        self.assertIn('<link rel="icon" href="favicon.svg"', pages["index.html"])
+        self.assertIn('<link rel="icon" href="../favicon.svg"', pages["en/index.html"])
+        self.assertTrue((progress.ROOT / "docs" / "favicon.svg").exists())
         self.assertIn(progress.number("es", m["done"]) + " de " + progress.number("es", m["in_scope"]),
                       pages["index.html"])
         self.assertIn(progress.number("en", m["done"]) + " of " + progress.number("en", m["in_scope"]),
