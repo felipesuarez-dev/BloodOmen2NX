@@ -11350,9 +11350,9 @@ address,name,subsystem,status,notes
 00694590,FUN_00694590,unknown,todo,ghidra
 006945f0,FUN_006945f0,unknown,todo,ghidra
 00694670,FUN_00694670,unknown,todo,ghidra
-00694760,FUN_00694760,unknown,todo,ghidra
-006947e0,FUN_006947e0,unknown,todo,ghidra
-00694820,FUN_00694820,unknown,todo,ghidra
+00694760,FUN_00694760,engine,translated,src/engine/random.cpp: GameRandom state (k 24 and j 55 and T[1..55]); tests/unit/test_engine.cpp
+006947e0,FUN_006947e0,engine,translated,src/engine/random.cpp: GameRandom::seed fills T from the seed with the 16807 step; tests/unit/test_engine.cpp
+00694820,FUN_00694820,engine,translated,src/engine/random.cpp: GameRandom::next the additive lagged step; tests/unit/test_engine.cpp
 00694890,FUN_00694890,unknown,todo,ghidra
 00694900,FUN_00694900,unknown,todo,ghidra
 00694940,FUN_00694940,unknown,todo,ghidra

@@ -426,6 +426,9 @@ and `randomint` among them. It is an additive lagged generator:
 - The first values of a fresh generator are `0x7490722f`, `0x3738a772`,
   `0xe87949af`, `0xf2d4f764`; the 100th is `0xecdac651`.
 
+Port: `src/engine/random.cpp` (`GameRandom`; `tests/unit/test_engine.cpp`
+checks the first eight values, the hundredth and the two hundredth).
+
 The sequence the game sees depends on every function that draws from it,
 so a script's random values match the original only when everything before
 it drew the same count.

@@ -19,6 +19,7 @@
 #include "bo2/engine/erg.hpp"
 #include "bo2/engine/math.hpp"
 #include "bo2/engine/pixmap_font.hpp"
+#include "bo2/engine/random.hpp"
 #include "bo2/engine/render_order.hpp"
 #include "bo2/engine/text.hpp"
 
@@ -678,6 +679,26 @@ void test_crt_random() {
         random.next();
     }
     CHECK(random.next() == 9514);  // the 200th
+}
+
+// FUN_00694750, FUN_00694760, FUN_006947e0 and FUN_00694820.
+void test_game_random() {
+    bo2::engine::GameRandom random;
+    const std::uint32_t first[] = {0x7490722f, 0x3738a772, 0xe87949af, 0xf2d4f764,
+                                   0x7bbe42c8, 0x081297f0, 0x7cb511b3, 0xd39d3eba};
+    for (const std::uint32_t value : first) {
+        CHECK(random.next() == value);
+    }
+    for (int index = 8; index < 99; ++index) {
+        random.next();
+    }
+    CHECK(random.next() == 0xecdac651);  // the 100th
+    for (int index = 100; index < 199; ++index) {
+        random.next();
+    }
+    CHECK(random.next() == 0xb8279e37);  // the 200th
+    random.seed(12345);
+    CHECK(random.next() == first[0]);
 }
 
 void test_reader() {
@@ -2203,6 +2224,7 @@ void test_skeleton_bones() {
 int main() {
     test_reader();
     test_crt_random();
+    test_game_random();
     test_big();
     test_big_archive_load_file();
     test_dds();
