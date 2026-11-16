@@ -157,6 +157,9 @@ index of a gift is also the type it reports.
   `FUN_00428780` also marks stealth as owned before anything else (the call
   at `0x4288ae`) and ends by selecting gift 0 when the selected gift is not
   an owned one (`0x428f5f`).
+- Without a saved state, the gifts Kain owns at the start of a level come
+  from its `debugHealth` record (`FUN_004256c0`; `start_gifts` in the port;
+  [`FORMATS/tunedata.md`](FORMATS/tunedata.md#healthparams-b0x898)).
 - `FUN_00436bb0` adds rage up to the maximum and `FUN_00436c00` takes it
   down to 0. Each frame `FUN_004300d0` takes `pointsLostPerSec` times the
   frame time.
@@ -282,11 +285,11 @@ asks for it (`FUN_00571bf0`); the other materials draw both sides
 
 Not ported:
 
-- The dark gift icon: the spin when the selected gift changes, the timer of
-  stealth and the gifts a level owns. The texture of the selected gift and
-  the colour of a gift that cannot be used are ported.
+- The dark gift icon: the spin when the selected gift changes and the timer
+  of stealth. The texture of the selected gift and the colour of a gift that
+  cannot be used are ported.
 - What changes the rage (blocks, dodges, the drain of `FUN_004300d0`) and
-  the selection and ownership of the gifts.
+  the selection of the gifts.
 - The enemy health bar and the enemy icon (mode 3 only), the pause fade
   (paused only), the charm haze and the highlights (hidden until something
   starts them), the screen cut and the letterbox (nothing starts a cut in

@@ -39,6 +39,7 @@ struct KainVitals {
     // The gift object of the player (player + 0x128): the selected gift and
     // the rage the gifts spend.
     DarkGift selected_gift = DarkGift::None;  // +0x04, an index or -1
+    std::array<bool, 7> gifts_owned{};        // +0x08, the seven gifts, by DarkGift index
     float rage = 0.0f;                        // +0x24
     float max_rage = 0.0f;                    // +0x28
 };
@@ -55,6 +56,11 @@ void set_lore_level(KainVitals& vitals, const KainTuning& tuning, std::int32_t l
 // `level_name`, or `defaultHealth.loreLevel` when no record has that name.
 // The comparison is exact.
 std::int32_t start_lore_level(const KainTuning& tuning, std::string_view level_name);
+
+// FUN_004256c0: the seven dark gifts owned at the start of `level_name`, from
+// its `debugHealth` record or from `defaultHealth` when no record has that
+// name. It replaces the flags, and it does not change the selection.
+void start_gifts(KainVitals& vitals, const KainTuning& tuning, std::string_view level_name);
 
 // FUN_004208a0: `maxHitPoints` of the last lore level, the longest health
 // vial. Throws std::out_of_range when the table is empty.

@@ -440,6 +440,14 @@ int main() {
             CHECK(bo2::game::start_lore_level(tuning, "slums") == 0);
             CHECK(bo2::game::start_lore_level(tuning, "keep") == 7);
             CHECK(bo2::game::start_lore_level(tuning, "no such level") == 15);
+            // FUN_004256c0: in the slums Kain owns stealth and fury only.
+            bo2::game::KainVitals owned;
+            bo2::game::reset_gifts(owned, tuning);
+            bo2::game::start_gifts(owned, tuning, "slums");
+            CHECK(owned.gifts_owned[0] && owned.gifts_owned[5]);
+            for (const std::size_t index : {1U, 2U, 3U, 4U, 6U}) {
+                CHECK(!owned.gifts_owned[index]);
+            }
             // Kain enters the slums with 30 hit points and room for 6 lore.
             bo2::game::KainVitals vitals;
             bo2::game::set_lore_level(vitals, tuning,

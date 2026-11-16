@@ -733,7 +733,7 @@ address,name,subsystem,status,notes
 00425520,FUN_00425520,player,wip,include/bo2/game/kain_tuning.hpp: stick_deadzone is read from the tunedata and applied to the stick; the rest of the input path is not ported
 00425580,FUN_00425580,player,wip,src/game/kain_animation.cpp: KainAnimation::combat_direction gives the five directions from the stick; the axes come from the port input instead of FUN_00452c30
 00425670,FUN_00425670,unknown,todo,ghidra
-004256c0,FUN_004256c0,player,wip,src/game/kain_vitals.cpp: start_lore_level picks the debugHealth record by level name or the default one; the dark gift flags are not ported
+004256c0,FUN_004256c0,player,translated,src/game/kain_vitals.cpp: start_lore_level and start_gifts pick the debugHealth record by name or the default one and copy its lore level and seven gift flags; tests/unit/test_kain_asset.cpp
 00425820,FUN_00425820,unknown,todo,ghidra
 004258e0,FUN_004258e0,unknown,todo,ghidra
 00425910,FUN_00425910,unknown,todo,ghidra

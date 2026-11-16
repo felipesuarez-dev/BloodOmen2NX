@@ -53,10 +53,13 @@ struct LoreLevel {
 
 // One record of `healthParams.debugHealth` (kaintune.h KainDebugHealth): the
 // lore level Kain enters a level with when there is no saved state
-// (FUN_004256c0). The seven dark gift flags after it are not read.
+// (FUN_004256c0), and the seven dark gifts it owns. The flags sit at +0x08 to
+// +0x20 and are indexed by the DarkGift value (kain_vitals.hpp); a field above
+// 0 owns the gift.
 struct StartLoreLevel {
     std::string level;            // name
     std::int32_t lore_level = 0;  // loreLevel
+    std::array<bool, 7> gifts{};  // the seven flags, by DarkGift index
 };
 
 // The first nine fields of a dark gift that spends rage (kaintune.h
@@ -106,6 +109,7 @@ struct KainTuning {
     // without a fixup stays empty.
     std::vector<LoreLevel> lore_levels;             // B+0x8B0 lorePerLevelArray, B+0x8B4 numLoreLevels
     std::int32_t default_lore_level = 0;            // B+0x8BC defaultHealth.loreLevel
+    std::array<bool, 7> default_gifts{};            // B+0x8C0 defaultHealth flags, by DarkGift
     std::vector<StartLoreLevel> start_lore_levels;  // B+0x8DC debugHealth, B+0x8E0 numDebugHealths
     // `darkGiftParams`: the three gifts that spend rage, and the colour of the
     // rage bar while another gift, or none, is selected (FUN_00425fd0).

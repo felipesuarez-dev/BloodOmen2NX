@@ -152,6 +152,10 @@ std::vector<std::uint8_t> make_entry_with_tables() {
     put_u32(data, 4 + 0x8DC, 0x55667788);
     put_u32(data, 4 + 0x8E0, 2);
     put_u32(data, 4 + starts + 4, 1);          // "slums" starts at level 1
+    put_u32(data, 4 + starts + 8 + 4 * 4, 1);  // stealth (field 4)
+    put_u32(data, 4 + starts + 8 + 3 * 4, 1);  // speed (field 3)
+    put_u32(data, 4 + starts + 8 + 1 * 4, 1);  // fury (field 1)
+    put_u32(data, 4 + 0x8C0 + 5 * 4, 1);       // defaultHealth: superJump (field 5)
     put_u32(data, 4 + starts + 0x24 + 4, 0);   // a record without a name
     const char text[] = "slums";
     for (std::size_t index = 0; index < sizeof text; ++index) {
@@ -274,6 +278,46 @@ void test_lore_tables_follow_the_fixups() {
     std::vector<std::uint8_t> long_table = entry;
     put_u32(long_table, 4 + 0x8B4, 0x1000);
     CHECK(throws_parse_error([&] { bo2::game::parse_kain_tuning(long_table); }));
+}
+
+// FUN_004256c0: the gifts of the record named like the level, or the default.
+void test_start_gifts() {
+    const std::vector<std::uint8_t> entry = make_entry_with_tables();
+    const bo2::game::KainTuning tuning = bo2::game::parse_kain_tuning(entry);
+
+    // FUN_00428780: the created player owns stealth only.
+    bo2::game::KainVitals vitals;
+    bo2::game::reset_gifts(vitals, tuning);
+    CHECK(vitals.gifts_owned[static_cast<std::size_t>(bo2::game::DarkGift::Stealth)]);
+    for (std::size_t index = 0; index < vitals.gifts_owned.size(); ++index) {
+        if (index != static_cast<std::size_t>(bo2::game::DarkGift::Stealth)) {
+            CHECK(!vitals.gifts_owned[index]);
+        }
+    }
+
+    // The record of "slums": stealth, speed and fury.
+    bo2::game::start_gifts(vitals, tuning, "slums");
+    CHECK(vitals.gifts_owned[static_cast<std::size_t>(bo2::game::DarkGift::Stealth)]);
+    CHECK(vitals.gifts_owned[static_cast<std::size_t>(bo2::game::DarkGift::Speed)]);
+    CHECK(vitals.gifts_owned[static_cast<std::size_t>(bo2::game::DarkGift::Fury)]);
+    for (std::size_t index = 0; index < vitals.gifts_owned.size(); ++index) {
+        const bo2::game::DarkGift gift = static_cast<bo2::game::DarkGift>(index);
+        if (gift != bo2::game::DarkGift::Stealth && gift != bo2::game::DarkGift::Speed &&
+            gift != bo2::game::DarkGift::Fury) {
+            CHECK(!vitals.gifts_owned[index]);
+        }
+    }
+
+    // A level without a record takes defaultHealth: superJump.
+    bo2::game::start_gifts(vitals, tuning, "keep");
+    CHECK(vitals.gifts_owned[static_cast<std::size_t>(bo2::game::DarkGift::SuperJump)]);
+    for (std::size_t index = 0; index < vitals.gifts_owned.size(); ++index) {
+        if (index != static_cast<std::size_t>(bo2::game::DarkGift::SuperJump)) {
+            CHECK(!vitals.gifts_owned[index]);
+        }
+    }
+    // The selection does not change.
+    CHECK(vitals.selected_gift == bo2::game::DarkGift::Stealth);
 }
 
 // FUN_00435b60, FUN_00425f50 and FUN_00425fd0.
@@ -434,6 +478,7 @@ int main() {
     test_round_trip();
     test_rejects_bad_blobs();
     test_lore_tables_follow_the_fixups();
+    test_start_gifts();
     test_gift_state();
     test_derived_jump_matches_the_original();
     test_derived_airtimes_match_the_original();

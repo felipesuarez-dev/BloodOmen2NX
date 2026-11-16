@@ -4,6 +4,21 @@
 
 namespace bo2::game {
 
+namespace {
+
+// The `debugHealth` record of `level_name`, or null when no record has it
+// (FUN_004256c0 compares the names exactly).
+const StartLoreLevel* find_start_record(const KainTuning& tuning, std::string_view level_name) {
+    for (const StartLoreLevel& record : tuning.start_lore_levels) {
+        if (record.level == level_name) {
+            return &record;
+        }
+    }
+    return nullptr;
+}
+
+}  // namespace
+
 void set_lore_level(KainVitals& vitals, const KainTuning& tuning, std::int32_t level, float lore) {
     if (level < 0 || static_cast<std::size_t>(level) >= tuning.lore_levels.size()) {
         throw std::out_of_range("lore level is not in the lore level table");
@@ -29,12 +44,13 @@ void set_lore_level(KainVitals& vitals, const KainTuning& tuning, std::int32_t l
 }
 
 std::int32_t start_lore_level(const KainTuning& tuning, std::string_view level_name) {
-    for (const StartLoreLevel& record : tuning.start_lore_levels) {
-        if (record.level == level_name) {
-            return record.lore_level;
-        }
-    }
-    return tuning.default_lore_level;
+    const StartLoreLevel* record = find_start_record(tuning, level_name);
+    return record == nullptr ? tuning.default_lore_level : record->lore_level;
+}
+
+void start_gifts(KainVitals& vitals, const KainTuning& tuning, std::string_view level_name) {
+    const StartLoreLevel* record = find_start_record(tuning, level_name);
+    vitals.gifts_owned = record == nullptr ? tuning.default_gifts : record->gifts;
 }
 
 float top_max_health(const KainTuning& tuning) {
@@ -55,6 +71,8 @@ void reset_gifts(KainVitals& vitals, const KainTuning& tuning) {
     // FUN_00435b60 leaves the gift object without rage; FUN_00428fe0 sets the
     // maximum; FUN_00428780 marks stealth as owned and selects it.
     vitals.selected_gift = DarkGift::Stealth;
+    vitals.gifts_owned.fill(false);
+    vitals.gifts_owned[static_cast<std::size_t>(DarkGift::Stealth)] = true;
     vitals.rage = 0.0f;
     vitals.max_rage = tuning.max_rage;
 }

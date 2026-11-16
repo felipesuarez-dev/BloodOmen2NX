@@ -34,6 +34,7 @@ constexpr std::size_t kRunClipRate = 0xB14;
 constexpr std::size_t kLoreLevels = 0x8B0;
 constexpr std::size_t kLoreLevelCount = 0x8B4;
 constexpr std::size_t kDefaultLoreLevel = 0x8BC;
+constexpr std::size_t kDefaultGifts = 0x8C0;  // defaultHealth, the seven flags
 constexpr std::size_t kStartLevels = 0x8DC;
 constexpr std::size_t kStartLevelCount = 0x8E0;
 constexpr std::size_t kLoreLevelSize = 8;    // maxLore, maxHitPoints
@@ -92,6 +93,19 @@ RageGiftTuning read_rage_gift(const common::Reader& reader, std::size_t block) {
     gift.can_use_colour = read_colour(reader, block + 0x04);
     gift.cant_use_colour = read_colour(reader, block + 0x14);
     return gift;
+}
+
+// FUN_004256c0: the seven dark gift flags of a KainDebugHealth record, at
+// +0x08 to +0x20; a field above 0 owns the gift. The record order is charm,
+// fury, rupture, speed, stealth, superJump and telekinesis; the gift index is
+// the DarkGift one.
+std::array<bool, 7> read_start_gifts(const common::Reader& reader, std::size_t flags) {
+    constexpr std::array<std::size_t, 7> kRecordGift = {4, 5, 1, 3, 0, 2, 6};
+    std::array<bool, 7> gifts{};
+    for (std::size_t field = 0; field < kRecordGift.size(); ++field) {
+        gifts[kRecordGift[field]] = reader.u32(flags + field * 4) > 0;
+    }
+    return gifts;
 }
 
 // The lists after the blob (FUN_007706c0). Every u32 is read at the next
@@ -233,6 +247,7 @@ KainTuning parse_kain_tuning(const std::vector<std::uint8_t>& bytes) {
         throw common::ParseError("kain tunedata stick deadzone is outside [0, 1)");
     }
     tuning.default_lore_level = static_cast<std::int32_t>(reader.u32(kBlobStart + kDefaultLoreLevel));
+    tuning.default_gifts = read_start_gifts(reader, kBlobStart + kDefaultGifts);
     const std::map<std::uint32_t, std::uint32_t> fixups = read_fixups(bytes, blob_size);
     const auto lore = fixups.find(kLoreLevels);
     if (lore != fixups.end()) {
@@ -259,6 +274,7 @@ KainTuning parse_kain_tuning(const std::vector<std::uint8_t>& bytes) {
                 entry.level = read_blob_string(bytes, blob_size, name->second);
             }
             entry.lore_level = static_cast<std::int32_t>(reader.u32(kBlobStart + record + 4));
+            entry.gifts = read_start_gifts(reader, kBlobStart + record + 8);
             tuning.start_lore_levels.push_back(std::move(entry));
         }
     }

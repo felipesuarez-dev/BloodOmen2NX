@@ -1121,8 +1121,10 @@ bo2::game::KainVitals start_vitals(const Options& options, const bo2::game::Kain
     bo2::game::KainVitals vitals;
     bo2::game::set_lore_level(vitals, tuning, bo2::game::start_lore_level(tuning, level_name),
                               0.0f);
-    // The gift object as the player is created with it: no rage, no gift.
+    // The gift object as the player is created with it: no rage, no gift,
+    // and then the gifts the level owns (FUN_004256c0).
     bo2::game::reset_gifts(vitals, tuning);
+    bo2::game::start_gifts(vitals, tuning, level_name);
     return vitals;
 }
 

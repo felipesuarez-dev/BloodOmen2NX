@@ -167,11 +167,36 @@ lore level with 0 lore. The records: `slums` 0, `smugglersden/regionfiles` 3,
 13, the five boss arenas (4, 6, 9, 10, 13) and `johnsworld` 0. So Kain enters
 the slums with 30 hit points and room for 6 lore.
 
+The seven flags of each start record, in the `DarkGift` index order the port
+uses (`KainVitals::gifts_owned`; 1 owns the gift):
+
+| Level | stealth | rupture | superJump | speed | charm | fury | telekinesis |
+|---|---|---|---|---|---|---|---|
+| `defaultHealth` | 1 | 1 | 1 | 1 | 1 | 1 | 1 |
+| `slums` | 1 | 0 | 0 | 0 | 0 | 1 | 0 |
+| `smugglersden/regionfiles` | 1 | 0 | 0 | 0 | 0 | 1 | 0 |
+| `lowercity` | 1 | 0 | 1 | 0 | 0 | 1 | 0 |
+| `uppercitynew` | 1 | 0 | 1 | 0 | 0 | 1 | 0 |
+| `keep` | 1 | 0 | 1 | 0 | 1 | 1 | 0 |
+| `industrial quarter` | 1 | 0 | 1 | 0 | 1 | 1 | 0 |
+| `canyons` | 1 | 0 | 1 | 1 | 1 | 1 | 0 |
+| `eternal prison` | 1 | 0 | 1 | 1 | 1 | 1 | 1 |
+| `device` | 1 | 1 | 1 | 1 | 1 | 1 | 1 |
+| `wharves/regionfiles` | 1 | 1 | 1 | 1 | 1 | 1 | 1 |
+| `hyldencity` | 1 | 1 | 1 | 1 | 1 | 1 | 1 |
+| `johnsworld` | 1 | 1 | 1 | 1 | 1 | 1 | 1 |
+| `bossrooms/charmvampirearena` | 1 | 0 | 1 | 0 | 0 | 1 | 0 |
+| `bossrooms/jumpvampirearena` | 1 | 0 | 0 | 0 | 0 | 1 | 0 |
+| `bossrooms/madvampirearena` | 1 | 0 | 1 | 1 | 1 | 1 | 1 |
+| `bossrooms/sarafanlordarena` | 1 | 1 | 1 | 1 | 1 | 1 | 1 |
+| `bossrooms/speedvampirearena` | 1 | 0 | 1 | 0 | 1 | 1 | 0 |
+
 The port: `KainTuning::lore_levels`, `start_lore_levels`,
-`default_lore_level`; `set_lore_level`, `start_lore_level`, `top_max_health`
-and `top_max_lore` in `src/game/kain_vitals.cpp`. Not ported: the gift flags,
-the growth of the shown values toward their targets (FUN_004210b0) and the
-level-up (FUN_00420ab0).
+`default_lore_level`, `default_gifts` and `StartLoreLevel::gifts`;
+`set_lore_level`, `start_lore_level`, `start_gifts`, `top_max_health` and
+`top_max_lore` in `src/game/kain_vitals.cpp`. Not ported: the growth of the
+shown values toward their targets (FUN_004210b0) and the level-up
+(FUN_00420ab0).
 
 ## `darkGiftParams` and `rageParams`
 
