@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -477,6 +478,131 @@ void test_memory_card_prompts(const bo2::engine::BigArchive& archive) {
     }
 }
 
+// FUN_00772320 over every value of every strtable of the game, per language.
+// Counts only: the game text stays out of the repository.
+void test_text_parser_on_every_table(const std::filesystem::path& root) {
+    struct Totals {
+        std::size_t tables = 0;
+        std::size_t values = 0;
+        std::size_t rows = 0;
+        std::size_t glyphs = 0;
+        std::size_t buttons = 0;
+        std::size_t controls = 0;
+        std::size_t wrong_control = 0;
+        std::size_t unsupported = 0;
+        std::size_t multiple_spaces = 0;
+        std::size_t trailing_spaces = 0;
+        std::size_t alignment = 0;
+        std::size_t other = 0;
+    };
+    std::map<std::string, Totals> totals;
+    std::vector<std::filesystem::path> containers;
+    for (const std::filesystem::directory_entry& entry :
+         std::filesystem::recursive_directory_iterator(root)) {
+        if (entry.is_regular_file() && entry.path().extension() == ".big") {
+            containers.push_back(entry.path());
+        }
+    }
+    std::sort(containers.begin(), containers.end());
+    for (const std::filesystem::path& path : containers) {
+        const bo2::engine::BigArchive archive = bo2::engine::BigArchive::load(path.string());
+        for (const bo2::engine::BigEntry& entry : archive.entries()) {
+            if (entry.type != "strtable") {
+                continue;
+            }
+            const std::string language = archive.language_name(entry);
+            if (language.empty()) {
+                continue;
+            }
+            Totals& total = totals[language];
+            ++total.tables;
+            const bo2::engine::StringTable table =
+                bo2::engine::StringTable::parse(archive, entry);
+            for (const bo2::engine::StringTableRecord& record : table.records()) {
+                ++total.values;
+                const bo2::engine::ParsedText parsed = bo2::engine::parse_text(record.value);
+                total.rows += parsed.rows.size();
+                for (const std::vector<bo2::engine::TextItem>& row : parsed.rows) {
+                    for (const bo2::engine::TextItem& item : row) {
+                        if (item.control) {
+                            ++total.controls;
+                            if (item.value != 4) {
+                                ++total.wrong_control;
+                            }
+                        } else {
+                            ++total.glyphs;
+                            if (item.value >= 0xc8) {
+                                ++total.buttons;
+                            }
+                        }
+                    }
+                }
+                for (const bo2::engine::TextWarning warning : parsed.warnings) {
+                    switch (warning) {
+                        case bo2::engine::TextWarning::UnsupportedCharacter:
+                            ++total.unsupported;
+                            break;
+                        case bo2::engine::TextWarning::MultipleSpaces:
+                            ++total.multiple_spaces;
+                            break;
+                        case bo2::engine::TextWarning::TrailingSpaces:
+                            ++total.trailing_spaces;
+                            break;
+                        case bo2::engine::TextWarning::Alignment:
+                            ++total.alignment;
+                            break;
+                        default:
+                            ++total.other;
+                            break;
+                    }
+                }
+            }
+        }
+    }
+    struct Expected {
+        const char* language;
+        std::size_t tables;
+        std::size_t values;
+        std::size_t rows;
+        std::size_t glyphs;
+        std::size_t buttons;
+        std::size_t controls;
+        std::size_t unsupported;
+        std::size_t multiple_spaces;
+        std::size_t trailing_spaces;
+        std::size_t alignment;
+    };
+    const Expected expected[] = {
+        {"default", 17, 250, 388, 7529, 45, 153, 0, 1, 0, 0},
+        {"english", 15, 238, 366, 7079, 35, 141, 0, 1, 0, 0},
+        {"french", 15, 238, 420, 8853, 37, 195, 0, 0, 0, 0},
+        {"german", 15, 238, 458, 8413, 37, 232, 1, 0, 0, 1},
+        {"italian", 15, 236, 419, 8295, 37, 196, 0, 0, 0, 0},
+        {"spanish", 15, 238, 413, 8501, 37, 188, 1, 0, 1, 0},
+    };
+    CHECK(totals.size() == 6);
+    for (const Expected& item : expected) {
+        const auto found = totals.find(item.language);
+        CHECK(found != totals.end());
+        if (found == totals.end()) {
+            continue;
+        }
+        const Totals& total = found->second;
+        CHECK(total.tables == item.tables);
+        CHECK(total.values == item.values);
+        CHECK(total.rows == item.rows);
+        CHECK(total.glyphs == item.glyphs);
+        CHECK(total.buttons == item.buttons);
+        CHECK(total.controls == item.controls);
+        CHECK(total.wrong_control == 0);
+        CHECK(total.unsupported == item.unsupported);
+        CHECK(total.multiple_spaces == item.multiple_spaces);
+        CHECK(total.trailing_spaces == item.trailing_spaces);
+        CHECK(total.alignment == item.alignment);
+        CHECK(total.other == 0);
+    }
+}
+
 }  // namespace
 
 int main() {
@@ -580,6 +706,7 @@ int main() {
             const bo2::engine::StringTable table = bo2::engine::StringTable::parse(archive, *italian);
             CHECK(table.irregular().size() == 1);
         }
+        test_text_parser_on_every_table(std::filesystem::path(root) / "media/gogames/bo2");
     } catch (const std::exception& error) {
         std::cerr << "locale asset test failed: " << error.what() << '\n';
         return 1;

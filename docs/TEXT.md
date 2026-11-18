@@ -201,3 +201,11 @@ to `printf`, and any other `%` code throws `common::ParseError`.
 `src/platform/headless/software_renderer.cpp`) paints the placed glyphs over a
 software frame with the colour of the text and the alpha of the font texels;
 nothing draws them yet, and the SDL path does not have it.
+`test_text_parser_on_every_table` runs `parse_text` over the 92 string tables
+of the game; per language (default, english, french, german, italian, spanish)
+they hold 17/15/15/15/15/15 tables, 250/238/238/238/236/238 values,
+388/366/420/458/419/413 rows, 7,529/7,079/8,853/8,413/8,295/8,501 glyph items,
+45/35/37/37/37/37 button glyphs and 153/141/195/232/196/188 controls, all
+value 4, and the only warnings are one multiple-spaces in default and english,
+one alignment and one unsupported character in german, and one unsupported
+character and one trailing-spaces in spanish.
