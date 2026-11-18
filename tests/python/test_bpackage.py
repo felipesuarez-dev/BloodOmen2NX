@@ -358,6 +358,176 @@ class ParsePackageTest(unittest.TestCase):
             bpackage.parse(build_package(extra=b"\x00"), SYMBOLS)
 
 
+class DisassembleTest(unittest.TestCase):
+    @staticmethod
+    def synthetic_class(code, references=()):
+        return {
+            "name": "critter",
+            "states": ["default", "idlestate"],
+            "methods": [{"name": "start"}, {"name": "chained"}],
+            "bodies": [{
+                "method": 0,
+                "flags": 0,
+                "native": False,
+                "state": 0,
+                "locals_size": 2,
+                "stack_size": 4,
+                "locals": [],
+                "code": code,
+            }],
+            "references": {0: list(references)},
+        }
+
+    def test_instruction_words(self):
+        self.assertEqual(len(bpackage.MNEMONICS), 97)
+        for op in range(len(bpackage.MNEMONICS)):
+            expected = 3 if op in bpackage.THREE_WORD else 2 if op in bpackage.TWO_WORD else 1
+            self.assertEqual(bpackage.instruction_words(op << 24), expected, hex(op))
+        with self.assertRaises(PackageError):
+            bpackage.instruction_words(0x61 << 24)
+
+    def test_instructions_split(self):
+        code = [0x02000000, 0xDEADBEEF, 0x03FFFFFF, 0x49000000, 0x00000001, 0x00000002,
+                0x5C000000]
+        parsed = list(bpackage.instructions(code))
+        self.assertEqual([instruction["index"] for instruction in parsed], [0, 2, 3, 6])
+        self.assertEqual([instruction["op"] for instruction in parsed], [0x02, 0x03, 0x49, 0x5C])
+        self.assertEqual(parsed[0]["words"], [0xDEADBEEF])
+        self.assertEqual(parsed[1]["simm"], -1)
+        self.assertEqual(parsed[2]["words"], [1, 2])
+
+    def test_instructions_reject_truncated(self):
+        with self.assertRaises(PackageError):
+            list(bpackage.instructions([0x02000000]))
+        with self.assertRaises(PackageError):
+            list(bpackage.instructions([0x61000000]))
+
+    def test_disassemble_operands(self):
+        code = [
+            0x00000007,
+            0x03FFFFFD,
+            0x02000000, 0xDEADBEEF,
+            0x04000000,
+            0x45000002,
+            0x48000000, 0x00000000,
+            0x4A000001, 0x00000000,
+            0x49000000, 0x00000000, 0x00000000,
+            0x5F000000,
+            0x5C000000,
+        ]
+        references = [
+            {"kind": 0, "word": 4, "name": "message"},
+            {"kind": 4, "word": 7, "name": "critter", "index": 1},
+            {"kind": 3, "word": 9, "name": "monsterscript", "index": 2},
+            {"kind": 5, "word": 11, "name": "monsterscript", "second": "critter", "index": 0},
+        ]
+        cls = self.synthetic_class(code, references)
+        self.assertEqual(bpackage.disassemble(cls, 0), [
+            "0000  mark 7",
+            "0001  push_int -3",
+            "0002  push_word 0xdeadbeef",
+            "0004  push_name message",
+            "0005  jump -> 0008",
+            "0006  call critter body 1",
+            "0008  call_virtual monsterscript method 2 default",
+            "0010  call_table tablas monsterscript method 0",
+            "0013  cast ?",
+            "0014  return",
+        ])
+
+
+_EXPECTED_OPCODES = {
+    0x00: 666607, 0x01: 13, 0x02: 37908, 0x03: 359168, 0x04: 30193,
+    0x05: 4683, 0x06: 55739, 0x07: 284418, 0x08: 58063, 0x09: 24765,
+    0x0A: 112818, 0x0B: 260237, 0x0C: 10854, 0x0E: 3456, 0x0F: 162,
+    0x1C: 19114, 0x1D: 54457, 0x1E: 8605, 0x1F: 324, 0x21: 9084,
+    0x27: 2430, 0x28: 1652, 0x29: 3933, 0x2D: 4918, 0x2E: 4821,
+    0x2F: 14627, 0x30: 6686, 0x31: 6362, 0x32: 648, 0x33: 324,
+    0x34: 1296, 0x35: 3570, 0x36: 162, 0x38: 7776, 0x39: 5850,
+    0x3A: 460, 0x3B: 1270, 0x3C: 324, 0x3E: 229773, 0x45: 12652,
+    0x46: 58222, 0x47: 170456, 0x48: 204696, 0x49: 649, 0x4A: 17508,
+    0x4B: 2465, 0x4C: 12858, 0x4D: 6881, 0x4E: 2125, 0x4F: 17615,
+    0x50: 26930, 0x51: 492, 0x52: 162, 0x55: 2592, 0x56: 4374,
+    0x59: 4348, 0x5A: 2054, 0x5B: 6402, 0x5C: 125505, 0x5D: 2747,
+    0x5E: 41045, 0x5F: 42306, 0x60: 3609,
+}
+
+_PACKAGES = None
+_SUMMARY = None
+
+
+def game_packages():
+    global _PACKAGES
+    if _PACKAGES is None:
+        root = Path(os.environ["BO2NX_ASSETS_DIR"]) / "media/gogames/bo2"
+        _PACKAGES = []
+        for path in sorted(root.rglob("*.big")):
+            _PACKAGES.extend(bpackage.load_packages(path))
+    return _PACKAGES
+
+
+def game_summary():
+    global _SUMMARY
+    if _SUMMARY is not None:
+        return _SUMMARY
+    opcodes = {}
+    total = 0
+    jumps = 0
+    bad_jumps = []
+    coded_bodies = 0
+    bad_returns = []
+    reference_counts = [0] * 6
+    bad_references = []
+    reference_opcodes = {
+        0: {0x04}, 1: {0x5F}, 2: {0x21},
+        3: {0x4A, 0x4C, 0x50, 0x52, 0x56},
+        4: {0x47, 0x48, 0x4B, 0x4D, 0x4E, 0x51},
+        5: {0x49, 0x4F, 0x55},
+    }
+    for package_name, package in game_packages():
+        for cls in package["classes"]:
+            for body_index, body in enumerate(cls["bodies"]):
+                code = body["code"]
+                if not code:
+                    continue
+                coded_bodies += 1
+                if code[-1] >> 24 != 0x5C:
+                    bad_returns.append((package_name, cls["name"], body_index))
+                parsed = list(bpackage.instructions(code))
+                starts = {instruction["index"] for instruction in parsed}
+                for instruction in parsed:
+                    op = instruction["op"]
+                    opcodes[op] = opcodes.get(op, 0) + 1
+                    total += 1
+                    if op in bpackage.JUMPS:
+                        jumps += 1
+                        destination = (instruction["index"] + len(instruction["words"]) + 1
+                                       + instruction["simm"])
+                        if destination != len(code) and destination not in starts:
+                            bad_jumps.append(
+                                (package_name, cls["name"], body_index,
+                                 instruction["index"], destination)
+                            )
+                for reference in cls["references"].get(body_index, []):
+                    kind = reference["kind"]
+                    reference_counts[kind] += 1
+                    op = code[reference["word"] - (1 if kind >= 2 else 0)] >> 24
+                    if op not in reference_opcodes[kind]:
+                        bad_references.append((kind, op))
+    _SUMMARY = {
+        "opcodes": opcodes,
+        "total": total,
+        "jumps": jumps,
+        "bad_jumps": bad_jumps,
+        "coded_bodies": coded_bodies,
+        "bad_returns": bad_returns,
+        "reference_counts": reference_counts,
+        "bad_references": bad_references,
+    }
+    return _SUMMARY
+
+
+
 @unittest.skipUnless(os.environ.get("BO2NX_ASSETS_DIR"), "BO2NX_ASSETS_DIR is unset")
 class GamePackageTest(unittest.TestCase):
     @staticmethod
@@ -399,22 +569,44 @@ class GamePackageTest(unittest.TestCase):
         names = {}
         totals = {"classes": 0, "methods": 0, "bodies": 0, "natives": 0,
                   "words": 0, "fields": 0, "enums": 0}
-        for path in containers:
-            for name, package in bpackage.load_packages(path):
-                packages += 1
-                names[name] = names.get(name, 0) + 1
-                for key, value in bpackage.package_totals(package).items():
-                    totals[key] += value
-                for cls in package["classes"]:
-                    self.assertEqual(cls["states"][0], "default")
-                    self.assertEqual(cls["methods"][0]["name"], "start")
-                    self.assertEqual(cls["methods"][0]["slot"], 0)
+        for name, package in game_packages():
+            packages += 1
+            names[name] = names.get(name, 0) + 1
+            for key, value in bpackage.package_totals(package).items():
+                totals[key] += value
+            for cls in package["classes"]:
+                self.assertEqual(cls["states"][0], "default")
+                self.assertEqual(cls["methods"][0]["name"], "start")
+                self.assertEqual(cls["methods"][0]["slot"], 0)
         self.assertEqual(packages, 480)
         self.assertEqual(names, {"native": 168, "creatures": 162, "sounds": 149, "camera": 1})
         self.assertEqual(totals, {
             "classes": 67805, "methods": 207039, "bodies": 205790,
             "natives": 84840, "words": 3603894, "fields": 199314, "enums": 4362,
         })
+
+
+@unittest.skipUnless(os.environ.get("BO2NX_ASSETS_DIR"), "BO2NX_ASSETS_DIR is unset")
+class DisassemblyGameTest(unittest.TestCase):
+    def test_opcode_counts(self):
+        summary = game_summary()
+        self.assertEqual(summary["total"], 3066243)
+        self.assertEqual(summary["opcodes"], _EXPECTED_OPCODES)
+
+    def test_jumps_land_on_instructions(self):
+        summary = game_summary()
+        self.assertEqual(summary["jumps"], 80885)
+        self.assertEqual(summary["bad_jumps"], [])
+
+    def test_bodies_end_with_return(self):
+        summary = game_summary()
+        self.assertEqual(summary["coded_bodies"], 120950)
+        self.assertEqual(summary["bad_returns"], [])
+
+    def test_references_match_opcodes(self):
+        summary = game_summary()
+        self.assertEqual(summary["reference_counts"], [30193, 42306, 9084, 61832, 387115, 20856])
+        self.assertEqual(summary["bad_references"], [])
 
 
 if __name__ == "__main__":

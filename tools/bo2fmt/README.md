@@ -53,12 +53,16 @@ Script packages (`bpackage`, see `docs/FORMATS/bpackage.md`):
 ```sh
 python3 tools/bo2fmt/bpackage.py list <container.big>
 python3 tools/bo2fmt/bpackage.py classes <container.big> <package>
+python3 tools/bo2fmt/bpackage.py disasm <container.big> <package> <class> [method]
+python3 tools/bo2fmt/bpackage.py stats <directory>
 ```
 
 `list` prints one line per package (name, version, imports, classes, methods,
 bodies, native bodies and code words); `classes` prints one line per class of
 a package (name, kind, parent, data size, slots, states, fields, methods and
-bodies).
+bodies). `disasm` prints the instructions of the bodies of a class, with the
+operands taken from the reference list; `stats` counts the instructions of
+every container under a directory, in total and per code.
 
 `unpack` writes `manifest.json` with the BIG entry metadata (type, name,
 language, symbols and padding). `repack` rebuilds the container from that

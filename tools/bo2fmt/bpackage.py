@@ -37,6 +37,122 @@ import big
 VERSION = 1
 MAX_CHUNK_PADDING = 3
 
+MNEMONICS = (
+    "mark",             # 0x00
+    "pop",              # 0x01
+    "push_word",        # 0x02
+    "push_int",         # 0x03
+    "push_name",        # 0x04
+    "local_byte",       # 0x05
+    "local_word",       # 0x06
+    "local_addr",       # 0x07
+    "local_object",     # 0x08
+    "self_byte",        # 0x09
+    "self_word",        # 0x0a
+    "self_addr",        # 0x0b
+    "self_object",      # 0x0c
+    "field_byte",       # 0x0d
+    "field_word",       # 0x0e
+    "field_addr",       # 0x0f
+    "field_object",     # 0x10
+    "at_byte",          # 0x11
+    "at_word",          # 0x12
+    "at_addr",          # 0x13
+    "index_byte",       # 0x14
+    "index_word",       # 0x15
+    "index_object",     # 0x16
+    "index_addr",       # 0x17
+    "bound",            # 0x18
+    "op19",             # 0x19
+    "op1a",             # 0x1a
+    "op1b",             # 0x1b
+    "store_byte",       # 0x1c
+    "store_word",       # 0x1d
+    "store_object",     # 0x1e
+    "store_string",     # 0x1f
+    "op20",             # 0x20
+    "store_value",      # 0x21
+    "copy_bytes",       # 0x22
+    "copy_objects",     # 0x23
+    "copy_strings",     # 0x24
+    "op25",             # 0x25
+    "copy_values",      # 0x26
+    "ineg",             # 0x27
+    "iadd",             # 0x28
+    "isub",             # 0x29
+    "imul",             # 0x2a
+    "idiv",             # 0x2b
+    "imod",             # 0x2c
+    "ilt",              # 0x2d
+    "ile",              # 0x2e
+    "ieq",              # 0x2f
+    "fneg",             # 0x30
+    "fadd",             # 0x31
+    "fsub",             # 0x32
+    "fmul",             # 0x33
+    "fdiv",             # 0x34
+    "flt",              # 0x35
+    "fle",              # 0x36
+    "feq",              # 0x37
+    "seq",              # 0x38
+    "not",              # 0x39
+    "and",              # 0x3a
+    "or",               # 0x3b
+    "f2i",              # 0x3c
+    "f2b",              # 0x3d
+    "i2f",              # 0x3e
+    "i2b",              # 0x3f
+    "b2i",              # 0x40
+    "b2f",              # 0x41
+    "s2i",              # 0x42
+    "s2f",              # 0x43
+    "s2b",              # 0x44
+    "jump",             # 0x45
+    "jump_false",       # 0x46
+    "native",           # 0x47
+    "call",             # 0x48
+    "call_table",       # 0x49
+    "call_virtual",     # 0x4a
+    "call_on",          # 0x4b
+    "call_virtual_on",  # 0x4c
+    "native_wait",      # 0x4d
+    "wait",             # 0x4e
+    "wait_table",       # 0x4f
+    "wait_virtual",     # 0x50
+    "wait_on",          # 0x51
+    "wait_virtual_on",  # 0x52
+    "native_start",     # 0x53
+    "start",            # 0x54
+    "start_table",      # 0x55
+    "start_virtual",    # 0x56
+    "start_on",         # 0x57
+    "start_virtual_on", # 0x58
+    "fork_wait",        # 0x59
+    "fork",             # 0x5a
+    "fork_end",         # 0x5b
+    "return",           # 0x5c
+    "yield",            # 0x5d
+    "set_state",        # 0x5e
+    "cast",             # 0x5f
+    "loop",             # 0x60
+)
+
+TWO_WORD = frozenset(
+    [0x02, 0x21, 0x26, 0x47, 0x48]
+    + list(range(0x4A, 0x4F))
+    + list(range(0x50, 0x55))
+    + list(range(0x56, 0x59))
+)
+THREE_WORD = frozenset([0x49, 0x4F, 0x55])
+
+JUMPS = frozenset([0x45, 0x46, 0x59, 0x5A, 0x60])
+CALL_REFERENCE_KIND = {
+    0x47: 4, 0x48: 4, 0x49: 5, 0x4A: 3, 0x4B: 4, 0x4C: 3, 0x4D: 4, 0x4E: 4,
+    0x4F: 5, 0x50: 3, 0x51: 4, 0x52: 3, 0x53: 4, 0x54: 4,
+    0x55: 5, 0x56: 3, 0x57: 4, 0x58: 3,
+}
+
+
 
 class PackageError(ValueError):
     pass
@@ -338,6 +454,91 @@ def package_totals(package: dict) -> dict:
     }
 
 
+def instruction_words(word: int) -> int:
+    """Return how many words the instruction takes, its own included."""
+    op = word >> 24
+    if op >= len(MNEMONICS):
+        raise PackageError("unknown instruction code")
+    if op in THREE_WORD:
+        return 3
+    if op in TWO_WORD:
+        return 2
+    return 1
+
+
+def instructions(code: list[int]):
+    """Yield the instructions of a body as dicts with index, op, imm, simm and words."""
+    index = 0
+    while index < len(code):
+        word = code[index]
+        length = instruction_words(word)
+        if index + length > len(code):
+            raise PackageError("instruction does not fit in the body")
+        imm = word & 0xFFFFFF
+        yield {
+            "index": index,
+            "op": word >> 24,
+            "imm": imm,
+            "simm": imm - 0x1000000 if imm & 0x800000 else imm,
+            "words": code[index + 1:index + length],
+        }
+        index += length
+
+
+def _operand(instruction: dict, references: dict) -> str | None:
+    op = instruction["op"]
+    index = instruction["index"]
+    if op == 0x03:
+        return str(instruction["simm"])
+    if op == 0x02:
+        return f"0x{instruction['words'][0]:08x}"
+    if op in (0x04, 0x5F):
+        reference = references.get(index)
+        if reference is None or reference["kind"] != (0 if op == 0x04 else 1):
+            return "?"
+        return reference["name"]
+    if op in (0x21, 0x26):
+        reference = references.get(index + 1)
+        if reference is None or reference["kind"] != 2:
+            return "?"
+        return reference["name"]
+    if op in JUMPS:
+        destination = index + len(instruction["words"]) + 1 + instruction["simm"]
+        return f"-> {destination:04d}"
+    kind = CALL_REFERENCE_KIND.get(op)
+    if kind is not None:
+        reference = references.get(index + 1)
+        if reference is None or reference["kind"] != kind:
+            return "?"
+        if kind == 4:
+            operand = f"{reference['name']} body {reference['index']}"
+        elif kind == 3:
+            operand = f"{reference['name']} method {reference['index']}"
+        else:
+            operand = f"tablas {reference['name']} method {reference['index']}"
+        if op in (0x4A, 0x50, 0x56) and instruction["imm"] & 1:
+            operand += " default"
+        return operand
+    if op == 0x00 or 0x05 <= op <= 0x13 or op in (0x17, 0x18) or 0x22 <= op <= 0x25:
+        return str(instruction["imm"])
+    return None
+
+
+def disassemble(cls: dict, body_index: int) -> list[str]:
+    """Return the instructions of a body, one line each, with their operand."""
+    body = cls["bodies"][body_index]
+    references = {reference["word"]: reference
+                  for reference in cls["references"].get(body_index, [])}
+    lines = []
+    for instruction in instructions(body["code"]):
+        line = f"{instruction['index']:04d}  {MNEMONICS[instruction['op']]}"
+        operand = _operand(instruction, references)
+        if operand is not None:
+            line += f" {operand}"
+        lines.append(line)
+    return lines
+
+
 def cmd_list(args) -> int:
     for name, package in load_packages(args.container):
         totals = package_totals(package)
@@ -365,6 +566,46 @@ def cmd_classes(args) -> int:
     return 1
 
 
+def cmd_disasm(args) -> int:
+    for name, package in load_packages(args.container):
+        if name != args.package:
+            continue
+        for cls in package["classes"]:
+            if cls["name"] != args.class_name:
+                continue
+            for body_index, body in enumerate(cls["bodies"]):
+                method = cls["methods"][body["method"]]
+                if body["native"] or (args.method is not None and method["name"] != args.method):
+                    continue
+                print(
+                    f"{cls['name']}.{method['name']} state "
+                    f"{cls['states'][body['state']]} locals {body['locals_size']} "
+                    f"stack {body['stack_size']}"
+                )
+                for line in disassemble(cls, body_index):
+                    print(line)
+            return 0
+    print(f"no class {args.class_name!r} in bpackage {args.package!r}", file=sys.stderr)
+    return 1
+
+
+def cmd_stats(args) -> int:
+    counts = {}
+    total = 0
+    for path in sorted(Path(args.directory).rglob("*.big")):
+        for name, package in load_packages(path):
+            for cls in package["classes"]:
+                for body in cls["bodies"]:
+                    for instruction in instructions(body["code"]):
+                        op = instruction["op"]
+                        counts[op] = counts.get(op, 0) + 1
+                        total += 1
+    print(f"total\t{total}")
+    for op in sorted(counts):
+        print(f"{op:02x}\t{counts[op]}")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Read a Blood Omen 2 bpackage entry")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -375,6 +616,15 @@ def main() -> int:
     p_classes.add_argument("container")
     p_classes.add_argument("package")
     p_classes.set_defaults(func=cmd_classes)
+    p_disasm = sub.add_parser("disasm", help="print the instructions of the bodies of a class")
+    p_disasm.add_argument("container")
+    p_disasm.add_argument("package")
+    p_disasm.add_argument("class_name", metavar="class")
+    p_disasm.add_argument("method", nargs="?", default=None)
+    p_disasm.set_defaults(func=cmd_disasm)
+    p_stats = sub.add_parser("stats", help="count the instructions of every container")
+    p_stats.add_argument("directory")
+    p_stats.set_defaults(func=cmd_stats)
     args = parser.parse_args()
     try:
         return args.func(args)
