@@ -44,6 +44,7 @@ add_library(bo2_engine STATIC
     src/engine/script_natives.cpp
     src/engine/script_level.cpp
     src/engine/script_timer.cpp
+    src/engine/script_sound_natives.cpp
     src/engine/script_value_natives.cpp
     src/engine/string_table.cpp
     src/engine/text.cpp

@@ -141,6 +141,7 @@ design. `third_party/stb_vorbis.c` is third-party code (`NOTICE`).
 | `src/engine/script_creature_natives.cpp` | Natives of the creature scripts: the searches, position and rotation, existence, kill, hibernate, the drawing and the simulation flags | behaviour | analysis | 47 |
 | `src/engine/script_natives.cpp` | The natives of basescript | behaviour | specification | 34 |
 | `src/engine/script_value_natives.cpp` | The natives of the value classes | behaviour | specification | 54 |
+| `src/engine/script_sound_natives.cpp` | Natives of sound, soundgroup and effect | behaviour | specification | 32 |
 | `src/engine/script_timer.cpp` | Timers of the scripts: value type, task and natives | behaviour | analysis | 18 |
 | `src/engine/script_level.cpp` | The creatures of a level for the script machine (its host) | behaviour | analysis | 27 |
 | `src/engine/crt_random.cpp` | The rand of the C library the game links | behaviour | analysis | 1 |
