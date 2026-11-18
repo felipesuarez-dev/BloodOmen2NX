@@ -1115,6 +1115,11 @@ void parse_model(const common::Reader& reader, const Chunk& rmd, std::uint32_t m
 }
 
 void compute_bounds(LevelGeometry& geometry) {
+    if (geometry.positions.empty()) {
+        geometry.minimum = Vec3{0.0f, 0.0f, 0.0f};
+        geometry.maximum = Vec3{0.0f, 0.0f, 0.0f};
+        return;
+    }
     const float infinity = std::numeric_limits<float>::infinity();
     Vec3 minimum{infinity, infinity, infinity};
     Vec3 maximum{-infinity, -infinity, -infinity};
@@ -1499,15 +1504,18 @@ LevelGeometry parse_cell_group(const std::vector<std::uint8_t>& data,
                                const std::vector<std::uint16_t>& symbols,
                                const std::vector<std::string>& names) {
     const common::Reader reader(data);
-    if (data.size() < 28) {
+    if (data.size() < 8) {
         throw common::ParseError("cell group is shorter than its header");
     }
-    if (chunk_name(reader, 8) != "cellmdls") {
-        throw common::ParseError("cell group has no cellmdls section");
-    }
-    const std::uint32_t model_count = reader.u32(24);
-    std::size_t position = 28;
     LevelGeometry geometry;
+    std::uint32_t model_count = 0;
+    std::size_t position = 8;
+    // The chunks are dispatched by name in any order (FUN_00665200): a group
+    // without models starts with another chunk and has no `cellmdls` at all.
+    if (data.size() >= 28 && chunk_name(reader, 8) == "cellmdls") {
+        model_count = reader.u32(24);
+        position = 28;
+    }
     geometry.model_ranges.assign(model_count, ModelRange{});
     geometry.model_attributes.resize(model_count);
     for (std::uint32_t model = 0; model < model_count; ++model) {
@@ -1634,9 +1642,6 @@ LevelGeometry parse_cell_group(const std::vector<std::uint8_t>& data,
         }
     }
     place_instances(geometry);
-    if (geometry.positions.empty() || geometry.triangles.empty()) {
-        throw common::ParseError("cell group has no renderable geometry");
-    }
     compute_bounds(geometry);
     return geometry;
 }

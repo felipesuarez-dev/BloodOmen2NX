@@ -1202,6 +1202,79 @@ void test_collision_chunk() {
     CHECK(geometry.collisions[0].data[0] == 1);
 }
 
+// A cell group without `cellmdls`: the chunks start at byte 8 (FUN_00665200).
+std::vector<std::uint8_t> build_cell_group_without_models() {
+    std::vector<std::uint8_t> data(8, 0);
+    std::vector<std::uint8_t> markers;
+    put32(markers, 2);
+    for (const float x : {1.0f, 2.0f}) {
+        put32(markers, 4);
+        put32(markers, 1);
+        put32(markers, 0xFFFFFFFFU);
+        put32(markers, 1);
+        put32(markers, 2);
+        put_float(markers, x);
+        put_float(markers, 0.0f);
+        put_float(markers, 0.0f);
+        put_float(markers, 0.0f);
+        put_float(markers, 0.0f);
+        put_float(markers, 1.0f);
+        put32(markers, 0);
+        put32(markers, 0);
+        put_float(markers, 0.0f);
+    }
+    append_chunk(data, "cellmark", markers);
+    std::vector<std::uint8_t> attributes;
+    append_table(attributes, "default", {1U, 2U, 0x00bf0103U, 4U, 0x000f0f0fU});
+    append_chunk(data, "attrs", attributes);
+    std::vector<std::uint8_t> bsp;
+    append_cell_bsp(bsp);
+    append_chunk(data, "cellbsp", bsp);
+    return data;
+}
+
+// A cell group with one model whose prim chunk has no group: positions but no
+// triangles.
+std::vector<std::uint8_t> build_cell_group_without_triangles() {
+    std::vector<std::uint8_t> positions;
+    put32(positions, 4);
+    for (const auto& point :
+         std::vector<std::array<float, 3>>{{0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0}}) {
+        put_float(positions, point[0]);
+        put_float(positions, point[1]);
+        put_float(positions, point[2]);
+    }
+    std::vector<std::uint8_t> prims;
+    put32(prims, 0);
+    std::vector<std::uint8_t> record;
+    append_chunk(record, "position", positions);
+    append_chunk(record, "prims", prims);
+    std::vector<std::uint8_t> rmd;
+    put32(rmd, 2);
+    std::string record_name = "default";
+    record_name.resize(8, '\0');
+    append(rmd, record_name);
+    put32(rmd, static_cast<std::uint32_t>(16 + record.size()));
+    put32(rmd, 0);
+    rmd.insert(rmd.end(), record.begin(), record.end());
+    std::vector<std::uint8_t> model_chunks;
+    append_chunk(model_chunks, "rmd", rmd);
+    std::vector<std::uint8_t> model;
+    put32(model, 105);
+    append(model, "default");
+    model.push_back(0);
+    put32(model, static_cast<std::uint32_t>(16 + model_chunks.size()));
+    put32(model, 0);
+    model.insert(model.end(), model_chunks.begin(), model_chunks.end());
+    std::vector<std::uint8_t> data(8, 0);
+    append(data, "cellmdls");
+    put32(data, static_cast<std::uint32_t>(20 + model.size()));
+    put32(data, 0);
+    put32(data, 1);
+    data.insert(data.end(), model.begin(), model.end());
+    return data;
+}
+
 void test_cell_group() {
     const std::vector<std::uint8_t> data = build_cell_group();
     const bo2::engine::LevelGeometry geometry = bo2::engine::parse_cell_group(data);
@@ -1357,10 +1430,40 @@ void test_cell_group() {
     CHECK(textured.triangles[0].texture == 0);
 }
 
+void test_cell_group_without_models() {
+    const std::vector<std::uint8_t> data = build_cell_group_without_models();
+    const bo2::engine::LevelGeometry geometry = bo2::engine::parse_cell_group(data);
+    CHECK(geometry.model_ranges.empty());
+    CHECK(geometry.model_attributes.empty());
+    CHECK(geometry.positions.empty());
+    CHECK(geometry.triangles.empty());
+    CHECK(geometry.markers.size() == 2);
+    CHECK(geometry.has_markers);
+    CHECK(geometry.has_level_attributes);
+    CHECK(geometry.has_cell_bsp);
+    CHECK(geometry.minimum.x == 0.0f && geometry.minimum.y == 0.0f && geometry.minimum.z == 0.0f);
+    CHECK(geometry.maximum.x == 0.0f && geometry.maximum.y == 0.0f && geometry.maximum.z == 0.0f);
+}
+
+void test_cell_group_without_triangles() {
+    const std::vector<std::uint8_t> data = build_cell_group_without_triangles();
+    const bo2::engine::LevelGeometry geometry = bo2::engine::parse_cell_group(data);
+    CHECK(geometry.model_count == 1);
+    CHECK(geometry.model_ranges.size() == 1);
+    CHECK(geometry.model_ranges[0].present);
+    CHECK(geometry.model_ranges[0].vertex_count == 4);
+    CHECK(geometry.model_ranges[0].triangle_count == 0);
+    CHECK(geometry.positions.size() == 4);
+    CHECK(geometry.triangles.empty());
+    CHECK(std::fabs(geometry.minimum.x - 0.0f) < 1.0e-5f);
+    CHECK(std::fabs(geometry.minimum.z - 0.0f) < 1.0e-5f);
+    CHECK(std::fabs(geometry.maximum.x - 1.0f) < 1.0e-5f);
+    CHECK(std::fabs(geometry.maximum.z - 0.0f) < 1.0e-5f);
+}
+
 // The `texture` chunk holds one variable-length record per material: the
 // count, that many symbols and a 0xffff pad when the count is odd.
-void test_material_texture_lists() {
-    std::vector<std::uint8_t> textures;
+void test_material_texture_lists() {    std::vector<std::uint8_t> textures;
     put32(textures, 0);
     put32(textures, 2);
     put32(textures, 3);
@@ -2233,6 +2336,8 @@ int main() {
     test_render_sort_order();
     test_math();
     test_cell_group();
+    test_cell_group_without_models();
+    test_cell_group_without_triangles();
     test_material_texture_lists();
     test_material_cull();
     test_model_render_priority();

@@ -36,15 +36,16 @@ container and name.
   --cell-groups tests/data/cell_group_baseline.tsv
 ```
 
-The file has 206 lines: the 236 cell groups minus the 30 the reader rejects
-(see "cellgrup"). The controls are `slums/sl01` (608 models, 56 skipped,
+The file has 236 lines, one per cell group (BO2NX-166 removed the last
+rejected groups). The controls are `slums/sl01` (608 models, 56 skipped,
 35,053 triangles and 55,954 vertices; the host prints 49,378 and 66,143
 because it adds the entity geometry) and `ui/hud` (42 models, 192 triangles
 and 277 vertices). `test_cell_group_baseline` in
 `tests/unit/test_model_asset.cpp` reads the file and compares the four
 numbers; to stay under its 60-second budget it checks the four cell groups of
-`code.big` and the nine of the slums levels, and the rest of the file is
-checked by the tool. Regenerate the file when a reader change is deliberate.
+`code.big`, the nine of the slums levels and the cinematic group of `slums/sl07`
+without models, and the rest of the file is checked by the tool. Regenerate
+the file when a reader change is deliberate.
 
 ## Reads of 2026-11-16 (texture row updated after BO2NX-118, bpackage after BO2NX-146, animatio after BO2NX-165)
 
@@ -53,7 +54,7 @@ checked by the tool. Regenerate the file when a reader change is deliberate.
 | animatio | 4,081 | 4,081 | 0 |
 | animreel | 32,791 | 32,791 | 0 |
 | bpackage | 480 | 480 | 0 |
-| cellgrup | 236 | 236 | 30 |
+| cellgrup | 236 | 236 | 0 |
 | effect | 7,865 | 0 | 0 |
 | lipsync | 71,182 | 0 | 0 |
 | litedata | 142 | 142 | 0 |
@@ -73,47 +74,22 @@ checked by the tool. Regenerate the file when a reader change is deliberate.
 `animatio`, `animreel`, `bpackage`, `cellgrup`, `litedata`, `model`, `region`,
 `strtable`, `texfont` and `texture` have a registered reader. The other types are counted but not
 read yet; each following issue adds the reader of one type and its row here.
-The 4,081 `animatio` entries, the 142 `litedata` entries, the 92 `strtable`
-entries, the 165 `region` entries (their entities and their script package),
-the 32,791 `animreel` entries, the 22,483 `texture` entries and the four
-`texfont` entries are read without a failure.
+The 4,081 `animatio` entries, the 236 `cellgrup` entries, the 142
+`litedata` entries, the 92 `strtable` entries, the 165 `region` entries (their
+entities and their script package), the 32,791 `animreel` entries, the 22,483
+`texture` entries and the four `texfont` entries are read without a failure.
 
 ## cellgrup
 
-30 of the 236 entries fail: 29 with the message below and
-`lowercity/cinematics/kainmeetsvorador` (`kainmeetsvorador.big`) with
-`cell group has no renderable geometry` (BO2NX-166 reads both kinds):
-
-| Message | Entries |
-|---|---|
-| `cell group has no cellmdls section` | 30 |
-
-They are the cinematic cell groups and the weapon cell groups of a level:
-they carry markers only, without the `cellmdls` section the reader starts
-from. Reading them is still open. The first 20 failures:
-
-| Container | Entry |
-|---|---|
-| `resources/levels/bossrooms/sarafanlordarena/slarena.big` | `bossrooms/sarafanlordarena/cinematics/hyldencity_1` |
-| `resources/levels/bossrooms/sarafanlordarena/slarena.big` | `bossrooms/sarafanlordarena/cinematics/hyldencity_2` |
-| `resources/levels/bossrooms/sarafanlordarena/slarena.big` | `bossrooms/sarafanlordarena/cinematics/hyldencity_3` |
-| `resources/levels/bossrooms/sarafanlordarena/slarena.big` | `bossrooms/sarafanlordarena/cinematics/hyldencity_4` |
-| `resources/levels/bossrooms/speedvampirearena/svarena.big` | `bossrooms/speedvampirearena/cinematics/speedvampire` |
-| `resources/levels/canyons/cy07.big` | `canyons/cinematics/meeting_seer` |
-| `resources/levels/device/devicesanctuary.big` | `device/deviceweapons` |
-| `resources/levels/device/dv01.big` | `device/deviceweapons` |
-| `resources/levels/device/dv02.big` | `device/deviceweapons` |
-| `resources/levels/device/dv03.big` | `device/deviceweapons` |
-| `resources/levels/device/dv04.big` | `device/deviceweapons` |
-| `resources/levels/device/dv05.big` | `device/deviceweapons` |
-| `resources/levels/device/dv06.big` | `device/deviceweapons` |
-| `resources/levels/device/dv07.big` | `device/deviceweapons` |
-| `resources/levels/device/dv08.big` | `device/deviceweapons` |
-| `resources/levels/device/dv09.big` | `device/deviceweapons` |
-| `resources/levels/device/dv10.big` | `device/deviceweapons` |
-| `resources/levels/eternal prison/ep07.big` | `eternal prison/cinematics/mad_vampire` |
-| `resources/levels/hyldencity/hc_01.big` | `hyldencity/cinematics/kain_arrives` |
-| `resources/levels/hyldencity/hc_10.big` | `hyldencity/cinematics/calvary_arrives` |
+All 236 entries are read without a failure. 29 of them have no `cellmdls`
+section (sixteen `cellmark` plus `attrs` plus `cellbsp`, twelve `cellmark`
+plus `cells` plus `attrs` plus `cellbsp`, and `keep/sanctuary_keep` with
+`attrs` plus `cellbsp`); the chunk stream starts at byte 8 and the group has
+no models, and the 28 with `cellmark` hold 141 markers. The 30th,
+`lowercity/cinematics/kainmeetsvorador` (`kainmeetsvorador.big`), has a model
+whose `rmd` has no triangles. Both kinds are ported in BO2NX-166; the host
+keeps the `cell group has no renderable geometry` error for a group it cannot
+draw.
 
 ## model
 

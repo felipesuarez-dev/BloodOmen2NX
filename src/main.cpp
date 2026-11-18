@@ -552,6 +552,9 @@ LoadedLevel load_level(const Options& options) {
     level.geometry = bo2::engine::parse_cell_group(archive.extract(*entry), entry->symbols,
                                                    archive.names());
     level.parse_ms = elapsed_ms(parse_start);
+    if (level.geometry.positions.empty() || level.geometry.triangles.empty()) {
+        throw std::runtime_error("cell group has no renderable geometry");
+    }
     for (const bo2::engine::BigEntry& candidate : archive.entries()) {
         if (!bo2::engine::iequals(candidate.type, "region")) {
             continue;

@@ -421,7 +421,7 @@ void test_default_texture(const std::filesystem::path& root) {
 // tests/data/cell_group_baseline.tsv (docs/DATA_COVERAGE.md, "Cell group
 // baseline"). The container paths of the file are relative to the directory
 // bo2nx_check_data reads, so the test prefixes media/gogames/bo2. Reading the
-// 206 groups takes the test over its 60-second budget, so it checks the
+// 236 groups takes the test over its 60-second budget, so it checks the
 // slums levels and code.big and leaves the rest of the file to the tool.
 void test_cell_group_baseline(const std::filesystem::path& root) {
     const std::filesystem::path source =
@@ -475,8 +475,9 @@ void test_cell_group_baseline(const std::filesystem::path& root) {
         CHECK(geometry.positions.size() == std::stoul(fields[5]));
         ++rows;
     }
-    // The four cell groups of code.big and the nine of the slums levels.
-    CHECK(rows == 13);
+    // The four cell groups of code.big, the nine of the slums levels and the
+    // cinematic group of sl07, which has no models (BO2NX-166).
+    CHECK(rows == 14);
 }
 
 int main() {

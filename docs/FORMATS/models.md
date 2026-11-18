@@ -475,7 +475,11 @@ cellmdls [cellanim] cellinst cellight cellmark cells attrs cellbsp
 ```
 
 `cells`, `attrs`, `cellbsp`, `cellinst`, `cellight`, `cellmark` and
-`cellanim` are decoded here.
+`cellanim` are decoded here. 29 of the 236 `cellgrup` entries have no
+`cellmdls`: the dispatcher below reads the chunks by name in any order, so
+their chunk stream starts at byte 8 and the group holds no models, only
+markers; a 30th has a model whose `rmd` has no triangles. The reader accepts
+both, and the host is the one that asks for renderable geometry.
 
 ### `cellanim`
 
