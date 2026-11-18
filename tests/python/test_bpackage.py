@@ -436,6 +436,37 @@ class DisassembleTest(unittest.TestCase):
         ])
 
 
+class NativesTest(unittest.TestCase):
+    def test_type_name(self):
+        cases = [
+            ((0,), "void"),
+            ((1,), "bool"),
+            ((2,), "int"),
+            ((3,), "float"),
+            ((4,), "string"),
+            ((5,), "byte"),
+            ((6, (2,), 4), "int[4]"),
+            ((7, (1,)), "bool&"),
+            ((9, "critter"), "critter"),
+            ((10, "critter"), "critter ref"),
+            ((11, "sense"), "enum sense"),
+        ]
+        for type_, expected in cases:
+            self.assertEqual(bpackage.type_name(type_), expected)
+
+    def test_natives_minimal(self):
+        package = bpackage.parse(build_package(), SYMBOLS)
+        self.assertEqual(bpackage.natives(package), [{
+            "class": "critter",
+            "method": "takepain",
+            "state": "default",
+            "slot": 3,
+            "thread": True,
+            "result": "int",
+            "params": ["int"],
+        }])
+
+
 _EXPECTED_OPCODES = {
     0x00: 666607, 0x01: 13, 0x02: 37908, 0x03: 359168, 0x04: 30193,
     0x05: 4683, 0x06: 55739, 0x07: 284418, 0x08: 58063, 0x09: 24765,
@@ -607,6 +638,22 @@ class DisassemblyGameTest(unittest.TestCase):
         summary = game_summary()
         self.assertEqual(summary["reference_counts"], [30193, 42306, 9084, 61832, 387115, 20856])
         self.assertEqual(summary["bad_references"], [])
+
+
+@unittest.skipUnless(os.environ.get("BO2NX_ASSETS_DIR"), "BO2NX_ASSETS_DIR is unset")
+class NativesGameTest(unittest.TestCase):
+    def test_native_interface(self):
+        path = (Path(os.environ["BO2NX_ASSETS_DIR"])
+                / "media/gogames/bo2/resources/levels/slums/sl01.big")
+        packages = dict(bpackage.load_packages(path))
+        native = bpackage.natives(packages["native"])
+        self.assertEqual(len(native), 505)
+        self.assertEqual(len({entry["class"] for entry in native}), 50)
+        all_native = [package for name, package in game_packages() if name == "native"]
+        self.assertEqual(len(all_native), 168)
+        expected = bpackage.natives(all_native[0])
+        for package in all_native[1:]:
+            self.assertEqual(bpackage.natives(package), expected)
 
 
 if __name__ == "__main__":

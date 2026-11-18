@@ -55,6 +55,7 @@ python3 tools/bo2fmt/bpackage.py list <container.big>
 python3 tools/bo2fmt/bpackage.py classes <container.big> <package>
 python3 tools/bo2fmt/bpackage.py disasm <container.big> <package> <class> [method]
 python3 tools/bo2fmt/bpackage.py stats <directory>
+python3 tools/bo2fmt/bpackage.py natives <container.big> [--package native]
 ```
 
 `list` prints one line per package (name, version, imports, classes, methods,
@@ -62,7 +63,10 @@ bodies, native bodies and code words); `classes` prints one line per class of
 a package (name, kind, parent, data size, slots, states, fields, methods and
 bodies). `disasm` prints the instructions of the bodies of a class, with the
 operands taken from the reference list; `stats` counts the instructions of
-every container under a directory, in total and per code.
+every container under a directory, in total and per code. `natives` prints
+the native interface of a package, one line per native body, with its state
+when it is not `default` and `[thread]` when the method runs as a thread. Its
+output is game data: do not store it in the repository.
 
 `unpack` writes `manifest.json` with the BIG entry metadata (type, name,
 language, symbols and padding). `repack` rebuilds the container from that

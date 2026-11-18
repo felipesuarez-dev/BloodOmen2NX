@@ -539,6 +539,54 @@ def disassemble(cls: dict, body_index: int) -> list[str]:
     return lines
 
 
+def type_name(type_: tuple) -> str:
+    """Return the name of a type as the native interface prints it."""
+    kind = type_[0]
+    if kind == 0:
+        return "void"
+    if kind == 1:
+        return "bool"
+    if kind == 2:
+        return "int"
+    if kind == 3:
+        return "float"
+    if kind == 4:
+        return "string"
+    if kind == 5:
+        return "byte"
+    if kind == 6:
+        return f"{type_name(type_[1])}[{type_[2]}]"
+    if kind == 7:
+        return f"{type_name(type_[1])}&"
+    if kind == 9:
+        return type_[1]
+    if kind == 10:
+        return f"{type_[1]} ref"
+    if kind == 11:
+        return f"enum {type_[1]}"
+    raise PackageError("unknown type kind")
+
+
+def natives(package: dict) -> list[dict]:
+    """Return one entry per native body of a package, in file order."""
+    entries = []
+    for cls in package["classes"]:
+        for body in cls["bodies"]:
+            if not body["native"]:
+                continue
+            method = cls["methods"][body["method"]]
+            entries.append({
+                "class": cls["name"],
+                "method": method["name"],
+                "state": cls["states"][body["state"]],
+                "slot": method["slot"],
+                "thread": method["byte5"] == 2,
+                "result": type_name(method["result"]),
+                "params": [type_name(type_) for type_, _ in method["params"]],
+            })
+    return entries
+
+
 def cmd_list(args) -> int:
     for name, package in load_packages(args.container):
         totals = package_totals(package)
@@ -606,6 +654,24 @@ def cmd_stats(args) -> int:
     return 0
 
 
+def cmd_natives(args) -> int:
+    for name, package in load_packages(args.container):
+        if name != args.package:
+            continue
+        for native in natives(package):
+            suffix = ""
+            if native["thread"]:
+                suffix += " [thread]"
+            if native["state"] != "default":
+                suffix += f" [state {native['state']}]"
+            params = ", ".join(native["params"])
+            print(f"{native['class']}.{native['method']}({params}) -> "
+                  f"{native['result']}{suffix}")
+        return 0
+    print(f"no bpackage {args.package!r}", file=sys.stderr)
+    return 1
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Read a Blood Omen 2 bpackage entry")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -625,6 +691,10 @@ def main() -> int:
     p_stats = sub.add_parser("stats", help="count the instructions of every container")
     p_stats.add_argument("directory")
     p_stats.set_defaults(func=cmd_stats)
+    p_natives = sub.add_parser("natives", help="print the native interface of a package")
+    p_natives.add_argument("container")
+    p_natives.add_argument("--package", default="native")
+    p_natives.set_defaults(func=cmd_natives)
     args = parser.parse_args()
     try:
         return args.func(args)
