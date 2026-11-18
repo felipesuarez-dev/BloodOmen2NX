@@ -201,6 +201,9 @@ to `printf`, and any other `%` code throws `common::ParseError`.
 `src/platform/headless/software_renderer.cpp`) paints the placed glyphs over a
 software frame with the colour of the text and the alpha of the font texels;
 nothing draws them yet, and the SDL path does not have it.
+`layout_children` (`include/bo2/game/menu_layout.hpp`, `src/game/menu_layout.cpp`)
+is the child placement of `FUN_0055c6c0` in its four modes; the original then
+lays out each child in turn, which is not ported.
 `test_text_parser_on_every_table` runs `parse_text` over the 92 string tables
 of the game; per language (default, english, french, german, italian, spanish)
 they hold 17/15/15/15/15/15 tables, 250/238/238/238/236/238 values,

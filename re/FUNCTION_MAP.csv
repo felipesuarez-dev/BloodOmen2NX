@@ -5765,7 +5765,7 @@ address,name,subsystem,status,notes
 0055c5a0,FUN_0055c5a0,unknown,todo,ghidra
 0055c640,FUN_0055c640,unknown,todo,ghidra
 0055c680,FUN_0055c680,unknown,todo,ghidra
-0055c6c0,FUN_0055c6c0,unknown,todo,ghidra
+0055c6c0,FUN_0055c6c0,ui,wip,src/game/menu_layout.cpp: layout_children with the four modes; the original also lays out each child in turn; test_menu_layout.cpp test_layout_modes
 0055c8a0,FUN_0055c8a0,unknown,todo,ghidra
 0055c8f0,FUN_0055c8f0,unknown,todo,ghidra
 0055ca00,FUN_0055ca00,unknown,todo,ghidra

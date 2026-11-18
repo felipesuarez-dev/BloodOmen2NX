@@ -63,6 +63,7 @@ add_library(bo2_game STATIC
     src/game/kain_animation.cpp
     src/game/kain_tuning.cpp
     src/game/kain_vitals.cpp
+    src/game/menu_layout.cpp
     src/game/player.cpp
     src/game/replay.cpp
     src/game/save.cpp
@@ -156,6 +157,11 @@ if(BUILD_TESTING)
     target_link_libraries(bo2nx_camera_tests PRIVATE bo2_game)
     target_compile_options(bo2nx_camera_tests PRIVATE ${BO2NX_WARNINGS})
     add_test(NAME camera COMMAND bo2nx_camera_tests)
+
+    add_executable(bo2nx_menu_tests tests/unit/test_menu_layout.cpp)
+    target_link_libraries(bo2nx_menu_tests PRIVATE bo2_game)
+    target_compile_options(bo2nx_menu_tests PRIVATE ${BO2NX_WARNINGS})
+    add_test(NAME menu COMMAND bo2nx_menu_tests)
 
     add_executable(bo2nx_anim_reel_tests tests/unit/test_anim_reel.cpp)
     target_link_libraries(bo2nx_anim_reel_tests PRIVATE bo2_engine)

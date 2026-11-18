@@ -167,6 +167,7 @@ design. `third_party/stb_vorbis.c` is third-party code (`NOTICE`).
 | `src/game/kain_animation.cpp` | Kain's animation state | behaviour | analysis | 8 |
 | `src/game/kain_tuning.cpp` | Reader of Kain's tuning data | data format | analysis | 11 |
 | `src/game/kain_vitals.cpp` | Kain's health, lore and rage | behaviour | analysis, then specification | 5 |
+| `src/game/menu_layout.cpp` | Layout of the children of a menu element | behaviour | specification | 1 |
 | `src/game/player.cpp` | Kain's movement | behaviour | analysis | 23 |
 | `src/game/replay.cpp` | Replay of an oracle input timeline | port's own tooling | own design | 0 |
 | `src/game/save.cpp` | Save slots of the port | port's own | own design | 0 |
