@@ -8,6 +8,7 @@ is read from the function that writes a package (`FUN_0058cbb0`, a method of
 `FUN_0058d000` and `FUN_0058d420`) and checked by a reference reader on the
 480 entries of the game: every one is consumed to its last byte. What the
 code does when it runs is in [`../SCRIPTS.md`](../SCRIPTS.md).
+Reader: `tools/bo2fmt/bpackage.py`.
 
 ## What the game data has
 
