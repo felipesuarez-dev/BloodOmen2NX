@@ -1461,6 +1461,35 @@ void test_cell_group_without_triangles() {
     CHECK(std::fabs(geometry.maximum.z - 0.0f) < 1.0e-5f);
 }
 
+void test_model_asset_without_mesh() {
+    std::vector<std::uint8_t> chunks;
+    append_chunk(chunks, "collmodc", {1, 2, 3, 4});
+    std::vector<std::uint8_t> attributes;
+    append_table(attributes, "default", {1U, 2U, 0x00bf0103U, 4U, 0x000f0f0fU});
+    append_chunk(chunks, "mdlattr", attributes);
+    std::vector<std::uint8_t> model;
+    put32(model, 105);
+    append(model, "particles/pmarker");
+    model.push_back(0);
+    put32(model, static_cast<std::uint32_t>(9 + std::string("particles/pmarker").size() +
+                                            chunks.size()));
+    put32(model, 0);
+    model.insert(model.end(), chunks.begin(), chunks.end());
+    const bo2::engine::LevelGeometry geometry =
+        bo2::engine::parse_model_asset(model, {}, {});
+    CHECK(geometry.model_count == 0);
+    CHECK(geometry.model_ranges.size() == 1);
+    CHECK(!geometry.model_ranges[0].present);
+    CHECK(geometry.positions.empty());
+    CHECK(geometry.triangles.empty());
+    CHECK(geometry.collisions.size() == 1);
+    CHECK(geometry.collisions[0].model == 0);
+    CHECK(geometry.collisions[0].name == "particles/pmarker");
+    CHECK(geometry.collisions[0].data.size() == 4);
+    CHECK(geometry.minimum.x == 0.0f && geometry.minimum.y == 0.0f && geometry.minimum.z == 0.0f);
+    CHECK(geometry.maximum.x == 0.0f && geometry.maximum.y == 0.0f && geometry.maximum.z == 0.0f);
+}
+
 // The `texture` chunk holds one variable-length record per material: the
 // count, that many symbols and a 0xffff pad when the count is odd.
 void test_material_texture_lists() {    std::vector<std::uint8_t> textures;
@@ -2338,6 +2367,7 @@ int main() {
     test_cell_group();
     test_cell_group_without_models();
     test_cell_group_without_triangles();
+    test_model_asset_without_mesh();
     test_material_texture_lists();
     test_material_cull();
     test_model_render_priority();

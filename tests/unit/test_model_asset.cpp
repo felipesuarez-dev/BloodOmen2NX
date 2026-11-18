@@ -511,6 +511,29 @@ int main() {
             CHECK(asset.model_ranges.size() == 1);
             CHECK(asset.model_ranges[0].present);
         }
+        // The particle marker of sl01: collision and attributes, no mesh
+        // (BO2NX-167).
+        const std::filesystem::path level =
+            std::filesystem::path(root) / "media/gogames/bo2/resources/levels/slums/sl01.big";
+        if (std::filesystem::exists(level)) {
+            const bo2::engine::BigArchive level_archive =
+                bo2::engine::BigArchive::load(level.string());
+            const bo2::engine::BigEntry* marker =
+                level_archive.find("model", "particles/pmarker");
+            CHECK(marker != nullptr);
+            if (marker != nullptr) {
+                const bo2::engine::LevelGeometry geometry = bo2::engine::parse_model_asset(
+                    level_archive.extract(*marker), marker->symbols, level_archive.names());
+                CHECK(geometry.model_count == 0);
+                CHECK(geometry.positions.empty());
+                CHECK(geometry.triangles.empty());
+                CHECK(geometry.collisions.size() == 1);
+                CHECK(geometry.collisions[0].model == 0);
+                // The collision keeps the name of the model header ("default"
+                // for this marker), as parse_cell_group does.
+                CHECK(geometry.collisions[0].name == "default");
+            }
+        }
         // The HUD scene of code.big: a cell group whose markers name the
         // model and the clip of every object.
         const std::filesystem::path code =

@@ -47,7 +47,7 @@ numbers; to stay under its 60-second budget it checks the four cell groups of
 without models, and the rest of the file is checked by the tool. Regenerate
 the file when a reader change is deliberate.
 
-## Reads of 2026-11-16 (texture row updated after BO2NX-118, bpackage after BO2NX-146, animatio after BO2NX-165)
+## Reads of 2026-11-16 (texture row updated after BO2NX-118, bpackage after BO2NX-146, animatio after BO2NX-165, cellgrup after BO2NX-166, model after BO2NX-167)
 
 | Type | Entries | Checked | Failed |
 |---|---|---|---|
@@ -59,7 +59,7 @@ the file when a reader change is deliberate.
 | lipsync | 71,182 | 0 | 0 |
 | litedata | 142 | 142 | 0 |
 | liteinfo | 1 | 0 | 0 |
-| model | 5,168 | 5,168 | 146 |
+| model | 5,168 | 5,168 | 2 |
 | musicbnk | 11 | 0 | 0 |
 | planinfo | 159 | 0 | 0 |
 | region | 165 | 165 | 0 |
@@ -93,42 +93,16 @@ draw.
 
 ## model
 
-146 of the 5,168 entries fail:
+2 of the 5,168 entries fail: `hyldencity/t_lamp/t_lamp` and
+`hyldencity/t_lampb/t_lampb` in `hc_10.big`, both with `prim index count does
+not match the triangle count`. The 144 `particles/pmarker` models, one per
+container, have no `rmd` chunk; BO2NX-167 reads them as markers with their
+collision and no geometry.
 
-| Message | Entries |
-|---|---|
-| `model asset has no rmd chunk` | 144 |
-| `prim index count does not match the triangle count` | 2 |
-
-The 144 are the `particles/pmarker` model of one container each: it has no
-`rmd` chunk. The two others are `hyldencity/t_lamp/t_lamp` and
-`hyldencity/t_lampb/t_lampb` in `hc_10.big`. The first 20 `pmarker`
-failures and the two others:
-
-| Container | Entry |
-|---|---|
-| `resources/levels/bossrooms/CharmVampireArena/cvarena.big` | `particles/pmarker` |
-| `resources/levels/bossrooms/jumpvampirearena/jvarena.big` | `particles/pmarker` |
-| `resources/levels/bossrooms/jumpvampirearena/jvarena01.big` | `particles/pmarker` |
-| `resources/levels/bossrooms/madvampirearena/mvarena.big` | `particles/pmarker` |
-| `resources/levels/bossrooms/sarafanlordarena/slarena.big` | `particles/pmarker` |
-| `resources/levels/bossrooms/speedvampirearena/svarena.big` | `particles/pmarker` |
-| `resources/levels/canyons/cy01.big` | `particles/pmarker` |
-| `resources/levels/canyons/cy01a.big` | `particles/pmarker` |
-| `resources/levels/canyons/cy02.big` | `particles/pmarker` |
-| `resources/levels/canyons/cy02a.big` | `particles/pmarker` |
-| `resources/levels/canyons/cy03.big` | `particles/pmarker` |
-| `resources/levels/canyons/cy04.big` | `particles/pmarker` |
-| `resources/levels/canyons/cy04a.big` | `particles/pmarker` |
-| `resources/levels/canyons/cy04a1.big` | `particles/pmarker` |
-| `resources/levels/canyons/cy04b.big` | `particles/pmarker` |
-| `resources/levels/canyons/cy05.big` | `particles/pmarker` |
-| `resources/levels/canyons/cy06.big` | `particles/pmarker` |
-| `resources/levels/canyons/cy07.big` | `particles/pmarker` |
-| `resources/levels/canyons/cydv.big` | `particles/pmarker` |
-| `resources/levels/device/devicesanctuary.big` | `particles/pmarker` |
-| `resources/levels/hyldencity/hc_10.big` | `hyldencity/t_lamp/t_lamp` |
-| `resources/levels/hyldencity/hc_10.big` | `hyldencity/t_lampb/t_lampb` |
+| Container | Entry | Message |
+|---|---|---|
+| `resources/levels/hyldencity/hc_10.big` | `hyldencity/t_lamp/t_lamp` | `prim index count does not match the triangle count` |
+| `resources/levels/hyldencity/hc_10.big` | `hyldencity/t_lampb/t_lampb` | `prim index count does not match the triangle count` |
 
 ## texture
 

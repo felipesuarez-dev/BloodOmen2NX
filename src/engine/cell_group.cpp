@@ -1671,25 +1671,36 @@ LevelGeometry parse_model_asset(const std::vector<std::uint8_t>& data,
         throw common::ParseError("bad model asset size");
     }
     const std::vector<Chunk> chunks = read_chunks(reader, chunks_start, end);
-    const Chunk* rmd = find_chunk(chunks, "rmd");
-    if (rmd == nullptr) {
-        throw common::ParseError("model asset has no rmd chunk");
-    }
     LevelGeometry geometry;
     geometry.model_ranges.assign(1, ModelRange{});
-    parse_model(reader, *rmd, 0, symbols, names, geometry);
-    // The bone records are a top-level chunk on the character model asset
-    // (the `rmd` parser only fills the weights and joints).
-    const Chunk* skeleton = find_chunk(chunks, "modlskel");
-    if (skeleton == nullptr) {
-        skeleton = find_chunk(chunks, "skel");
+    const Chunk* collision = find_chunk(chunks, "collmodc");
+    if (collision != nullptr) {
+        LevelCollision entry;
+        entry.model = 0;
+        entry.name = name;
+        entry.data.assign(data.begin() + static_cast<std::ptrdiff_t>(collision->data_offset),
+                          data.begin() + static_cast<std::ptrdiff_t>(collision->data_offset +
+                                                                     collision->data_size));
+        geometry.collisions.push_back(std::move(entry));
     }
-    if (skeleton != nullptr && skeleton->data_size >= 4) {
-        const std::uint32_t count = reader.u32(skeleton->data_offset);
-        if (count <= (skeleton->data_size - 4) / 104) {
-            const auto begin = data.begin() + static_cast<std::ptrdiff_t>(skeleton->data_offset);
-            skeleton_for(geometry, 0).bones = parse_skeleton(
-                std::vector<std::uint8_t>(begin, begin + skeleton->data_size));
+    // A `particles/pmarker` has collision and attributes but no `rmd`: it is a
+    // marker, not a mesh, so the result has no geometry (BO2NX-167).
+    const Chunk* rmd = find_chunk(chunks, "rmd");
+    if (rmd != nullptr) {
+        parse_model(reader, *rmd, 0, symbols, names, geometry);
+        // The bone records are a top-level chunk on the character model asset
+        // (the `rmd` parser only fills the weights and joints).
+        const Chunk* skeleton = find_chunk(chunks, "modlskel");
+        if (skeleton == nullptr) {
+            skeleton = find_chunk(chunks, "skel");
+        }
+        if (skeleton != nullptr && skeleton->data_size >= 4) {
+            const std::uint32_t count = reader.u32(skeleton->data_offset);
+            if (count <= (skeleton->data_size - 4) / 104) {
+                const auto begin = data.begin() + static_cast<std::ptrdiff_t>(skeleton->data_offset);
+                skeleton_for(geometry, 0).bones = parse_skeleton(
+                    std::vector<std::uint8_t>(begin, begin + skeleton->data_size));
+            }
         }
     }
     ModelRange& range = geometry.model_ranges[0];
