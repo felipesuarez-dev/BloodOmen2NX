@@ -138,7 +138,7 @@ design. `third_party/stb_vorbis.c` is third-party code (`NOTICE`).
 | `src/engine/script_package.cpp` | Reader of the compiled script packages | data format | analysis | 10 |
 | `src/engine/script_program.cpp` | Linker of the script packages of a region | behaviour | analysis | 4 |
 | `src/engine/script_machine.cpp` | Interpreter of the script machine | behaviour | analysis | 76 |
-| `src/engine/script_creature_natives.cpp` | Natives that find creatures | behaviour | analysis | 9 |
+| `src/engine/script_creature_natives.cpp` | Natives of the creature scripts: the searches, the drawing and the simulation flags | behaviour | analysis | 33 |
 | `src/engine/script_natives.cpp` | The natives of basescript | behaviour | specification | 34 |
 | `src/engine/script_value_natives.cpp` | The natives of the value classes | behaviour | specification | 54 |
 | `src/engine/script_timer.cpp` | Timers of the scripts: value type, task and natives | behaviour | analysis | 18 |

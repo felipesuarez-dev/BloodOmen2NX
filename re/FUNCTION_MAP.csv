@@ -15413,9 +15413,9 @@ address,name,subsystem,status,notes
 00760750,FUN_00760750,script,translated,src/engine/script_creature_natives.cpp: native_creature_by_name; an empty name gives 0 and a missing creature gives 0 and the GetCreatureWithName warning
 007607b0,FUN_007607b0,script,translated,src/engine/script_creature_natives.cpp: native_creature_self writes the creature of the object (+0x2c)
 007607c0,FUN_007607c0,unknown,todo,ghidra
-00760810,FUN_00760810,unknown,todo,ghidra
+00760810,FUN_00760810,script,translated,src/engine/script_creature_natives.cpp: helper of native_creature_valid (FUN_00767320); tests/unit/test_script_machine.cpp
 00760830,FUN_00760830,unknown,todo,ghidra
-00760850,FUN_00760850,unknown,todo,ghidra
+00760850,FUN_00760850,script,translated,src/engine/script_creature_natives.cpp: helper of native_creature_equal (FUN_00767340); tests/unit/test_script_machine.cpp
 00760870,FUN_00760870,unknown,todo,ghidra
 007608a0,FUN_007608a0,unknown,todo,ghidra
 00760900,FUN_00760900,unknown,todo,ghidra
@@ -15426,7 +15426,7 @@ address,name,subsystem,status,notes
 00760a40,FUN_00760a40,unknown,todo,ghidra
 00760a70,FUN_00760a70,unknown,todo,ghidra
 00760c20,FUN_00760c20,unknown,todo,ghidra
-00760df0,FUN_00760df0,unknown,todo,ghidra
+00760df0,FUN_00760df0,script,translated,src/engine/script_creature_natives.cpp: helper of native_was_drawn_last_frame (FUN_00767f80); tests/unit/test_script_machine.cpp
 00760e20,FUN_00760e20,unknown,todo,ghidra
 00760e50,FUN_00760e50,unknown,todo,ghidra
 00760e80,FUN_00760e80,unknown,todo,ghidra
@@ -15460,6 +15460,15 @@ address,name,subsystem,status,notes
 007621d0,FUN_007621d0,unknown,todo,ghidra
 00762200,FUN_00762200,unknown,todo,ghidra
 00762230,FUN_00762230,unknown,todo,ghidra
+00762420,FUN_00762420,script,translated,src/engine/script_creature_natives.cpp: helper of native_disable_eot_simulate (FUN_007686b0); tests/unit/test_script_machine.cpp
+00762440,FUN_00762440,script,translated,src/engine/script_creature_natives.cpp: helper of native_enable_model_lod (FUN_007686c0); tests/unit/test_script_machine.cpp
+00762450,FUN_00762450,script,translated,src/engine/script_creature_natives.cpp: helper of native_disable_model_lod (FUN_007686d0); tests/unit/test_script_machine.cpp
+00762460,FUN_00762460,script,translated,src/engine/script_creature_natives.cpp: helper of native_disable_edit_mode_simulate (FUN_007686e0); tests/unit/test_script_machine.cpp
+00762470,FUN_00762470,script,translated,src/engine/script_creature_natives.cpp: helper of native_enable_sim_time_accumulate_while_culled (FUN_007686f0); tests/unit/test_script_machine.cpp
+00762480,FUN_00762480,script,translated,src/engine/script_creature_natives.cpp: helper of native_disable_simulate (FUN_007686a0); tests/unit/test_script_machine.cpp
+007624a0,FUN_007624a0,script,translated,src/engine/script_creature_natives.cpp: helper of native_disable_sim_cull (FUN_00768700); tests/unit/test_script_machine.cpp
+007624b0,FUN_007624b0,script,translated,src/engine/script_creature_natives.cpp: helper of native_enable_sim_cull (FUN_00768710); tests/unit/test_script_machine.cpp
+007624d0,FUN_007624d0,script,translated,src/engine/script_creature_natives.cpp: helper of native_disable_sim_when_script_done (FUN_00768720); tests/unit/test_script_machine.cpp
 007624e0,FUN_007624e0,unknown,todo,ghidra
 007625e0,FUN_007625e0,unknown,todo,ghidra
 007626e0,FUN_007626e0,unknown,todo,ghidra
@@ -15557,6 +15566,8 @@ address,name,subsystem,status,notes
 007671b0,FUN_007671b0,unknown,todo,ghidra
 00767270,FUN_00767270,script,translated,src/engine/script_creature_natives.cpp: native_creature_by_name takes the name argument (empty for a null cell)
 00767310,FUN_00767310,script,translated,src/engine/script_creature_natives.cpp: native_creature_self
+00767320,FUN_00767320,script,translated,src/engine/script_creature_natives.cpp: native_creature_valid body 8 (FUN_00760810); tests/unit/test_script_machine.cpp
+00767340,FUN_00767340,script,translated,src/engine/script_creature_natives.cpp: native_creature_equal body 9 (FUN_00760850); tests/unit/test_script_machine.cpp
 00767360,FUN_00767360,unknown,todo,ghidra
 00767460,FUN_00767460,unknown,todo,ghidra
 00767510,FUN_00767510,unknown,todo,ghidra
@@ -15571,6 +15582,7 @@ address,name,subsystem,status,notes
 00767c20,FUN_00767c20,unknown,todo,ghidra
 00767cd0,FUN_00767cd0,unknown,todo,ghidra
 00767d70,FUN_00767d70,unknown,todo,ghidra
+00767f80,FUN_00767f80,script,translated,src/engine/script_creature_natives.cpp: native_was_drawn_last_frame body 47 (FUN_00760df0); tests/unit/test_script_machine.cpp
 00768050,FUN_00768050,unknown,todo,ghidra
 00768120,FUN_00768120,unknown,todo,ghidra
 007681e0,FUN_007681e0,unknown,todo,ghidra
@@ -15579,6 +15591,15 @@ address,name,subsystem,status,notes
 00768460,FUN_00768460,unknown,todo,ghidra
 00768530,FUN_00768530,unknown,todo,ghidra
 007685f0,FUN_007685f0,unknown,todo,ghidra
+007686a0,FUN_007686a0,script,translated,src/engine/script_creature_natives.cpp: native_disable_simulate body 69 (FUN_00762480); tests/unit/test_script_machine.cpp
+007686b0,FUN_007686b0,script,translated,src/engine/script_creature_natives.cpp: native_disable_eot_simulate body 70 (FUN_00762420); tests/unit/test_script_machine.cpp
+007686c0,FUN_007686c0,script,translated,src/engine/script_creature_natives.cpp: native_enable_model_lod body 71 (FUN_00762440); tests/unit/test_script_machine.cpp
+007686d0,FUN_007686d0,script,translated,src/engine/script_creature_natives.cpp: native_disable_model_lod body 72 (FUN_00762450); tests/unit/test_script_machine.cpp
+007686e0,FUN_007686e0,script,translated,src/engine/script_creature_natives.cpp: native_disable_edit_mode_simulate body 73 (FUN_00762460); tests/unit/test_script_machine.cpp
+007686f0,FUN_007686f0,script,translated,src/engine/script_creature_natives.cpp: native_enable_sim_time_accumulate_while_culled body 74 (FUN_00762470); tests/unit/test_script_machine.cpp
+00768700,FUN_00768700,script,translated,src/engine/script_creature_natives.cpp: native_disable_sim_cull body 75 (FUN_007624a0); tests/unit/test_script_machine.cpp
+00768710,FUN_00768710,script,translated,src/engine/script_creature_natives.cpp: native_enable_sim_cull body 76 (FUN_007624b0); tests/unit/test_script_machine.cpp
+00768720,FUN_00768720,script,translated,src/engine/script_creature_natives.cpp: native_disable_sim_when_script_done body 77 (FUN_007624d0); tests/unit/test_script_machine.cpp
 00768730,FUN_00768730,unknown,todo,ghidra
 007687d0,FUN_007687d0,unknown,todo,ghidra
 007688b0,FUN_007688b0,unknown,todo,ghidra

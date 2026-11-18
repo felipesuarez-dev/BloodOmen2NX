@@ -24,6 +24,27 @@ ScriptAddress handle_or_null(ScriptMachine& machine, ScriptObjectId object) {
     return object == 0 ? 0 : machine.handle_of(object);
 }
 
+// A creature argument is a value of the class: its cell holds the address of
+// the slot and the slot holds the creature.
+std::uint32_t creature_argument(const ScriptMachine& machine, ScriptAddress args, std::size_t index) {
+    const ScriptAddress slot =
+        machine.memory().u32(args + static_cast<ScriptAddress>(index * 4));
+    return machine.memory().u32(slot);
+}
+
+void store_byte(ScriptMachine& machine, ScriptAddress result, bool value) {
+    if (result != 0) {
+        machine.memory().set_u8(result, value ? 1 : 0);
+    }
+}
+
+void update_flags(ScriptMachine& machine, ScriptObjectId self, std::uint32_t and_mask,
+                  std::uint32_t or_mask) {
+    ScriptCreatureHost& host = host_of(machine);
+    const std::uint32_t creature = machine.creature_of(self);
+    host.set_creature_flags(creature, (host.creature_flags(creature) & and_mask) | or_mask);
+}
+
 }  // namespace
 
 // FUN_00760750: an empty name gives 0 without a search; a name nobody has
@@ -81,7 +102,99 @@ void native_get_hud(ScriptMachine& machine, ScriptObjectId, std::uint32_t, Scrip
     machine.store_handle(result, handle_or_null(machine, host_of(machine).hud_object()));
 }
 
+// FUN_00767320 (native), FUN_00760810 (helper): whether the creature is not 0.
+void native_creature_valid(ScriptMachine& machine, ScriptObjectId, std::uint32_t, ScriptAddress args,
+                           ScriptAddress result) {
+    store_byte(machine, result, creature_argument(machine, args, 0) != 0);
+}
+
+// FUN_00767340 (native), FUN_00760850 (helper): whether the two creatures are equal.
+void native_creature_equal(ScriptMachine& machine, ScriptObjectId, std::uint32_t, ScriptAddress args,
+                           ScriptAddress result) {
+    store_byte(machine, result,
+               creature_argument(machine, args, 0) == creature_argument(machine, args, 1));
+}
+
+// FUN_00767f80 (native), FUN_00760df0 (helper): the subtraction is unsigned, so with frame 0 the previous one
+// is 0xffffffff and the creature was not drawn in it.
+void native_was_drawn_last_frame(ScriptMachine& machine, ScriptObjectId self, std::uint32_t,
+                                 ScriptAddress, ScriptAddress result) {
+    ScriptCreatureHost& host = host_of(machine);
+    const std::uint32_t creature = machine.creature_of(self);
+    const std::uint32_t frame = host.frame();
+    store_byte(machine, result, !(host.drawn_frame(creature) < frame - 1U));
+}
+
+// FUN_007686a0 and FUN_007686b0 (natives), FUN_00762480 and FUN_00762420 (helpers): out of the two update groups.
+void native_disable_simulate(ScriptMachine& machine, ScriptObjectId self, std::uint32_t,
+                             ScriptAddress, ScriptAddress) {
+    host_of(machine).leave_group(machine.creature_of(self), ScriptCreatureHost::Group::process);
+}
+
+void native_disable_eot_simulate(ScriptMachine& machine, ScriptObjectId self, std::uint32_t,
+                                 ScriptAddress, ScriptAddress) {
+    host_of(machine).leave_group(machine.creature_of(self), ScriptCreatureHost::Group::second);
+}
+
+// FUN_007686c0 and FUN_007686d0 (natives), FUN_00762440 and FUN_00762450 (helpers): the level-of-detail switch of the models.
+void native_enable_model_lod(ScriptMachine& machine, ScriptObjectId, std::uint32_t, ScriptAddress,
+                             ScriptAddress) {
+    host_of(machine).set_model_lod(true);
+}
+
+void native_disable_model_lod(ScriptMachine& machine, ScriptObjectId, std::uint32_t, ScriptAddress,
+                              ScriptAddress) {
+    host_of(machine).set_model_lod(false);
+}
+
+// FUN_007686e0 (native), FUN_00762460 (helper): clears bit 0x10.
+void native_disable_edit_mode_simulate(ScriptMachine& machine, ScriptObjectId self, std::uint32_t,
+                                       ScriptAddress, ScriptAddress) {
+    update_flags(machine, self, ~0x10U, 0U);
+}
+
+// FUN_007686f0 (native), FUN_00762470 (helper): sets bit 0x800.
+void native_enable_sim_time_accumulate_while_culled(ScriptMachine& machine, ScriptObjectId self,
+                                                    std::uint32_t, ScriptAddress, ScriptAddress) {
+    update_flags(machine, self, ~0U, 0x800U);
+}
+
+// FUN_00768700 (native), FUN_007624a0 (helper): sets bit 4.
+void native_disable_sim_cull(ScriptMachine& machine, ScriptObjectId self, std::uint32_t,
+                             ScriptAddress, ScriptAddress) {
+    update_flags(machine, self, ~0U, 4U);
+}
+
+// FUN_00768710 (native), FUN_007624b0 (helper): clears bit 4 only when bit 8 is clear.
+void native_enable_sim_cull(ScriptMachine& machine, ScriptObjectId self, std::uint32_t,
+                            ScriptAddress, ScriptAddress) {
+    ScriptCreatureHost& host = host_of(machine);
+    const std::uint32_t creature = machine.creature_of(self);
+    const std::uint32_t flags = host.creature_flags(creature);
+    if ((flags & 8U) == 0U) {
+        host.set_creature_flags(creature, flags & ~4U);
+    }
+}
+
+// FUN_00768720 (native), FUN_007624d0 (helper): sets bit 0x10000.
+void native_disable_sim_when_script_done(ScriptMachine& machine, ScriptObjectId self,
+                                         std::uint32_t, ScriptAddress, ScriptAddress) {
+    update_flags(machine, self, ~0U, 0x10000U);
+}
+
 void bind_creature_natives(ScriptMachine& machine) {
+    machine.bind_native("creaturescript", 8, native_creature_valid);
+    machine.bind_native("creaturescript", 9, native_creature_equal);
+    machine.bind_native("creaturescript", 47, native_was_drawn_last_frame);
+    machine.bind_native("creaturescript", 69, native_disable_simulate);
+    machine.bind_native("creaturescript", 70, native_disable_eot_simulate);
+    machine.bind_native("creaturescript", 71, native_enable_model_lod);
+    machine.bind_native("creaturescript", 72, native_disable_model_lod);
+    machine.bind_native("creaturescript", 73, native_disable_edit_mode_simulate);
+    machine.bind_native("creaturescript", 74, native_enable_sim_time_accumulate_while_culled);
+    machine.bind_native("creaturescript", 75, native_disable_sim_cull);
+    machine.bind_native("creaturescript", 76, native_enable_sim_cull);
+    machine.bind_native("creaturescript", 77, native_disable_sim_when_script_done);
     machine.bind_native("creaturescript", 6, native_creature_by_name);
     machine.bind_native("creaturescript", 7, native_creature_self);
     machine.bind_native("bo2creaturescript", 0, native_get_kain);

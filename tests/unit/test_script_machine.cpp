@@ -1735,12 +1735,28 @@ struct FakeCreatures final : bo2::engine::ScriptCreatureHost {
     void hibernate_creature(std::uint32_t) override {}
     void unhibernate_creature(std::uint32_t) override {}
     void remove_creature(std::uint32_t) override {}
-    std::uint32_t creature_flags(std::uint32_t) override { return 0; }
-    void set_creature_flags(std::uint32_t, std::uint32_t) override {}
-    std::uint32_t drawn_frame(std::uint32_t) override { return 0; }
-    std::uint32_t frame() override { return 0; }
-    void leave_group(std::uint32_t, Group) override {}
-    void set_model_lod(bool) override {}
+    std::map<std::uint32_t, std::uint32_t> flags;
+    std::map<std::uint32_t, std::uint32_t> drawn;
+    std::uint32_t now = 0;
+    std::vector<std::pair<std::uint32_t, Group>> left;
+    bool model_lod = false;
+
+    std::uint32_t creature_flags(std::uint32_t creature) override {
+        const auto found = flags.find(creature);
+        return found == flags.end() ? 0 : found->second;
+    }
+    void set_creature_flags(std::uint32_t creature, std::uint32_t value) override {
+        flags[creature] = value;
+    }
+    std::uint32_t drawn_frame(std::uint32_t creature) override {
+        const auto found = drawn.find(creature);
+        return found == drawn.end() ? 0 : found->second;
+    }
+    std::uint32_t frame() override { return now; }
+    void leave_group(std::uint32_t creature, Group group) override {
+        left.emplace_back(creature, group);
+    }
+    void set_model_lod(bool on) override { model_lod = on; }
     void load_region(const std::string& name) override { regions.push_back(name); }
     std::vector<std::string> regions;
 };
@@ -1759,7 +1775,7 @@ ScriptClass native_class(const std::string& name, const std::string& parent, std
 // The natives that find creatures (BO2NX-177; docs/SCRIPTS.md).
 void test_creature_natives() {
     const Linked linked = make_program({native_class("basecreaturescript", "", 0),
-                                        native_class("creaturescript", "basecreaturescript", 8),
+                                        native_class("creaturescript", "basecreaturescript", 78),
                                         native_class("bo2creaturescript", "creaturescript", 12),
                                         native_class("guard01", "bo2creaturescript", 0),
                                         native_class("lever01", "basecreaturescript", 0)});
@@ -1824,6 +1840,121 @@ void test_creature_natives() {
     creatures.hud = 0;
     CHECK(call(bo2::engine::native_get_hud, nullptr) == 0);
     CHECK(count(lever) == 1);
+}
+
+// The creaturescript natives of validity, drawing and simulation flags
+// (BO2NX-181; docs/SCRIPTS.md, "More natives of creaturescript").
+void test_creature_flag_natives() {
+    const Linked linked = make_program({native_class("basecreaturescript", "", 0),
+                                        native_class("creaturescript", "basecreaturescript", 78),
+                                        native_class("bo2creaturescript", "creaturescript", 12),
+                                        native_class("guard01", "bo2creaturescript", 0),
+                                        native_class("lever01", "basecreaturescript", 0)});
+    ScriptMachine machine(linked.program);
+    bo2::engine::bind_creature_natives(machine);
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    const ScriptObjectId guard = machine.create_object(linked.program.find_class("guard01") - 1);
+    machine.create_object(linked.program.find_class("lever01") - 1);
+    machine.set_creature(guard, 0x100);
+    FakeCreatures creatures;
+    creatures.flags[0x100] = 0x14;
+    machine.set_creature_host(&creatures);
+    const ScriptAddress result = memory.allocate(4);
+    const ScriptAddress args = memory.allocate(8);
+    const ScriptAddress slot = memory.allocate(4);
+    const ScriptAddress second = memory.allocate(4);
+    const auto call = [&](bo2::engine::ScriptNative native) {
+        native(machine, guard, 0, args, result);
+    };
+    const auto set_creature = [&](std::uint32_t creature, std::uint32_t into) {
+        memory.set_u32(slot, creature);
+        memory.set_u32(into, slot);
+    };
+
+    // 73, 74, 75, 76 and 77 over 0x14.
+    call(bo2::engine::native_disable_edit_mode_simulate);
+    CHECK(creatures.flags[0x100] == 0x04);
+    call(bo2::engine::native_enable_sim_time_accumulate_while_culled);
+    CHECK(creatures.flags[0x100] == 0x804);
+    call(bo2::engine::native_disable_sim_cull);
+    CHECK(creatures.flags[0x100] == 0x804);
+    call(bo2::engine::native_enable_sim_cull);
+    CHECK(creatures.flags[0x100] == 0x800);
+    call(bo2::engine::native_disable_sim_when_script_done);
+    CHECK(creatures.flags[0x100] == 0x10800);
+    // 76 does nothing when bit 8 is set.
+    creatures.flags[0x100] = 0x0C;
+    call(bo2::engine::native_enable_sim_cull);
+    CHECK(creatures.flags[0x100] == 0x0C);
+
+    // 69 and 70 leave the two update groups.
+    call(bo2::engine::native_disable_simulate);
+    call(bo2::engine::native_disable_eot_simulate);
+    CHECK(creatures.left.size() == 2);
+    if (creatures.left.size() == 2) {
+        CHECK(creatures.left[0].first == 0x100);
+        CHECK(creatures.left[0].second == bo2::engine::ScriptCreatureHost::Group::process);
+        CHECK(creatures.left[1].first == 0x100);
+        CHECK(creatures.left[1].second == bo2::engine::ScriptCreatureHost::Group::second);
+    }
+
+    // 71 and 72 set the level-of-detail switch.
+    call(bo2::engine::native_enable_model_lod);
+    CHECK(creatures.model_lod);
+    call(bo2::engine::native_disable_model_lod);
+    CHECK(!creatures.model_lod);
+
+    // 47: drawn in the previous frame.
+    creatures.now = 100;
+    creatures.drawn[0x100] = 99;
+    memory.set_u32(result, 0xFFFFFF01U);
+    call(bo2::engine::native_was_drawn_last_frame);
+    CHECK(memory.u8(result) == 1);
+    creatures.drawn[0x100] = 98;
+    memory.set_u32(result, 0xFFFFFF01U);
+    call(bo2::engine::native_was_drawn_last_frame);
+    CHECK(memory.u8(result) == 0);
+    creatures.drawn[0x100] = 100;
+    memory.set_u32(result, 0xFFFFFF01U);
+    call(bo2::engine::native_was_drawn_last_frame);
+    CHECK(memory.u8(result) == 1);
+    creatures.now = 0;
+    creatures.drawn[0x100] = 0;
+    memory.set_u32(result, 0xFFFFFF01U);
+    call(bo2::engine::native_was_drawn_last_frame);
+    CHECK(memory.u8(result) == 0);
+
+    // 8: a creature argument.
+    set_creature(0x200, args);
+    memory.set_u32(result, 0xFFFFFF01U);
+    call(bo2::engine::native_creature_valid);
+    CHECK(memory.u8(result) == 1);
+    set_creature(0, args);
+    memory.set_u32(result, 0xFFFFFF01U);
+    call(bo2::engine::native_creature_valid);
+    CHECK(memory.u8(result) == 0);
+    CHECK(!throws([&] { bo2::engine::native_creature_valid(machine, guard, 0, args, 0); }));
+
+    // 9: two creature arguments.
+    set_creature(0x100, args);
+    memory.set_u32(second, 0x100);
+    memory.set_u32(args + 4, second);
+    memory.set_u32(result, 0xFFFFFF01U);
+    call(bo2::engine::native_creature_equal);
+    CHECK(memory.u8(result) == 1);
+    memory.set_u32(second, 0x200);
+    memory.set_u32(result, 0xFFFFFF01U);
+    call(bo2::engine::native_creature_equal);
+    CHECK(memory.u8(result) == 0);
+
+    // Without a host the natives that ask it throw.
+    machine.set_creature_host(nullptr);
+    CHECK(throws([&] { bo2::engine::native_disable_simulate(machine, guard, 0, args, result); }));
+
+    memory.release(second);
+    memory.release(slot);
+    memory.release(args);
+    memory.release(result);
 }
 
 // The class basescript of docs/SCRIPTS.md: 20 bodies, 17 of them native.
@@ -2945,6 +3076,11 @@ void test_create_sl01_objects(const std::filesystem::path& root) {
     CHECK(method_of("bo2creaturescript", 1).result.name == "creaturescript");
     CHECK(method_of("bo2creaturescript", 11).name == "gethud");
     CHECK(method_of("bo2creaturescript", 11).result.name == "hud");
+    CHECK(method_of("creaturescript", 8).name == "creaturevalid");
+    CHECK(method_of("creaturescript", 9).name == "creatureequal");
+    CHECK(method_of("creaturescript", 47).name == "wasdrawnlastframe");
+    CHECK(method_of("creaturescript", 69).name == "disablesimulate");
+    CHECK(method_of("creaturescript", 77).name == "disablesimwhenscriptdone");
 }
 
 void native_nothing(ScriptMachine&, ScriptObjectId, std::uint32_t, ScriptAddress, ScriptAddress) {}
@@ -3149,6 +3285,7 @@ int main() {
     test_activate_links_fields();
     test_creature_and_store_handle();
     test_creature_natives();
+    test_creature_flag_natives();
     test_native_self_and_state();
     test_native_compare();
     test_native_angles();
