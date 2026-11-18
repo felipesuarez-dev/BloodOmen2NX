@@ -223,7 +223,8 @@ met its exit criterion but five of its tasks are still open (BO2NX-68, 96,
   (`docs/FORMATS/textures.md`, `docs/FORMATS/strtable.md`) and the text
   commands and the placing of glyphs are documented (`docs/TEXT.md`), and
   so is how the main menu sizes, lays out and colours its five items,
-  checked against the running game; no text is drawn yet. The scripts are
+  checked against the running game; `bo2nx --menu-text` draws them in the
+  five languages. The scripts are
   read (`docs/SCRIPTS.md`: the compiled packages, the machine and its 97
   instructions, the binding of the 505 native functions, the classes of
   every region) and the port's script machine is decided

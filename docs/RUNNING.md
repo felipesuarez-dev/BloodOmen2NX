@@ -65,6 +65,19 @@ and in the `--play` window: the frame, the health vial and the lore vial,
 with the health and lore Kain enters the level with ([`HUD.md`](HUD.md)). It
 reads the Kain tuning from `--kain` or `<level dir>/../kain/kain.big`.
 
+`--menu-text <code.big>` draws the five items of the main menu (`ui/UI`, keys
+`fe_start_game`, `fe_options`, `fe_extras`, `fe_replay_movie` and
+`fe_quit_game`) in the language of `--locale`, over a black frame of
+`--width` x `--height`, with the font `main/main` and the placement, size and
+colours of the original ([`TEXT.md`](TEXT.md)). It prints one line per item
+with its key and its pen in the 640 x 480 text space and needs `--out`; it
+takes no level:
+
+```sh
+./build/linux-debug/bo2nx --menu-text external/installed/media/gogames/bo2/code.big \
+  --width 800 --height 600 --out /tmp/main_menu.ppm
+```
+
 `--replay ... --scripts` (and `--play ... --scripts`) runs the script
 objects of the level with the player: each tick the simulation scheduler (with the follow camera as its
 viewer) and then the update of the creatures, after the player and the
@@ -250,6 +263,7 @@ provisional until the original controls are recovered from `bo2.exe`.
 | `--scripts` | With `--replay` or `--play`: run the script objects of the level each tick (`ScriptLevel`) and print how many run, their states and what stopped the others (at the end, and every 600 ticks in `--play`) |
 | `--code <code.big>` | The `code.big` of `--scripts`, for the tune of the level keeper (default `<level dir>/../../../code.big`) |
 | `--hud <code.big>` | The HUD scene of `code.big` over the `--level` frame or in the `--play` window |
+| `--menu-text <code.big>` | The five main-menu items with the font and the `ui/UI` table of `--locale`, in a black frame (needs `--out`) |
 | `--locale <name>` | Language of the localized resources: `english`, `french`, `italian`, `german` or `spanish` (default `spanish`, the one the original executable forces) |
 | `--kain-model <kain.big>` | Append Kain's model to the level: at `--kain-at` for `--level` and `--sdl`, at the player for `--replay` and `--play` |
 | `--kain-at x,y,z` | Kain's position for `--level` and `--sdl` (default 0,0,0) |

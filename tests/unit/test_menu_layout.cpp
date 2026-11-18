@@ -1,9 +1,14 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <cstdlib>
+#include <filesystem>
 #include <iostream>
 #include <vector>
 
+#include "bo2/engine/big_archive.hpp"
+#include "bo2/engine/pixmap_font.hpp"
+#include "bo2/engine/string_table.hpp"
 #include "bo2/game/menu_layout.hpp"
 
 namespace {
@@ -90,6 +95,74 @@ void test_main_menu_layout() {
     }
 }
 
+void test_main_menu_pens(const std::filesystem::path& path) {
+    using bo2::engine::BigArchive;
+    using bo2::engine::BigEntry;
+    using bo2::engine::PixmapFont;
+    using bo2::engine::StringTable;
+    const BigArchive archive = BigArchive::load(path.string());
+    const BigEntry* font_entry = archive.find("texfont", "main/main");
+    CHECK(font_entry != nullptr);
+    if (font_entry == nullptr) {
+        return;
+    }
+    const PixmapFont font = bo2::engine::parse_pixmap_font(
+        archive.extract(*font_entry), font_entry->symbols, archive.names());
+    const bo2::engine::TextStyle style =
+        bo2::engine::make_text_style(font, 0.0520833f, 1.0f, 240.0f);
+    struct Case {
+        const char* locale;
+        float pens[5][2];
+    };
+    const Case cases[] = {
+        {"spanish", {{270.75f, 216.45f}, {294.25f, 231.35f}, {299.5f, 246.25f},
+                     {257.25f, 261.15f}, {273.0f, 276.05f}}},
+        {"english", {{287.0f, 216.45f}, {298.0f, 231.35f}, {299.5f, 246.25f},
+                     {282.0f, 261.15f}, {291.0f, 276.05f}}},
+        {"french", {{267.25f, 216.45f}, {298.0f, 231.35f}, {302.75f, 246.25f},
+                    {278.25f, 261.15f}, {267.25f, 276.05f}}},
+        {"italian", {{280.75f, 216.45f}, {299.75f, 231.35f}, {302.75f, 246.25f},
+                     {271.5f, 261.15f}, {277.5f, 276.05f}}},
+        {"german", {{279.25f, 216.45f}, {294.5f, 231.35f}, {299.5f, 246.25f},
+                    {265.0f, 261.15f}, {278.0f, 276.05f}}},
+    };
+    const char* const keys[] = {"fe_start_game", "fe_options", "fe_extras", "fe_replay_movie",
+                                "fe_quit_game"};
+    for (const Case& item : cases) {
+        const BigEntry* entry = archive.find("strtable", "ui/UI", item.locale);
+        CHECK(entry != nullptr);
+        if (entry == nullptr) {
+            continue;
+        }
+        const StringTable table = StringTable::parse(archive, *entry);
+        std::vector<bo2::game::MenuBox> children;
+        for (const char* key : keys) {
+            const std::string* text = table.find(key);
+            CHECK(text != nullptr);
+            if (text == nullptr) {
+                continue;
+            }
+            const bo2::engine::TextSize size =
+                bo2::engine::measure_text(font, style, *text, 320.0f, 240.0f);
+            children.push_back({0.0f, 0.0f, size.width, size.height});
+        }
+        CHECK(children.size() == 5);
+        if (children.size() != 5) {
+            continue;
+        }
+        const std::vector<bo2::game::MenuBox> placed =
+            bo2::game::layout_children(kParent, 3, children);
+        CHECK(placed.size() == 5);
+        for (std::size_t index = 0; index < placed.size() && index < 5; ++index) {
+            const bo2::engine::TextPen pen = bo2::engine::text_pen(
+                font, style, placed[index].x, -placed[index].y - placed[index].height, 320.0f,
+                240.0f);
+            CHECK(std::fabs(pen.x - item.pens[index][0]) < 1.0e-3f);
+            CHECK(std::fabs(pen.y - item.pens[index][1]) < 1.0e-3f);
+        }
+    }
+}
+
 }  // namespace
 
 int main() {
@@ -97,6 +170,18 @@ int main() {
     test_layout_single_child();
     test_layout_unknown_mode();
     test_main_menu_layout();
+    const char* root = std::getenv("BO2NX_ASSETS_DIR");
+    if (root == nullptr) {
+        std::cout << "menu layout asset test skipped (BO2NX_ASSETS_DIR is unset)\n";
+    } else {
+        const std::filesystem::path code =
+            std::filesystem::path(root) / "media/gogames/bo2/code.big";
+        if (std::filesystem::exists(code)) {
+            test_main_menu_pens(code);
+        } else {
+            std::cout << "menu layout asset test skipped (code.big not found)\n";
+        }
+    }
     if (failures != 0) {
         std::cerr << failures << " check(s) failed\n";
         return 1;

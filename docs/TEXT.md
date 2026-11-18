@@ -208,7 +208,9 @@ lays out each child in turn, which is not ported.
 `text_pen` (`FUN_0056e300`) in `include/bo2/engine/pixmap_font.hpp` and
 `src/engine/pixmap_font.cpp` are the style, the measure and the pen of a UI
 text; the five items of the main menu match the sizes and the pen of the five
-languages.
+languages, and `bo2nx --menu-text <code.big>` draws them with
+`layout_children`, `layout_string` and `draw_glyph_quads` in the language of
+`--locale`.
 `test_text_parser_on_every_table` runs `parse_text` over the 92 string tables
 of the game; per language (default, english, french, german, italian, spanish)
 they hold 17/15/15/15/15/15 tables, 250/238/238/238/236/238 values,

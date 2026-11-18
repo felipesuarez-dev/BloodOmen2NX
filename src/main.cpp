@@ -24,8 +24,10 @@
 #include "bo2/engine/erg.hpp"
 #include "bo2/engine/navigation.hpp"
 #include "bo2/engine/ogg.hpp"
+#include "bo2/engine/pixmap_font.hpp"
 #include "bo2/engine/region.hpp"
 #include "bo2/engine/skeleton_pose.hpp"
+#include "bo2/engine/string_table.hpp"
 #include "bo2/engine/tick.hpp"
 #include "bo2/engine/crt_random.hpp"
 #include "bo2/engine/script_creature_natives.hpp"
@@ -38,6 +40,7 @@
 #include "bo2/game/kain_animation.hpp"
 #include "bo2/game/kain_tuning.hpp"
 #include "bo2/game/kain_vitals.hpp"
+#include "bo2/game/menu_layout.hpp"
 #include "bo2/game/player.hpp"
 #include "bo2/game/replay.hpp"
 #include "bo2/platform/platform.hpp"
@@ -72,6 +75,7 @@ struct Options {
     bo2::engine::Vec3 kain_at{0.0f, 0.0f, 0.0f};
     std::string entry;
     std::string hud;
+    std::string menu_text;
     // The locale of the localized resources: one of the names of the
     // LocaleSet of game.erg. The default is the one the original Spanish
     // executable forces (FUN_004aae40).
@@ -161,6 +165,7 @@ Options parse_options(int argc, char** argv) {
                 << "  bo2nx --erg <game.erg>\n"
                 << "  bo2nx --frame --big <file.big> --out <frame.ppm> [options]\n"
                 << "  bo2nx --level --big <file.big> --out <frame.ppm> [options]\n"
+                << "  bo2nx --menu-text <code.big> --out <frame.ppm> [options]\n"
                 << "  bo2nx --sdl [--big <file.big>] [--out <screenshot.ppm>] [options]\n"
                 << "  bo2nx --play --big <level.big> [--kain <kain.big>] [options]\n"
                 << "  bo2nx --replay <inputs.csv> --big <level.big> --state-out <state.csv> [options]\n"
@@ -195,6 +200,8 @@ Options parse_options(int argc, char** argv) {
                 << "  --hud <code.big>       draw the HUD scene over the --level frame or in the\n"
                 << "                         --play window, with the health and lore Kain enters\n"
                 << "                         the level with\n"
+                << "  --menu-text <code.big> draw the five items of the main menu with the font\n"
+                << "                         and the ui/UI table of --locale\n"
                 << "  --locale <name>        language of the localized resources: english, french,\n"
                 << "                         italian, german or spanish (default: spanish)\n"
                 << "  --kain-model <file.big> append Kain's model to the level (--level and --sdl at\n"
@@ -272,6 +279,8 @@ Options parse_options(int argc, char** argv) {
             options.code = next_argument(index, argc, argv);
         } else if (argument == "--hud") {
             options.hud = next_argument(index, argc, argv);
+        } else if (argument == "--menu-text") {
+            options.menu_text = next_argument(index, argc, argv);
         } else if (argument == "--locale") {
             options.locale = next_argument(index, argc, argv);
             // LocaleSet of game.erg; `default` is the copy every locale falls
@@ -346,6 +355,9 @@ Options parse_options(int argc, char** argv) {
     if (!options.hud.empty() && !options.level && !options.play) {
         usage_error("--hud requires --level or --play");
     }
+    if (!options.menu_text.empty() && options.out.empty()) {
+        usage_error("--menu-text requires --out");
+    }
     if (!options.kain_clip.empty() && options.kain_model.empty()) {
         usage_error("--kain-clip requires --kain-model");
     }
@@ -375,10 +387,10 @@ Options parse_options(int argc, char** argv) {
                       (options.frame ? 1 : 0) + (options.level ? 1 : 0) +
                       (options.collision_dump ? 1 : 0) + (options.sdl ? 1 : 0) +
                       (options.headless ? 1 : 0) + (!options.replay.empty() ? 1 : 0) +
-                      (audio ? 1 : 0);
+                      (!options.menu_text.empty() ? 1 : 0) + (audio ? 1 : 0);
     if (modes > 1) {
         usage_error("--list-big, --erg, --frame, --level, --collision-dump, --sdl, "
-                    "--headless, --replay and audio are mutually exclusive");
+                    "--headless, --replay, --menu-text and audio are mutually exclusive");
     }
     return options;
 }
@@ -1164,6 +1176,76 @@ void draw_hud(const Options& options, std::vector<std::uint8_t>& pixels, std::ui
     print_hud(items.size(), vitals);
 }
 
+// The first text of the game on screen: the five items of the main menu
+// (FUN_005581d0) with the style, the measure and the pen of FUN_0056e2b0,
+// FUN_0056df40 and FUN_0056e300 over the ui/UI table of the locale, placed by
+// FUN_0055c6c0 in mode 3 and drawn with draw_glyph_quads.
+int render_menu_frame(const Options& options) {
+    const bo2::engine::BigArchive archive = bo2::engine::BigArchive::load(options.menu_text);
+    const bo2::engine::BigEntry* font_entry = archive.find("texfont", "main/main");
+    if (font_entry == nullptr) {
+        throw std::runtime_error("no texfont main/main in " + options.menu_text);
+    }
+    const bo2::engine::PixmapFont font = bo2::engine::parse_pixmap_font(
+        archive.extract(*font_entry), font_entry->symbols, archive.names());
+    const bo2::engine::BigEntry* texture_entry = archive.find("texture", font.texture);
+    if (texture_entry == nullptr) {
+        throw std::runtime_error("no texture " + font.texture + " in " + options.menu_text);
+    }
+    const bo2::engine::Image texture = bo2::engine::decode_dds(archive.extract(*texture_entry));
+    const bo2::engine::BigEntry* table_entry =
+        archive.find("strtable", "ui/UI", options.locale);
+    if (table_entry == nullptr) {
+        throw std::runtime_error("no strtable ui/UI for the locale " + options.locale);
+    }
+    const bo2::engine::StringTable table = bo2::engine::StringTable::parse(archive, *table_entry);
+    // FUN_00557710: the main menu sets the font main/main, size 0x3d555555 and
+    // aspect 1 over a text space of half height 240.
+    const bo2::engine::TextStyle style =
+        bo2::engine::make_text_style(font, 0.0520833f, 1.0f, 240.0f);
+    static constexpr const char* kKeys[] = {"fe_start_game", "fe_options", "fe_extras",
+                                            "fe_replay_movie", "fe_quit_game"};
+    std::vector<std::string> texts;
+    std::vector<bo2::game::MenuBox> children;
+    for (const char* key : kKeys) {
+        const std::string* text = table.find(key);
+        if (text == nullptr) {
+            throw std::runtime_error(std::string("ui/UI has no key ") + key);
+        }
+        const bo2::engine::TextSize size =
+            bo2::engine::measure_text(font, style, *text, 320.0f, 240.0f);
+        texts.push_back(*text);
+        children.push_back({0.0f, 0.0f, size.width, size.height});
+    }
+    // FUN_005581d0: a mode-3 column over the whole screen.
+    const std::vector<bo2::game::MenuBox> placed =
+        bo2::game::layout_children({-1.0f, -1.0f, 2.0f, 2.0f}, 3, children);
+    const std::uint32_t width = options.frame_options.width;
+    const std::uint32_t height = options.frame_options.height;
+    std::vector<std::uint8_t> pixels(static_cast<std::size_t>(width) * height * 4, 0);
+    for (std::size_t index = 3; index < pixels.size(); index += 4) {
+        pixels[index] = 255;
+    }
+    for (std::size_t index = 0; index < placed.size(); ++index) {
+        // FUN_0055d2a0: the text goes at y = -item y - item height, in the
+        // upward units of the text renderer; the selected item is red.
+        const bo2::engine::TextPen pen = bo2::engine::text_pen(
+            font, style, placed[index].x, -placed[index].y - placed[index].height, 320.0f,
+            240.0f);
+        const bo2::engine::StringLayout layout = bo2::engine::layout_string(
+            font, texture.width, texture.height, texts[index], pen.x, pen.y, pen.row_height,
+            pen.scale);
+        const bo2::engine::Vec3 colour =
+            index == 0 ? bo2::engine::Vec3{1.0f, 0.0f, 0.0f}
+                       : bo2::engine::Vec3{1.0f, 1.0f, 1.0f};
+        bo2::platform::headless::draw_glyph_quads(pixels, width, height, texture, layout.quads,
+                                                  colour, 1.0f);
+        std::cout << "menu: " << kKeys[index] << " pen " << pen.x << ' ' << pen.y << '\n';
+    }
+    bo2::platform::headless::write_ppm(options.out, width, height, pixels);
+    return 0;
+}
+
 int render_level_frame(const Options& options) {
     if (options.out.empty()) {
         usage_error("--level requires --out");
@@ -1627,6 +1709,9 @@ int main(int argc, char** argv) {
         }
         if (options.level) {
             return render_level_frame(options);
+        }
+        if (!options.menu_text.empty()) {
+            return render_menu_frame(options);
         }
         if (options.collision_dump) {
             return dump_collisions(options);
