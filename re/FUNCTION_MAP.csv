@@ -15729,6 +15729,25 @@ address,name,subsystem,status,notes
 0076bc90,FUN_0076bc90,unknown,todo,ghidra
 0076bd10,FUN_0076bd10,unknown,todo,ghidra
 0076bd40,FUN_0076bd40,unknown,todo,ghidra
+0076bf00,FUN_0076bf00,script,translated,src/engine/script_sound_natives.cpp: native_sound_move_relative body 0 (FUN_0079c200); tests/unit/test_script_machine.cpp
+0076bf20,FUN_0076bf20,script,translated,src/engine/script_sound_natives.cpp: native_sound_start body 1 (FUN_0079c220); tests/unit/test_script_machine.cpp
+0076bf30,FUN_0076bf30,script,translated,src/engine/script_sound_natives.cpp: native_sound_stop body 2 (FUN_0079c350); tests/unit/test_script_machine.cpp
+0076bf40,FUN_0076bf40,script,translated,src/engine/script_sound_natives.cpp: native_sound_is_running body 3 (FUN_0079c360); tests/unit/test_script_machine.cpp
+0076bf60,FUN_0076bf60,script,translated,src/engine/script_sound_natives.cpp: native_sound_spawn body 4 (FUN_0079c3a0); tests/unit/test_script_machine.cpp
+0076bf70,FUN_0076bf70,script,translated,src/engine/script_sound_natives.cpp: native_sound_start_lip body 5 (FUN_0079c2b0); tests/unit/test_script_machine.cpp
+0076bf90,FUN_0076bf90,script,translated,src/engine/script_sound_natives.cpp: native_sound_play body 6 (FUN_0079c440); tests/unit/test_script_machine.cpp
+0076bfb0,FUN_0076bfb0,script,translated,src/engine/script_sound_natives.cpp: native_sound_set_volume body 7 (FUN_0079c460); tests/unit/test_script_machine.cpp
+0076bfd0,FUN_0076bfd0,script,translated,src/engine/script_sound_natives.cpp: native_sound_set_pan body 8 (FUN_0079c490); tests/unit/test_script_machine.cpp
+0076bff0,FUN_0076bff0,script,translated,src/engine/script_sound_natives.cpp: native_sound_set_pitch body 9 (FUN_0079c4c0); tests/unit/test_script_machine.cpp
+0076c010,FUN_0076c010,script,translated,src/engine/script_sound_natives.cpp: native_sound_set_max_dist body 10 (FUN_0079c4f0); tests/unit/test_script_machine.cpp
+0076c030,FUN_0076c030,script,translated,src/engine/script_sound_natives.cpp: native_sound_set_volume_wait body 11 (FUN_0079c520); tests/unit/test_script_machine.cpp
+0076c050,FUN_0076c050,script,translated,src/engine/script_sound_natives.cpp: native_sound_set_pan_wait body 12 (FUN_0079c5c0); tests/unit/test_script_machine.cpp
+0076c070,FUN_0076c070,script,translated,src/engine/script_sound_natives.cpp: native_sound_set_pitch_wait body 13 (FUN_0079c660); tests/unit/test_script_machine.cpp
+0076c090,FUN_0076c090,script,translated,src/engine/script_sound_natives.cpp: native_sound_set_max_dist_wait body 14 (FUN_0079c700); tests/unit/test_script_machine.cpp
+0076c0b0,FUN_0076c0b0,script,translated,src/engine/script_sound_natives.cpp: native_sound_get_volume body 15 (FUN_0079c7a0); tests/unit/test_script_machine.cpp
+0076c0d0,FUN_0076c0d0,script,translated,src/engine/script_sound_natives.cpp: native_sound_get_pan body 16 (FUN_0079c7d0); tests/unit/test_script_machine.cpp
+0076c0f0,FUN_0076c0f0,script,translated,src/engine/script_sound_natives.cpp: native_sound_get_pitch body 17 (FUN_0079c800); tests/unit/test_script_machine.cpp
+0076c110,FUN_0076c110,script,translated,src/engine/script_sound_natives.cpp: native_sound_get_max_dist body 18 (FUN_0079c830); tests/unit/test_script_machine.cpp
 0076c160,FUN_0076c160,unknown,todo,ghidra
 0076c1e0,FUN_0076c1e0,unknown,todo,ghidra
 0076c210,FUN_0076c210,unknown,todo,ghidra
@@ -16710,25 +16729,25 @@ address,name,subsystem,status,notes
 0079c190,FUN_0079c190,unknown,todo,ghidra
 0079c1b0,FUN_0079c1b0,script,translated,src/engine/script_machine.cpp: ScriptEngineObjectType::destroy releases the counted sound instance and keeps the slot
 0079c1d0,FUN_0079c1d0,script,translated,src/engine/script_machine.cpp: ScriptEngineObjectType::assign shares the counted sound instance
-0079c200,FUN_0079c200,unknown,todo,ghidra
-0079c220,FUN_0079c220,unknown,todo,ghidra
-0079c2b0,FUN_0079c2b0,unknown,todo,ghidra
-0079c350,FUN_0079c350,unknown,todo,ghidra
-0079c360,FUN_0079c360,unknown,todo,ghidra
-0079c3a0,FUN_0079c3a0,unknown,todo,ghidra
-0079c440,FUN_0079c440,unknown,todo,ghidra
-0079c460,FUN_0079c460,unknown,todo,ghidra
-0079c490,FUN_0079c490,unknown,todo,ghidra
-0079c4c0,FUN_0079c4c0,unknown,todo,ghidra
-0079c4f0,FUN_0079c4f0,unknown,todo,ghidra
-0079c520,FUN_0079c520,unknown,todo,ghidra
-0079c5c0,FUN_0079c5c0,unknown,todo,ghidra
-0079c660,FUN_0079c660,unknown,todo,ghidra
-0079c700,FUN_0079c700,unknown,todo,ghidra
-0079c7a0,FUN_0079c7a0,unknown,todo,ghidra
-0079c7d0,FUN_0079c7d0,unknown,todo,ghidra
-0079c800,FUN_0079c800,unknown,todo,ghidra
-0079c830,FUN_0079c830,unknown,todo,ghidra
+0079c200,FUN_0079c200,script,wip,src/engine/script_sound_natives.cpp: helper of native_sound_move_relative (FUN_0076bf00); only the empty slot
+0079c220,FUN_0079c220,script,wip,src/engine/script_sound_natives.cpp: helper of native_sound_start (FUN_0076bf20); only the empty slot
+0079c2b0,FUN_0079c2b0,script,wip,src/engine/script_sound_natives.cpp: helper of native_sound_start_lip (FUN_0076bf70); only the empty slot
+0079c350,FUN_0079c350,script,wip,src/engine/script_sound_natives.cpp: helper of native_sound_stop (FUN_0076bf30); only the empty slot
+0079c360,FUN_0079c360,script,wip,src/engine/script_sound_natives.cpp: helper of native_sound_is_running (FUN_0076bf40); only the empty slot
+0079c3a0,FUN_0079c3a0,script,wip,src/engine/script_sound_natives.cpp: helper of native_sound_spawn (FUN_0076bf60); only the empty slot
+0079c440,FUN_0079c440,script,wip,src/engine/script_sound_natives.cpp: helper of native_sound_play (FUN_0076bf90); only the empty slot
+0079c460,FUN_0079c460,script,wip,src/engine/script_sound_natives.cpp: helper of native_sound_set_volume (FUN_0076bfb0); only the empty slot
+0079c490,FUN_0079c490,script,wip,src/engine/script_sound_natives.cpp: helper of native_sound_set_pan (FUN_0076bfd0); only the empty slot
+0079c4c0,FUN_0079c4c0,script,wip,src/engine/script_sound_natives.cpp: helper of native_sound_set_pitch (FUN_0076bff0); only the empty slot
+0079c4f0,FUN_0079c4f0,script,wip,src/engine/script_sound_natives.cpp: helper of native_sound_set_max_dist (FUN_0076c010); only the empty slot
+0079c520,FUN_0079c520,script,wip,src/engine/script_sound_natives.cpp: helper of native_sound_set_volume_wait (FUN_0076c030); only the empty slot
+0079c5c0,FUN_0079c5c0,script,wip,src/engine/script_sound_natives.cpp: helper of native_sound_set_pan_wait (FUN_0076c050); only the empty slot
+0079c660,FUN_0079c660,script,wip,src/engine/script_sound_natives.cpp: helper of native_sound_set_pitch_wait (FUN_0076c070); only the empty slot
+0079c700,FUN_0079c700,script,wip,src/engine/script_sound_natives.cpp: helper of native_sound_set_max_dist_wait (FUN_0076c090); only the empty slot
+0079c7a0,FUN_0079c7a0,script,wip,src/engine/script_sound_natives.cpp: helper of native_sound_get_volume (FUN_0076c0b0); only the empty slot
+0079c7d0,FUN_0079c7d0,script,wip,src/engine/script_sound_natives.cpp: helper of native_sound_get_pan (FUN_0076c0d0); only the empty slot
+0079c800,FUN_0079c800,script,wip,src/engine/script_sound_natives.cpp: helper of native_sound_get_pitch (FUN_0076c0f0); only the empty slot
+0079c830,FUN_0079c830,script,wip,src/engine/script_sound_natives.cpp: helper of native_sound_get_max_dist (FUN_0076c110); only the empty slot
 0079c860,FUN_0079c860,unknown,todo,ghidra
 0079c880,FUN_0079c880,unknown,todo,ghidra
 0079c8b0,FUN_0079c8b0,unknown,todo,ghidra

@@ -2658,6 +2658,85 @@ void test_soundgroup_natives() {
     memory.release(result);
 }
 
+// The sound natives with an empty slot (BO2NX-179; docs/SCRIPTS.md, "The
+// natives of sound, soundgroup and effect").
+void test_sound_natives() {
+    const Linked linked = make_program({native_class("sound", "", 19)});
+    ScriptMachine machine(linked.program);
+    CHECK(!throws([&] { bo2::engine::bind_sound_natives(machine); }));
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    const ScriptAddress slot = memory.allocate(4);
+    const ScriptAddress args = memory.allocate(12);
+    const ScriptAddress result = memory.allocate(4);
+    const std::size_t blocks = memory.live_blocks();
+    const std::size_t tasks = machine.update_task_count();
+    const auto call = [&](bo2::engine::ScriptNative native) {
+        native(machine, slot, 2, args, result);
+    };
+    const auto call_task = [&](bo2::engine::ScriptTaskNative native) {
+        return native(machine, slot, 0, 2, args);
+    };
+
+    for (const bo2::engine::ScriptNative native :
+         {bo2::engine::native_sound_move_relative, bo2::engine::native_sound_start,
+          bo2::engine::native_sound_stop, bo2::engine::native_sound_spawn,
+          bo2::engine::native_sound_start_lip, bo2::engine::native_sound_set_volume,
+          bo2::engine::native_sound_set_pan, bo2::engine::native_sound_set_pitch,
+          bo2::engine::native_sound_set_max_dist}) {
+        call(native);
+    }
+    CHECK(memory.live_blocks() == blocks);
+    CHECK(machine.update_task_count() == tasks);
+
+    for (const bo2::engine::ScriptTaskNative native :
+         {bo2::engine::native_sound_play, bo2::engine::native_sound_set_volume_wait,
+          bo2::engine::native_sound_set_pan_wait, bo2::engine::native_sound_set_pitch_wait,
+          bo2::engine::native_sound_set_max_dist_wait}) {
+        CHECK(call_task(native) == nullptr);
+    }
+    CHECK(machine.update_task_count() == tasks);
+
+    memory.set_u32(result, 0xFFFFFF01U);
+    call(bo2::engine::native_sound_is_running);
+    CHECK(memory.u32(result) == 0xFFFFFF00U);
+    memory.set_u32(result, 0xFFFFFFFFU);
+    call(bo2::engine::native_sound_get_volume);
+    CHECK(memory.u32(result) == 0x3F800000U);
+    for (const bo2::engine::ScriptNative native :
+         {bo2::engine::native_sound_get_pan, bo2::engine::native_sound_get_pitch,
+          bo2::engine::native_sound_get_max_dist}) {
+        memory.set_u32(result, 0xFFFFFFFFU);
+        call(native);
+        CHECK(memory.u32(result) == 0);
+    }
+
+    memory.set_u32(slot, 0x1234);
+    for (const bo2::engine::ScriptNative native :
+         {bo2::engine::native_sound_move_relative, bo2::engine::native_sound_start,
+          bo2::engine::native_sound_stop, bo2::engine::native_sound_spawn,
+          bo2::engine::native_sound_start_lip, bo2::engine::native_sound_set_volume,
+          bo2::engine::native_sound_set_pan, bo2::engine::native_sound_set_pitch,
+          bo2::engine::native_sound_set_max_dist, bo2::engine::native_sound_is_running,
+          bo2::engine::native_sound_get_volume, bo2::engine::native_sound_get_pan,
+          bo2::engine::native_sound_get_pitch, bo2::engine::native_sound_get_max_dist}) {
+        CHECK(throws([&] { call(native); }));
+    }
+    for (const bo2::engine::ScriptTaskNative native :
+         {bo2::engine::native_sound_play, bo2::engine::native_sound_set_volume_wait,
+          bo2::engine::native_sound_set_pan_wait, bo2::engine::native_sound_set_pitch_wait,
+          bo2::engine::native_sound_set_max_dist_wait}) {
+        CHECK(throws([&] { call_task(native); }));
+    }
+
+    const Linked bare = make_program({machine_class({op(0x5C)})});
+    ScriptMachine bare_machine(bare.program);
+    CHECK(!throws([&] { bo2::engine::bind_sound_natives(bare_machine); }));
+
+    memory.release(slot);
+    memory.release(args);
+    memory.release(result);
+}
+
 // Timers (docs/SCRIPTS.md, "Timers"): the value type, the natives, the task
 // the script manager runs once per frame, the call of slot 15 when the time
 // runs out, and play as a task of the frame.
@@ -3503,6 +3582,7 @@ int main() {
     test_waypoints_natives();
     test_bind_value_natives();
     test_soundgroup_natives();
+    test_sound_natives();
     test_timers();
     test_script_level();
     test_scheduler();
