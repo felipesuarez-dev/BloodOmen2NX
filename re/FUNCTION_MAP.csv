@@ -4437,18 +4437,20 @@ address,name,subsystem,status,notes
 00515140,FUN_00515140,script,wip,src/engine/script_machine.cpp: ScriptEngineObjectType::init leaves 0 as for an effect name not found; the effect resource lookup is not ported
 005151d0,FUN_005151d0,script,translated,src/engine/script_machine.cpp: ScriptEngineObjectType::destroy releases the counted effect instance and clears the slot
 005151f0,FUN_005151f0,script,translated,src/engine/script_machine.cpp: ScriptEngineObjectType::assign shares the counted effect instance
-00515220,FUN_00515220,unknown,todo,ghidra
-005155e0,FUN_005155e0,unknown,todo,ghidra
-00515610,FUN_00515610,unknown,todo,ghidra
-00515640,FUN_00515640,unknown,todo,ghidra
-00515670,FUN_00515670,unknown,todo,ghidra
-00515730,FUN_00515730,unknown,todo,ghidra
-00515780,FUN_00515780,unknown,todo,ghidra
-005157b0,FUN_005157b0,unknown,todo,ghidra
-005157d0,FUN_005157d0,unknown,todo,ghidra
-005157e0,FUN_005157e0,unknown,todo,ghidra
-00515800,FUN_00515800,unknown,todo,ghidra
-005158b0,FUN_005158b0,unknown,todo,ghidra
+00515220,FUN_00515220,script,wip,src/engine/script_effect_natives.cpp: helper of native_effect_move (FUN_0076cc40); only the empty slot
+00515260,FUN_00515260,script,wip,src/engine/script_effect_natives.cpp: helper of native_effect_move_relative (FUN_0076cc60); only the empty slot
+00515420,FUN_00515420,script,wip,src/engine/script_effect_natives.cpp: helper of native_effect_move_relative_to_creature (FUN_0076cc80); only the empty slot
+005155e0,FUN_005155e0,script,wip,src/engine/script_effect_natives.cpp: helper of native_effect_set_track_bone (FUN_0076ccf0); only the empty slot
+00515610,FUN_00515610,script,wip,src/engine/script_effect_natives.cpp: helper of native_effect_trigger_event (FUN_0076cca0); only the empty slot
+00515640,FUN_00515640,script,wip,src/engine/script_effect_natives.cpp: helper of native_effect_set_attractor (FUN_0076ccb0); only the empty slot
+00515670,FUN_00515670,script,wip,src/engine/script_effect_natives.cpp: helper of native_effect_set_attractor_track_creature (FUN_0076ccd0); only the empty slot
+00515730,FUN_00515730,script,wip,src/engine/script_effect_natives.cpp: helper of native_effect_start (FUN_0076cd10); only the empty slot
+00515780,FUN_00515780,script,wip,src/engine/script_effect_natives.cpp: helper of native_effect_force_update (FUN_0076cd70); only the empty slot
+005157b0,FUN_005157b0,script,wip,src/engine/script_effect_natives.cpp: helper of native_effect_stop (FUN_0076cd30); only the empty slot
+005157d0,FUN_005157d0,script,wip,src/engine/script_effect_natives.cpp: helper of native_effect_reset (FUN_0076cd40); only the empty slot
+005157e0,FUN_005157e0,script,wip,src/engine/script_effect_natives.cpp: helper of native_effect_is_running (FUN_0076cd50); only the empty slot
+00515800,FUN_00515800,script,wip,src/engine/script_effect_natives.cpp: helper of native_effect_play (FUN_0076cd80); only the empty slot
+005158b0,FUN_005158b0,script,wip,src/engine/script_effect_natives.cpp: helper of native_effect_clone (FUN_0076cda0); only the empty slot
 00515920,FUN_00515920,unknown,todo,ghidra
 00516240,FUN_00516240,unknown,todo,ghidra
 005162b0,FUN_005162b0,unknown,todo,ghidra
@@ -15771,6 +15773,20 @@ address,name,subsystem,status,notes
 0076ca40,FUN_0076ca40,unknown,todo,ghidra
 0076cac0,FUN_0076cac0,unknown,todo,ghidra
 0076caf0,FUN_0076caf0,unknown,todo,ghidra
+0076cc40,FUN_0076cc40,script,translated,src/engine/script_effect_natives.cpp: native_effect_move body 0 (FUN_00515220); tests/unit/test_script_machine.cpp
+0076cc60,FUN_0076cc60,script,translated,src/engine/script_effect_natives.cpp: native_effect_move_relative body 1 (FUN_00515260); tests/unit/test_script_machine.cpp
+0076cc80,FUN_0076cc80,script,translated,src/engine/script_effect_natives.cpp: native_effect_move_relative_to_creature body 2 (FUN_00515420); tests/unit/test_script_machine.cpp
+0076cca0,FUN_0076cca0,script,translated,src/engine/script_effect_natives.cpp: native_effect_trigger_event body 3 (FUN_00515610); tests/unit/test_script_machine.cpp
+0076ccb0,FUN_0076ccb0,script,translated,src/engine/script_effect_natives.cpp: native_effect_set_attractor body 4 (FUN_00515640); tests/unit/test_script_machine.cpp
+0076ccd0,FUN_0076ccd0,script,translated,src/engine/script_effect_natives.cpp: native_effect_set_attractor_track_creature body 5 (FUN_00515670); tests/unit/test_script_machine.cpp
+0076ccf0,FUN_0076ccf0,script,translated,src/engine/script_effect_natives.cpp: native_effect_set_track_bone body 6 (FUN_005155e0); tests/unit/test_script_machine.cpp
+0076cd10,FUN_0076cd10,script,translated,src/engine/script_effect_natives.cpp: native_effect_start body 7 (FUN_00515730); tests/unit/test_script_machine.cpp
+0076cd30,FUN_0076cd30,script,translated,src/engine/script_effect_natives.cpp: native_effect_stop body 8 (FUN_005157b0); tests/unit/test_script_machine.cpp
+0076cd40,FUN_0076cd40,script,translated,src/engine/script_effect_natives.cpp: native_effect_reset body 9 (FUN_005157d0); tests/unit/test_script_machine.cpp
+0076cd50,FUN_0076cd50,script,translated,src/engine/script_effect_natives.cpp: native_effect_is_running body 10 (FUN_005157e0); tests/unit/test_script_machine.cpp
+0076cd70,FUN_0076cd70,script,translated,src/engine/script_effect_natives.cpp: native_effect_force_update body 11 (FUN_00515780); tests/unit/test_script_machine.cpp
+0076cd80,FUN_0076cd80,script,translated,src/engine/script_effect_natives.cpp: native_effect_play body 12 (FUN_00515800); tests/unit/test_script_machine.cpp
+0076cda0,FUN_0076cda0,script,translated,src/engine/script_effect_natives.cpp: native_effect_clone body 13 (FUN_005158b0); tests/unit/test_script_machine.cpp
 0076cdf0,FUN_0076cdf0,unknown,todo,ghidra
 0076ce70,FUN_0076ce70,unknown,todo,ghidra
 0076cea0,FUN_0076cea0,unknown,todo,ghidra

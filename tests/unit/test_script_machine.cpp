@@ -20,6 +20,7 @@
 #include "bo2/engine/script_timer.hpp"
 #include "bo2/engine/script_machine.hpp"
 #include "bo2/engine/script_memory.hpp"
+#include "bo2/engine/script_effect_natives.hpp"
 #include "bo2/engine/script_natives.hpp"
 #include "bo2/engine/script_sound_natives.hpp"
 #include "bo2/engine/script_value_natives.hpp"
@@ -2737,6 +2738,87 @@ void test_sound_natives() {
     memory.release(result);
 }
 
+// The effect natives with an empty slot (BO2NX-180; docs/SCRIPTS.md, "The
+// natives of sound, soundgroup and effect").
+void test_effect_natives() {
+    const Linked linked = make_program({native_class("effect", "", 14)});
+    ScriptMachine machine(linked.program);
+    CHECK(!throws([&] { bo2::engine::bind_effect_natives(machine); }));
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    const ScriptAddress slot = memory.allocate(4);
+    const ScriptAddress args = memory.allocate(12);
+    const ScriptAddress result = memory.allocate(4);
+    const std::size_t blocks = memory.live_blocks();
+    const std::size_t tasks = machine.update_task_count();
+    const auto call = [&](bo2::engine::ScriptNative native) {
+        native(machine, slot, 2, args, result);
+    };
+    const auto call_task = [&](bo2::engine::ScriptTaskNative native) {
+        return native(machine, slot, 0, 2, args);
+    };
+
+    for (const bo2::engine::ScriptNative native :
+         {bo2::engine::native_effect_move, bo2::engine::native_effect_move_relative,
+          bo2::engine::native_effect_move_relative_to_creature,
+          bo2::engine::native_effect_trigger_event, bo2::engine::native_effect_set_attractor,
+          bo2::engine::native_effect_set_attractor_track_creature,
+          bo2::engine::native_effect_set_track_bone, bo2::engine::native_effect_start,
+          bo2::engine::native_effect_stop, bo2::engine::native_effect_reset,
+          bo2::engine::native_effect_force_update}) {
+        call(native);
+    }
+    CHECK(memory.live_blocks() == blocks);
+    CHECK(machine.update_task_count() == tasks);
+    CHECK(call_task(bo2::engine::native_effect_play) == nullptr);
+    CHECK(machine.update_task_count() == tasks);
+
+    memory.set_u32(result, 0xFFFFFF01U);
+    call(bo2::engine::native_effect_is_running);
+    CHECK(memory.u32(result) == 0xFFFFFF00U);
+
+    // clone lets go of the effect in the result slot first.
+    const ScriptAddress shared = memory.allocate(8);
+    memory.set_u32(shared + 4, 2);
+    memory.set_u32(result, shared);
+    const std::size_t live = memory.live_blocks();
+    call(bo2::engine::native_effect_clone);
+    CHECK(memory.u32(result) == 0);
+    CHECK(memory.u32(shared + 4) == 1);
+    CHECK(memory.live_blocks() == live);
+    memory.release(shared);
+
+    const ScriptAddress single = memory.allocate(8);
+    memory.set_u32(single + 4, 1);
+    memory.set_u32(result, single);
+    const std::size_t before = memory.live_blocks();
+    call(bo2::engine::native_effect_clone);
+    CHECK(memory.u32(result) == 0);
+    CHECK(memory.live_blocks() == before - 1);
+
+    memory.set_u32(slot, 0x1234);
+    memory.set_u32(result, 0);
+    for (const bo2::engine::ScriptNative native :
+         {bo2::engine::native_effect_move, bo2::engine::native_effect_move_relative,
+          bo2::engine::native_effect_move_relative_to_creature,
+          bo2::engine::native_effect_trigger_event, bo2::engine::native_effect_set_attractor,
+          bo2::engine::native_effect_set_attractor_track_creature,
+          bo2::engine::native_effect_set_track_bone, bo2::engine::native_effect_start,
+          bo2::engine::native_effect_stop, bo2::engine::native_effect_reset,
+          bo2::engine::native_effect_is_running, bo2::engine::native_effect_force_update,
+          bo2::engine::native_effect_clone}) {
+        CHECK(throws([&] { call(native); }));
+    }
+    CHECK(throws([&] { call_task(bo2::engine::native_effect_play); }));
+
+    const Linked bare = make_program({machine_class({op(0x5C)})});
+    ScriptMachine bare_machine(bare.program);
+    CHECK(!throws([&] { bo2::engine::bind_effect_natives(bare_machine); }));
+
+    memory.release(slot);
+    memory.release(args);
+    memory.release(result);
+}
+
 // Timers (docs/SCRIPTS.md, "Timers"): the value type, the natives, the task
 // the script manager runs once per frame, the call of slot 15 when the time
 // runs out, and play as a task of the frame.
@@ -3583,6 +3665,7 @@ int main() {
     test_bind_value_natives();
     test_soundgroup_natives();
     test_sound_natives();
+    test_effect_natives();
     test_timers();
     test_script_level();
     test_scheduler();
