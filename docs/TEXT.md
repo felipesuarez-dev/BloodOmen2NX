@@ -197,3 +197,7 @@ own lists are not ported. `key_text` (`include/bo2/engine/string_table.hpp`,
 key and the warning of the original when the table lacks it. `format_count`
 is the `%d` and `%%` part of `FUN_00755970`: it never passes text of the data
 to `printf`, and any other `%` code throws `common::ParseError`.
+`draw_glyph_quads` (`include/bo2/platform/headless/software_renderer.hpp`,
+`src/platform/headless/software_renderer.cpp`) paints the placed glyphs over a
+software frame with the colour of the text and the alpha of the font texels;
+nothing draws them yet, and the SDL path does not have it.

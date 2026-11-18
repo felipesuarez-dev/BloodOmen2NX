@@ -677,6 +677,64 @@ void draw_screen_items(std::vector<std::uint8_t>& rgba, std::uint32_t width, std
     }
 }
 
+void draw_glyph_quads(std::vector<std::uint8_t>& rgba, std::uint32_t width, std::uint32_t height,
+                      const engine::Image& font_texture,
+                      const std::vector<engine::GlyphQuad>& quads, const engine::Vec3& colour,
+                      float alpha) {
+    if (font_texture.empty() || alpha <= 0.0f) {
+        return;
+    }
+    const float scale_x = static_cast<float>(width) / 640.0f;
+    const float scale_y = static_cast<float>(height) / 480.0f;
+    for (const engine::GlyphQuad& quad : quads) {
+        const float left = quad.x0 * scale_x;
+        const float top = quad.y0 * scale_y;
+        const float right = quad.x1 * scale_x;
+        const float bottom = quad.y1 * scale_y;
+        if (right <= left || bottom <= top) {
+            continue;
+        }
+        const int min_x = std::max(0, static_cast<int>(std::floor(left)));
+        const int max_x = std::min(static_cast<int>(width) - 1,
+                                   static_cast<int>(std::ceil(right)) - 1);
+        const int min_y = std::max(0, static_cast<int>(std::floor(top)));
+        const int max_y = std::min(static_cast<int>(height) - 1,
+                                   static_cast<int>(std::ceil(bottom)) - 1);
+        for (int y = min_y; y <= max_y; ++y) {
+            const float py = static_cast<float>(y) + 0.5f;
+            if (py < top || py >= bottom) {
+                continue;
+            }
+            const float v = quad.v0 + (quad.v1 - quad.v0) * (py - top) / (bottom - top);
+            for (int x = min_x; x <= max_x; ++x) {
+                const float px = static_cast<float>(x) + 0.5f;
+                if (px < left || px >= right) {
+                    continue;
+                }
+                const float u = quad.u0 + (quad.u1 - quad.u0) * (px - left) / (right - left);
+                const Texel texel = sample_bilinear(font_texture, u, v);
+                const float texel_alpha =
+                    std::clamp(static_cast<float>(texel.a) / 255.0f * alpha, 0.0f, 1.0f);
+                if (texel_alpha <= 0.0f) {
+                    continue;
+                }
+                const std::size_t out =
+                    (static_cast<std::size_t>(y) * width + static_cast<std::size_t>(x)) * 4;
+                const float source[3] = {static_cast<float>(texel.r) * colour.x,
+                                         static_cast<float>(texel.g) * colour.y,
+                                         static_cast<float>(texel.b) * colour.z};
+                for (std::size_t channel = 0; channel < 3; ++channel) {
+                    const float destination = static_cast<float>(rgba[out + channel]);
+                    const float blended =
+                        source[channel] * texel_alpha + destination * (1.0f - texel_alpha);
+                    rgba[out + channel] =
+                        static_cast<std::uint8_t>(std::clamp(blended + 0.5f, 0.0f, 255.0f));
+                }
+            }
+        }
+    }
+}
+
 void write_ppm(const std::string& path, std::uint32_t width, std::uint32_t height,
                const std::vector<std::uint8_t>& rgba) {
     if (rgba.size() < static_cast<std::size_t>(width) * height * 4) {

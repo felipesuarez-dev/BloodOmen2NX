@@ -7,6 +7,7 @@
 #include "bo2/engine/cell_group.hpp"
 #include "bo2/engine/image.hpp"
 #include "bo2/engine/math.hpp"
+#include "bo2/engine/pixmap_font.hpp"
 
 namespace bo2::platform::headless {
 
@@ -69,6 +70,18 @@ void draw_screen_items(std::vector<std::uint8_t>& rgba, std::uint32_t width, std
                        const engine::LevelGeometry& scene,
                        const std::vector<engine::Image>& textures,
                        const std::vector<ScreenItem>& items, float half_width, float half_height);
+
+// Draws the placed glyphs of `quads` (layout_string, 640 x 480 with y down)
+// over the frame `rgba`. Each rectangle is mapped to the size of the frame
+// (`x * width / 640`, `y * height / 480`) and u and v are interpolated between
+// its edges; each texel of `font_texture` is multiplied by `colour` (0..1, like
+// ScreenItem::colour) and blended by its alpha times `alpha`, the path
+// draw_screen_items uses. The original queues each glyph after the models and
+// the HUD with alpha blending, no depth write and order -200000 (FUN_00565b50).
+void draw_glyph_quads(std::vector<std::uint8_t>& rgba, std::uint32_t width, std::uint32_t height,
+                      const engine::Image& font_texture,
+                      const std::vector<engine::GlyphQuad>& quads, const engine::Vec3& colour,
+                      float alpha);
 
 void write_ppm(const std::string& path, std::uint32_t width, std::uint32_t height,
                const std::vector<std::uint8_t>& rgba);

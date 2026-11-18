@@ -323,6 +323,44 @@ int main() {
     CHECK(out_of_range[pixel_at(10, 10) + 0] == 255);
     CHECK(out_of_range[pixel_at(10, 10) + 2] == 0);
 
+    // FUN_00565b50: the placed glyphs of layout_string are drawn over the frame
+    // with the colour of the text, their rectangle mapped from 640 x 480.
+    bo2::engine::Image font_glyphs;
+    font_glyphs.width = 2;
+    font_glyphs.height = 2;
+    font_glyphs.rgba = {255, 255, 255, 255, 255, 255, 255, 255,
+                        255, 255, 255, 255, 255, 255, 255, 0};
+    const bo2::engine::GlyphQuad glyph{0, 5.0f, 5.0f, 325.0f, 245.0f, 0.0f, 0.0f, 1.0f, 1.0f};
+    const auto text_frame = [] {
+        std::vector<std::uint8_t> pixels(64U * 48U * 4U, 255);
+        for (std::size_t pixel = 0; pixel < 64U * 48U; ++pixel) {
+            pixels[pixel * 4 + 0] = 10;
+            pixels[pixel * 4 + 1] = 20;
+            pixels[pixel * 4 + 2] = 30;
+        }
+        return pixels;
+    };
+    std::vector<std::uint8_t> opaque_text = text_frame();
+    bo2::platform::headless::draw_glyph_quads(opaque_text, 64, 48, font_glyphs, {glyph},
+                                              {1.0f, 0.5f, 0.25f}, 1.0f);
+    CHECK(opaque_text[pixel_at(8, 6) + 0] == 255);
+    CHECK(opaque_text[pixel_at(8, 6) + 1] == 128);
+    CHECK(opaque_text[pixel_at(8, 6) + 2] == 64);
+    CHECK(opaque_text[pixel_at(24, 18) + 0] == 10);
+    CHECK(opaque_text[pixel_at(24, 18) + 1] == 20);
+    CHECK(opaque_text[pixel_at(24, 18) + 2] == 30);
+    CHECK(opaque_text[pixel_at(40, 40) + 0] == 10);
+    CHECK(opaque_text[pixel_at(40, 40) + 1] == 20);
+    CHECK(opaque_text[pixel_at(40, 40) + 2] == 30);
+    std::vector<std::uint8_t> faded_text = text_frame();
+    bo2::platform::headless::draw_glyph_quads(faded_text, 64, 48, font_glyphs, {glyph},
+                                              {1.0f, 0.5f, 0.25f}, 0.5f);
+    CHECK(faded_text[pixel_at(8, 6) + 0] == 133);
+    CHECK(faded_text[pixel_at(8, 6) + 1] == 74);
+    CHECK(faded_text[pixel_at(8, 6) + 2] == 47);
+    CHECK(faded_text[pixel_at(24, 18) + 0] == 10);
+    CHECK(faded_text[pixel_at(40, 40) + 0] == 10);
+
     if (failures != 0) {
         std::cerr << failures << " check(s) failed\n";
         return 1;
