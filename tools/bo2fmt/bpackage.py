@@ -33,6 +33,7 @@ import sys
 from pathlib import Path
 
 import big
+import region
 
 VERSION = 1
 MAX_CHUNK_PADDING = 3
@@ -424,6 +425,16 @@ def parse(data: bytes, symbols: list[str]) -> dict:
     return {"version": version, "imports": imports, "classes": classes}
 
 
+def entry_symbols(entry, names: list[str]) -> list[str]:
+    """Return the symbol names of an entry, checked against the name table."""
+    symbols = []
+    for index in entry.symbols:
+        if index >= len(names):
+            raise PackageError("entry symbol is outside the name table")
+        symbols.append(names[index])
+    return symbols
+
+
 def load_packages(path: str | Path) -> list[tuple[str, dict]]:
     """Return the (entry name, package) pairs of every `bpackage` of a container."""
     names, entries = big.load(Path(path))
@@ -431,13 +442,40 @@ def load_packages(path: str | Path) -> list[tuple[str, dict]]:
     for entry in entries:
         if entry.type != "bpackage":
             continue
-        symbols = []
-        for index in entry.symbols:
-            if index >= len(names):
-                raise PackageError("entry symbol is outside the name table")
-            symbols.append(names[index])
-        packages.append((entry.name, parse(entry.data, symbols)))
+        packages.append((entry.name, parse(entry.data, entry_symbols(entry, names))))
     return packages
+
+
+def region_package(data: bytes, symbols: list[str]) -> dict:
+    """Return the package of the `packages` section of a region entry."""
+    sections = [section for section in region.parse_sections(region.region_payload(data))
+                if section["name"] == "packages"]
+    if len(sections) != 1:
+        raise PackageError("region entry does not hold one packages section")
+    payload = sections[0]["payload"]
+    if len(payload) < 16:
+        raise PackageError("region packages section is truncated")
+    reader = Reader(payload)
+    if reader.u32() != 4:
+        raise PackageError("region packages section does not start with 4")
+    if reader.u32() != 1:
+        raise PackageError("region packages section does not hold one package")
+    if reader.u16() != 1 or reader.u16() != 0xFFFF:
+        raise PackageError("bad region packages header")
+    end = payload.find(b"\0", reader.pos)
+    if end < 0:
+        raise PackageError("region package name is unterminated")
+    size_offset = (end + 4) & ~3
+    if size_offset + 4 > len(payload):
+        raise PackageError("region packages section is truncated")
+    size = struct.unpack_from("<I", payload, size_offset)[0]
+    if size != len(payload) - 12:
+        raise PackageError("region package size does not cover the section")
+    start = size_offset + 4
+    if struct.unpack_from("<I", payload, start)[0] != 0:
+        raise PackageError("region packages section does not end its header with zero")
+    start += 4
+    return parse(payload[start:], symbols)
 
 
 def package_totals(package: dict) -> dict:
@@ -587,14 +625,33 @@ def natives(package: dict) -> list[dict]:
     return entries
 
 
+def package_line(name: str, package: dict) -> str:
+    totals = package_totals(package)
+    return (
+        f"{name}\t{package['version']}\t{len(package['imports'])}\t"
+        f"{totals['classes']}\t{totals['methods']}\t{totals['bodies']}\t"
+        f"{totals['natives']}\t{totals['words']}"
+    )
+
+
+def class_line(cls: dict) -> str:
+    return (
+        f"{cls['name']}\t{cls['kind']}\t{cls['parent'] or '-'}\t"
+        f"{cls['data_size']}\t{cls['slot_count']}\t"
+        f"{','.join(cls['states'])}\t{len(cls['fields'])}\t"
+        f"{len(cls['methods'])}\t{len(cls['bodies'])}"
+    )
+
+
 def cmd_list(args) -> int:
-    for name, package in load_packages(args.container):
-        totals = package_totals(package)
-        print(
-            f"{name}\t{package['version']}\t{len(package['imports'])}\t"
-            f"{totals['classes']}\t{totals['methods']}\t{totals['bodies']}\t"
-            f"{totals['natives']}\t{totals['words']}"
-        )
+    names, entries = big.load(Path(args.container))
+    for entry in entries:
+        if entry.type == "bpackage":
+            package = parse(entry.data, entry_symbols(entry, names))
+            print(package_line(entry.name, package))
+        elif entry.type == "region":
+            package = region_package(entry.data, entry_symbols(entry, names))
+            print(package_line(f"region {entry.name}", package))
     return 0
 
 
@@ -603,14 +660,22 @@ def cmd_classes(args) -> int:
         if name != args.package:
             continue
         for cls in package["classes"]:
-            print(
-                f"{cls['name']}\t{cls['kind']}\t{cls['parent'] or '-'}\t"
-                f"{cls['data_size']}\t{cls['slot_count']}\t"
-                f"{','.join(cls['states'])}\t{len(cls['fields'])}\t"
-                f"{len(cls['methods'])}\t{len(cls['bodies'])}"
-            )
+            print(class_line(cls))
         return 0
     print(f"no bpackage {args.package!r}", file=sys.stderr)
+    return 1
+
+
+def cmd_region_classes(args) -> int:
+    names, entries = big.load(Path(args.container))
+    for entry in entries:
+        if entry.type != "region" or entry.name != args.region:
+            continue
+        package = region_package(entry.data, entry_symbols(entry, names))
+        for cls in package["classes"]:
+            print(class_line(cls))
+        return 0
+    print(f"no region {args.region!r}", file=sys.stderr)
     return 1
 
 
@@ -682,6 +747,11 @@ def main() -> int:
     p_classes.add_argument("container")
     p_classes.add_argument("package")
     p_classes.set_defaults(func=cmd_classes)
+    p_region = sub.add_parser("region-classes",
+                              help="print one line per class of the package of a region")
+    p_region.add_argument("container")
+    p_region.add_argument("region")
+    p_region.set_defaults(func=cmd_region_classes)
     p_disasm = sub.add_parser("disasm", help="print the instructions of the bodies of a class")
     p_disasm.add_argument("container")
     p_disasm.add_argument("package")

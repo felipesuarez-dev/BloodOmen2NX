@@ -53,19 +53,22 @@ Script packages (`bpackage`, see `docs/FORMATS/bpackage.md`):
 ```sh
 python3 tools/bo2fmt/bpackage.py list <container.big>
 python3 tools/bo2fmt/bpackage.py classes <container.big> <package>
+python3 tools/bo2fmt/bpackage.py region-classes <container.big> <region>
 python3 tools/bo2fmt/bpackage.py disasm <container.big> <package> <class> [method]
 python3 tools/bo2fmt/bpackage.py stats <directory>
 python3 tools/bo2fmt/bpackage.py natives <container.big> [--package native]
 ```
 
 `list` prints one line per package (name, version, imports, classes, methods,
-bodies, native bodies and code words); `classes` prints one line per class of
+bodies, native bodies and code words) and one line per region with its
+`packages` section, prefixed `region`; `classes` prints one line per class of
 a package (name, kind, parent, data size, slots, states, fields, methods and
-bodies). `disasm` prints the instructions of the bodies of a class, with the
-operands taken from the reference list; `stats` counts the instructions of
-every container under a directory, in total and per code. `natives` prints
-the native interface of a package, one line per native body, with its state
-when it is not `default` and `[thread]` when the method runs as a thread. Its
+bodies) and `region-classes` does the same for the package of a region.
+`disasm` prints the instructions of the bodies of a class, with the operands
+taken from the reference list; `stats` counts the instructions of every
+container under a directory, in total and per code. `natives` prints the
+native interface of a package, one line per native body, with its state when
+it is not `default` and `[thread]` when the method runs as a thread. Its
 output is game data: do not store it in the repository.
 
 `unpack` writes `manifest.json` with the BIG entry metadata (type, name,
@@ -105,7 +108,7 @@ the installed tree. `sfxi.py` still lists the SFXI resource container of
 | `font.py` | `texfont` reader: `dump <container.big> [--entry main/main]` | Verified: `main/main` of `code.big`, 87 glyphs |
 | `animreel.py` | `animreel` clip reader: `info <entry>`, `root <container.big> [--match text]` | Verified: 134/134 Kain clips parse; root speed of `kain/run` is 200 u/s |
 | `animatio.py` | `animatio` graph reader: `nodes`, `states` (`--big <container.big> --entry <name>` or an extracted entry) | Verified: all 4,081 `animatio` entries of the installed tree parse to the last byte (2,156 graphs, 1,925 alias lists) |
-| `bpackage.py` | `bpackage` script package reader: `list <container.big>`, `classes <container.big> <package>` | Verified: 480/480 packages parse to the last byte |
+| `bpackage.py` | `bpackage` script package reader: `list`, `classes`, `region-classes`, `disasm`, `stats`, `natives` | Verified: 480/480 packages and 165/165 region packages parse to the last byte |
 | `compare_frames.py` | Frame side-by-side, diff and metrics | Synthetic tests; used against the Windows and Wine oracle frames |
 
 The numbered `data/*.dat` pipeline is documented in

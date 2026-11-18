@@ -6,6 +6,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools" / "bo2fmt"))
 
+import big  # noqa: E402
 import bpackage  # noqa: E402
 from bpackage import PackageError  # noqa: E402
 
@@ -172,6 +173,34 @@ def build_package(declaration_bytes=None, link_bytes=None, version=1, trailer=0,
     w.chunk(link_bytes if link_bytes is not None else link())
     w.u32(trailer)
     w.data += extra
+    return bytes(w.data)
+
+
+def packages_section(package_bytes, count=1, size=None):
+    w = Writer()
+    w.u32(4)
+    w.u32(count)
+    w.u16(1)
+    w.u16(0xFFFF)
+    w.data += b"default\0"
+    while len(w.data) % 4:
+        w.data.append(0)
+    size_offset = len(w.data)
+    w.u32(0)
+    w.u32(0)
+    w.data += package_bytes
+    struct.pack_into("<I", w.data, size_offset,
+                     len(w.data) - 12 if size is None else size)
+    return bytes(w.data)
+
+
+def region_entry(section_payload, name=b"packages"):
+    w = Writer()
+    w.u32(1)
+    w.u32(0)
+    w.data += name.ljust(8, b"\0")
+    w.u32(12 + len(section_payload))
+    w.data += section_payload
     return bytes(w.data)
 
 
@@ -436,6 +465,23 @@ class DisassembleTest(unittest.TestCase):
         ])
 
 
+class RegionPackageTest(unittest.TestCase):
+    def test_region_package_synthetic(self):
+        package = bpackage.region_package(region_entry(packages_section(build_package())),
+                                          SYMBOLS)
+        self.assertEqual(package["imports"], ["creatures"])
+        self.assertEqual(package["classes"][0]["name"], "critter")
+        with self.assertRaises(ValueError):
+            bpackage.region_package(
+                region_entry(packages_section(build_package(), count=2)), SYMBOLS)
+        with self.assertRaises(ValueError):
+            bpackage.region_package(
+                region_entry(packages_section(build_package(), size=4)), SYMBOLS)
+        with self.assertRaises(ValueError):
+            bpackage.region_package(
+                region_entry(packages_section(build_package()), name=b"entities"), SYMBOLS)
+
+
 class NativesTest(unittest.TestCase):
     def test_type_name(self):
         cases = [
@@ -484,17 +530,34 @@ _EXPECTED_OPCODES = {
 }
 
 _PACKAGES = None
+_REGIONS = None
 _SUMMARY = None
 
 
-def game_packages():
-    global _PACKAGES
+def game_tree():
+    global _PACKAGES, _REGIONS
     if _PACKAGES is None:
         root = Path(os.environ["BO2NX_ASSETS_DIR"]) / "media/gogames/bo2"
         _PACKAGES = []
+        _REGIONS = []
         for path in sorted(root.rglob("*.big")):
-            _PACKAGES.extend(bpackage.load_packages(path))
-    return _PACKAGES
+            names, entries = big.load(path)
+            for entry in entries:
+                symbols = bpackage.entry_symbols(entry, names)
+                if entry.type == "bpackage":
+                    _PACKAGES.append((entry.name, bpackage.parse(entry.data, symbols)))
+                elif entry.type == "region":
+                    _REGIONS.append((entry.name,
+                                     bpackage.region_package(entry.data, symbols)))
+    return _PACKAGES, _REGIONS
+
+
+def game_packages():
+    return game_tree()[0]
+
+
+def game_regions():
+    return game_tree()[1]
 
 
 def game_summary():
@@ -654,6 +717,49 @@ class NativesGameTest(unittest.TestCase):
         expected = bpackage.natives(all_native[0])
         for package in all_native[1:]:
             self.assertEqual(bpackage.natives(package), expected)
+
+
+@unittest.skipUnless(os.environ.get("BO2NX_ASSETS_DIR"), "BO2NX_ASSETS_DIR is unset")
+class RegionPackageGameTest(unittest.TestCase):
+    def test_region_packages_sl01(self):
+        path = (Path(os.environ["BO2NX_ASSETS_DIR"])
+                / "media/gogames/bo2/resources/levels/slums/sl01.big")
+        names, entries = big.load(path)
+        entry = next(candidate for candidate in entries
+                     if candidate.type == "region" and candidate.name == "slums/sl01")
+        package = bpackage.region_package(entry.data,
+                                          bpackage.entry_symbols(entry, names))
+        self.assertEqual(len(package["classes"]), 79)
+        classes = {cls["name"]: cls for cls in package["classes"]}
+        conversation = classes["conversation002"]
+        self.assertEqual(conversation["parent"], "conversationscript")
+        self.assertEqual(conversation["states"],
+                         ["default", "conversingstate", "donothingstate"])
+        self.assertEqual(conversation["data_size"], 12)
+        marker = classes["psntcnf005"]
+        self.assertEqual(marker["parent"], "peasant")
+        self.assertEqual(marker["data_size"], 41)
+
+    def test_region_packages_all(self):
+        regions = game_regions()
+        self.assertEqual(len(regions), 165)
+        classes = bodies = words = fields = 0
+        for name, package in regions:
+            self.assertEqual(package["imports"], ["creatures"])
+            first = package["classes"][0]
+            self.assertEqual(first["name"], "resourcedb")
+            self.assertIsNone(first["parent"])
+            self.assertEqual(first["states"], [])
+            for cls in package["classes"]:
+                classes += 1
+                fields += len(cls["fields"])
+                for body in cls["bodies"]:
+                    bodies += 1
+                    words += len(body["code"])
+        self.assertEqual(classes, 13158)
+        self.assertEqual(bodies, 16104)
+        self.assertEqual(words, 345637)
+        self.assertEqual(fields, 17255)
 
 
 if __name__ == "__main__":
