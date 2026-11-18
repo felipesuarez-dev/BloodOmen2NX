@@ -24,7 +24,7 @@ English version: [README.en.md](README.en.md)
 <!-- badges:start -->
 [status-badge]: https://img.shields.io/badge/fase-M3%20en%20curso-orange
 [overall-badge]: https://img.shields.io/badge/global-9.1%25-yellow
-[fn-badge]: https://img.shields.io/badge/funciones-346%20%2F%2017109-lightgrey
+[fn-badge]: https://img.shields.io/badge/funciones-349%20%2F%2017110-lightgrey
 [levels-badge]: https://img.shields.io/badge/niveles-0%20%2F%2011-lightgrey
 <!-- badges:end -->
 [cpp-badge]: https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white
@@ -77,11 +77,11 @@ El original se usa como referencia; no se distribuye.
 
 | Componente | Peso | Avance | Puntaje |
 |---|---:|---:|---:|
-| Funciones traducidas / en alcance | 60% | 346 / 17 109 | 2.02% |
+| Funciones traducidas / en alcance | 60% | 349 / 17 110 | 2.04% |
 | Niveles completables (capítulos de la campaña) | 30% | 0 / 11 | 0.00% |
 | Características de plataforma | 10% | 9 / 12 + 1 parcial | 79.17% |
 
-Mapa de funciones: 35 711 filas: 346 traducidas, 235 en curso, 16 528 pendientes, 18 602 externas (no son código del juego).
+Mapa de funciones: 35 712 filas: 349 traducidas, 235 en curso, 16 526 pendientes, 18 602 externas (no son código del juego).
 
 ![Mapa del código del juego: un rectángulo por cada función de bo2.exe, del tamaño de su código y agrupado por sistema; verde lo traducido y ámbar lo que está en curso](docs/progress.svg)
 

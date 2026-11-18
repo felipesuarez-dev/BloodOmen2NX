@@ -440,6 +440,62 @@ void test_marker_use_per_language(const bo2::engine::BigArchive& archive) {
     }
 }
 
+// FUN_0056e2b0, FUN_0056df40 and FUN_0056e300: the style, the measure and the
+// pen of the five main-menu items in the ui/UI table of each language.
+void test_menu_text_sizes(const bo2::engine::BigArchive& archive) {
+    const bo2::engine::BigEntry* font_entry = archive.find("texfont", "main/main");
+    CHECK(font_entry != nullptr);
+    if (font_entry == nullptr) {
+        return;
+    }
+    const bo2::engine::PixmapFont font = bo2::engine::parse_pixmap_font(
+        archive.extract(*font_entry), font_entry->symbols, archive.names());
+    const bo2::engine::TextStyle style =
+        bo2::engine::make_text_style(font, 0.0520833f, 1.0f, 240.0f);
+    CHECK(std::fabs(style.y_scale - 0.5f) < 1.0e-5f);
+    CHECK(std::fabs(style.x_scale - 0.5f) < 1.0e-5f);
+    struct Case {
+        const char* locale;
+        float widths[5];
+    };
+    const Case cases[] = {
+        {"spanish", {0.307812f, 0.160937f, 0.128125f, 0.392187f, 0.293750f}},
+        {"english", {0.206250f, 0.137500f, 0.128125f, 0.237500f, 0.181250f}},
+        {"french", {0.329687f, 0.137500f, 0.107812f, 0.260937f, 0.329687f}},
+        {"italian", {0.245312f, 0.126562f, 0.107812f, 0.303125f, 0.265625f}},
+        {"german", {0.254687f, 0.159375f, 0.128125f, 0.343750f, 0.262500f}},
+    };
+    const char* const keys[] = {"fe_start_game", "fe_options", "fe_extras", "fe_replay_movie",
+                                "fe_quit_game"};
+    for (const Case& item : cases) {
+        const bo2::engine::BigEntry* entry = archive.find("strtable", "ui/UI", item.locale);
+        CHECK(entry != nullptr);
+        if (entry == nullptr) {
+            continue;
+        }
+        const bo2::engine::StringTable table = bo2::engine::StringTable::parse(archive, *entry);
+        for (std::size_t index = 0; index < 5; ++index) {
+            const std::string* text = table.find(keys[index]);
+            CHECK(text != nullptr);
+            if (text == nullptr) {
+                continue;
+            }
+            const bo2::engine::TextSize size =
+                bo2::engine::measure_text(font, style, *text, 320.0f, 240.0f);
+            CHECK(std::fabs(size.width - item.widths[index]) < 1.0e-5f);
+            CHECK(std::fabs(size.height - 0.0520833f) < 1.0e-5f);
+        }
+    }
+    // The pen of the first item of the Spanish main menu, as the live game
+    // queued it.
+    const bo2::engine::TextPen pen =
+        bo2::engine::text_pen(font, style, -0.153906f, 0.098125f, 320.0f, 240.0f);
+    CHECK(std::fabs(pen.x - 270.75f) < 1.0e-4f);
+    CHECK(std::fabs(pen.y - 216.45f) < 1.0e-4f);
+    CHECK(std::fabs(pen.row_height - 12.5f) < 1.0e-5f);
+    CHECK(std::fabs(pen.scale - 0.5f) < 1.0e-5f);
+}
+
 // FUN_007556e0 and FUN_00755970 over the memory card prompts of ui/UI in the
 // five languages. The expected text is not copied into the repository: the
 // checks use its size and its SHA-256 digest.
@@ -628,6 +684,7 @@ int main() {
         test_game_font(archive);
         test_game_font_glyphs(archive);
         test_layout_with_the_game_font(archive);
+        test_menu_text_sizes(archive);
         test_text_parser_on_the_menu_table(archive);
         test_memory_card_prompts(archive);
         test_marker_use_per_language(archive);

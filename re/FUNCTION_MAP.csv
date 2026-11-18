@@ -5966,8 +5966,9 @@ address,name,subsystem,status,notes
 0056dd80,FUN_0056dd80,unknown,todo,ghidra
 0056dda0,FUN_0056dda0,unknown,todo,ghidra
 0056dec0,FUN_0056dec0,unknown,todo,ghidra
-0056e2b0,FUN_0056e2b0,unknown,todo,ghidra
-0056e300,FUN_0056e300,unknown,todo,ghidra
+0056df40,FUN_0056df40,locale,translated,src/engine/pixmap_font.cpp: measure_text of a UI string; test_engine.cpp test_text_style_and_measure and test_locale_asset.cpp test_menu_text_sizes
+0056e2b0,FUN_0056e2b0,locale,translated,src/engine/pixmap_font.cpp: make_text_style of a UI text; test_engine.cpp test_text_style_and_measure
+0056e300,FUN_0056e300,locale,translated,src/engine/pixmap_font.cpp: text_pen of a UI text; test_engine.cpp test_text_style_and_measure and test_locale_asset.cpp test_menu_text_sizes
 0056e3d0,FUN_0056e3d0,unknown,todo,ghidra
 0056e8c0,FUN_0056e8c0,unknown,todo,ghidra
 0056ea60,FUN_0056ea60,unknown,todo,ghidra

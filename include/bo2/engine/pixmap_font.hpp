@@ -85,4 +85,38 @@ StringLayout layout_string(const PixmapFont& font, std::uint32_t texture_width,
                            std::uint32_t texture_height, std::string_view text, float x,
                            float y, float row_height, float scale);
 
+// The scale of a row of a UI text (FUN_0056e2b0): a row of `size` screen units
+// with `aspect`, over the leading and base height of the font and the half
+// height of the text space.
+struct TextStyle {
+    float x_scale = 1.0f;
+    float y_scale = 1.0f;
+};
+
+TextStyle make_text_style(const PixmapFont& font, float size, float aspect, float half_height);
+
+// The size of a string (FUN_0056df40), in screen units: the widest row over
+// `half_width` and the sum of the row heights over `half_height`. 0x0a starts
+// a row; a space or a byte without a glyph advances the space width.
+struct TextSize {
+    float width = 0.0f;
+    float height = 0.0f;
+};
+
+TextSize measure_text(const PixmapFont& font, const TextStyle& style, std::string_view text,
+                      float half_width, float half_height);
+
+// Where a UI text starts (FUN_0056e300): the pen in the 640 x 480 space (y
+// down, so the caller's y is up), the height of a row and the scale
+// layout_string takes.
+struct TextPen {
+    float x = 0.0f;
+    float y = 0.0f;
+    float row_height = 0.0f;
+    float scale = 0.0f;
+};
+
+TextPen text_pen(const PixmapFont& font, const TextStyle& style, float x, float y,
+                 float half_width, float half_height);
+
 }  // namespace bo2::engine

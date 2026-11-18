@@ -1,5 +1,6 @@
 #include "bo2/engine/pixmap_font.hpp"
 
+#include <algorithm>
 #include <cstring>
 #include <stdexcept>
 
@@ -181,6 +182,64 @@ StringLayout layout_string(const PixmapFont& font, std::uint32_t texture_width,
         layout.pen_x += (glyph->width + font.kerning) * scale;
     }
     return layout;
+}
+
+// FUN_0056e2b0: the y scale of a row of `size` screen units, over the
+// leading and the base height of the font, and the x scale from the aspect.
+TextStyle make_text_style(const PixmapFont& font, float size, float aspect, float half_height) {
+    TextStyle style;
+    style.y_scale = size * half_height / (font.leading + font.base_height);
+    style.x_scale = style.y_scale * aspect;
+    return style;
+}
+
+// FUN_0056df40: the widest row and the sum of the row heights of a string.
+// The glyph of ^ is not a replacement here; that is only done when the glyphs
+// are placed.
+TextSize measure_text(const PixmapFont& font, const TextStyle& style, std::string_view text,
+                      float half_width, float half_height) {
+    float widest = 0.0f;
+    float row_width = 0.0f;
+    float row_height = 0.0f;
+    float total_height = 0.0f;
+    for (const char raw : text) {
+        const std::uint8_t code = static_cast<std::uint8_t>(raw);
+        if (code == 0x0a) {
+            widest = std::max(widest, row_width);
+            total_height += row_height;
+            row_width = 0.0f;
+            row_height = 0.0f;
+            continue;
+        }
+        const FontGlyph* glyph = font.find(code);
+        if (code == 0x20 || glyph == nullptr) {
+            row_width += font.space_width * style.x_scale;
+            if (row_height == 0.0f) {
+                row_height = (font.leading + font.base_height) * style.y_scale;
+            }
+            continue;
+        }
+        row_width += (font.kerning + glyph->width) * style.x_scale;
+        row_height =
+            std::max(row_height, (font.leading + glyph->height) * style.y_scale);
+    }
+    widest = std::max(widest, row_width);
+    TextSize size;
+    size.width = widest / half_width;
+    size.height = (total_height + row_height) / half_height;
+    return size;
+}
+
+// FUN_0056e300: the pen in the 640 x 480 text space, the height of a row and
+// the scale layout_string takes.
+TextPen text_pen(const PixmapFont& font, const TextStyle& style, float x, float y,
+                 float half_width, float half_height) {
+    TextPen pen;
+    pen.x = x * half_width + half_width;
+    pen.y = half_height - y * half_height;
+    pen.row_height = (font.leading + font.base_height) * style.y_scale;
+    pen.scale = style.x_scale;
+    return pen;
 }
 
 }  // namespace bo2::engine

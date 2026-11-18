@@ -204,6 +204,11 @@ nothing draws them yet, and the SDL path does not have it.
 `layout_children` (`include/bo2/game/menu_layout.hpp`, `src/game/menu_layout.cpp`)
 is the child placement of `FUN_0055c6c0` in its four modes; the original then
 lays out each child in turn, which is not ported.
+`make_text_style` (`FUN_0056e2b0`), `measure_text` (`FUN_0056df40`) and
+`text_pen` (`FUN_0056e300`) in `include/bo2/engine/pixmap_font.hpp` and
+`src/engine/pixmap_font.cpp` are the style, the measure and the pen of a UI
+text; the five items of the main menu match the sizes and the pen of the five
+languages.
 `test_text_parser_on_every_table` runs `parse_text` over the 92 string tables
 of the game; per language (default, english, french, german, italian, spanish)
 they hold 17/15/15/15/15/15 tables, 250/238/238/238/236/238 values,

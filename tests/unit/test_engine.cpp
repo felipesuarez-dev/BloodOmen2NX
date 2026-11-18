@@ -638,14 +638,16 @@ struct GlyphSpec {
     float height;
 };
 
-std::vector<std::uint8_t> make_font(bool upper_case_only, const std::vector<GlyphSpec>& glyphs) {
+std::vector<std::uint8_t> make_font(bool upper_case_only, const std::vector<GlyphSpec>& glyphs,
+                                    float base_height = 20.0f, float kerning = 2.0f,
+                                    float leading = 5.0f, float space_width = 8.0f) {
     std::vector<std::uint8_t> data;
     append(data, std::string("texfont\0", 8));
     put32(data, static_cast<std::uint32_t>(40 + glyphs.size() * 20));
     put32(data, 0);
     put16(data, 0);
     put16(data, 0xFFFF);
-    for (float value : {20.0f, 2.0f, 5.0f, 8.0f}) {
+    for (float value : {base_height, kerning, leading, space_width}) {
         put_float(data, value);
     }
     data.push_back(upper_case_only ? 1 : 0);
@@ -1947,6 +1949,46 @@ void test_layout_string() {
     }
 }
 
+// FUN_0056e2b0, FUN_0056df40 and FUN_0056e300: the style, the measure and the
+// pen of a UI text (docs/TEXT.md, "The text of a menu").
+void test_text_style_and_measure() {
+    const auto near = [](float left, float right) {
+        return std::fabs(left - right) < 1.0e-5f;
+    };
+    const std::vector<std::uint16_t> symbols = {100};
+    std::vector<std::string> names(101);
+    names[100] = "fonts/revised";
+    const bo2::engine::PixmapFont font = bo2::engine::parse_pixmap_font(
+        make_font(false, {{'a', 0, 0, 5, 10}, {'b', 0, 0, 6, 12}}, 10.0f, 1.0f, 2.0f, 4.0f),
+        symbols, names);
+    const bo2::engine::TextStyle style = bo2::engine::make_text_style(font, 0.1f, 2.0f, 50.0f);
+    CHECK(near(style.y_scale, 0.1f * 50.0f / 12.0f));
+    CHECK(near(style.x_scale, style.y_scale * 2.0f));
+    const bo2::engine::TextSize ab =
+        bo2::engine::measure_text(font, style, "ab a", 100.0f, 50.0f);
+    CHECK(near(ab.width, (6.0f + 7.0f + 4.0f + 6.0f) * style.x_scale / 100.0f));
+    CHECK(near(ab.height, (2.0f + 12.0f) * style.y_scale / 50.0f));
+    const bo2::engine::TextSize lines =
+        bo2::engine::measure_text(font, style, "a\nb", 100.0f, 50.0f);
+    CHECK(near(lines.width, 7.0f * style.x_scale / 100.0f));
+    CHECK(near(lines.height, (12.0f + 14.0f) * style.y_scale / 50.0f));
+    const bo2::engine::TextSize space =
+        bo2::engine::measure_text(font, style, " ", 100.0f, 50.0f);
+    CHECK(near(space.width, 4.0f * style.x_scale / 100.0f));
+    CHECK(near(space.height, 12.0f * style.y_scale / 50.0f));
+    // A byte without a glyph measures as a space.
+    const bo2::engine::TextSize missing =
+        bo2::engine::measure_text(font, style, "z", 100.0f, 50.0f);
+    CHECK(near(missing.width, space.width));
+    CHECK(near(missing.height, space.height));
+    const bo2::engine::TextPen pen =
+        bo2::engine::text_pen(font, style, 0.5f, -0.5f, 100.0f, 50.0f);
+    CHECK(near(pen.x, 150.0f));
+    CHECK(near(pen.y, 75.0f));
+    CHECK(near(pen.row_height, 5.0f));
+    CHECK(near(pen.scale, style.x_scale));
+}
+
 // FUN_00772320: the parser of a stored text into rows of glyph and control
 // items, with the warnings of docs/TEXT.md, "Parsing a string".
 void test_text_parser() {
@@ -2376,6 +2418,7 @@ int main() {
     test_pixmap_font();
     test_glyph_bitmap();
     test_layout_string();
+    test_text_style_and_measure();
     test_text_parser();
     test_data_check();
     test_data_check_cellgrup();
