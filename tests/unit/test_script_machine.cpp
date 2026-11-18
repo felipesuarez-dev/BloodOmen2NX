@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -3583,6 +3584,104 @@ void test_link_all_regions(const std::filesystem::path& root) {
     CHECK(other_length == 0);
 }
 
+// The words an instruction takes, by its code (docs/SCRIPTS.md,
+// "Instructions").
+std::size_t instruction_words(std::uint32_t code) {
+    if (code == 0x49 || code == 0x4F || code == 0x55) {
+        return 3;
+    }
+    switch (code) {
+    case 0x02:
+    case 0x21:
+    case 0x26:
+    case 0x47:
+    case 0x48:
+    case 0x4A:
+    case 0x4B:
+    case 0x4C:
+    case 0x4D:
+    case 0x4E:
+    case 0x50:
+    case 0x51:
+    case 0x52:
+    case 0x53:
+    case 0x54:
+    case 0x56:
+    case 0x57:
+    case 0x58:
+        return 2;
+    default:
+        return 1;
+    }
+}
+
+// The codes the machine does not execute (the italics of the same table).
+bool machine_skips(std::uint32_t code) {
+    return (code >= 0x10 && code <= 0x16) || (code >= 0x19 && code <= 0x1B) || code == 0x20 ||
+           (code >= 0x22 && code <= 0x26) || (code >= 0x2A && code <= 0x2C) || code == 0x3D ||
+           (code >= 0x3F && code <= 0x44) || code > 0x60;
+}
+
+// BO2NX-184: every script body of the 165 region packages uses only codes the
+// machine runs. The counts come from the dumps.
+void test_codes_of_the_region_packages(const std::filesystem::path& root) {
+    std::size_t regions = 0;
+    std::size_t bodies = 0;
+    std::size_t words = 0;
+    std::size_t instructions = 0;
+    std::size_t skipped = 0;
+    std::map<std::uint32_t, std::size_t> counts;
+    std::vector<std::filesystem::path> files;
+    for (const std::filesystem::directory_entry& item :
+         std::filesystem::recursive_directory_iterator(root / "media/gogames/bo2")) {
+        if (item.is_regular_file() && item.path().extension() == ".big") {
+            files.push_back(item.path());
+        }
+    }
+    std::sort(files.begin(), files.end());
+    for (const std::filesystem::path& path : files) {
+        const bo2::engine::BigArchive archive = bo2::engine::BigArchive::load(path.string());
+        const RegionPrograms container = read_container(archive);
+        for (const auto& [name, region] : container.regions) {
+            ++regions;
+            for (const ScriptClass& cls : region->classes) {
+                for (const ScriptBody& body : cls.bodies) {
+                    if (body.native()) {
+                        continue;
+                    }
+                    ++bodies;
+                    words += body.code.size();
+                    std::size_t offset = 0;
+                    while (offset < body.code.size()) {
+                        const std::uint32_t code = body.code[offset] >> 24;
+                        ++instructions;
+                        ++counts[code];
+                        skipped += machine_skips(code) ? 1 : 0;
+                        const std::size_t length = instruction_words(code);
+                        if (offset + length > body.code.size()) {
+                            break;
+                        }
+                        offset += length;
+                    }
+                }
+            }
+        }
+    }
+    CHECK(regions == 165);
+    CHECK(bodies == 16104);
+    CHECK(words == 345637);
+    CHECK(instructions == 290084);
+    CHECK(counts[0x0D] == 342);
+    CHECK(counts[0x17] == 291);
+    CHECK(counts[0x18] == 291);
+    CHECK(counts[0x37] == 222);
+    CHECK(counts[0x53] == 15);
+    CHECK(counts[0x54] == 67);
+    CHECK(counts[0x57] == 1);
+    CHECK(counts[0x58] == 24);
+    CHECK(skipped == 0);
+}
+
 }  // namespace
 
 int main() {
@@ -3683,6 +3782,7 @@ int main() {
             test_sl01_level(root);
             test_level_scripts_sl01(root);
             test_link_all_regions(root);
+            test_codes_of_the_region_packages(root);
         } catch (const std::exception& error) {
             std::cerr << "script machine asset tests: " << error.what() << '\n';
             return 1;
