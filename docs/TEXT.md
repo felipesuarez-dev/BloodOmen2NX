@@ -192,4 +192,8 @@ the locale. `layout_string` (`include/bo2/engine/pixmap_font.hpp`,
 `src/engine/pixmap_font.cpp`) is `FUN_00575980`: it places the glyphs of a
 string with the advance and the texture coordinates of the original; the view
 coordinates and the renderer queue are not ported. The `Text` object and its
-own lists are not ported.
+own lists are not ported. `key_text` (`include/bo2/engine/string_table.hpp`,
+`src/engine/string_table.cpp`) is `FUN_007556e0`: the value of the key, or the
+key and the warning of the original when the table lacks it. `format_count`
+is the `%d` and `%%` part of `FUN_00755970`: it never passes text of the data
+to `printf`, and any other `%` code throws `common::ParseError`.

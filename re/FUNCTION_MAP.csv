@@ -15165,9 +15165,9 @@ address,name,subsystem,status,notes
 00755380,FUN_00755380,unknown,todo,ghidra
 007554e0,FUN_007554e0,unknown,todo,ghidra
 007555f0,FUN_007555f0,unknown,todo,ghidra
-007556e0,FUN_007556e0,unknown,todo,ghidra
+007556e0,FUN_007556e0,locale,translated,src/engine/string_table.cpp: key_text with the value of the key or the key and its warning; test_locale.cpp test_key_text; docs/TEXT.md The text of a key and its format codes
 00755850,FUN_00755850,unknown,todo,ghidra
-00755970,FUN_00755970,unknown,todo,ghidra
+00755970,FUN_00755970,locale,wip,src/engine/string_table.cpp: format_count with the %d and %% part; the text object is not ported; test_locale.cpp test_format_count
 00755af0,FUN_00755af0,unknown,todo,ghidra
 00755b30,FUN_00755b30,unknown,todo,ghidra
 00755e20,FUN_00755e20,unknown,todo,ghidra

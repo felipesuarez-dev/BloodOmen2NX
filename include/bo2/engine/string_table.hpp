@@ -55,4 +55,18 @@ private:
 // Control codes (`@c`, `@n`, `\x`, `\q`, `%d`) are lower case and pass through.
 std::string display_text(const std::string& stored, const std::string& locale);
 
+// Text of `key` in `table` (FUN_007556e0): the stored value, or the key itself
+// when the table has no such key. A missing key appends the message the
+// original writes to its log, without the final newline, to `warnings` when it
+// is not null.
+std::string key_text(const StringTable& table, const std::string& table_name,
+                     const std::string& key, std::vector<std::string>* warnings);
+
+// Formats the only format code of the game data (FUN_00755970): `%d` becomes
+// the signed decimal of `value` and `%%` a percent sign. Any other `%` throws
+// common::ParseError, so no text of the data reaches printf as a format. The
+// original formats into a 256-byte buffer and its longest formatted text is
+// 137 bytes, so nothing is truncated here.
+std::string format_count(const std::string& text, std::int32_t value);
+
 }  // namespace bo2::engine

@@ -439,6 +439,44 @@ void test_marker_use_per_language(const bo2::engine::BigArchive& archive) {
     }
 }
 
+// FUN_007556e0 and FUN_00755970 over the memory card prompts of ui/UI in the
+// five languages. The expected text is not copied into the repository: the
+// checks use its size and its SHA-256 digest.
+void test_memory_card_prompts(const bo2::engine::BigArchive& archive) {
+    const char* const locales[] = {"english", "french", "italian", "german", "spanish"};
+    for (const char* locale : locales) {
+        const bo2::engine::BigEntry* entry = archive.find("strtable", "ui/UI", locale);
+        CHECK(entry != nullptr);
+        if (entry == nullptr) {
+            continue;
+        }
+        const bo2::engine::StringTable table =
+            bo2::engine::StringTable::parse(archive, *entry);
+        std::vector<std::string> warnings;
+        const std::string absent =
+            bo2::engine::key_text(table, "ui/UI", "card_absent_menu_prompt", &warnings);
+        CHECK(warnings.empty());
+        const std::string absent_text = bo2::engine::format_count(absent, 45);
+        CHECK(absent_text.size() == 93);
+        CHECK(sha256_hex(absent_text) ==
+              "99823f6fc5d3d230e58407a8861f31bdfdb642d5342f5ff4e38fd3e0eb93e8cd");
+        const std::string full =
+            bo2::engine::key_text(table, "ui/UI", "card_full_menu_prompt", &warnings);
+        CHECK(warnings.empty());
+        const std::string full_text = bo2::engine::format_count(full, 45);
+        CHECK(full_text.size() == 137);
+        CHECK(sha256_hex(full_text) ==
+              "d7043281c734aca7b8fbf0d1ffb83f0565f434047d99a4845372d7f21f32d735");
+        std::size_t with_code = 0;
+        for (const bo2::engine::StringTableRecord& record : table.records()) {
+            if (record.value.find("%d") != std::string::npos) {
+                ++with_code;
+            }
+        }
+        CHECK(with_code == 2);
+    }
+}
+
 }  // namespace
 
 int main() {
@@ -465,6 +503,7 @@ int main() {
         test_game_font_glyphs(archive);
         test_layout_with_the_game_font(archive);
         test_text_parser_on_the_menu_table(archive);
+        test_memory_card_prompts(archive);
         test_marker_use_per_language(archive);
         // Every installed container starts its name table with the language names.
         const std::vector<std::string> expected = {"default", "english", "french",

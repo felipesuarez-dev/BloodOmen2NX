@@ -369,6 +369,29 @@ void test_display_text() {
     CHECK(bo2::engine::display_text("\x80\xFF", "english") == "\xC2\x80\xC3\xBF");
 }
 
+void test_key_text() {
+    const bo2::engine::StringTable table = parse_table({7, 0, 1, kEnd}, {7, 8});
+    std::vector<std::string> warnings;
+    CHECK(bo2::engine::key_text(table, "ui/UI", "key_one", &warnings) == "uno");
+    CHECK(warnings.empty());
+    CHECK(bo2::engine::key_text(table, "ui/UI", "KEY_ONE", nullptr) == "uno");
+    CHECK(bo2::engine::key_text(table, "ui/UI", "absent_key", nullptr) == "absent_key");
+    CHECK(bo2::engine::key_text(table, "ui/UI", "absent_key", &warnings) == "absent_key");
+    CHECK(warnings.size() == 1);
+    CHECK(warnings[0] == "ui: cannot get string by keyword 'absent_key' from the existing "
+                        "string table resource 'ui/UI'; defaulting its value");
+}
+
+void test_format_count() {
+    CHECK(bo2::engine::format_count("needs %dkb", 45) == "needs 45kb");
+    CHECK(bo2::engine::format_count("needs %dkb", -3) == "needs -3kb");
+    CHECK(bo2::engine::format_count("100%%", 7) == "100%");
+    CHECK(bo2::engine::format_count("%d%%", 1) == "1%");
+    CHECK(bo2::engine::format_count("plain", 1) == "plain");
+    CHECK(throws_parse_error([] { bo2::engine::format_count("%s", 0); }));
+    CHECK(throws_parse_error([] { bo2::engine::format_count("x%", 0); }));
+}
+
 }  // namespace
 
 int main() {
@@ -383,6 +406,8 @@ int main() {
         test_string_table_rejects_bad_payloads();
         test_string_table_by_locale();
         test_display_text();
+        test_key_text();
+        test_format_count();
     } catch (const std::exception& error) {
         std::cerr << "unexpected exception: " << error.what() << '\n';
         return 1;

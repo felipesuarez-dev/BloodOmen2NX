@@ -112,4 +112,40 @@ std::string display_text(const std::string& stored, const std::string&) {
     return text;
 }
 
+std::string key_text(const StringTable& table, const std::string& table_name,
+                     const std::string& key, std::vector<std::string>* warnings) {
+    if (const std::string* value = table.find(key)) {
+        return *value;
+    }
+    if (warnings != nullptr) {
+        warnings->push_back("ui: cannot get string by keyword '" + key +
+                            "' from the existing string table resource '" + table_name +
+                            "'; defaulting its value");
+    }
+    return key;
+}
+
+std::string format_count(const std::string& text, std::int32_t value) {
+    std::string formatted;
+    formatted.reserve(text.size() + 8);
+    for (std::size_t index = 0; index < text.size(); ++index) {
+        if (text[index] != '%') {
+            formatted.push_back(text[index]);
+            continue;
+        }
+        if (index + 1 >= text.size()) {
+            throw common::ParseError("format code is not supported");
+        }
+        ++index;
+        if (text[index] == 'd') {
+            formatted += std::to_string(value);
+        } else if (text[index] == '%') {
+            formatted.push_back('%');
+        } else {
+            throw common::ParseError("format code is not supported");
+        }
+    }
+    return formatted;
+}
+
 }  // namespace bo2::engine
