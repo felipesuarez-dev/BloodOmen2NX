@@ -26,6 +26,28 @@ void native_creature_script_by_name(ScriptMachine& machine, ScriptObjectId self,
 void native_get_hud(ScriptMachine& machine, ScriptObjectId self, std::uint32_t argc, ScriptAddress args,
                     ScriptAddress result);
 
+// creaturescript.getposition(), body 1 (FUN_00767170, FUN_0075fa70).
+void native_get_position(ScriptMachine& machine, ScriptObjectId self, std::uint32_t argc,
+                         ScriptAddress args, ScriptAddress result);
+// creaturescript.getrotation(), body 2 (FUN_00767180, FUN_0075faa0).
+void native_get_rotation(ScriptMachine& machine, ScriptObjectId self, std::uint32_t argc,
+                         ScriptAddress args, ScriptAddress result);
+// creaturescript.doesnamedcreatureexist(string), body 10 (FUN_00767360,
+// FUN_00760870).
+void native_does_named_creature_exist(ScriptMachine& machine, ScriptObjectId self,
+                                      std::uint32_t argc, ScriptAddress args, ScriptAddress result);
+// creaturescript.killcreature(creature), body 11 (FUN_00767400, FUN_007603e0).
+void native_kill_creature(ScriptMachine& machine, ScriptObjectId self, std::uint32_t argc,
+                          ScriptAddress args, ScriptAddress result);
+// creaturescript.hibernatecreature(creature), body 12 (FUN_00767420, FUN_00760410).
+void native_hibernate_creature(ScriptMachine& machine, ScriptObjectId self, std::uint32_t argc,
+                               ScriptAddress args, ScriptAddress result);
+// creaturescript.unhibernatecreature(creature), body 13 (FUN_00767440, FUN_00760430).
+void native_unhibernate_creature(ScriptMachine& machine, ScriptObjectId self, std::uint32_t argc,
+                                 ScriptAddress args, ScriptAddress result);
+// creaturescript.getscript(creature), body 16 (FUN_00767630, FUN_00760450).
+void native_get_script(ScriptMachine& machine, ScriptObjectId self, std::uint32_t argc,
+                       ScriptAddress args, ScriptAddress result);
 // creaturescript.creaturevalid(creature), body 8 (FUN_00767320, FUN_00760810).
 void native_creature_valid(ScriptMachine& machine, ScriptObjectId self, std::uint32_t argc,
                            ScriptAddress args, ScriptAddress result);

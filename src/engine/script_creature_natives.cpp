@@ -102,6 +102,92 @@ void native_get_hud(ScriptMachine& machine, ScriptObjectId, std::uint32_t, Scrip
     machine.store_handle(result, handle_or_null(machine, host_of(machine).hud_object()));
 }
 
+// FUN_00767170 (native), FUN_0075fa70 (helper): the three floats of the
+// creature's position into the block of the result.
+void native_get_position(ScriptMachine& machine, ScriptObjectId self, std::uint32_t,
+                         ScriptAddress, ScriptAddress result) {
+    const ScriptAddress block = result == 0 ? 0 : machine.memory().u32(result);
+    if (block == 0) {
+        return;
+    }
+    const std::array<float, 3> position = host_of(machine).creature_position(machine.creature_of(self));
+    for (std::size_t index = 0; index < 3; ++index) {
+        machine.memory().set_f32(block + static_cast<ScriptAddress>(index * 4), position[index]);
+    }
+}
+
+// FUN_00767180 (native), FUN_0075faa0 (helper): the same with the rotation.
+void native_get_rotation(ScriptMachine& machine, ScriptObjectId self, std::uint32_t,
+                         ScriptAddress, ScriptAddress result) {
+    const ScriptAddress block = result == 0 ? 0 : machine.memory().u32(result);
+    if (block == 0) {
+        return;
+    }
+    const std::array<float, 3> rotation = host_of(machine).creature_rotation(machine.creature_of(self));
+    for (std::size_t index = 0; index < 3; ++index) {
+        machine.memory().set_f32(block + static_cast<ScriptAddress>(index * 4), rotation[index]);
+    }
+}
+
+// FUN_00767360 (native), FUN_00760870 (helper): an empty name is 0 without a
+// search and never logs.
+void native_does_named_creature_exist(ScriptMachine& machine, ScriptObjectId self, std::uint32_t,
+                                      ScriptAddress args, ScriptAddress result) {
+    if (result == 0) {
+        return;
+    }
+    const std::string name = name_argument(machine, args);
+    if (name.empty()) {
+        store_byte(machine, result, false);
+        return;
+    }
+    store_byte(machine, result,
+               host_of(machine).find_creature(machine.creature_of(self), name) != 0);
+}
+
+// FUN_00767400 (native), FUN_007603e0 (helper): a creature with a package is
+// hibernated, the others are removed.
+void native_kill_creature(ScriptMachine& machine, ScriptObjectId, std::uint32_t, ScriptAddress args,
+                          ScriptAddress) {
+    const std::uint32_t creature = creature_argument(machine, args, 0);
+    if (creature == 0) {
+        return;
+    }
+    ScriptCreatureHost& host = host_of(machine);
+    if (host.creature_has_package(creature)) {
+        host.hibernate_creature(creature);
+    } else {
+        host.remove_creature(creature);
+    }
+}
+
+// FUN_00767420 (native), FUN_00760410 (helper): hibernate the creature.
+void native_hibernate_creature(ScriptMachine& machine, ScriptObjectId, std::uint32_t,
+                               ScriptAddress args, ScriptAddress) {
+    const std::uint32_t creature = creature_argument(machine, args, 0);
+    if (creature != 0) {
+        host_of(machine).hibernate_creature(creature);
+    }
+}
+
+// FUN_00767440 (native), FUN_00760430 (helper): wake the creature.
+void native_unhibernate_creature(ScriptMachine& machine, ScriptObjectId, std::uint32_t,
+                                 ScriptAddress args, ScriptAddress) {
+    const std::uint32_t creature = creature_argument(machine, args, 0);
+    if (creature != 0) {
+        host_of(machine).unhibernate_creature(creature);
+    }
+}
+
+// FUN_00767630 (native), FUN_00760450 (helper): the object of the creature,
+// whatever its class.
+void native_get_script(ScriptMachine& machine, ScriptObjectId, std::uint32_t, ScriptAddress args,
+                       ScriptAddress result) {
+    const std::uint32_t creature = creature_argument(machine, args, 0);
+    const ScriptObjectId object = creature == 0 ? 0 : host_of(machine).creature_object(creature);
+    machine.store_handle(result, object == 0 ? 0 : machine.handle_of(object));
+}
+
 // FUN_00767320 (native), FUN_00760810 (helper): whether the creature is not 0.
 void native_creature_valid(ScriptMachine& machine, ScriptObjectId, std::uint32_t, ScriptAddress args,
                            ScriptAddress result) {
@@ -183,6 +269,13 @@ void native_disable_sim_when_script_done(ScriptMachine& machine, ScriptObjectId 
 }
 
 void bind_creature_natives(ScriptMachine& machine) {
+    machine.bind_native("creaturescript", 1, native_get_position);
+    machine.bind_native("creaturescript", 2, native_get_rotation);
+    machine.bind_native("creaturescript", 10, native_does_named_creature_exist);
+    machine.bind_native("creaturescript", 11, native_kill_creature);
+    machine.bind_native("creaturescript", 12, native_hibernate_creature);
+    machine.bind_native("creaturescript", 13, native_unhibernate_creature);
+    machine.bind_native("creaturescript", 16, native_get_script);
     machine.bind_native("creaturescript", 8, native_creature_valid);
     machine.bind_native("creaturescript", 9, native_creature_equal);
     machine.bind_native("creaturescript", 47, native_was_drawn_last_frame);

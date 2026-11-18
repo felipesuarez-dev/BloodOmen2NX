@@ -15389,8 +15389,8 @@ address,name,subsystem,status,notes
 0075f990,FUN_0075f990,unknown,todo,ghidra
 0075fa40,FUN_0075fa40,unknown,todo,ghidra
 0075fa50,FUN_0075fa50,unknown,todo,ghidra
-0075fa70,FUN_0075fa70,unknown,todo,ghidra
-0075faa0,FUN_0075faa0,unknown,todo,ghidra
+0075fa70,FUN_0075fa70,script,translated,src/engine/script_creature_natives.cpp: helper of native_get_position (FUN_00767170); tests/unit/test_script_machine.cpp
+0075faa0,FUN_0075faa0,script,translated,src/engine/script_creature_natives.cpp: helper of native_get_rotation (FUN_00767180); tests/unit/test_script_machine.cpp
 0075fad0,FUN_0075fad0,unknown,todo,ghidra
 0075fb20,FUN_0075fb20,unknown,todo,ghidra
 0075fb60,FUN_0075fb60,unknown,todo,ghidra
@@ -15404,10 +15404,10 @@ address,name,subsystem,status,notes
 007601f0,FUN_007601f0,unknown,todo,ghidra
 007602b0,FUN_007602b0,unknown,todo,ghidra
 00760330,FUN_00760330,unknown,todo,ghidra
-007603e0,FUN_007603e0,unknown,todo,ghidra
-00760410,FUN_00760410,unknown,todo,ghidra
-00760430,FUN_00760430,unknown,todo,ghidra
-00760450,FUN_00760450,unknown,todo,ghidra
+007603e0,FUN_007603e0,script,translated,src/engine/script_creature_natives.cpp: helper of native_kill_creature (FUN_00767400); tests/unit/test_script_machine.cpp
+00760410,FUN_00760410,script,translated,src/engine/script_creature_natives.cpp: helper of native_hibernate_creature (FUN_00767420); tests/unit/test_script_machine.cpp
+00760430,FUN_00760430,script,translated,src/engine/script_creature_natives.cpp: helper of native_unhibernate_creature (FUN_00767440); tests/unit/test_script_machine.cpp
+00760450,FUN_00760450,script,translated,src/engine/script_creature_natives.cpp: helper of native_get_script (FUN_00767630); tests/unit/test_script_machine.cpp
 00760480,FUN_00760480,unknown,todo,ghidra
 00760700,FUN_00760700,unknown,todo,ghidra
 00760750,FUN_00760750,script,translated,src/engine/script_creature_natives.cpp: native_creature_by_name; an empty name gives 0 and a missing creature gives 0 and the GetCreatureWithName warning
@@ -15416,7 +15416,7 @@ address,name,subsystem,status,notes
 00760810,FUN_00760810,script,translated,src/engine/script_creature_natives.cpp: helper of native_creature_valid (FUN_00767320); tests/unit/test_script_machine.cpp
 00760830,FUN_00760830,unknown,todo,ghidra
 00760850,FUN_00760850,script,translated,src/engine/script_creature_natives.cpp: helper of native_creature_equal (FUN_00767340); tests/unit/test_script_machine.cpp
-00760870,FUN_00760870,unknown,todo,ghidra
+00760870,FUN_00760870,script,translated,src/engine/script_creature_natives.cpp: helper of native_does_named_creature_exist (FUN_00767360); tests/unit/test_script_machine.cpp
 007608a0,FUN_007608a0,unknown,todo,ghidra
 00760900,FUN_00760900,unknown,todo,ghidra
 007609b0,FUN_007609b0,unknown,todo,ghidra
@@ -15563,15 +15563,20 @@ address,name,subsystem,status,notes
 00766770,FUN_00766770,unknown,todo,ghidra
 00766870,FUN_00766870,unknown,todo,ghidra
 007670e0,FUN_007670e0,unknown,todo,ghidra
+00767170,FUN_00767170,script,translated,src/engine/script_creature_natives.cpp: native_get_position body 1 (FUN_0075fa70); tests/unit/test_script_machine.cpp
+00767180,FUN_00767180,script,translated,src/engine/script_creature_natives.cpp: native_get_rotation body 2 (FUN_0075faa0); tests/unit/test_script_machine.cpp
 007671b0,FUN_007671b0,unknown,todo,ghidra
 00767270,FUN_00767270,script,translated,src/engine/script_creature_natives.cpp: native_creature_by_name takes the name argument (empty for a null cell)
 00767310,FUN_00767310,script,translated,src/engine/script_creature_natives.cpp: native_creature_self
 00767320,FUN_00767320,script,translated,src/engine/script_creature_natives.cpp: native_creature_valid body 8 (FUN_00760810); tests/unit/test_script_machine.cpp
 00767340,FUN_00767340,script,translated,src/engine/script_creature_natives.cpp: native_creature_equal body 9 (FUN_00760850); tests/unit/test_script_machine.cpp
-00767360,FUN_00767360,unknown,todo,ghidra
+00767360,FUN_00767360,script,translated,src/engine/script_creature_natives.cpp: native_does_named_creature_exist body 10 (FUN_00760870); tests/unit/test_script_machine.cpp
+00767400,FUN_00767400,script,translated,src/engine/script_creature_natives.cpp: native_kill_creature body 11 (FUN_007603e0); tests/unit/test_script_machine.cpp
+00767420,FUN_00767420,script,translated,src/engine/script_creature_natives.cpp: native_hibernate_creature body 12 (FUN_00760410); tests/unit/test_script_machine.cpp
+00767440,FUN_00767440,script,translated,src/engine/script_creature_natives.cpp: native_unhibernate_creature body 13 (FUN_00760430); tests/unit/test_script_machine.cpp
 00767460,FUN_00767460,unknown,todo,ghidra
 00767510,FUN_00767510,unknown,todo,ghidra
-00767630,FUN_00767630,unknown,todo,ghidra
+00767630,FUN_00767630,script,translated,src/engine/script_creature_natives.cpp: native_get_script body 16 (FUN_00760450); tests/unit/test_script_machine.cpp
 007676e0,FUN_007676e0,unknown,todo,ghidra
 00767790,FUN_00767790,unknown,todo,ghidra
 00767840,FUN_00767840,unknown,todo,ghidra

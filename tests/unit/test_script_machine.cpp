@@ -7,6 +7,7 @@
 #include <limits>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -1729,12 +1730,27 @@ struct FakeCreatures final : bo2::engine::ScriptCreatureHost {
     std::uint32_t kain() override { return kain_creature; }
     ScriptObjectId hud_object() override { return hud; }
 
-    std::array<float, 3> creature_position(std::uint32_t) override { return {}; }
-    std::array<float, 3> creature_rotation(std::uint32_t) override { return {}; }
-    bool creature_has_package(std::uint32_t) override { return true; }
-    void hibernate_creature(std::uint32_t) override {}
-    void unhibernate_creature(std::uint32_t) override {}
-    void remove_creature(std::uint32_t) override {}
+    std::map<std::uint32_t, std::array<float, 3>> positions;
+    std::map<std::uint32_t, std::array<float, 3>> rotations;
+    std::set<std::uint32_t> packages;
+    std::vector<std::uint32_t> hibernated;
+    std::vector<std::uint32_t> woken;
+    std::vector<std::uint32_t> removed;
+
+    std::array<float, 3> creature_position(std::uint32_t creature) override {
+        const auto found = positions.find(creature);
+        return found == positions.end() ? std::array<float, 3>{} : found->second;
+    }
+    std::array<float, 3> creature_rotation(std::uint32_t creature) override {
+        const auto found = rotations.find(creature);
+        return found == rotations.end() ? std::array<float, 3>{} : found->second;
+    }
+    bool creature_has_package(std::uint32_t creature) override {
+        return packages.count(creature) != 0;
+    }
+    void hibernate_creature(std::uint32_t creature) override { hibernated.push_back(creature); }
+    void unhibernate_creature(std::uint32_t creature) override { woken.push_back(creature); }
+    void remove_creature(std::uint32_t creature) override { removed.push_back(creature); }
     std::map<std::uint32_t, std::uint32_t> flags;
     std::map<std::uint32_t, std::uint32_t> drawn;
     std::uint32_t now = 0;
@@ -1955,6 +1971,106 @@ void test_creature_flag_natives() {
     memory.release(slot);
     memory.release(args);
     memory.release(result);
+}
+
+// The creaturescript natives of position, rotation, existence, kill,
+// hibernate and script (BO2NX-182).
+void test_creature_basic_natives() {
+    const Linked linked = make_program({native_class("basecreaturescript", "", 0),
+                                        native_class("creaturescript", "basecreaturescript", 78),
+                                        native_class("bo2creaturescript", "creaturescript", 12),
+                                        native_class("guard01", "bo2creaturescript", 0),
+                                        native_class("lever01", "basecreaturescript", 0)});
+    ScriptMachine machine(linked.program);
+    bo2::engine::bind_creature_natives(machine);
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    const ScriptObjectId guard = machine.create_object(linked.program.find_class("guard01") - 1);
+    const ScriptObjectId lever = machine.create_object(linked.program.find_class("lever01") - 1);
+    machine.set_creature(guard, 0x100);
+    machine.set_creature(lever, 0x200);
+    FakeCreatures creatures;
+    creatures.packages.insert(0x100);
+    creatures.positions[0x100] = {1.5f, -2.0f, 3.25f};
+    creatures.rotations[0x100] = {0.1f, 0.2f, 0.3f};
+    creatures.by_name = {{"guard01", 0x100}, {"lever01", 0x200}};
+    creatures.objects = {{0x100, guard}, {0x200, lever}};
+    machine.set_creature_host(&creatures);
+    const ScriptAddress args = memory.allocate(8);
+    const ScriptAddress result = memory.allocate(4);
+    const ScriptAddress slot = memory.allocate(4);
+    const ScriptAddress point = memory.allocate(4);
+    const ScriptAddress empty = memory.allocate(4);
+    bo2::engine::ScriptValueType& position = machine.value_type("position");
+
+    // getposition and getrotation into the block of the result slot.
+    position.init(machine, point, 0);
+    const ScriptAddress block = memory.u32(point);
+    bo2::engine::native_get_position(machine, guard, 0, args, point);
+    CHECK(floats_are(memory, block, {1.5f, -2.0f, 3.25f}));
+    bo2::engine::native_get_rotation(machine, guard, 0, args, point);
+    CHECK(floats_are(memory, block, {0.1f, 0.2f, 0.3f}));
+    CHECK(!throws([&] { bo2::engine::native_get_position(machine, guard, 0, args, empty); }));
+    CHECK(memory.u32(empty) == 0);
+    position.destroy(machine, point);
+
+    // doesnamedcreatureexist: an empty name asks no one and never logs.
+    const auto exists = [&](const char* name) {
+        const ScriptAddress cell = machine.new_string_cell(name);
+        memory.set_u32(args, cell);
+        memory.set_u32(result, 0xFFFFFF01U);
+        bo2::engine::native_does_named_creature_exist(machine, guard, 1, args, result);
+        const std::uint32_t value = memory.u32(result);
+        machine.release_string_cell(cell);
+        return value;
+    };
+    const std::size_t warned = machine.warnings().size();
+    CHECK(exists("lever01") == 0xFFFFFF01U);
+    CHECK(exists("nobody") == 0xFFFFFF00U);
+    const std::size_t asked = creatures.asked.size();
+    CHECK(exists("") == 0xFFFFFF00U);
+    CHECK(creatures.asked.size() == asked);
+    CHECK(machine.warnings().size() == warned);
+
+    // killcreature: with a package it hibernates, without it removes.
+    const auto creature_arg = [&](std::uint32_t creature) {
+        memory.set_u32(slot, creature);
+        memory.set_u32(args, slot);
+    };
+    creature_arg(0x100);
+    bo2::engine::native_kill_creature(machine, guard, 1, args, result);
+    CHECK(creatures.hibernated == std::vector<std::uint32_t>{0x100});
+    CHECK(creatures.removed.empty());
+    creature_arg(0x200);
+    bo2::engine::native_kill_creature(machine, guard, 1, args, result);
+    CHECK(creatures.removed == std::vector<std::uint32_t>{0x200});
+    creature_arg(0);
+    bo2::engine::native_kill_creature(machine, guard, 1, args, result);
+    CHECK(creatures.hibernated.size() == 1);
+    CHECK(creatures.removed.size() == 1);
+
+    creature_arg(0x200);
+    bo2::engine::native_hibernate_creature(machine, guard, 1, args, result);
+    CHECK(creatures.hibernated.size() == 2 && creatures.hibernated.back() == 0x200);
+    creature_arg(0x100);
+    bo2::engine::native_unhibernate_creature(machine, guard, 1, args, result);
+    CHECK(creatures.woken == std::vector<std::uint32_t>{0x100});
+
+    // getscript: the object of the creature, whatever its class.
+    creature_arg(0x200);
+    memory.set_u32(result, 0);
+    bo2::engine::native_get_script(machine, guard, 1, args, result);
+    CHECK(memory.u32(result) == machine.handle_of(lever));
+    CHECK(memory.u32(machine.handle_of(lever) + 4) == 2);
+    creature_arg(0);
+    bo2::engine::native_get_script(machine, guard, 1, args, result);
+    CHECK(memory.u32(result) == 0);
+    CHECK(memory.u32(machine.handle_of(lever) + 4) == 1);
+
+    memory.release(empty);
+    memory.release(point);
+    memory.release(slot);
+    memory.release(result);
+    memory.release(args);
 }
 
 // The class basescript of docs/SCRIPTS.md: 20 bodies, 17 of them native.
@@ -3076,6 +3192,11 @@ void test_create_sl01_objects(const std::filesystem::path& root) {
     CHECK(method_of("bo2creaturescript", 1).result.name == "creaturescript");
     CHECK(method_of("bo2creaturescript", 11).name == "gethud");
     CHECK(method_of("bo2creaturescript", 11).result.name == "hud");
+    CHECK(method_of("creaturescript", 1).name == "getposition");
+    CHECK(method_of("creaturescript", 2).name == "getrotation");
+    CHECK(method_of("creaturescript", 10).name == "doesnamedcreatureexist");
+    CHECK(method_of("creaturescript", 11).name == "killcreature");
+    CHECK(method_of("creaturescript", 16).name == "getscript");
     CHECK(method_of("creaturescript", 8).name == "creaturevalid");
     CHECK(method_of("creaturescript", 9).name == "creatureequal");
     CHECK(method_of("creaturescript", 47).name == "wasdrawnlastframe");
@@ -3286,6 +3407,7 @@ int main() {
     test_creature_and_store_handle();
     test_creature_natives();
     test_creature_flag_natives();
+    test_creature_basic_natives();
     test_native_self_and_state();
     test_native_compare();
     test_native_angles();
