@@ -159,6 +159,44 @@ def collect_entities(path: Path) -> list[dict]:
     return result
 
 
+def reserved_script(entity: dict) -> str:
+    """The value of the `reserved.script` property, "" when it has none
+    (FUN_007828c0): the first property with that key."""
+    for prop in entity.get("properties", []):
+        if prop["key"] == "reserved.script":
+            return prop["value"]
+    return ""
+
+
+def region_package_name(name: str) -> str:
+    """FUN_00783900: the name of the script package of a region: the
+    characters before the first letter are dropped, then the trailing spaces,
+    tabs, carriage returns and line feeds; every character that is not a
+    letter or a digit becomes `_`, and the letters become lower case."""
+
+    def letter(character):
+        return "A" <= character <= "Z" or "a" <= character <= "z"
+
+    def digit(character):
+        return "0" <= character <= "9"
+
+    first = 0
+    while first < len(name) and not letter(name[first]):
+        first += 1
+    last = len(name)
+    while last > first and name[last - 1] in " \t\r\n":
+        last -= 1
+    package = []
+    for character in name[first:last]:
+        if not letter(character) and not digit(character):
+            package.append("_")
+        elif "A" <= character <= "Z":
+            package.append(character.lower())
+        else:
+            package.append(character)
+    return "".join(package)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Blood Omen 2 region entity table")
     sub = parser.add_subparsers(dest="command", required=True)

@@ -1,3 +1,4 @@
+import os
 import struct
 import sys
 import tempfile
@@ -54,6 +55,45 @@ class RegionTest(unittest.TestCase):
             entities = region.collect_entities(path)
             self.assertEqual(len(entities), 1)
             self.assertEqual(entities[0]["model"], "dagger")
+
+    def test_reserved_script(self):
+        # FUN_007828c0: the value of the first reserved.script, "" for none.
+        entity = {"properties": [{"key": "reserved.marker", "type": 2, "value": 1}]}
+        self.assertEqual(region.reserved_script(entity), "")
+        self.assertEqual(region.reserved_script({"properties": []}), "")
+        entity = {
+            "properties": [
+                {"key": "reserved.script", "type": 8, "value": "hint_proximity"},
+                {"key": "reserved.script", "type": 8, "value": "other"},
+            ]
+        }
+        self.assertEqual(region.reserved_script(entity), "hint_proximity")
+
+    def test_region_package_name(self):
+        # FUN_00783900: the five controls of BO2NX-185.
+        self.assertEqual(region.region_package_name("slums/sl01"), "slums_sl01")
+        self.assertEqual(
+            region.region_package_name("bossrooms/charmvampirearena/cvarena"),
+            "bossrooms_charmvampirearena_cvarena",
+        )
+        self.assertEqual(region.region_package_name("eternal prison/ep02"), "eternal_prison_ep02")
+        self.assertEqual(region.region_package_name("ui/optionscreen_01"), "ui_optionscreen_01")
+        self.assertEqual(region.region_package_name("  9a/B c \t"), "a_b_c")
+
+
+@unittest.skipUnless(os.environ.get("BO2NX_ASSETS_DIR"), "BO2NX_ASSETS_DIR is unset")
+class GameRegionTest(unittest.TestCase):
+    def test_scripted_entities_of_slums(self):
+        # 78, 66 and 94 entities with a script, none of them with a slash.
+        levels = Path(os.environ["BO2NX_ASSETS_DIR"]) / "media/gogames/bo2/resources/levels/slums"
+        expected = {"sl01.big": 78, "sl02.big": 66, "sl_music.big": 94}
+        for name, count in expected.items():
+            entities = region.collect_entities(levels / name)
+            scripts = [region.reserved_script(entity) for entity in entities]
+            scripts = [script for script in scripts if script]
+            self.assertEqual(len(scripts), count, name)
+            for script in scripts:
+                self.assertNotIn("/", script)
 
 
 if __name__ == "__main__":
