@@ -378,3 +378,16 @@ BO2NX_ASSETS_DIR=$PWD/external/installed
 last run and the meaning of each number are in
 [DATA_COVERAGE.md](DATA_COVERAGE.md). The tool is not a CTest case: a full
 walk takes about a minute and a half.
+
+## Checking the container round trip
+
+`scripts/verify_data.sh` unpacks and repacks every `.big` container with
+`tools/bo2fmt/bo2fmt.py verify` and compares the bytes:
+
+```sh
+BO2NX_ASSETS_DIR=$PWD/external/installed ./scripts/verify_data.sh
+```
+
+It prints `FAIL <path>` for every container that is not byte-identical and
+ends with `verified 179 of 179`; it exits with an error when one fails. The
+full run takes about a minute and is not part of CI.

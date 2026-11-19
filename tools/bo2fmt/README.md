@@ -99,7 +99,7 @@ the installed tree. `sfxi.py` still lists the SFXI resource container of
 | `sfxi.py` | Installer SFXI container | Verified against the reference installer |
 | `big.py` | `.big` (`goefile`) content container, locale-aware lookup (`find_localized`) | Verified: 179 files, 246,332 entries |
 | `rkv.py` | `pc.rkv` audio archive | Verified: 2,666 Ogg streams |
-| `bo2fmt.py` | Umbrella list/unpack/repack CLI | BIG and RKV list/unpack; BIG repack verified byte-identical |
+| `bo2fmt.py` | Umbrella list/unpack/repack CLI | BIG and RKV list/unpack; BIG repack verified byte-identical on the 179 containers with `scripts/verify_data.sh` |
 | `audio.py` | `sound` metadata and `strmfile` extraction | Verified on the installed tree; field semantics open |
 | `model.py` | model, skeleton and raw animation extraction | Verified: 5,168 models, 1,586 skinned |
 | `region.py` | entity table extraction | Verified: 15,632 entities, 533 models, 0 errors |
