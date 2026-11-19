@@ -59,7 +59,7 @@ the file when a reader change is deliberate.
 | lipsync | 71,182 | 0 | 0 |
 | litedata | 142 | 142 | 0 |
 | liteinfo | 1 | 0 | 0 |
-| model | 5,168 | 5,168 | 2 |
+| model | 5,168 | 5,168 | 0 |
 | musicbnk | 11 | 0 | 0 |
 | planinfo | 159 | 0 | 0 |
 | region | 165 | 165 | 0 |
@@ -93,16 +93,12 @@ draw.
 
 ## model
 
-2 of the 5,168 entries fail: `hyldencity/t_lamp/t_lamp` and
-`hyldencity/t_lampb/t_lampb` in `hc_10.big`, both with `prim index count does
-not match the triangle count`. The 144 `particles/pmarker` models, one per
-container, have no `rmd` chunk; BO2NX-167 reads them as markers with their
-collision and no geometry.
-
-| Container | Entry | Message |
-|---|---|---|
-| `resources/levels/hyldencity/hc_10.big` | `hyldencity/t_lamp/t_lamp` | `prim index count does not match the triangle count` |
-| `resources/levels/hyldencity/hc_10.big` | `hyldencity/t_lampb/t_lampb` | `prim index count does not match the triangle count` |
+All 5,168 entries are read without a failure. The 144 `particles/pmarker`
+models, one per container, have no `rmd` chunk and are read as markers with
+their collision and no geometry (BO2NX-167). The two lamps of `hc_10.big`,
+`hyldencity/t_lamp/t_lamp` and `hyldencity/t_lampb/t_lampb`, carry the `n2`,
+`n3` and `n4` arrays of the prim tail and are read with the format of
+`FUN_0061de60` (BO2NX-169).
 
 ## texture
 

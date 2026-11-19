@@ -9430,7 +9430,7 @@ address,name,subsystem,status,notes
 0061d550,FUN_0061d550,unknown,todo,ghidra
 0061d700,FUN_0061d700,unknown,todo,ghidra
 0061db50,FUN_0061db50,unknown,todo,ghidra
-0061de60,FUN_0061de60,unknown,todo,ghidra
+0061de60,FUN_0061de60,render,wip,src/engine/cell_group.cpp: parse_prims reads one group of the prims with the format of FUN_0061de60; the n2 n3 and n4 arrays and the 16 bytes are skipped; test_engine.cpp test_prim_tail_arrays and test_model_asset.cpp test_hc10_lamps
 0061e400,FUN_0061e400,unknown,todo,ghidra
 0061e840,FUN_0061e840,unknown,todo,ghidra
 0061e9a0,FUN_0061e9a0,unknown,todo,ghidra

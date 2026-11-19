@@ -831,24 +831,39 @@ void read_material_cull(const common::Reader& reader, const std::vector<Chunk>& 
     }
 }
 
-void parse_prims(const common::Reader& reader, const Chunk& chunk, std::uint32_t vertex_base,
-                 std::uint32_t vertex_count, std::uint32_t model, std::uint32_t material_base,
+void parse_prims(const common::Reader& reader, const Chunk& chunk, std::uint32_t version,
+                 std::uint32_t vertex_base, std::uint32_t vertex_count, std::uint32_t model,
+                 std::uint32_t material_base,
                  const std::vector<std::int32_t>& material_texture, LevelGeometry& geometry) {
     if (chunk.data_size < 4) {
         throw common::ParseError("empty prim chunk");
     }
     const std::size_t end = chunk.data_offset + chunk.data_size;
+    const auto align4 = [](std::size_t value) { return (value + 3) & ~std::size_t{3U}; };
     const std::uint32_t groups = reader.u32(chunk.data_offset);
     std::size_t position = chunk.data_offset + 4;
     for (std::uint32_t group = 0; group < groups; ++group) {
-        if (position + 12 > end) {
+        if (position + 8 > end) {
             throw common::ParseError("truncated prim group");
         }
         const std::uint32_t material = reader.u32(position);
-        const std::uint32_t triangles = reader.u32(position + 4);
-        const std::uint32_t indices = reader.u32(position + 8);
-        position += 12;
-        if (triangles * 3 != indices) {
+        const std::uint16_t triangles = reader.u16(position + 4);
+        const std::uint16_t strips = reader.u16(position + 6);
+        position += 8;
+        if (strips != 0) {
+            if (position + static_cast<std::size_t>(strips) * 2 > end) {
+                throw common::ParseError("prim strip lengths are truncated");
+            }
+            position = align4(position + static_cast<std::size_t>(strips) * 2);
+            throw common::ParseError("prim strips are not read");
+        }
+        position = align4(position);
+        if (position + 4 > end) {
+            throw common::ParseError("truncated prim group");
+        }
+        const std::uint32_t indices = reader.u32(position);
+        position += 4;
+        if (indices != static_cast<std::uint32_t>(triangles) * 3U) {
             throw common::ParseError("prim index count does not match the triangle count");
         }
         if (position + static_cast<std::size_t>(indices) * 2 > end) {
@@ -876,15 +891,55 @@ void parse_prims(const common::Reader& reader, const Chunk& chunk, std::uint32_t
             geometry.triangles.push_back({vertex_base + a, vertex_base + b, vertex_base + c,
                                           global_material, model, 0xFFFFFFFFU, texture, -1});
         }
-        position += static_cast<std::size_t>(indices) * 2;
-        if (position + 2 > end) {
-            throw common::ParseError("prim trailer is truncated");
+        position = align4(position + static_cast<std::size_t>(indices) * 2);
+        if (version >= 1) {
+            // FUN_0061de60: the tail of a group of version 1 or later. `a`,
+            // the three arrays and the 16 bytes are not read; the arrays are
+            // skipped by their counts.
+            if (position + 4 > end) {
+                throw common::ParseError("prim tail is truncated");
+            }
+            const std::uint32_t a = reader.u32(position);
+            position += 4;
+            const auto skip_array = [&](std::uint32_t stride) {
+                if (position + 4 > end) {
+                    throw common::ParseError("prim array is truncated");
+                }
+                const std::uint32_t count = reader.u32(position);
+                position += 4;
+                const std::size_t bytes = static_cast<std::size_t>(count) * stride;
+                if (position + bytes > end) {
+                    throw common::ParseError("prim array is truncated");
+                }
+                position += bytes;
+            };
+            skip_array(4);
+            skip_array(8);
+            skip_array(16);
+            if (position + 16 > end) {
+                throw common::ParseError("prim tail is truncated");
+            }
+            position += 16;
+            if ((a >> 16) != 0) {
+                if (position + 4 > end) {
+                    throw common::ParseError("prim tail is truncated");
+                }
+                position += 4;
+            }
         }
-        const std::uint16_t flag = reader.u16(position);
-        position += 2;
-        position += (flag == 0xFFFFU) ? 40 : 38;
+        if (version >= 2) {
+            if (position + 2 > end) {
+                throw common::ParseError("prim adc list is truncated");
+            }
+            const std::uint16_t adcs = reader.u16(position);
+            position += 2;
+            if (position + adcs > end) {
+                throw common::ParseError("prim adc list is truncated");
+            }
+            position = align4(position + adcs);
+        }
         if (position > end) {
-            throw common::ParseError("prim extra data is truncated");
+            throw common::ParseError("prim group is truncated");
         }
     }
     if (position != end) {
@@ -1084,8 +1139,10 @@ void parse_model(const common::Reader& reader, const Chunk& rmd, std::uint32_t m
     const std::vector<std::int32_t> material_texture = read_material_textures(
         reader, find_chunk(chunks, "texture"), symbols, names, material_base, geometry);
     read_material_cull(reader, chunks, material_base, geometry);
-    parse_prims(reader, *prims, base, static_cast<std::uint32_t>(vertices.size()), model,
-                material_base, material_texture, geometry);
+    // The `rmd` opens with the version its loader passes to FUN_0061de60.
+    parse_prims(reader, *prims, reader.u32(rmd.data_offset), base,
+                static_cast<std::uint32_t>(vertices.size()), model, material_base,
+                material_texture, geometry);
     // The skin weights and joint indices live inside the rmd on character
     // models (the cell group also carries a top-level fallback).
     const Chunk* weights = find_chunk(chunks, "vtxweigh");

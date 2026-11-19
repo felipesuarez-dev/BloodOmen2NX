@@ -395,28 +395,38 @@ std::vector<std::uint8_t> build_cell_group(
         put_float(normals, 1.0f);
     }
     std::vector<std::uint8_t> prims;
+    const auto append_prim_tail = [](std::vector<std::uint8_t>& out) {
+        put32(out, 0x00010000U);  // a: the high half is not 0
+        put32(out, 0);            // n2
+        put32(out, 0);            // n3
+        put32(out, 0);            // n4
+        for (int index = 0; index < 16; ++index) {
+            out.push_back(0);
+        }
+        put16(out, 0);  // the two u16 of a non-zero high half
+        put16(out, 0);
+        put16(out, 0);  // ADC count
+        put16(out, 0);  // pad to 4
+    };
     put32(prims, 2);
     put32(prims, 0);
-    put32(prims, 2);
+    put16(prims, 2);  // triangles
+    put16(prims, 0);  // strips
     put32(prims, 6);
     for (std::uint16_t index : {std::uint16_t{0}, std::uint16_t{1}, std::uint16_t{2}, std::uint16_t{0},
                                 std::uint16_t{2}, std::uint16_t{3}}) {
         put16(prims, index);
     }
+    append_prim_tail(prims);
+    put32(prims, 1);
+    put16(prims, 1);
     put16(prims, 0);
-    for (int index = 0; index < 38; ++index) {
-        prims.push_back(0);
-    }
-    put32(prims, 1);
-    put32(prims, 1);
     put32(prims, 3);
     for (std::uint16_t index : {std::uint16_t{0}, std::uint16_t{1}, std::uint16_t{2}}) {
         put16(prims, index);
     }
-    put16(prims, 0xFFFF);
-    for (int index = 0; index < 40; ++index) {
-        prims.push_back(0);
-    }
+    put16(prims, 0);  // pad of the indices to 4
+    append_prim_tail(prims);
 
     std::vector<std::uint8_t> uv_indices;
     put32(uv_indices, 4);
@@ -1492,6 +1502,69 @@ void test_model_asset_without_mesh() {
     CHECK(geometry.maximum.x == 0.0f && geometry.maximum.y == 0.0f && geometry.maximum.z == 0.0f);
 }
 
+void test_prim_tail_arrays() {
+    std::vector<std::uint8_t> positions;
+    put32(positions, 4);
+    for (const auto& point :
+         std::vector<std::array<float, 3>>{{0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0}}) {
+        put_float(positions, point[0]);
+        put_float(positions, point[1]);
+        put_float(positions, point[2]);
+    }
+    std::vector<std::uint8_t> prims;
+    put32(prims, 1);
+    put32(prims, 0);
+    put16(prims, 1);
+    put16(prims, 0);
+    put32(prims, 3);
+    put16(prims, 0);
+    put16(prims, 1);
+    put16(prims, 2);
+    put16(prims, 0);   // pad of the indices to 4
+    put32(prims, 0);   // a, high half 0
+    put32(prims, 2);   // n2
+    for (int index = 0; index < 8; ++index) {
+        prims.push_back(0);
+    }
+    put32(prims, 1);   // n3
+    for (int index = 0; index < 8; ++index) {
+        prims.push_back(0);
+    }
+    put32(prims, 1);   // n4
+    for (int index = 0; index < 16; ++index) {
+        prims.push_back(0);
+    }
+    for (int index = 0; index < 16; ++index) {
+        prims.push_back(0);
+    }
+    put16(prims, 0);   // ADC count
+    put16(prims, 0);   // pad to 4
+    std::vector<std::uint8_t> record;
+    append_chunk(record, "position", positions);
+    append_chunk(record, "prims", prims);
+    std::vector<std::uint8_t> rmd;
+    put32(rmd, 2);
+    std::string name = "default";
+    name.resize(8, '\0');
+    append(rmd, name);
+    put32(rmd, static_cast<std::uint32_t>(16 + record.size()));
+    put32(rmd, 0);
+    rmd.insert(rmd.end(), record.begin(), record.end());
+    std::vector<std::uint8_t> chunks;
+    append_chunk(chunks, "rmd", rmd);
+    std::vector<std::uint8_t> model;
+    put32(model, 105);
+    append(model, "default");
+    model.push_back(0);
+    put32(model, static_cast<std::uint32_t>(16 + chunks.size()));
+    put32(model, 0);
+    model.insert(model.end(), chunks.begin(), chunks.end());
+    const bo2::engine::LevelGeometry geometry =
+        bo2::engine::parse_model_asset(model, {}, {});
+    CHECK(geometry.positions.size() == 4);
+    CHECK(geometry.triangles.size() == 1);
+}
+
 // The `texture` chunk holds one variable-length record per material: the
 // count, that many symbols and a 0xffff pad when the count is odd.
 void test_material_texture_lists() {    std::vector<std::uint8_t> textures;
@@ -2410,6 +2483,7 @@ int main() {
     test_cell_group_without_models();
     test_cell_group_without_triangles();
     test_model_asset_without_mesh();
+    test_prim_tail_arrays();
     test_material_texture_lists();
     test_material_cull();
     test_model_render_priority();

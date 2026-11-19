@@ -534,6 +534,26 @@ int main() {
                 CHECK(geometry.collisions[0].name == "default");
             }
         }
+        // The two hc_10 lamps: their groups carry the n2, n3 and n4 arrays of
+        // the prim tail (BO2NX-169).
+        const std::filesystem::path lamps =
+            std::filesystem::path(root) /
+            "media/gogames/bo2/resources/levels/hyldencity/hc_10.big";
+        if (std::filesystem::exists(lamps)) {
+            const bo2::engine::BigArchive lamp_archive =
+                bo2::engine::BigArchive::load(lamps.string());
+            for (const char* name : {"hyldencity/t_lamp/t_lamp",
+                                     "hyldencity/t_lampb/t_lampb"}) {
+                const bo2::engine::BigEntry* entry = lamp_archive.find("model", name);
+                CHECK(entry != nullptr);
+                if (entry == nullptr) {
+                    continue;
+                }
+                const bo2::engine::LevelGeometry geometry = bo2::engine::parse_model_asset(
+                    lamp_archive.extract(*entry), entry->symbols, lamp_archive.names());
+                CHECK(!geometry.triangles.empty());
+            }
+        }
         // The HUD scene of code.big: a cell group whose markers name the
         // model and the clip of every object.
         const std::filesystem::path code =
