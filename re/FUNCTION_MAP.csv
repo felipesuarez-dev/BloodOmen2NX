@@ -8204,7 +8204,7 @@ address,name,subsystem,status,notes
 005e1a10,FUN_005e1a10,unknown,todo,ghidra
 005e1b60,FUN_005e1b60,animation,wip,src/engine/anim_graph.cpp: the tagged reel reference (index << 1 | 1) is read; the other reference forms are not
 005e1d80,FUN_005e1d80,animation,wip,src/engine/anim_machine.cpp: AnimMachine::start_clip starts the clock the blend time before the clip; the blend sampler and the resume flags and the root channel slots are not ported
-005e1f80,FUN_005e1f80,animation,wip,src/engine/anim_machine.cpp: AnimMachine::advance_clip moves the clock in real time during the blend and at the clip rate after it and clamps at the end and gives the root motion of blends and of clips with a transform; the root channels of the reel and the events are not ported
+005e1f80,FUN_005e1f80,animation,wip,src/engine/anim_machine.cpp: AnimMachine::advance_clip moves the clock in real time during the blend and at the clip rate after it and keeps what it used for the caller's leftover; the root channels of the reel and the events are not ported
 005e26a0,FUN_005e26a0,unknown,todo,ghidra
 005e26c0,FUN_005e26c0,unknown,todo,ghidra
 005e2750,FUN_005e2750,unknown,todo,ghidra
@@ -8241,12 +8241,12 @@ address,name,subsystem,status,notes
 005e36d0,FUN_005e36d0,unknown,todo,ghidra
 005e3930,FUN_005e3930,unknown,todo,ghidra
 005e3960,FUN_005e3960,unknown,todo,ghidra
-005e3aa0,FUN_005e3aa0,unknown,todo,ghidra
+005e3aa0,FUN_005e3aa0,animation,wip,src/engine/anim_machine.cpp: AnimLayers::made_ marks the layer when a state or a sequence is started on it
 005e3b80,FUN_005e3b80,animation,wip,src/engine/anim_machine.cpp: AnimLayers::start_state starts a state on a layer; the machines exist from the start instead of being created on demand; test_layers in tests/unit/test_anim_machine.cpp
 005e3bf0,FUN_005e3bf0,unknown,todo,ghidra
 005e3c80,FUN_005e3c80,unknown,todo,ghidra
 005e3e50,FUN_005e3e50,animation,wip,src/engine/anim_machine.cpp: AnimLayers::play_sequence plays a sequence on a layer; the state reset before it is not ported
-005e3ea0,FUN_005e3ea0,animation,wip,src/engine/anim_machine.cpp: AnimLayers::advance moves every layer and each keeps its root motion; the root layer index at +0x130 and the callback of a finished instance are not ported
+005e3ea0,FUN_005e3ea0,animation,wip,src/engine/anim_machine.cpp: AnimLayers::advance_flags moves only the layers with a machine made and gives their flags in three bits each; the callback of a finished instance is not ported
 005e3eb2,FUN_005e3eb2,unknown,todo,ghidra
 005e43e0,FUN_005e43e0,animation,wip,src/engine/skeleton_pose.cpp: bone_matrices multiplies the local matrix by the parent's with the parentless bone at identity; the per-bone cache and the LOD collapse and the entity matrix are not ported
 005e49b0,FUN_005e49b0,unknown,todo,ghidra
@@ -9977,7 +9977,7 @@ address,name,subsystem,status,notes
 00642e30,FUN_00642e30,unknown,todo,ghidra
 00642e50,FUN_00642e50,unknown,todo,ghidra
 00642ea0,FUN_00642ea0,animation,wip,src/engine/anim_graph.cpp: name tags are read as byte offsets into the name pool; the rest is not
-00643030,FUN_00643030,animation,wip,src/engine/anim_machine.cpp: AnimMachine::advance restarts the requested state when the sequence has finished and reports the finish and runs the state function with its child state; the layer entity is not ported
+00643030,FUN_00643030,animation,wip,src/engine/anim_machine.cpp: AnimMachine::advance_flags gives the four flags of FUN_00643030 and the state function runs with its child state; the layer entity is not ported
 00643170,FUN_00643170,unknown,todo,ghidra
 006431b0,FUN_006431b0,unknown,todo,ghidra
 00643200,FUN_00643200,unknown,todo,ghidra
@@ -9989,7 +9989,7 @@ address,name,subsystem,status,notes
 00643820,FUN_00643820,unknown,todo,ghidra
 00643d60,FUN_00643d60,animation,wip,src/engine/anim_graph.cpp: a clip index of -1 means no clip; the rest of the node rule is not ported
 00643f10,FUN_00643f10,animation,wip,src/engine/anim_machine.cpp: AnimMachine::play_sequence starts the first chain link with the given blend or its own; the event flush is not ported
-00643f80,FUN_00643f80,animation,wip,src/engine/anim_machine.cpp: AnimMachine::advance moves the clip once and starts the next chain link or rests on the terminator when it ends; the sequence clock and the events are not ported
+00643f80,FUN_00643f80,animation,wip,src/engine/anim_machine.cpp: AnimMachine::advance_flags moves the clip once and starts the next chain link or rests on the terminator when it ends; the sequence clock and the events are not ported
 006440b0,FUN_006440b0,unknown,todo,ghidra
 006440c0,FUN_006440c0,unknown,todo,ghidra
 00644110,FUN_00644110,unknown,todo,ghidra

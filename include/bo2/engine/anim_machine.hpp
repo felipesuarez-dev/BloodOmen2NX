@@ -62,6 +62,12 @@ public:
     // left over is dropped, as the callers of the original drop it. Returns
     // true when the sequence played its last clip to the end during the call.
     bool advance(double seconds);
+    // The same advance for the callers that use its result (the task of
+    // `playanimation`): the flags of FUN_00643030 (1 a link ended and the next
+    // one started, 2 the chain reached its end, 4 the sequence is over and the
+    // requested state is in) and, in `time`, what the clip did not use (0
+    // below 0.001 s). A machine with no state gives 4 and moves nothing.
+    std::uint32_t advance_flags(float& time);
     // The root motion of the last advance.
     const AnimRootMotion& root_motion() const { return root_; }
 
@@ -109,6 +115,7 @@ private:
     float out_ = 0.0f;       // machine+0x0c
     float rate_ = 1.0f;      // machine+0x10
     float blend_ = 0.0f;     // the blend time of the clip in play
+    double used_ = 0.0;      // FUN_005e1f80: the time the last clip move used
     std::uint32_t blend_tag_ = 0;  // the blend record of the clip in play
     AnimRootMotion root_;
     std::uint32_t starts_ = 0;
@@ -142,9 +149,16 @@ public:
     void play_sequence(std::int32_t layer, std::int32_t sequence, std::uint32_t blend_tag);
     // FUN_005e3ea0: advances every layer in order. Returns what layer 0 returns.
     bool advance(double seconds);
+    // The same advance for the callers that use its result (FUN_005e3ea0 with
+    // FUN_005e3aa0): only the layers that have a machine made (a state started
+    // or a sequence played on them) move, all from the same input time; their
+    // flags go to three bits each from bit 0 and `time` is the smallest left
+    // over. Without machines made it gives 0 and the same time.
+    std::uint32_t advance_flags(float& time);
 
 private:
     std::vector<AnimMachine> machines_;
+    std::vector<std::uint8_t> made_;  // FUN_005e3aa0: the layer has a machine
 };
 
 }  // namespace bo2::engine

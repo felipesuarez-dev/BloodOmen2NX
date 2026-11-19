@@ -333,7 +333,10 @@ fails, starts the state's child (`+0x14`; none stops the layer). That is how
 the blend layers of the run end by themselves (Kain's run state, below).
 
 The port runs kinds 1 to 4, conditions 0, 1, 5, 7 and the three combinators,
-and the state function (`AnimMachine`, with `AnimLayers` for the layers). The
+and the state function (`AnimMachine`, with `AnimLayers` for the layers).
+`AnimMachine::advance_flags` and `AnimLayers::advance_flags` give the flags of
+FUN_00643030 and the time the clip did not use (FUN_005e1f80, 0 below
+0.001 s); `advance` is the advance Kain uses, which drops that time. The
 layer entity (kind 5), the callbacks (kind 6) and the clip events are not
 ported.
 The pose blend is drawn from the machine's blend factor

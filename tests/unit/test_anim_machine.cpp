@@ -16,6 +16,7 @@ using bo2::engine::AnimAction;
 using bo2::engine::AnimChainLink;
 using bo2::engine::AnimClipNode;
 using bo2::engine::AnimGraph;
+using bo2::engine::AnimLayers;
 using bo2::engine::AnimMachine;
 using bo2::engine::AnimSequence;
 using bo2::engine::AnimState;
@@ -482,6 +483,139 @@ void test_kain_states() {
     CHECK(layers.state_of(1) == -1 && layers.state_of(2) == -1 && layers.state_of(3) == -1);
 }
 
+// A graph with state 0, which always plays sequence 0 over `chain`.
+AnimGraph chain_graph(std::vector<AnimClipNode> clips, std::vector<AnimChainLink> chain) {
+    AnimGraph graph;
+    graph.clips = std::move(clips);
+    graph.chain = std::move(chain);
+    graph.sequences = {AnimSequence{tag(0), "sq"}};
+    AnimState state;
+    state.name = "st";
+    state.transitions = {when(0, 0, {play(0)})};
+    graph.states = {state};
+    return graph;
+}
+
+// FUN_00643030 with FUN_005e1f80 (BO2NX-197): the flags of an advance and the
+// time the clip did not use.
+void test_advance_flags_one_clip() {
+    const AnimGraph graph =
+        chain_graph({clip(0.0f, 1.0f, 1.0f)}, {AnimChainLink{0, 0}, AnimChainLink{-1, 0}});
+    AnimMachine machine(graph);
+    machine.start_state(0);
+    float time = 0.75f;
+    CHECK(machine.advance_flags(time) == 0);
+    CHECK(near(time, 0.0f));
+    CHECK(near(machine.time(), 0.75f));
+    time = 0.5f;
+    CHECK(machine.advance_flags(time) == 7);  // the chain ended and the state is in
+    CHECK(near(time, 0.25f));
+    CHECK(near(machine.time(), 1.0f));
+    time = 0.25f;  // the sequence starts again at the beginning of the call
+    CHECK(machine.advance_flags(time) == 0);
+    CHECK(near(time, 0.0f));
+    CHECK(near(machine.time(), 0.25f));
+}
+
+// A clip that stays in its first frame takes all the time and ends never.
+void test_advance_flags_held() {
+    const AnimGraph graph =
+        chain_graph({clip(0.0f, 0.0f, 0.0f)}, {AnimChainLink{0, 0}, AnimChainLink{-1, 0}});
+    AnimMachine machine(graph);
+    machine.start_state(0);
+    for (int index = 0; index < 3; ++index) {
+        float time = 0.01f;
+        CHECK(machine.advance_flags(time) == 0);
+        CHECK(near(time, 0.0f));
+        CHECK(near(machine.time(), 0.0f));
+    }
+}
+
+// Two clips in a row: the first leaves the rest of its time and the second
+// does not move in the call that starts it.
+void test_advance_flags_chain() {
+    const AnimGraph graph = chain_graph(
+        {clip(0.0f, 1.0f, 1.0f), clip(0.0f, 0.5f, 1.0f)},
+        {AnimChainLink{0, 0}, AnimChainLink{1, 0}, AnimChainLink{-1, 0}});
+    AnimMachine machine(graph);
+    machine.start_state(0);
+    float time = 1.25f;
+    CHECK(machine.advance_flags(time) == 1);
+    CHECK(near(time, 0.25f));
+    CHECK(near(machine.time(), 0.0f));
+    time = 0.75f;
+    CHECK(machine.advance_flags(time) == 7);
+    CHECK(near(time, 0.25f));
+    CHECK(near(machine.time(), 0.5f));
+}
+
+// During a blend the clock moves in real time and the clip uses it all.
+void test_advance_flags_blend() {
+    AnimGraph graph;
+    graph.blends = {0.25f};
+    graph.clips = {clip(0.0f, 1.0f, 2.0f, tag(0))};
+    graph.chain = {AnimChainLink{0, 0}, AnimChainLink{-1, 0}};
+    graph.sequences = {AnimSequence{tag(0), "sq"}};
+    AnimState state;
+    state.name = "st";
+    state.transitions = {when(0, 0, {play(0)})};
+    graph.states = {state};
+    AnimMachine machine(graph);
+    machine.start_state(0);
+    float time = 0.5f;
+    CHECK(machine.advance_flags(time) == 0);
+    CHECK(near(time, 0.0f));
+    CHECK(near(machine.time(), 0.5f));
+}
+
+// No state: 4 at once and the time is not touched.
+void test_advance_flags_no_state() {
+    const AnimGraph graph =
+        chain_graph({clip(0.0f, 1.0f, 1.0f)}, {AnimChainLink{0, 0}, AnimChainLink{-1, 0}});
+    AnimMachine machine(graph);
+    float time = 0.5f;
+    CHECK(machine.advance_flags(time) == 4);
+    CHECK(near(time, 0.5f));
+    CHECK(machine.time() == 0.0f);
+}
+
+// FUN_005e3ea0 (BO2NX-197): only the layers with a machine made move, three
+// flag bits each from bit 0, and the smallest time left goes out.
+void test_layers_advance_flags() {
+    AnimGraph graph;
+    graph.clips = {clip(0.0f, 1.0f, 1.0f), clip(0.0f, 2.0f, 1.0f)};
+    graph.chain = {AnimChainLink{0, 0}, AnimChainLink{-1, 0}, AnimChainLink{1, 0},
+                   AnimChainLink{-1, 0}};
+    graph.sequences = {AnimSequence{tag(0), "sq_a"}, AnimSequence{tag(2), "sq_b"}};
+    AnimState first;
+    first.name = "st_a";
+    first.transitions = {when(0, 0, {play(0)})};
+    AnimState second;
+    second.name = "st_b";
+    second.transitions = {when(0, 0, {play(1)})};
+    graph.states = {first, second};
+
+    AnimLayers both(graph);
+    both.start_state(0, 0);
+    both.start_state(1, 1);
+    float time = 1.25f;
+    CHECK(both.advance_flags(time) == 7);  // layer 1 leaves nothing
+    CHECK(near(time, 0.0f));
+
+    AnimLayers one(graph);
+    one.start_state(0, 0);
+    time = 1.25f;
+    CHECK(one.advance_flags(time) == 7);
+    CHECK(near(time, 0.25f));
+
+    AnimLayers with_none(graph);
+    with_none.start_state(0, 0);
+    with_none.start_state(1, -1);  // a machine with no state: 4, shifted to bit 3
+    time = 1.25f;
+    CHECK(with_none.advance_flags(time) == 0x27);
+    CHECK(near(time, 0.25f));
+}
+
 }  // namespace
 
 int main() {
@@ -491,6 +625,12 @@ int main() {
         test_clip_runs_at_its_rate_and_loops();
         test_sequence_chain_and_finish();
         test_root_motion();
+        test_advance_flags_one_clip();
+        test_advance_flags_held();
+        test_advance_flags_chain();
+        test_advance_flags_blend();
+        test_advance_flags_no_state();
+        test_layers_advance_flags();
     test_conditions();
         test_layers();
         test_kain_states();
