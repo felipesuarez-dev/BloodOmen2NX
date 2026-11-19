@@ -23,6 +23,8 @@
 #include "bo2/engine/render_order.hpp"
 #include "bo2/engine/text.hpp"
 
+#include "truncation.hpp"
+
 namespace {
 
 int failures = 0;
@@ -1287,6 +1289,23 @@ std::vector<std::uint8_t> build_cell_group_without_triangles() {
     return data;
 }
 
+// BO2NX-127: every prefix of a valid container gives ParseError (or parses),
+// never another exception; the ASan build catches a read past the data.
+void test_bigarchive_parse_truncation() {
+    const std::vector<std::uint8_t> valid = build_big({
+        {"model", "alpha", {1, 2, 3}, {3, 4}},
+        {"texture", "Beta", {4, 5, 6, 7}, {}},
+    });
+    const std::vector<std::size_t> bad = bo2::testing::bad_prefixes(
+        valid, [](const std::vector<std::uint8_t>& prefix) {
+            static_cast<void>(bo2::engine::BigArchive::parse(prefix));
+        });
+    for (const std::size_t length : bad) {
+        std::cerr << "big archive: prefix of " << length << " bytes threw another exception\n";
+    }
+    CHECK(bad.empty());
+}
+
 void test_cell_group() {
     const std::vector<std::uint8_t> data = build_cell_group();
     const bo2::engine::LevelGeometry geometry = bo2::engine::parse_cell_group(data);
@@ -2473,6 +2492,7 @@ int main() {
     test_crt_random();
     test_game_random();
     test_big();
+    test_bigarchive_parse_truncation();
     test_big_archive_load_file();
     test_dds();
     test_dds_dxt2_dxt4();
