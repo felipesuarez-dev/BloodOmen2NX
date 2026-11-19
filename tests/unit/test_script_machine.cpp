@@ -1795,7 +1795,7 @@ ScriptClass native_class(const std::string& name, const std::string& parent, std
 // The natives that find creatures (BO2NX-177; docs/SCRIPTS.md).
 void test_creature_natives() {
     const Linked linked = make_program({native_class("basecreaturescript", "", 0),
-                                        native_class("creaturescript", "basecreaturescript", 78),
+                                        native_class("creaturescript", "basecreaturescript", 79),
                                         native_class("bo2creaturescript", "creaturescript", 12),
                                         native_class("guard01", "bo2creaturescript", 0),
                                         native_class("lever01", "basecreaturescript", 0)});
@@ -1862,11 +1862,41 @@ void test_creature_natives() {
     CHECK(count(lever) == 1);
 }
 
+// creaturescript.loadregion(string), body 78 (BO2NX-192; docs/SCRIPTS.md, the
+// row of the creature natives): the name goes to the creature host as it
+// arrives, a cell with no string is the empty name, and nothing is written.
+void test_load_region_native() {
+    const Linked linked = make_program({native_class("basecreaturescript", "", 0),
+                                        native_class("creaturescript", "basecreaturescript", 79),
+                                        native_class("bo2creaturescript", "creaturescript", 12),
+                                        native_class("guard01", "creaturescript", 0)});
+    ScriptMachine machine(linked.program);
+    bo2::engine::bind_creature_natives(machine);
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    const ScriptObjectId guard = machine.create_object(linked.program.find_class("guard01") - 1);
+    const ScriptAddress args = memory.allocate(4);
+    const ScriptAddress result = memory.allocate(4);
+    CHECK(throws([&] { bo2::engine::native_load_region(machine, guard, 1, args, result); }));
+    FakeCreatures creatures;
+    machine.set_creature_host(&creatures);
+    memory.set_u32(args, machine.new_string_cell("Slums\\SL02"));
+    memory.set_u32(result, 7);
+    bo2::engine::native_load_region(machine, guard, 1, args, result);
+    CHECK(memory.u32(result) == 7);
+    memory.set_u32(args, 0);
+    bo2::engine::native_load_region(machine, guard, 1, args, result);
+    CHECK(creatures.regions.size() == 2);
+    if (creatures.regions.size() == 2) {
+        CHECK(creatures.regions[0] == "Slums\\SL02");
+        CHECK(creatures.regions[1].empty());
+    }
+}
+
 // The creaturescript natives of validity, drawing and simulation flags
 // (BO2NX-181; docs/SCRIPTS.md, "More natives of creaturescript").
 void test_creature_flag_natives() {
     const Linked linked = make_program({native_class("basecreaturescript", "", 0),
-                                        native_class("creaturescript", "basecreaturescript", 78),
+                                        native_class("creaturescript", "basecreaturescript", 79),
                                         native_class("bo2creaturescript", "creaturescript", 12),
                                         native_class("guard01", "bo2creaturescript", 0),
                                         native_class("lever01", "basecreaturescript", 0)});
@@ -1981,7 +2011,7 @@ void test_creature_flag_natives() {
 // hibernate and script (BO2NX-182).
 void test_creature_basic_natives() {
     const Linked linked = make_program({native_class("basecreaturescript", "", 0),
-                                        native_class("creaturescript", "basecreaturescript", 78),
+                                        native_class("creaturescript", "basecreaturescript", 79),
                                         native_class("bo2creaturescript", "creaturescript", 12),
                                         native_class("guard01", "bo2creaturescript", 0),
                                         native_class("lever01", "basecreaturescript", 0)});
@@ -3445,6 +3475,7 @@ void test_create_sl01_objects(const std::filesystem::path& root) {
     CHECK(method_of("creaturescript", 47).name == "wasdrawnlastframe");
     CHECK(method_of("creaturescript", 69).name == "disablesimulate");
     CHECK(method_of("creaturescript", 77).name == "disablesimwhenscriptdone");
+    CHECK(method_of("creaturescript", 78).name == "loadregion");
 }
 
 void native_nothing(ScriptMachine&, ScriptObjectId, std::uint32_t, ScriptAddress, ScriptAddress) {}
@@ -4034,6 +4065,7 @@ int main() {
     test_activate_links_fields();
     test_creature_and_store_handle();
     test_creature_natives();
+    test_load_region_native();
     test_creature_flag_natives();
     test_creature_basic_natives();
     test_native_self_and_state();

@@ -15466,7 +15466,7 @@ address,name,subsystem,status,notes
 00761dd0,FUN_00761dd0,unknown,todo,ghidra
 00761f30,FUN_00761f30,unknown,todo,ghidra
 00762050,FUN_00762050,unknown,todo,ghidra
-007621a0,FUN_007621a0,unknown,todo,ghidra
+007621a0,FUN_007621a0,script,translated,src/engine/script_creature_natives.cpp: the debug option 5 of 0x21 is always off so the name goes as it is and no result is written
 007621c0,FUN_007621c0,unknown,todo,ghidra
 007621d0,FUN_007621d0,unknown,todo,ghidra
 00762200,FUN_00762200,unknown,todo,ghidra
@@ -15616,7 +15616,7 @@ address,name,subsystem,status,notes
 00768700,FUN_00768700,script,translated,src/engine/script_creature_natives.cpp: native_disable_sim_cull body 75 (FUN_007624a0); tests/unit/test_script_machine.cpp
 00768710,FUN_00768710,script,translated,src/engine/script_creature_natives.cpp: native_enable_sim_cull body 76 (FUN_007624b0); tests/unit/test_script_machine.cpp
 00768720,FUN_00768720,script,translated,src/engine/script_creature_natives.cpp: native_disable_sim_when_script_done body 77 (FUN_007624d0); tests/unit/test_script_machine.cpp
-00768730,FUN_00768730,unknown,todo,ghidra
+00768730,FUN_00768730,script,translated,src/engine/script_creature_natives.cpp: native_load_region reads the name of the first cell and asks the creature host with load_region
 007687d0,FUN_007687d0,unknown,todo,ghidra
 007688b0,FUN_007688b0,unknown,todo,ghidra
 007689d0,FUN_007689d0,unknown,todo,ghidra

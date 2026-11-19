@@ -138,14 +138,14 @@ design. `third_party/stb_vorbis.c` is third-party code (`NOTICE`).
 | `src/engine/script_package.cpp` | Reader of the compiled script packages | data format | analysis | 10 |
 | `src/engine/script_program.cpp` | Linker of the script packages of a region | behaviour | analysis | 4 |
 | `src/engine/script_machine.cpp` | Interpreter of the script machine | behaviour | analysis | 76 |
-| `src/engine/script_creature_natives.cpp` | Natives of the creature scripts: the searches, position and rotation, existence, kill, hibernate, the drawing and the simulation flags | behaviour | analysis | 47 |
+| `src/engine/script_creature_natives.cpp` | Natives of the creature scripts: the searches, position and rotation, existence, kill, hibernate, the drawing and the simulation flags, and the request to load a region | behaviour | analysis | 48 |
 | `src/engine/script_natives.cpp` | The natives of basescript | behaviour | specification | 34 |
 | `src/engine/script_value_natives.cpp` | The natives of the value classes | behaviour | specification | 54 |
 | `src/engine/script_sound_natives.cpp` | Natives of sound, soundgroup and effect | behaviour | specification | 70 |
 | `src/engine/script_effect_natives.cpp` | Natives of sound, soundgroup and effect | behaviour | specification | 28 |
 | `src/engine/script_timer.cpp` | Timers of the scripts: value type, task and natives | behaviour | analysis | 18 |
 | `src/engine/script_level.cpp` | The creatures of a level for the script machine (its host) | behaviour | analysis | 27 |
-| `src/engine/script_detector.cpp` | The sensor of a detectorscript: its steps, scan, entries and events, and the seven natives of the class | behaviour | specification | 31 |
+| `src/engine/script_detector.cpp` | The sensor of a detectorscript: its steps, scan, entries and events, and the seven natives of the class | behaviour | specification | 32 |
 | `src/engine/crt_random.cpp` | The rand of the C library the game links | behaviour | analysis | 1 |
 | `src/engine/random.cpp` | The game's random number generator | behaviour | specification | 3 |
 | `src/engine/script_memory.cpp` | 32-bit memory of the script machine | port's own; the 4-byte cells of the original | analysis | 0 |

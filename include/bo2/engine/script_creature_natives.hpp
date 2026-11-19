@@ -88,6 +88,11 @@ void native_enable_sim_cull(ScriptMachine& machine, ScriptObjectId self, std::ui
 void native_disable_sim_when_script_done(ScriptMachine& machine, ScriptObjectId self,
                                          std::uint32_t argc, ScriptAddress args,
                                          ScriptAddress result);
+// creaturescript.loadregion(string), body 78 (FUN_00768730, FUN_007621a0): asks
+// the creature host to load the region; the name arrives as it is and there is
+// no result. The debug option that skips the call (5, 0x21) is always off.
+void native_load_region(ScriptMachine& machine, ScriptObjectId self, std::uint32_t argc,
+                        ScriptAddress args, ScriptAddress result);
 
 // Binds the natives to their bodies (the binders of the two classes start at
 // 0x7668f0 and 0x4cd3f0).

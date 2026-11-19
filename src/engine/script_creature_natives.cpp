@@ -268,6 +268,16 @@ void native_disable_sim_when_script_done(ScriptMachine& machine, ScriptObjectId 
     update_flags(machine, self, ~0U, 0x10000U);
 }
 
+// FUN_007621a0: the name is the string of the first argument cell, empty when
+// that cell holds no string; the host queues the region and nothing is
+// written. The original skips the call when its debug option (5, 0x21) is on,
+// which the port never sets.
+void native_load_region(ScriptMachine& machine, ScriptObjectId, std::uint32_t, ScriptAddress args,
+                        ScriptAddress) {
+    const std::string name = machine.string_at(machine.memory().u32(args));
+    host_of(machine).load_region(name);
+}
+
 void bind_creature_natives(ScriptMachine& machine) {
     machine.bind_native("creaturescript", 1, native_get_position);
     machine.bind_native("creaturescript", 2, native_get_rotation);
@@ -288,6 +298,7 @@ void bind_creature_natives(ScriptMachine& machine) {
     machine.bind_native("creaturescript", 75, native_disable_sim_cull);
     machine.bind_native("creaturescript", 76, native_enable_sim_cull);
     machine.bind_native("creaturescript", 77, native_disable_sim_when_script_done);
+    machine.bind_native("creaturescript", 78, native_load_region);
     machine.bind_native("creaturescript", 6, native_creature_by_name);
     machine.bind_native("creaturescript", 7, native_creature_self);
     machine.bind_native("bo2creaturescript", 0, native_get_kain);
