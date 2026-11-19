@@ -103,6 +103,7 @@ the installed tree. `sfxi.py` still lists the SFXI resource container of
 | `audio.py` | `sound` metadata and `strmfile` extraction | Verified on the installed tree; field semantics open |
 | `model.py` | model, skeleton and raw animation extraction | Verified: 5,168 models, 1,586 skinned |
 | `region.py` | entity table extraction | Verified: 15,632 entities, 533 models, 0 errors |
+| `cellgroup.py` | `cellgrup` reader: `models`, `attributes` (models with their chunks, marker, priority, materials and textures; the attributes of each model) | Verified: the 42 models and markers of `ui/hud`; 664 model blocks of `slums/sl01` |
 | `textures.py` | `texture` entries to PNG (Pillow; DXT2 and DXT4 are read as DXT3 and DXT5) with `index.json` | Verified on `slums/sl01`: 239/239 and `code.big`: 66/66 |
 | `strtable.py` | `strtable` reader: `dump <container.big> --entry <name> [--locale spanish] [--raw]` | Verified: 92/92 tables parse, 1 irregular record (Italian `ui/UI`); full accent table from the font art |
 | `font.py` | `texfont` reader: `dump <container.big> [--entry main/main]` | Verified: `main/main` of `code.big`, 87 glyphs |
