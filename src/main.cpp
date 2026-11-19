@@ -31,6 +31,7 @@
 #include "bo2/engine/tick.hpp"
 #include "bo2/engine/crt_random.hpp"
 #include "bo2/engine/script_creature_natives.hpp"
+#include "bo2/engine/script_detector.hpp"
 #include "bo2/engine/script_level.hpp"
 #include "bo2/engine/script_timer.hpp"
 #include "bo2/engine/world.hpp"
@@ -1328,6 +1329,7 @@ struct ScriptRun {
     std::unique_ptr<bo2::engine::ScriptMachine> machine;
     bo2::engine::CrtRandom random;
     std::unique_ptr<bo2::engine::ScriptLevel> level;
+    std::unique_ptr<bo2::engine::DetectorSensors> sensors;
     std::uint32_t kain = 0;
 };
 
@@ -1348,6 +1350,11 @@ std::unique_ptr<ScriptRun> start_scripts(const Options& options, const bo2::engi
     bo2::engine::bind_creature_natives(*run->machine);
     bo2::engine::bind_timer_natives(*run->machine);
     run->level = std::make_unique<bo2::engine::ScriptLevel>(*run->machine, run->random);
+    // The sensors of the detectors: their natives and the part of the objects
+    // that runs with them (FUN_004e13c0, FUN_004e1aa0).
+    run->sensors =
+        std::make_unique<bo2::engine::DetectorSensors>(*run->machine, *run->level, run->random);
+    run->level->add_object_hooks(run->sensors->hooks());
     const std::string code_path = code_container_path(options);
     const bo2::engine::BigArchive code = bo2::engine::BigArchive::load(code_path);
     const bo2::engine::BigEntry* tune = code.find("tunedata", "levelkeeper");

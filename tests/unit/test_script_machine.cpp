@@ -17,6 +17,7 @@
 #include "bo2/engine/region.hpp"
 #include "bo2/engine/script_creature_natives.hpp"
 #include "bo2/engine/crt_random.hpp"
+#include "bo2/engine/script_detector.hpp"
 #include "bo2/engine/script_level.hpp"
 #include "bo2/engine/script_timer.hpp"
 #include "bo2/engine/script_machine.hpp"
@@ -3452,6 +3453,163 @@ std::unique_ptr<bo2::engine::ScriptTask> task_nothing(ScriptMachine&, ScriptObje
     return nullptr;
 }
 
+// The range part of a detectorscript sensor (BO2NX-190, docs/SCRIPTS.md "The
+// sensor of a detectorscript"): the steps of 0.1 s, the scan, the entries and
+// the thresholds.
+void test_range_sensor() {
+    const std::array<float, 3> origin{0.0f, 0.0f, 0.0f};
+    bo2::engine::RangeSensor sensor(1, 1);
+    CHECK(sensor.thresholds() == (std::set<float>{128.0f, 256.0f, 512.0f}));
+    sensor.thresholds().clear();
+    sensor.thresholds().insert(100.0f);
+    bo2::engine::CrtRandom random;
+    bo2::engine::RangeSensor::Candidate kain;
+    kain.creature = 1;
+    kain.kind = 0;
+    kain.name = "kain";
+    kain.position = {50.0f, 0.0f, 0.0f};
+    kain.answers = true;
+    std::vector<bo2::engine::RangeSensor::Candidate> candidates = {kain};
+    sensor.step(0.1f, origin, "pkg", 7, candidates, random);
+    std::vector<bo2::engine::RangeSensor::Event> events = sensor.take_in_range();
+    CHECK(events.size() == 1);
+    if (events.size() == 1) {
+        CHECK(events[0].name == "kain");
+        CHECK(bits(events[0].distance) == 0x42480000U);  // 50
+    }
+    const auto entry = sensor.entries().find("kain");
+    CHECK(entry != sensor.entries().end());
+    if (entry != sensor.entries().end()) {
+        CHECK(bits(entry->second.timer) == 0x3e028f5cU);
+    }
+    CHECK(bits(sensor.scan_timer()) == 0x3f88f5c2U);
+
+    kain.position = {150.0f, 0.0f, 0.0f};
+    candidates = {kain};
+    sensor.step(0.1f, origin, "pkg", 7, candidates, random);
+    CHECK(sensor.take_in_range().empty());
+    const auto second = sensor.entries().find("kain");
+    CHECK(second != sensor.entries().end());
+    if (second != sensor.entries().end()) {
+        CHECK(bits(second->second.timer) == 0x3ce147acU);
+    }
+    CHECK(bits(sensor.scan_timer()) == 0x3f7851eaU);
+
+    sensor.step(0.1f, origin, "pkg", 7, candidates, random);
+    events = sensor.take_in_range();
+    CHECK(events.size() == 1);
+    if (events.size() == 1) {
+        CHECK(bits(events[0].distance) == 0x43160000U);  // 150
+    }
+    const auto third = sensor.entries().find("kain");
+    CHECK(third != sensor.entries().end());
+    if (third != sensor.entries().end()) {
+        CHECK(bits(third->second.timer) == 0x3e570a3eU);
+    }
+    CHECK(bits(sensor.scan_timer()) == 0x3f5eb850U);
+    CHECK(random.state() == 0x18be873aU);
+
+    // Out of range, another package, another kind and no answer: no entry.
+    bo2::engine::RangeSensor::Candidate far = kain;
+    far.position = {1300.0f, 0.0f, 0.0f};
+    bo2::engine::RangeSensor other(1, 1);
+    bo2::engine::CrtRandom other_random;
+    other.step(0.1f, origin, "pkg", 7, {far}, other_random);
+    CHECK(other.entries().empty());
+    bo2::engine::RangeSensor::Candidate foreign = kain;
+    foreign.package = "otro";
+    bo2::engine::RangeSensor packaged(1, 1);
+    bo2::engine::CrtRandom packaged_random;
+    packaged.step(0.1f, origin, "pkg", 7, {foreign}, packaged_random);
+    CHECK(packaged.entries().empty());
+    bo2::engine::RangeSensor::Candidate monster = kain;
+    monster.kind = 2;
+    bo2::engine::RangeSensor masked(1, 1);
+    bo2::engine::CrtRandom masked_random;
+    masked.step(0.1f, origin, "pkg", 7, {monster}, masked_random);
+    CHECK(masked.entries().empty());
+    bo2::engine::RangeSensor::Candidate silent = kain;
+    silent.answers = false;
+    bo2::engine::RangeSensor quiet(1, 1);
+    bo2::engine::CrtRandom quiet_random;
+    quiet.step(0.1f, origin, "pkg", 7, {silent}, quiet_random);
+    CHECK(quiet.entries().empty());
+    bo2::engine::CrtRandom expected;
+    expected.next();  // the candidate: drawn even when it does not answer
+    expected.next();  // the scan timer
+    CHECK(quiet_random.state() == expected.state());
+}
+
+// A detectorscript class with the seven native bodies of its binder.
+ScriptClass detector_class() {
+    ScriptClass cls = make_class("detectorscript", "", {"default"}, 26);
+    cls.methods = {make_method("body0", bo2::engine::kScriptNoSlot),
+                   make_method("body1", bo2::engine::kScriptNoSlot),
+                   make_method("body2", bo2::engine::kScriptNoSlot),
+                   make_method("body3", bo2::engine::kScriptNoSlot),
+                   make_method("body4", bo2::engine::kScriptNoSlot),
+                   make_method("removeallrangethresholds", bo2::engine::kScriptNoSlot),
+                   make_method("addrangethreshold", bo2::engine::kScriptNoSlot)};
+    for (std::uint16_t index = 0; index < 7; ++index) {
+        ScriptBody body = make_body(index, 0, {});
+        body.flags = 1;  // native
+        cls.bodies.push_back(body);
+    }
+    return cls;
+}
+
+// The natives of detectorscript and the sensor of a detectorscript object
+// (BO2NX-190): the seven bodies, the presence rule and bodies 5 and 6.
+void test_detector_natives() {
+    ScriptClass detector = detector_class();
+    ScriptClass hint = make_class("hint", "detectorscript", {"default"}, 26);
+    hint.methods = {make_method("onplayerinrange", 22)};
+    hint.bodies = {make_body(0, 0, {op(0x5C)})};
+    hint.slots = {{0, 22, "hint", 0}};
+    Linked linked = make_program({detector, hint});
+    ScriptMachine machine(linked.program);
+    bo2::engine::CrtRandom random;
+    bo2::engine::ScriptLevel level(machine, random);
+    bo2::engine::DetectorSensors sensors(machine, level, random);
+    const bo2::engine::ScriptLevel::ObjectHooks hooks = sensors.hooks();
+
+    const ScriptObjectId object = machine.create_object(1);  // hint
+    hooks.start(1, object);
+    const bo2::engine::RangeSensor* sensor = sensors.sensor_of(object);
+    CHECK(sensor != nullptr);
+    if (sensor != nullptr) {
+        CHECK(sensor->mask() == 1);
+        CHECK(sensor->flags() == 1);
+        CHECK(sensor->thresholds() == (std::set<float>{128.0f, 256.0f, 512.0f}));
+    }
+    // detectorscript alone: slots 22 to 25 hold no script body.
+    const ScriptObjectId plain = machine.create_object(0);
+    hooks.start(2, plain);
+    CHECK(sensors.sensor_of(plain) == nullptr);
+
+    bo2::engine::native_detector_nothing(machine, object, 0, 0, 0);
+    bo2::engine::native_detector_remove_all_range_thresholds(machine, object, 0, 0, 0);
+    if (sensor != nullptr) {
+        CHECK(sensor->thresholds().empty());
+    }
+    const ScriptAddress args = machine.memory().allocate(4);
+    machine.memory().set_f32(args, 300.0f);
+    bo2::engine::native_detector_add_range_threshold(machine, object, 1, args, 0);
+    bo2::engine::native_detector_add_range_threshold(machine, object, 1, args, 0);
+    if (sensor != nullptr) {
+        CHECK(sensor->thresholds() == (std::set<float>{300.0f}));
+    }
+    machine.memory().set_f32(args, 200.0f);
+    bo2::engine::native_detector_add_range_threshold(machine, object, 1, args, 0);
+    if (sensor != nullptr) {
+        CHECK(sensor->thresholds() == (std::set<float>{200.0f, 300.0f}));
+    }
+    // An object with no sensor ignores 5 and 6.
+    bo2::engine::native_detector_remove_all_range_thresholds(machine, plain, 0, 0, 0);
+    bo2::engine::native_detector_add_range_threshold(machine, plain, 1, args, 0);
+    CHECK(sensors.sensor_of(plain) == nullptr);
+}
+
 // The level of sl01 (ScriptLevel): 104 creatures, one per entity, and the
 // objects of the 78 with a script; every native the port has not ported
 // does nothing here. All of them activate and run 120 updates of 1/60 s
@@ -3514,6 +3672,136 @@ void test_sl01_level(const std::filesystem::path& root) {
     CHECK(states[1] == 33);
     CHECK(states[2] == 1);
     CHECK(states[3] == 8);
+}
+
+// The sensors of the six hint_proximity of sl01 (BO2NX-190): the thresholds
+// their scripts set, the four in-range events of the first update, the draws
+// they take and the object that stops.
+void test_sl01_detector_sensors(const std::filesystem::path& root) {
+    const bo2::engine::BigArchive archive = bo2::engine::BigArchive::load(
+        (root / "media/gogames/bo2/resources/levels/slums/sl01.big").string());
+    const RegionPrograms container = read_container(archive);
+    if (container.regions.size() != 1) {
+        CHECK(container.regions.size() == 1);
+        return;
+    }
+    const ScriptProgram program = link_region(container, *container.regions[0].second, kNativeTypes);
+    ScriptMachine machine(program);
+    for (const auto& cls : program.classes()) {
+        for (std::size_t index = 0; index < cls.bodies.size(); ++index) {
+            const auto& body = program.bodies()[cls.bodies[index]];
+            if (!body.source->native() || &program.classes()[body.owner] != &cls) {
+                continue;
+            }
+            // Body 2 of bo2creaturescript stays unbound: it is the one the
+            // onplayerinrange of hint_proximity001 calls (BO2NX-190, out of
+            // scope), so the control expects that object to stop there.
+            if (cls.name == "bo2creaturescript" && index == 2) {
+                continue;
+            }
+            machine.bind_native(cls.name, static_cast<std::uint16_t>(index), native_nothing);
+            machine.bind_task_native(cls.name, static_cast<std::uint16_t>(index), task_nothing);
+        }
+    }
+    bo2::engine::bind_creature_natives(machine);
+    bo2::engine::bind_timer_natives(machine);
+    bo2::engine::CrtRandom random;
+    bo2::engine::ScriptLevel level(machine, random);
+    bo2::engine::DetectorSensors sensors(machine, level, random);
+    level.add_object_hooks(sensors.hooks());
+    std::vector<bo2::engine::RegionEntityTable> tables;
+    for (const bo2::engine::BigEntry& entry : archive.entries()) {
+        if (entry.type == "region") {
+            tables = bo2::engine::parse_region_entities(archive.extract(entry));
+            CHECK(level.add_region(entry.name, tables) == 104);
+        }
+    }
+    bo2::engine::ScriptLevel::Creature kain;
+    kain.name = "kain";
+    kain.kain = true;
+    kain.position = {-8.75f, 57.125f, 208.0f};
+    level.add_creature(kain);
+    level.activate();
+    struct Sent {
+        std::uint32_t creature = 0;
+        std::uint32_t slot = 0;
+        std::uint32_t sensed = 0;
+        float distance = 0.0f;
+    };
+    std::vector<Sent> sent;
+    sensors.set_event_observer(
+        [&sent](std::uint32_t creature, std::uint32_t slot, std::uint32_t sensed, float distance) {
+            sent.push_back({creature, slot, sensed, distance});
+        });
+    std::map<std::string, std::uint32_t> words;
+    std::map<std::string, ScriptObjectId> objects;
+    for (std::uint32_t word = 1; word <= level.creatures().size(); ++word) {
+        words[level.creature(word).name] = word;
+        objects[level.creature(word).name] = level.creature(word).object;
+        level.creature(word).time = 0.0f;
+    }
+    const std::vector<std::pair<float, float>> expected = {
+        {320.0f, 340.0f}, {320.0f, 330.0f}, {256.0f, 300.0f},
+        {230.0f, 240.0f}, {256.0f, 260.0f}, {192.0f, 200.0f}};
+    for (std::size_t index = 0; index < expected.size(); ++index) {
+        const std::string name = "hint_proximity00" + std::to_string(index + 1);
+        level.creature(words.at(name)).time = 0.1f;
+        const bo2::engine::RangeSensor* sensor = sensors.sensor_of(objects.at(name));
+        CHECK(sensor != nullptr);
+        if (sensor != nullptr) {
+            CHECK(sensor->thresholds() ==
+                  (std::set<float>{expected[index].first, expected[index].second}));
+        }
+    }
+    for (const char* name : {"detector01", "detector02", "detector03", "detector04",
+                             "levelloader01"}) {
+        CHECK(sensors.sensor_of(objects.at(name)) == nullptr);
+    }
+    level.update(0.0f);
+    CHECK(sent.size() == 4);
+    if (sent.size() == 4) {
+        CHECK(sent[0].creature == words.at("hint_proximity001"));
+        CHECK(sent[0].slot == 23);
+        CHECK(bits(sent[0].distance) == 0x4379d19dU);
+        CHECK(sent[1].creature == words.at("hint_proximity001"));
+        CHECK(sent[1].slot == 22);
+        CHECK(bits(sent[1].distance) == 0x4379d19dU);
+        CHECK(sent[2].creature == words.at("hint_proximity006"));
+        CHECK(sent[2].slot == 23);
+        CHECK(bits(sent[2].distance) == 0x44527e24U);
+        CHECK(sent[3].creature == words.at("hint_proximity006"));
+        CHECK(sent[3].slot == 22);
+        CHECK(bits(sent[3].distance) == 0x44527e24U);
+        for (const Sent& event : sent) {
+            CHECK(event.sensed == level.kain());
+        }
+    }
+    const bo2::engine::RangeSensor* first = sensors.sensor_of(objects.at("hint_proximity001"));
+    CHECK(first != nullptr);
+    if (first != nullptr) {
+        const auto entry = first->entries().find("kain");
+        CHECK(entry != first->entries().end());
+        if (entry != first->entries().end()) {
+            CHECK(bits(entry->second.timer) == 0x3e028f5cU);
+        }
+        CHECK(bits(first->scan_timer()) == 0x3f88f5c2U);
+    }
+    const bo2::engine::RangeSensor* sixth = sensors.sensor_of(objects.at("hint_proximity006"));
+    CHECK(sixth != nullptr);
+    if (sixth != nullptr) {
+        const auto entry = sixth->entries().find("kain");
+        CHECK(entry != sixth->entries().end());
+        if (entry != sixth->entries().end()) {
+            CHECK(bits(entry->second.timer) == 0x3e6147aeU);
+        }
+    }
+    CHECK(random.state() == 0x72ae7869U);
+    CHECK(level.errors().size() == 1);
+    if (level.errors().size() == 1) {
+        CHECK(level.errors()[0].find("hint_proximity001: ") == 0);
+        CHECK(level.errors()[0].find("native body 2 of bo2creaturescript is not bound") !=
+              std::string::npos);
+    }
 }
 
 // The level keeper's tune in code.big and the scripts of the sl01 container
@@ -3771,6 +4059,8 @@ int main() {
     test_region_model_radius();
     test_object_hooks();
     test_region_requests();
+    test_range_sensor();
+    test_detector_natives();
 
     const char* root = std::getenv("BO2NX_ASSETS_DIR");
     if (root == nullptr) {
@@ -3780,6 +4070,7 @@ int main() {
             test_link_sl01(root);
             test_create_sl01_objects(root);
             test_sl01_level(root);
+            test_sl01_detector_sensors(root);
             test_level_scripts_sl01(root);
             test_link_all_regions(root);
             test_codes_of_the_region_packages(root);

@@ -23,8 +23,8 @@ English version: [README.en.md](README.en.md)
 
 <!-- badges:start -->
 [status-badge]: https://img.shields.io/badge/fase-M3%20en%20curso-orange
-[overall-badge]: https://img.shields.io/badge/global-9.1%25-yellow
-[fn-badge]: https://img.shields.io/badge/funciones-349%20%2F%2017110-lightgrey
+[overall-badge]: https://img.shields.io/badge/global-9.2%25-yellow
+[fn-badge]: https://img.shields.io/badge/funciones-373%20%2F%2017118-lightgrey
 [levels-badge]: https://img.shields.io/badge/niveles-0%20%2F%2011-lightgrey
 <!-- badges:end -->
 [cpp-badge]: https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white
@@ -73,15 +73,15 @@ El original se usa como referencia; no se distribuye.
 **Dónde está el proyecto: M0 y M1 están completos; M3 es la fase actual. M2 cumplió su criterio de cierre pero le quedan cinco tareas, y M4 ya avanza.** La canalización de datos, el renderizador de niveles y el oráculo funcionan. Kain camina, corre y salta (con control en el aire) con los ajustes de movimiento originales y el port elige el español como el original. La máquina que ejecuta los scripts del juego está portada, pero todavía no corre los scripts de un nivel, y el combate y los enemigos no están traducidos, así que **no se puede completar ningún capítulo**. Los números de abajo se generan y miden lo que el port traduce, no qué tan jugable se siente (consulta [qué miden los porcentajes](#qué-miden-los-porcentajes)).
 
 <!-- progress:start -->
-**Progreso global: 9.1%**
+**Progreso global: 9.2%**
 
 | Componente | Peso | Avance | Puntaje |
 |---|---:|---:|---:|
-| Funciones traducidas / en alcance | 60% | 349 / 17 110 | 2.04% |
+| Funciones traducidas / en alcance | 60% | 373 / 17 118 | 2.18% |
 | Niveles completables (capítulos de la campaña) | 30% | 0 / 11 | 0.00% |
 | Características de plataforma | 10% | 9 / 12 + 1 parcial | 79.17% |
 
-Mapa de funciones: 35 712 filas: 349 traducidas, 236 en curso, 16 525 pendientes, 18 602 externas (no son código del juego).
+Mapa de funciones: 35 720 filas: 373 traducidas, 242 en curso, 16 503 pendientes, 18 602 externas (no son código del juego).
 
 ![Mapa del código del juego: un rectángulo por cada función de bo2.exe, del tamaño de su código y agrupado por sistema; verde lo traducido y ámbar lo que está en curso](docs/progress.svg)
 

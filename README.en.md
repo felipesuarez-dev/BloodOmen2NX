@@ -23,8 +23,8 @@ Lee esto en español: [README.md](README.md)
 
 <!-- badges:start -->
 [status-badge]: https://img.shields.io/badge/phase-M3%20in%20progress-orange
-[overall-badge]: https://img.shields.io/badge/overall-9.1%25-yellow
-[fn-badge]: https://img.shields.io/badge/functions-349%20%2F%2017110-lightgrey
+[overall-badge]: https://img.shields.io/badge/overall-9.2%25-yellow
+[fn-badge]: https://img.shields.io/badge/functions-373%20%2F%2017118-lightgrey
 [levels-badge]: https://img.shields.io/badge/levels-0%20%2F%2011-lightgrey
 <!-- badges:end -->
 [cpp-badge]: https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white
@@ -73,15 +73,15 @@ The original is used as a reference, not shipped.
 **Where the project stands: M0 and M1 are done; M3 is the current phase. M2 met its exit criterion but has five tasks left, and M4 is under way.** The data pipeline, the level renderer and the oracle work. Kain walks, runs and jumps (with air control) with the original movement tuning and the port picks Spanish like the original. The machine that runs the game's scripts is ported, but it does not run the scripts of a level yet, and combat and enemies are not translated, so **no chapter can be completed**. The numbers below are generated and measure what the port translates, not how playable it feels (see [what the percentages measure](#what-the-percentages-measure)).
 
 <!-- progress:start -->
-**Overall progress: 9.1%**
+**Overall progress: 9.2%**
 
 | Component | Weight | Progress | Score |
 |---|---:|---:|---:|
-| Functions translated / in scope | 60% | 349 / 17,110 | 2.04% |
+| Functions translated / in scope | 60% | 373 / 17,118 | 2.18% |
 | Levels completable (campaign chapters) | 30% | 0 / 11 | 0.00% |
 | Platform features | 10% | 9 / 12 + 1 partial | 79.17% |
 
-Function map: 35,712 rows: 349 translated, 236 in progress, 16,525 to do, 18,602 external (not game code).
+Function map: 35,720 rows: 373 translated, 242 in progress, 16,503 to do, 18,602 external (not game code).
 
 ![Map of the game code: one rectangle per function of bo2.exe, sized by its code and grouped by system; green is translated, amber is in progress](docs/progress.svg)
 

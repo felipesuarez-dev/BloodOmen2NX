@@ -142,7 +142,7 @@ address,name,subsystem,status,notes
 00407ec0,FUN_00407ec0,camera,wip,src/game/camera.cpp: yaw catch-up with the Hermite step; the x5 factor for input device type 2 is fitted not read
 00407fb0,FUN_00407fb0,unknown,todo,ghidra
 004082c0,FUN_004082c0,unknown,todo,ghidra
-004082e0,FUN_004082e0,unknown,todo,ghidra
+004082e0,FUN_004082e0,script,translated,src/engine/script_detector.cpp: the squared distance of the range test as (x*x + y*y) + z*z
 00408300,FUN_00408300,unknown,todo,ghidra
 00408480,FUN_00408480,unknown,todo,ghidra
 004088c0,FUN_004088c0,camera,wip,src/game/camera.cpp: range blend ported and pinned by test_camera.cpp; the pose tail still uses the host camera
@@ -535,7 +535,7 @@ address,name,subsystem,status,notes
 00418260,FUN_00418260,unknown,todo,ghidra
 00418400,FUN_00418400,unknown,todo,ghidra
 004187c0,FUN_004187c0,unknown,todo,ghidra
-00418c00,FUN_00418c00,unknown,todo,ghidra
+00418c00,FUN_00418c00,script,translated,src/engine/script_detector.cpp: the difference of the positions in the scan and the entry update
 00418c30,FUN_00418c30,unknown,todo,ghidra
 00418c60,FUN_00418c60,unknown,todo,ghidra
 00418e70,FUN_00418e70,unknown,todo,ghidra
@@ -879,7 +879,7 @@ address,name,subsystem,status,notes
 004300d0,FUN_004300d0,player,wip,src/game/kain_vitals.cpp: drain_rage takes dt times rage_lost_per_second; the game loop does not call it yet and the per-frame cost of each gift is not ported
 00430220,FUN_00430220,unknown,todo,ghidra
 00430280,FUN_00430280,unknown,todo,ghidra
-00430420,FUN_00430420,unknown,todo,ghidra
+00430420,FUN_00430420,script,wip,src/engine/script_detector.cpp: Kain answers the state query with state 0 and +8 at 0
 00430450,FUN_00430450,unknown,todo,ghidra
 004306b0,FUN_004306b0,unknown,todo,ghidra
 004306e0,FUN_004306e0,unknown,todo,ghidra
@@ -2052,7 +2052,7 @@ address,name,subsystem,status,notes
 0047d2b0,FUN_0047d2b0,unknown,todo,ghidra
 0047d2c0,FUN_0047d2c0,unknown,todo,ghidra
 0047d320,FUN_0047d320,unknown,todo,ghidra
-0047dab0,FUN_0047dab0,unknown,todo,ghidra
+0047dab0,FUN_0047dab0,script,translated,src/engine/script_detector.cpp: the distance of a candidate as sqrt of (x*x + y*y) + z*z
 0047daf0,FUN_0047daf0,unknown,todo,ghidra
 0047db10,FUN_0047db10,unknown,todo,ghidra
 0047db90,FUN_0047db90,unknown,todo,ghidra
@@ -2502,21 +2502,21 @@ address,name,subsystem,status,notes
 0049a910,FUN_0049a910,unknown,todo,ghidra
 0049a980,FUN_0049a980,unknown,todo,ghidra
 0049a9c0,FUN_0049a9c0,unknown,todo,ghidra
-0049a9f0,FUN_0049a9f0,unknown,todo,ghidra
-0049aa50,FUN_0049aa50,unknown,todo,ghidra
+0049a9f0,FUN_0049a9f0,script,translated,src/engine/script_detector.cpp: native_detector_remove_all_range_thresholds empties the ordered set
+0049aa50,FUN_0049aa50,script,translated,src/engine/script_detector.cpp: native_detector_add_range_threshold adds to the ordered set
 0049aaf0,FUN_0049aaf0,unknown,todo,ghidra
 0049ab70,FUN_0049ab70,unknown,todo,ghidra
-0049ad00,FUN_0049ad00,unknown,todo,ghidra
+0049ad00,FUN_0049ad00,script,wip,src/engine/script_detector.cpp: the update of an entry and its thresholds; the timers of the sight events are not ported
 0049b1a0,FUN_0049b1a0,unknown,todo,ghidra
-0049b210,FUN_0049b210,unknown,todo,ghidra
+0049b210,FUN_0049b210,script,wip,src/engine/script_detector.cpp: RangeSensor keeps the mask and the thresholds; the block of 16 floats is not ported
 0049b3c0,FUN_0049b3c0,unknown,todo,ghidra
 0049b460,FUN_0049b460,unknown,todo,ghidra
 0049b570,FUN_0049b570,unknown,todo,ghidra
-0049b5f0,FUN_0049b5f0,unknown,todo,ghidra
+0049b5f0,FUN_0049b5f0,script,wip,src/engine/script_detector.cpp: the range scan; only Kain is a candidate and the sight lists are not ported
 0049bc30,FUN_0049bc30,unknown,todo,ghidra
 0049bc50,FUN_0049bc50,unknown,todo,ghidra
 0049bc70,FUN_0049bc70,unknown,todo,ghidra
-0049bc90,FUN_0049bc90,unknown,todo,ghidra
+0049bc90,FUN_0049bc90,script,translated,src/engine/script_detector.cpp: RangeSensor::step in steps of 0.1 s with the scan and the entries
 0049bdc0,FUN_0049bdc0,unknown,todo,ghidra
 0049c040,FUN_0049c040,unknown,todo,ghidra
 0049c0f0,FUN_0049c0f0,unknown,todo,ghidra
@@ -3353,18 +3353,21 @@ address,name,subsystem,status,notes
 004d1700,FUN_004d1700,unknown,todo,ghidra
 004d1790,FUN_004d1790,unknown,todo,ghidra
 004d17c0,FUN_004d17c0,unknown,todo,ghidra
-004d1810,FUN_004d1810,unknown,todo,ghidra
-004d1850,FUN_004d1850,unknown,todo,ghidra
+004d1810,FUN_004d1810,script,translated,src/engine/script_detector.cpp: DetectorSensors holds the native part of the detectorscript objects
+004d1850,FUN_004d1850,script,translated,src/engine/script_detector.cpp: DetectorSensors holds the native part of the detectorscript objects
 004d1890,FUN_004d1890,unknown,todo,ghidra
 004d18d0,FUN_004d18d0,unknown,todo,ghidra
 004d1910,FUN_004d1910,unknown,todo,ghidra
 004d1990,FUN_004d1990,unknown,todo,ghidra
 004d1a90,FUN_004d1a90,unknown,todo,ghidra
 004d1b30,FUN_004d1b30,unknown,todo,ghidra
-004d1c30,FUN_004d1c30,unknown,todo,ghidra
-004d1cd0,FUN_004d1cd0,unknown,todo,ghidra
-004d1d70,FUN_004d1d70,unknown,todo,ghidra
-004d1e10,FUN_004d1e10,unknown,todo,ghidra
+004d1c10,FUN_004d1c10,script,translated,src/engine/script_detector.cpp: body 0 of detectorscript does nothing
+004d1c30,FUN_004d1c30,script,translated,src/engine/script_detector.cpp: body 1 of detectorscript does nothing
+004d1cd0,FUN_004d1cd0,script,translated,src/engine/script_detector.cpp: body 2 of detectorscript does nothing
+004d1d70,FUN_004d1d70,script,translated,src/engine/script_detector.cpp: body 3 of detectorscript does nothing
+004d1e10,FUN_004d1e10,script,translated,src/engine/script_detector.cpp: body 4 of detectorscript does nothing
+004d1eb0,FUN_004d1eb0,script,translated,src/engine/script_detector.cpp: body 5 of detectorscript removeallrangethresholds
+004d1ec0,FUN_004d1ec0,script,translated,src/engine/script_detector.cpp: body 6 of detectorscript addrangethreshold
 004d1f10,FUN_004d1f10,unknown,todo,ghidra
 004d1f40,FUN_004d1f40,unknown,todo,ghidra
 004d1f70,FUN_004d1f70,unknown,todo,ghidra
@@ -3683,14 +3686,19 @@ address,name,subsystem,status,notes
 004e0e70,FUN_004e0e70,unknown,todo,ghidra
 004e0ea0,FUN_004e0ea0,unknown,todo,ghidra
 004e1320,FUN_004e1320,unknown,todo,ghidra
+004e13c0,FUN_004e13c0,script,wip,src/engine/script_detector.cpp: the sensor of a detectorscript object and its range part; the sight events and the block of 16 floats are not ported
 004e1710,FUN_004e1710,unknown,todo,ghidra
 004e1810,FUN_004e1810,unknown,todo,ghidra
-004e1820,FUN_004e1820,unknown,todo,ghidra
-004e1830,FUN_004e1830,unknown,todo,ghidra
-004e1840,FUN_004e1840,unknown,todo,ghidra
-004e1850,FUN_004e1850,unknown,todo,ghidra
-004e1860,FUN_004e1860,unknown,todo,ghidra
-004e1870,FUN_004e1870,unknown,todo,ghidra
+004e1820,FUN_004e1820,script,translated,src/engine/script_detector.cpp: the empty function body 0 calls
+004e1830,FUN_004e1830,script,translated,src/engine/script_detector.cpp: the empty function body 1 calls
+004e1840,FUN_004e1840,script,translated,src/engine/script_detector.cpp: the empty function body 2 calls
+004e1850,FUN_004e1850,script,translated,src/engine/script_detector.cpp: the empty function body 3 calls
+004e1860,FUN_004e1860,script,translated,src/engine/script_detector.cpp: the empty function body 4 calls
+004e1870,FUN_004e1870,script,translated,src/engine/script_detector.cpp: native_detector_add_range_threshold does nothing without a sensor
+004e1890,FUN_004e1890,script,translated,src/engine/script_detector.cpp: native_detector_remove_all_range_thresholds does nothing without a sensor
+004e18a0,FUN_004e18a0,script,wip,src/engine/script_detector.cpp: the in-range events; the sight lists are not ported
+004e1a10,FUN_004e1a10,script,translated,src/engine/script_detector.cpp: has_script_event reads the state tables of the class for a script body in one of the four event slots
+004e1aa0,FUN_004e1aa0,script,translated,src/engine/script_detector.cpp: DetectorSensors::update steps the sensor after the object ran and sends its events past 0.25 s
 004e1de0,FUN_004e1de0,unknown,todo,ghidra
 004e1ec0,FUN_004e1ec0,unknown,todo,ghidra
 004e1f00,FUN_004e1f00,unknown,todo,ghidra

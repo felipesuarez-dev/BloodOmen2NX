@@ -41,6 +41,7 @@ add_library(bo2_engine STATIC
     src/engine/script_program.cpp
     src/engine/script_machine.cpp
     src/engine/script_creature_natives.cpp
+    src/engine/script_detector.cpp
     src/engine/script_natives.cpp
     src/engine/script_level.cpp
     src/engine/script_timer.cpp

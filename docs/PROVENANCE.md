@@ -145,6 +145,7 @@ design. `third_party/stb_vorbis.c` is third-party code (`NOTICE`).
 | `src/engine/script_effect_natives.cpp` | Natives of sound, soundgroup and effect | behaviour | specification | 28 |
 | `src/engine/script_timer.cpp` | Timers of the scripts: value type, task and natives | behaviour | analysis | 18 |
 | `src/engine/script_level.cpp` | The creatures of a level for the script machine (its host) | behaviour | analysis | 27 |
+| `src/engine/script_detector.cpp` | The sensor of a detectorscript: its steps, scan, entries and events, and the seven natives of the class | behaviour | specification | 31 |
 | `src/engine/crt_random.cpp` | The rand of the C library the game links | behaviour | analysis | 1 |
 | `src/engine/random.cpp` | The game's random number generator | behaviour | specification | 3 |
 | `src/engine/script_memory.cpp` | 32-bit memory of the script machine | port's own; the 4-byte cells of the original | analysis | 0 |
