@@ -15,8 +15,8 @@
   "M2": {
    "discovery": 0,
    "done": 27,
-   "no_discovery": 2,
-   "open": 3
+   "no_discovery": 5,
+   "open": 6
   },
   "M3": {
    "discovery": 8,
@@ -27,8 +27,8 @@
   "M4": {
    "discovery": 3,
    "done": 45,
-   "no_discovery": 10,
-   "open": 19
+   "no_discovery": 13,
+   "open": 22
   },
   "M5": {
    "discovery": 0,
