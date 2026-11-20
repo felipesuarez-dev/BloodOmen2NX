@@ -1250,6 +1250,24 @@ void ScriptMachine::release_string_cell(ScriptAddress cell) {
     memory_.release(cell);
 }
 
+// FUN_0068eaa0 on the caller's cell: the temporary the native built is
+// released after the store, so the cell ends with the only count of the new
+// record.
+void ScriptMachine::store_string_result(ScriptAddress result, std::string_view text) {
+    if (result == 0) {
+        return;
+    }
+    const ScriptAddress cell = memory_.u32(result);
+    if (cell == 0) {
+        return;
+    }
+    const ScriptAddress old = memory_.u32(cell);
+    memory_.set_u32(cell, new_record(text));
+    if (old != 0) {
+        release_record(old);
+    }
+}
+
 // A string variable holds the address of a 4-byte holder of a counted
 // string record (FUN_00588390, FUN_00587fc0), the same thing a string cell
 // on the stack is.

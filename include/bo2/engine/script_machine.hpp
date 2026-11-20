@@ -367,6 +367,12 @@ public:
     // Gives back a cell of new_string_cell: its record loses one count (and
     // goes at 0), then the cell is freed. 0 does nothing.
     void release_string_cell(ScriptAddress cell);
+    // The string result of a native (docs/SCRIPTS.md, "Values"): `result` is
+    // the address of the caller's string variable; when the variable holds a
+    // cell, the cell's record loses one count (freed at 0) and the cell takes
+    // a new record of `text` (FUN_0068eaa0). A variable with no cell gets
+    // nothing.
+    void store_string_result(ScriptAddress result, std::string_view text);
 
     // The warnings the original prints to its log, for the host to show.
     const std::vector<std::string>& warnings() const { return warnings_; }

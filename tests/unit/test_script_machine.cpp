@@ -481,6 +481,37 @@ void test_strings() {
     CHECK(throws([&] { static_cast<void>(machine.name_cell(2)); }));
 }
 
+// A native's string result: the cell of the caller's variable gives back its
+// record and takes a new one; a variable with no cell, or no result address,
+// gets nothing.
+void test_store_string_result() {
+    MachineRun run(machine_class({op(0x5C)}));
+    ScriptMachine& machine = *run.machine;
+    bo2::engine::ScriptMemory& memory = machine.memory();
+    const bo2::engine::ScriptAddress cell = machine.new_string_cell("old");
+    const bo2::engine::ScriptAddress old_record = memory.u32(cell);
+    const bo2::engine::ScriptAddress variable = memory.allocate(4);
+    memory.set_u32(variable, cell);
+    machine.store_string_result(variable, "kain");
+    CHECK(machine.string_at(cell) == "kain");
+    CHECK(memory.u32(memory.u32(cell)) == 1);
+    CHECK(throws([&] { static_cast<void>(memory.u32(old_record)); }));
+    // A record that another cell also holds survives with one count less.
+    const bo2::engine::ScriptAddress shared = memory.u32(cell);
+    const bo2::engine::ScriptAddress other = memory.allocate(4);
+    memory.set_u32(other, shared);
+    memory.set_u32(shared, 2);
+    machine.store_string_result(variable, "ocean");
+    CHECK(machine.string_at(cell) == "ocean");
+    CHECK(machine.string_at(other) == "kain");
+    CHECK(memory.u32(shared) == 1);
+    const bo2::engine::ScriptAddress empty = memory.allocate(4);
+    memory.set_u32(empty, 0);
+    machine.store_string_result(empty, "x");
+    CHECK(memory.u32(empty) == 0);
+    machine.store_string_result(0, "x");
+}
+
 void test_unported_code() {
     CHECK(throws([] {
         MachineRun run(machine_class({op(0x03, 1), op(0x10, 0), op(0x5C)}));
@@ -4021,6 +4052,7 @@ int main() {
     test_store();
     test_store_null_object();
     test_strings();
+    test_store_string_result();
     test_unported_code();
     test_int_ops();
     test_int_compare();

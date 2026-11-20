@@ -256,6 +256,15 @@ a name, and `0x1f`, `0x38` and the natives take holders. The code of the
 `bpackage` entries and of the regions pushes string fields by value (in
 `sl01`, 124 times `0x0a` against 2 times `0x0b`).
 
+A native whose result is a string gets, as its result address, the address
+of the caller's string variable. It builds the string in a temporary
+(starting from the shared empty string) and, when that variable holds a
+cell, gives the cell the string with `FUN_0068eaa0`: when the two records
+differ, the cell's record loses one count (freed at 0) and the cell takes
+the new record, counted once more; then the temporary is released. A
+variable that holds no cell gets nothing (`creaturescript.getname`,
+`FUN_007670e0` with `FUN_0075fa50`, which takes the creature's name, +0xb0).
+
 Measured over the 480 packages and the 165 region packages: kinds 7 and 8
 appear nowhere. Arrays (kind 6) appear only as fields (123, of 10 or 20
 floats or values of a class) and as parameters of 168 native bodies (20
