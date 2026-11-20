@@ -9,6 +9,8 @@
 #include "bo2/game/kain_tuning.hpp"
 #include "bo2/game/kain_vitals.hpp"
 
+#include "truncation.hpp"
+
 namespace {
 
 int failures = 0;
@@ -212,6 +214,17 @@ void test_rejects_bad_blobs() {
     std::vector<std::uint8_t> padded = make_blob();
     padded.resize(padded.size() + 64, 0);
     CHECK(bo2::game::parse_kain_tuning(padded).jump.height_tap == 64.0f);
+}
+
+// A tunedata blob cut at any point either parses or throws ParseError; any
+// other exception is a defect of parse_kain_tuning.
+void test_parse_kain_tuning_truncation() {
+    const std::vector<std::uint8_t> data = make_blob();
+    const std::vector<std::size_t> bad = bo2::testing::bad_prefixes(
+        data, [](const std::vector<std::uint8_t>& prefix) {
+            (void)bo2::game::parse_kain_tuning(prefix);
+        });
+    CHECK(bad.empty());
 }
 
 void test_lore_tables_follow_the_fixups() {
@@ -496,6 +509,7 @@ void test_invalid_jump_tuning_throws() {
 int main() {
     test_round_trip();
     test_rejects_bad_blobs();
+    test_parse_kain_tuning_truncation();
     test_lore_tables_follow_the_fixups();
     test_start_gifts();
     test_gift_state();
