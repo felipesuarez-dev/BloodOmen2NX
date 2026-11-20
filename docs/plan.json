@@ -14,21 +14,21 @@
   },
   "M2": {
    "discovery": 0,
-   "done": 24,
-   "no_discovery": 4,
-   "open": 5
+   "done": 27,
+   "no_discovery": 2,
+   "open": 3
   },
   "M3": {
    "discovery": 8,
-   "done": 22,
-   "no_discovery": 4,
-   "open": 16
+   "done": 26,
+   "no_discovery": 0,
+   "open": 12
   },
   "M4": {
    "discovery": 3,
-   "done": 23,
-   "no_discovery": 26,
-   "open": 35
+   "done": 45,
+   "no_discovery": 10,
+   "open": 19
   },
   "M5": {
    "discovery": 0,
@@ -38,9 +38,9 @@
   },
   "M6": {
    "discovery": 0,
-   "done": 0,
-   "no_discovery": 1,
-   "open": 6
+   "done": 1,
+   "no_discovery": 0,
+   "open": 5
   }
  }
 }
