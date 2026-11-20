@@ -847,7 +847,7 @@ timer (+0x28) is out it scans (`FUN_0049b5f0`) and draws the next scan time
 from the C library `rand`: `1 × (1 + (rand() % 100 × 0.02 − 1) × 0.5)`. The
 scan walks the creatures that can be sensed (`DAT_0091dc90`, each with a
 kind; `FUN_0049a910` adds them: Kain with kind 0 from `FUN_0042af90`, and
-two other callers, `FUN_004da655` and `FUN_004e9a7b`). It keeps those of the same package as the sensor's
+two other callers, `FUN_004da450` at 0x4da832 and `FUN_004e97a0` at 0x4e9afa, in the tails Ghidra splits off at 0x4da655 and 0x4e9a7b). It keeps those of the same package as the sensor's
 creature, or with no package, that are not that creature, closer than the
 range (squared distance below 1200²) and whose kind is in the mask. A new
 one gets an entry when it answers the state query its message handler gets
