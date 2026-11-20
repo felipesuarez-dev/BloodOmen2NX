@@ -1047,7 +1047,7 @@ void test_cell_instances() {
     CHECK(partial.triangles.size() == 3);
 }
 
-void test_lightmaps() {
+std::vector<std::uint8_t> build_lightmaps() {
     std::vector<std::uint8_t> data;
     put32(data, 1);
     put32(data, 112);
@@ -1075,6 +1075,11 @@ void test_lightmaps() {
     for (const float value : {0.25f, 0.5f, 0.75f, 1.0f, 1.0f, 0.0f, 0.5f, 1.0f}) {
         put_float(data, value);
     }
+    return data;
+}
+
+void test_lightmaps() {
+    const std::vector<std::uint8_t> data = build_lightmaps();
     const std::vector<bo2::engine::LevelLightMap> maps =
         bo2::engine::parse_lightmaps(data);
     CHECK(maps.size() == 1);
@@ -1088,6 +1093,17 @@ void test_lightmaps() {
     CHECK(maps[0].image.rgba[4] == 0x10);
     CHECK(maps[0].image.rgba[8] == 0x20);
     CHECK(maps[0].image.rgba[12] == 0x30);
+}
+
+// A light map payload cut at any point either parses, is rejected with an
+// empty list, or throws ParseError; any other exception is a defect.
+void test_parse_lightmaps_truncation() {
+    const std::vector<std::uint8_t> data = build_lightmaps();
+    const std::vector<std::size_t> bad = bo2::testing::bad_prefixes(
+        data, [](const std::vector<std::uint8_t>& prefix) {
+            (void)bo2::engine::parse_lightmaps(prefix);
+        });
+    CHECK(bad.empty());
 }
 
 void test_erg() {
@@ -2578,6 +2594,7 @@ int main() {
     test_cell_animations();
     test_cell_instances();
     test_lightmaps();
+    test_parse_lightmaps_truncation();
     test_model_lightmaps();
     test_shared_instance_lightmaps();
     test_named_model_lightmaps();
