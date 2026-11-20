@@ -148,6 +148,29 @@ four bytes from R, G, B, A to the device's A, R, G, B (`FUN_005711e0`); that
 this chunk is the source of those colours is read from the data, not traced
 in the loader. The host does not read it.
 
+### `vmopdir` and `vmocdir`
+
+Two arrays of the vertex animation the game calls VMO (the log has
+`Terrain %s has VMO Data that was never activated`, `0x901f28`). The `rmd`
+reader (`FUN_0061ed40`) makes one object for each and keeps it as a stream
+of the model:
+
+- `vmopdir`: `u32 count` (read 4-aligned, `FUN_006a09a0`), then `count`
+  records of three floats (`FUN_00620230`, `FUN_00620400`); stream `0x1e`.
+- `vmocdir`: `u32 count`, then `count` 32-bit words (`FUN_00620290`,
+  `FUN_00620490`); stream `0x22`.
+
+Measured over the 179 containers: 456 models of 81 cell groups have a
+`vmopdir` (18,534 records) and 573 a `vmocdir` (62,233 words), plus two
+`model` entries with a `vmocdir`. In every one the chunk is exactly
+`4 + count × 12` (or `× 4`) bytes and `count` is the vertex count of the
+model's `position` chunk. In `slums/sl03` (`sl03.big`) models 461 and 462
+have a `vmocdir` of 60 words, first and last `0xff000000`, and models 489
+and 490 a `vmopdir` of 367 and 356 records (first record of 489: bits
+`0xc2cacf48`, `0x41a8455b`, `0xbde7ed9f`). What the game does with the two
+arrays (the natives 52 to 67 of `creaturescript` start, stop and tune it)
+is not read yet.
+
 ### `collmodc`
 
 The collision chunk is a sibling of `rmd` in the model block, not a subchunk.
