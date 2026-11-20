@@ -159,13 +159,19 @@ of the model:
   records of three floats (`FUN_00620230`, `FUN_00620400`); stream `0x1e`.
 - `vmocdir`: `u32 count`, then `count` 32-bit words (`FUN_00620290`,
   `FUN_00620490`); stream `0x22`.
+- `vmouvdir` (`0x86f6d8`): `u32 count`, then `count` pairs of floats
+  (`FUN_00620270`, `FUN_0061cf30`); stream `0x26`.
 
 Measured over the 179 containers: 456 models of 81 cell groups have a
 `vmopdir` (18,534 records) and 573 a `vmocdir` (62,233 words), plus two
 `model` entries with a `vmocdir`. In every one the chunk is exactly
 `4 + count × 12` (or `× 4`) bytes and `count` is the vertex count of the
-model's `position` chunk. In `slums/sl03` (`sl03.big`) models 461 and 462
-have a `vmocdir` of 60 words, first and last `0xff000000`, and models 489
+model's `position` chunk. 91 models have a `vmouvdir` (8,630 pairs), also of
+exactly `4 + count × 8` bytes with `count` the vertex count; the first is
+model 217 of `bossrooms/charmvampirearena/cvarena` (`cvarena.big`), 6 pairs,
+the first `0x3f76bae0`, `0x3d145228`. In `slums/sl03` (`sl03.big`) models 461 and 462
+have a `vmocdir` of 60 words, first and last `0xff000000`, and a
+`vmouvdir` of 60 pairs (first `0x3f0a0000`, `0xbe9000f8`), and models 489
 and 490 a `vmopdir` of 367 and 356 records (first record of 489: bits
 `0xc2cacf48`, `0x41a8455b`, `0xbde7ed9f`). What the game does with the two
 arrays (the natives 52 to 67 of `creaturescript` start, stop and tune it)
@@ -904,7 +910,8 @@ There are two managers, one for creatures (`FUN_00775fb0`, the object at
 `DAT_00a83f28`) and one for terrains (`FUN_006339f0`, `DAT_00a72e98`). Each
 keeps an entry per creature (or terrain) with three channels at +0x18,
 +0x20 and +0x28; a channel holds its animator or 0. Channel 0 moves the
-positions, channel 1 the colours; channel 2 is not read. A native that
+positions, channel 1 the colours and channel 2 the texture coordinates (it
+needs a `vmouvdir`, `FUN_0061b6f0`). A native that
 takes a channel takes 3 for the three.
 
 ### Animator
@@ -990,7 +997,7 @@ The morph of the positions, for each vertex with index `k` (`0x61ab30`):
 is `target * w + (1 - w) * base` per axis, with `target` the `vmopdir`
 record of the vertex and `base` stream `0x1d`. The morph of the colours
 (the bytes of `vmocdir` and stream `0x21`, scaled by `1/255`, `0x867604`)
-and channel 2 are not read yet.
+and of the texture coordinates are not read yet.
 
 ## Skeleton pose and skinning
 
