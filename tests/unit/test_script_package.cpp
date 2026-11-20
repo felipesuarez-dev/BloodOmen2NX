@@ -12,6 +12,8 @@
 #include "bo2/engine/region.hpp"
 #include "bo2/engine/script_package.hpp"
 
+#include "truncation.hpp"
+
 namespace {
 
 int failures = 0;
@@ -91,6 +93,8 @@ std::vector<std::uint16_t> identity_symbols() {
 
 struct Variant {
     std::uint16_t version = 1;
+    std::uint16_t class_count = 1;
+    std::uint32_t code_count = 3;
     std::uint16_t class_name = kAlpha;
     std::uint16_t method_slot = 0;
     std::uint16_t body_method = 1;
@@ -113,7 +117,7 @@ std::vector<std::uint8_t> build_package(const Variant& v = Variant{}) {
     out.u16(v.version);
     out.u16(1);
     out.u16(kNative);
-    out.u16(1);  // class count
+    out.u16(v.class_count);  // class count
 
     const std::size_t declaration = out.begin_chunk();
     out.u16(v.class_name);
@@ -169,7 +173,7 @@ std::vector<std::uint8_t> build_package(const Variant& v = Variant{}) {
     out.u16(1);  // one local
     out.u16(2);
     out.u32(0);
-    out.u32(3);  // three code words
+    out.u32(v.code_count);  // the words that follow
     out.u32(0x04000000);
     out.u32(0x48000000);
     out.u32(0x00000000);
@@ -314,6 +318,26 @@ void test_validation_rules() {
     CHECK(throws([&] { bo2::engine::parse_script_package(build_package(), symbols, kNames); }));
 }
 
+// Every prefix of the minimal package either parses or throws ParseError; any
+// other exception is a defect of parse_script_package.
+void test_parse_script_package_truncation() {
+    const std::vector<std::uint8_t> data = build_package();
+    const std::vector<std::size_t> bad = bo2::testing::bad_prefixes(
+        data, [](const std::vector<std::uint8_t>& prefix) { (void)parse(prefix); });
+    CHECK(bad.empty());
+}
+
+// A count read from the file is checked against the bytes that remain before
+// any memory is reserved.
+void test_parse_script_package_huge_counts() {
+    Variant words;
+    words.code_count = 0xFFFFFFFFU;
+    CHECK(throws([&] { (void)parse(build_package(words)); }));
+    Variant classes;
+    classes.class_count = 0xFFFFU;
+    CHECK(throws([&] { (void)parse(build_package(classes)); }));
+}
+
 void test_instruction_words() {
     for (std::uint32_t code = 0; code <= 0x60; ++code) {
         std::size_t expected = 1;
@@ -434,6 +458,8 @@ int main() {
     test_alignment();
     test_chunk_padding();
     test_validation_rules();
+    test_parse_script_package_truncation();
+    test_parse_script_package_huge_counts();
     test_instruction_words();
 
     const char* root = std::getenv("BO2NX_ASSETS_DIR");

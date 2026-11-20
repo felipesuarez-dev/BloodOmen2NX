@@ -304,6 +304,11 @@ ScriptPackage parse_script_package(const std::vector<std::uint8_t>& data,
         package.imports.push_back(in.name());
     }
     const std::uint16_t class_count = in.u16();
+    // A declaration takes at least one byte: a count above what remains is a
+    // truncated package and must fail before the vector reserves memory.
+    if (class_count > in.size() - in.position()) {
+        throw common::ParseError("script package class count overruns the data");
+    }
     package.classes.reserve(class_count);
     for (std::uint16_t index = 0; index < class_count; ++index) {
         package.classes.push_back(read_declaration(in));
