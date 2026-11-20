@@ -866,6 +866,42 @@ void test_dds_dxt2_dxt4() {
     CHECK(dxt4.rgba == dxt5.rgba);
 }
 
+// Every prefix of a valid DDS file either decodes or throws ParseError; any
+// other exception or a read past the prefix is a defect of decode_dds.
+std::vector<std::size_t> bad_dds_prefixes(const std::vector<std::uint8_t>& bytes) {
+    return bo2::testing::bad_prefixes(bytes, [](const std::vector<std::uint8_t>& prefix) {
+        (void)bo2::engine::decode_dds(prefix);
+    });
+}
+
+void test_decode_dds_truncation() {
+    // The formats test_dds decodes: DXT1, DXT5, DXT3 and BGRA without FourCC.
+    std::vector<std::uint8_t> color_block;
+    put16(color_block, 0xF800);
+    put16(color_block, 0x07E0);
+    put32(color_block, 0);
+    CHECK(bad_dds_prefixes(make_dds(4, 4, 0x31545844U, 4, 0, 0, 0, 0, 0, color_block)).empty());
+
+    std::vector<std::uint8_t> alpha_block;
+    alpha_block.push_back(0);
+    alpha_block.push_back(255);
+    for (int index = 0; index < 6; ++index) {
+        alpha_block.push_back(0);
+    }
+    put16(alpha_block, 0xF800);
+    put16(alpha_block, 0x07E0);
+    put32(alpha_block, 0x55555555U);
+    CHECK(bad_dds_prefixes(make_dds(4, 4, 0x35545844U, 4, 0, 0, 0, 0, 0, alpha_block)).empty());
+    CHECK(bad_dds_prefixes(make_dds(4, 4, 0x33545844U, 4, 0, 0, 0, 0, 0, alpha_block)).empty());
+
+    std::vector<std::uint8_t> pixels;
+    put32(pixels, 0xFF0000FFU);
+    put32(pixels, 0xFFFF0000U);
+    CHECK(bad_dds_prefixes(make_dds(2, 1, 0, 0x41, 32, 0x00FF0000, 0x0000FF00, 0x000000FF,
+                                   0xFF000000, pixels))
+              .empty());
+}
+
 // FUN_0056f320: the blend class of a DDS header by its format.
 void test_texture_blend() {
     struct Case {
@@ -2496,6 +2532,7 @@ int main() {
     test_big_archive_load_file();
     test_dds();
     test_dds_dxt2_dxt4();
+    test_decode_dds_truncation();
     test_texture_blend();
     test_render_sort_order();
     test_math();
