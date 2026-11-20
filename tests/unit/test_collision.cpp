@@ -5,6 +5,8 @@
 
 #include "bo2/engine/collision.hpp"
 
+#include "truncation.hpp"
+
 namespace {
 
 int failures = 0;
@@ -180,6 +182,17 @@ void test_collmodc_model() {
     CHECK(spheres.spheres[0].bone == 3);
 
     CHECK(!bo2::engine::parse_collmodc({1, 2, 3}).valid);
+}
+
+// A collision payload cut at any point either parses, is rejected as
+// invalid, or throws ParseError; any other exception is a defect.
+void test_parse_collmodc_truncation() {
+    const std::vector<std::uint8_t> data = make_collision_payload();
+    const std::vector<std::size_t> bad = bo2::testing::bad_prefixes(
+        data, [](const std::vector<std::uint8_t>& prefix) {
+            (void)bo2::engine::parse_collmodc(prefix);
+        });
+    CHECK(bad.empty());
 }
 
 void test_collmodc_boxes() {
@@ -615,6 +628,7 @@ int main() {
     test_swept_sphere();
     test_box_contact();
     test_collmodc_model();
+    test_parse_collmodc_truncation();
     test_collmodc_triangle_records();
     test_collmodc_boxes();
     test_slide_body();
