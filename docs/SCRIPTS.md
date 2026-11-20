@@ -979,6 +979,45 @@ allowed, it writes the creature's position with `FUN_006944d0`: per axis
 `fraction * end + (1 - fraction) * start`, with `1 - fraction` computed
 first (`0x87624c`). Every operation is a float.
 
+## Creature messages
+
+Many natives ask or tell a creature something by sending it a message: an
+object whose vtable is its type, given to the creature's virtual +0x54. A
+message class has a type id, an integer that static initialisation hands
+out in order (`FUN_004a0b00`: the counter at `DAT_00a83648`, one id per
+class; `CreatureStateMsg` gets the id at `DAT_008f0340`, `GetMotionMsg` the
+one at `DAT_008f04dc`); the vtable's slot 2 returns it (`0x415190`,
+`0x4d9490`) and slot 1 the class name. A receiver has a table of 200
+handlers indexed by `id - base` (`DAT_0091dd08` for the creature
+behaviours, filled by `FUN_004a0b00` and `FUN_0049e1b0`); a handler passes
+the message to a virtual of the behaviour: `CreatureStateMsg` to +0xe8
+(`FUN_004a1a60`), `GetMotionMsg` to +0x284 (`0x4a2740`).
+
+The messages the natives of `bo2creaturescript` send (names from the RTTI
+of their vtables):
+
+| Native | Message | Vtable |
+|---|---|---|
+| `setdamagerate` (13) | `SetDamageRateMsg` | `0x866028` |
+| `resurrectcreature` (14) | `ResurrectCreatureMsg` | `0x866040` |
+| `getsuckstatus` (15) | `BloodSuckQueryMsg` | `0x841c78` |
+| `playergethit` (16), `playergethitwithanim` (17) | `AttackStartingMsg`, then `GetHitMsg` | `0x840734`, `0x8407c4` |
+| `endcharm` (22) | `EndCharmMsg` | `0x842dfc` |
+| `abortbloodsuck` (28) | `AbortBloodSuckMsg` | `0x8660a0` |
+| `getplayervelocity` (30) | `GetMotionMsg` | `0x866058` |
+
+Kain's behaviour is a `KainTopLevelBehavior` (vtable `0x841d84`; its +0xe8
+is `FUN_00430420`, the answer to the state query above). Its answer to
+`GetMotionMsg` (+0x284, `0x433ca0`) copies the vector at +0x19c into the
+message (+4, +8, +0xc) and returns 1. That vector is kept by
+`FUN_00431df0`, called with the frame time from `FUN_00432030`: when the
+x of the previous position (+0x190) is not `FLT_MAX` (`0x841d40`), the
+vector becomes `(position - previous) * k` with `k = 1 / time` computed
+first (`FUN_0041f220`), the position being the creature's (+0xb4); then the
+previous position takes the creature's position. The behaviour's
+constructor (`FUN_00422050`) leaves both at 0. Where `FUN_00432030` runs in
+the frame, against the scripts, is not read yet.
+
 ## The update of the objects of a level
 
 Every frame the game tick (`FUN_0072edba`) does, in this order:
