@@ -918,6 +918,58 @@ Traced in the oracle (`re/decomp/detector/sensor.gdb` on
   one step of the generator apart. The sensors draw far more often than the
   scheduler, so the port needs them to draw the same sequence.
 
+## The natives of creaturecontroller
+
+`creaturecontroller` is a value class whose slot holds a counted object
+(`NTcreaturecontroller`, "Values" above). The natives (bound by the type's
+virtual +0x24) pass the slot and the argument cells to a helper. The
+object a controller holds is the handle of a creature's script object:
+`setcreature(creaturescript)` (`FUN_0076c540`, `FUN_0079d570`) takes the
+argument, an object, and stores its handle (object +8) in the slot,
+counted, releasing the one it held. Every other native reads the creature
+through the handle: handle +8 is the object, object +0x2c its creature.
+They do nothing when the slot holds no handle, the handle no object or a
+position argument no block (a value of a class as an argument: the cell
+holds the address of the slot and the slot the block).
+
+Before a native moves a creature it asks `FUN_0079d0d0`: when the game
+allows it (`GameSpecific` virtual +0xcc, `0x4aa250`, always 1 in this game),
+a creature whose name (+0xb0) is not `m_crate` (`0x915590`, compared with
+`FUN_0068ec30`, a `strcmp`) and that has a model (virtual +0x68, +0x10)
+whose data has a collision geometry (virtual +0x30, `0x5c9570`, passes the
+model to `FUN_005d8ba0`: the model's virtual +8 gives the rigid data and
+its +0x3c, else its virtual +0xc the animated data and its +0x18) is
+refused: the
+log gets `creature controller doesnt work on object with collision geom`
+(`0x915550`, `FUN_0070fdc0`) and nothing moves.
+
+| Body | Method | Helper | What it does |
+|---:|---|---|---|
+| 0 | `setcreature(creaturescript)` | `FUN_0079d570` | Above |
+| 1 | `setposition(position)` | `FUN_0079d600` | When allowed, the creature's position (+0xb4) takes the three floats of the block |
+| 2 | `setrotation(rotation)` | `FUN_0079d6a0` | When allowed, the creature's rotation (+0xc0) takes the three floats |
+| 4 | `translateto(position, float)` (task) | `FUN_0079d6f0` | The task of a move (below) by the vector of the block at the speed of the float; no task without a creature or a block |
+| 5, 6, 7 | `rotatexby`, `rotateyby`, `rotatezby(float, float)` (tasks) | `FUN_0079d790`, `FUN_0079d890`, `FUN_0079d8d0` | The task of a turn (`FUN_0079d7d0`, `FUN_0079d130`, vtable `0x87a048`) about the axis x, y or z by the angle in degrees over the time of the second float; not read further |
+| 8 | `rotateaxisby(position, float, float)` (task) | `FUN_0079d910` | As 5 about the axis of the block; no task when the axis is near zero (`FUN_00694890`) |
+| 9 | `rotatezaround(float, float, position)` (task) | `FUN_0079d970` | A turn about z (`FUN_0079d2f0`, vtable `0x87a05c`) that also turns the position about the point of the block; not read further |
+
+The data of the game calls bodies 0, 1, 4, 5, 6 and 7, and never 2, 3, 8
+or 9 (measured over the 480 packages and the 165 region packages).
+
+The task of a move (`FUN_0079cf90`, vtable `0x87a034`, 0x2c bytes) keeps
+the creature (+4), its position when the task is made (+8), the end point
+(+0x14: that position plus the vector, per axis), the rate (+0x20), the
+fraction done (+0x24, 0 at the start) and a running byte (+0x28, 1). The
+rate is `speed / length` with `length = sqrt((z*z + y*y) + x*x)` of the
+vector, or 1 when the squared length is 0 or the length is not above 0
+(`0x83f5c4`). As a task: +4 (`0x79d040`) returns the running byte; +8, its
+run with the time of the frame (`0x79d050`), does `fraction = time * rate +
+fraction` and then, when `1 <= fraction` (`0x83f714`), puts the creature at
+the end point (when allowed) and clears the running byte; otherwise, when
+allowed, it writes the creature's position with `FUN_006944d0`: per axis
+`fraction * end + (1 - fraction) * start`, with `1 - fraction` computed
+first (`0x87624c`). Every operation is a float.
+
 ## The update of the objects of a level
 
 Every frame the game tick (`FUN_0072edba`) does, in this order:
