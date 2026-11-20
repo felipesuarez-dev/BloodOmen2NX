@@ -13,6 +13,8 @@
 #include "bo2/engine/big_archive.hpp"
 #include "bo2/engine/region.hpp"
 
+#include "truncation.hpp"
+
 namespace {
 
 int failures = 0;
@@ -175,6 +177,17 @@ void test_direct_payload() {
     CHECK(tables[0].entities[0].position.x == 1.0f);
 }
 
+// A region payload cut at any point either parses or throws ParseError; any
+// other exception is a defect of parse_region_entities.
+void test_parse_region_entities_truncation() {
+    const std::vector<std::uint8_t> data = region_payload();
+    const std::vector<std::size_t> bad = bo2::testing::bad_prefixes(
+        data, [](const std::vector<std::uint8_t>& prefix) {
+            (void)bo2::engine::parse_region_entities(prefix);
+        });
+    CHECK(bad.empty());
+}
+
 void test_nested_container() {
     const auto tables =
         bo2::engine::parse_region_entities(nested_region(region_payload()));
@@ -300,6 +313,7 @@ void test_scripted_entities_of_slums(const std::filesystem::path& root) {
 
 int main() {
     test_direct_payload();
+    test_parse_region_entities_truncation();
     test_nested_container();
     test_region_script_package();
     test_entity_properties();
