@@ -1497,6 +1497,17 @@ void test_cell_group() {
     CHECK(textured.triangles[0].texture == 0);
 }
 
+// A cell group cut at any point either parses or throws ParseError; any
+// other exception or a read past the prefix is a defect of the reader.
+void test_parse_cell_group_truncation() {
+    const std::vector<std::uint8_t> data = build_cell_group();
+    const std::vector<std::size_t> bad = bo2::testing::bad_prefixes(
+        data, [](const std::vector<std::uint8_t>& prefix) {
+            (void)bo2::engine::parse_cell_group(prefix);
+        });
+    CHECK(bad.empty());
+}
+
 void test_cell_group_without_models() {
     const std::vector<std::uint8_t> data = build_cell_group_without_models();
     const bo2::engine::LevelGeometry geometry = bo2::engine::parse_cell_group(data);
@@ -2537,6 +2548,7 @@ int main() {
     test_render_sort_order();
     test_math();
     test_cell_group();
+    test_parse_cell_group_truncation();
     test_cell_group_without_models();
     test_cell_group_without_triangles();
     test_model_asset_without_mesh();
