@@ -3,7 +3,9 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#if !defined(__SWITCH__)
 #include <dlfcn.h>
+#endif
 #include <limits>
 #include <stdexcept>
 #include <string>
@@ -31,6 +33,13 @@ namespace bo2::engine {
 
 namespace {
 
+#if defined(__SWITCH__)
+// The Switch has no dynamic loader and the devkitPro packages do not link
+// libvorbisfile; decode_ogg catches this and falls back to stb_vorbis.
+std::shared_ptr<const PcmClip> decode_vorbisfile(const std::uint8_t*, std::size_t) {
+    throw std::runtime_error("libvorbisfile is not available on this platform");
+}
+#else
 struct VorbisInfo {
     int version;
     int channels;
@@ -134,7 +143,7 @@ std::shared_ptr<const PcmClip> decode_vorbisfile(const std::uint8_t* data, std::
     }
     return clip;
 }
-
+#endif
 
 std::shared_ptr<const PcmClip> decode_stb(const std::uint8_t* data, std::size_t size) {
     if (data == nullptr || size == 0) {

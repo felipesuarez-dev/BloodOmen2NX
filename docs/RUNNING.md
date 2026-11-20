@@ -292,22 +292,22 @@ Planned with the level pipeline:
 The `.nro` is built with devkitPro once the platform backend lands. The
 SD card layout will be documented here before the first public build.
 
-Checked on 2026-11-15 with devkitA64 (GCC 16.1) and the devkitPro CMake
-toolchain:
+The `switch-check` presets configure and build the five libraries with the
+devkitPro toolchain. They expect devkitPro under `/opt/devkitpro`: the
+configure preset sets `DEVKITPRO` and the toolchain file. Measured on
+2026-11-15 with devkitA64 (GCC 16.1):
 
 ```sh
-DEVKITPRO=/opt/devkitpro cmake -S . -B build/switch-check -G Ninja \
-  -DCMAKE_TOOLCHAIN_FILE=/opt/devkitpro/cmake/Switch.cmake \
-  -DBO2NX_ENABLE_SDL=OFF -DCMAKE_BUILD_TYPE=Release
-ninja -C build/switch-check -k 0 bo2_common bo2_engine bo2_game \
-  bo2_platform_core bo2_platform_headless
+cmake --preset switch-check
+cmake --build --preset switch-check
 ```
 
 Every source of those five libraries compiles for AArch64 with the
-project's warnings and no warning, except `src/engine/ogg.cpp`, which
-includes `<dlfcn.h>` to load `libvorbisfile` at run time; the Switch has no
-dynamic loader. The audio of the game needs a Vorbis decoder with floor 0
-on the Switch (devkitPro packages `libogg` and `libvorbis` as
+project's warnings and no warning. `src/engine/ogg.cpp` includes
+`<dlfcn.h>` and loads `libvorbisfile` at run time only when `__SWITCH__` is
+not defined; the Switch has no dynamic loader, so there `decode_ogg` falls
+back to `stb_vorbis`. The audio of the game needs a Vorbis decoder with
+floor 0 on the Switch (devkitPro packages `libogg` and `libvorbis` as
 `switch-libogg` and `switch-libvorbis`; they are not installed here).
 
 ## Oracle

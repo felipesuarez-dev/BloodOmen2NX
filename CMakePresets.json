@@ -29,12 +29,34 @@
         "CMAKE_CXX_FLAGS": "-fsanitize=address,undefined -fno-omit-frame-pointer",
         "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address,undefined"
       }
+    },
+    {
+      "name": "switch-check",
+      "displayName": "Switch libraries (devkitPro)",
+      "inherits": "base",
+      "toolchainFile": "/opt/devkitpro/cmake/Switch.cmake",
+      "environment": { "DEVKITPRO": "/opt/devkitpro" },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BO2NX_ENABLE_SDL": "OFF"
+      }
     }
   ],
   "buildPresets": [
     { "name": "linux-debug", "configurePreset": "linux-debug" },
     { "name": "linux-release", "configurePreset": "linux-release" },
-    { "name": "linux-asan", "configurePreset": "linux-asan" }
+    { "name": "linux-asan", "configurePreset": "linux-asan" },
+    {
+      "name": "switch-check",
+      "configurePreset": "switch-check",
+      "targets": [
+        "bo2_common",
+        "bo2_engine",
+        "bo2_game",
+        "bo2_platform_core",
+        "bo2_platform_headless"
+      ]
+    }
   ],
   "testPresets": [
     {
