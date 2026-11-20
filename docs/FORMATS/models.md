@@ -891,6 +891,107 @@ original shows no pyramid for them. What is ruled out and what is known:
 
 The port still draws those types, since no rule is proven yet.
 
+## Vertex animation (VMO)
+
+The arrays of [`vmopdir` and `vmocdir`](#vmopdir-and-vmocdir) are the
+targets of a morph: each vertex moves from its base position (or colour)
+towards its target by a weight that an animated table of 16 values gives.
+The x87 unit runs in single precision ([PORTING_GUIDE.md](../PORTING_GUIDE.md#floating-point)):
+every operation below rounds to a float, and `trunc` is `__ftol`
+(`0x7a3af4`), which cuts towards zero.
+
+There are two managers, one for creatures (`FUN_00775fb0`, the object at
+`DAT_00a83f28`) and one for terrains (`FUN_006339f0`, `DAT_00a72e98`). Each
+keeps an entry per creature (or terrain) with three channels at +0x18,
++0x20 and +0x28; a channel holds its animator or 0. Channel 0 moves the
+positions, channel 1 the colours; channel 2 is not read. A native that
+takes a channel takes 3 for the three.
+
+### Animator
+
+An animator (`FUN_00619250`, 16 bytes, all zero) has a count of cycles
+(+0), a phase (+4), a speed (+8) and a curve (+0xc, a function, or 0).
+
+- Its run with the time `t` (`FUN_00619280`): when the count is not 0,
+  `p = t * speed + phase` and the phase becomes `p`; when `1 <= p`
+  (`0x83f714`) or `p < 0`, a positive count goes down by 1; then a count of
+  0 leaves the phase at 0, and otherwise the phase becomes
+  `(p - trunc(p)) + 1` when `p < 1`, else `p - trunc(p)`. With a count of 0
+  nothing of that happens. Then, whatever the count, it writes the table:
+  for `i` from 0 to 15, `x = i * 0.0625 + phase` (`0.0625` is set once,
+  `DAT_00a72d88`), wrapped as the phase is (`x < 0` gives
+  `(x - trunc(x)) + 1`, `1 <= x` gives `x - trunc(x)`), and the entry is
+  `curve(x)`, or 0 with no curve.
+- The speed (`FUN_00619400`): when the phase is below 0.001 (`0x8612b0`) and
+  the new speed is below 0, the phase becomes `0x3f7fbe77` (0.999); else,
+  when the phase is above 0.999 (`0x86e724`) and the new speed is above 0,
+  the phase becomes 0. Then the speed is the new one.
+- Start (`FUN_00777730`, a channel and a number of cycles): the count
+  becomes the number, or -1 (no end) when it is below 1. Stop
+  (`FUN_007777b0`): the count becomes 1, so the cycle in play ends and the
+  phase goes back to 0.
+- The palette (`FUN_00760fe0`, eight curves) sets the curve and puts the
+  phase at 0: 0 gives 0 (`0x619800`); 1 gives 1 (`0x619810`); 2 gives
+  `(cos(2π * x) + 1) * 0.5`, with `2π` computed once as `π + π`
+  (`0x86f59c`) and the product `2π * x` taken first (`0x619820`); 3 gives
+  `1 - x` (`0x619860`); 4 gives `x` (`0x619870`); 5 gives 0 when
+  `x <= 0.5` and 1 above (`0x619880`); 6 the opposite (`0x6198a0`); 7 gives
+  `x + x` when `x <= 0.5`, else `(2 - x) - x` (`0x6198c0`, `0x84083c`).
+
+### Index of a vertex
+
+Each vertex of a channel has a position in the table, a float from 0 to
+16. A generator gives a value `v` for the position of the vertex and the
+index is `v * 16` (`0x8420d4`), 0 below 0 and 16 above 16
+(`FUN_007770b0`). Every generator clamps `v`: above `0x3f7ff972` (0.9999)
+it is that value, below 0 it is 0.
+
+- Constant (`FUN_00619460`, vtable `0x86f5a4`): the value, clamped when the
+  generator is made.
+- Distance from a centre (`FUN_006195b0`, vtable `0x86f5b8`; a centre, a
+  step and `inv = 1 / step`): with `d = p - centre`, the length is
+  `sqrt((dx*dx + dz*dz) + dy*dy)`, or 0 when that sum is 0; then
+  `v = (length - trunc(length * inv) * step) * inv` (`0x6195f0`).
+- Distance from a plane (`FUN_006196b0`, vtable `0x86f5c0`; a point, a
+  normal, a step and `inv`): the normal is normalised (`FUN_00694590`) when
+  its length is at least 0.0001 (the double at `0x867c88`), else it is
+  (0, 1, 0); with `d = p - point`,
+  `distance = |(dz*nz + dy*ny) + dx*nx|` and `v` as for the centre
+  (`0x619760`).
+- Random (vtable `0x87881c`, `0x6194e0`): `a = (sin(x) + 1) * 7`,
+  `b = (sin(y) + 1) * 147`, `c = (sin(z) + 1) * 95483` (`0x86f5b0`,
+  `0x86f5ac`, `0x86f5a8`) and
+  `v = (((c - trunc(c)) + (b - trunc(b))) + (a - trunc(a))) * 0.33333334`
+  (`0x83f724`).
+
+### A frame
+
+When a channel is made (`FUN_007762b0`; channel 0 needs a `vmopdir`,
+`FUN_0061b650`), the model gets what it lacks (`FUN_00619ed0`): a copy of
+its positions as the base (stream `0x1d`), a table of 16 zeros (stream
+`0x20`) and an index of 0 for every vertex (stream `0x1f`, the constant
+generator of 0); the creature gets flag `0x400` at +0xf0. Channel 1 needs a `vmocdir`
+(`FUN_0061b6a0`) and its morph reads streams `0x21` (base), `0x23` (index)
+and `0x24` (table); what its preparation (`FUN_0061a370`) makes is not read
+yet. The `initvmo*` natives replace the index of channel 0 with a generator
+(`FUN_007770b0`, over the positions of stream 0).
+
+The game tick (`0x72f1bb`) runs the creature manager (`FUN_00776e60`): for
+each creature whose +0x13c is the frame counter (`DAT_008ff180`), each
+channel with an animator runs with the creature's time (+0xfc) into the
+table of its stream (`0x20`, `0x24`, `0x28`), and then the model is morphed
+with the channels it has (`FUN_00776fc0`, `FUN_0061ab30`). The terrain
+manager runs its terrains the same way (`FUN_00634760`), with a time the
+tick passes.
+
+The morph of the positions, for each vertex with index `k` (`0x61ab30`):
+`i0 = trunc(k)`, `i1 = i0 + 1` (0 when it reaches the table's count),
+`f = k - i0`, `w = table[i1] * f + table[i0] * (1 - f)`, and the position
+is `target * w + (1 - w) * base` per axis, with `target` the `vmopdir`
+record of the vertex and `base` stream `0x1d`. The morph of the colours
+(the bytes of `vmocdir` and stream `0x21`, scaled by `1/255`, `0x867604`)
+and channel 2 are not read yet.
+
 ## Skeleton pose and skinning
 
 `vtxweigh`, `jointidx`, `animatio` and `animreel` are present in the
