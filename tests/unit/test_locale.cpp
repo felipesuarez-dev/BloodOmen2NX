@@ -8,6 +8,8 @@
 #include "bo2/engine/big_archive.hpp"
 #include "bo2/engine/string_table.hpp"
 
+#include "truncation.hpp"
+
 namespace {
 
 int failures = 0;
@@ -327,6 +329,20 @@ void test_string_table_rejects_bad_payloads() {
     CHECK(throws_parse_error([&] { bo2::engine::StringTable::parse(archive, tiny); }));
 }
 
+// Every prefix of a strtable payload either parses or throws ParseError; any
+// other exception is a defect of StringTable::parse.
+void test_stringtable_parse_truncation() {
+    const std::vector<std::uint16_t> symbols = {7, 8};
+    const std::vector<std::uint8_t> payload = strtable_payload({7, 0, 1, kEnd});
+    const std::vector<std::size_t> bad = bo2::testing::bad_prefixes(
+        payload, [&symbols](const std::vector<std::uint8_t>& prefix) {
+            const auto archive = bo2::engine::BigArchive::parse(
+                build_big(strtable_names(), {{"strtable", 6, 5, prefix, symbols}}));
+            (void)bo2::engine::StringTable::parse(archive, archive.entries()[0]);
+        });
+    CHECK(bad.empty());
+}
+
 void test_string_table_by_locale() {
     // Spanish and default copies of the same table, as in code.big.
     const auto archive = bo2::engine::BigArchive::parse(build_big(
@@ -404,6 +420,7 @@ int main() {
         test_string_table_records();
         test_string_table_irregular_record();
         test_string_table_rejects_bad_payloads();
+        test_stringtable_parse_truncation();
         test_string_table_by_locale();
         test_display_text();
         test_key_text();
